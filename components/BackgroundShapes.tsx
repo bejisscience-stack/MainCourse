@@ -9,7 +9,7 @@ export default function BackgroundShapes() {
       {/* Abstract 3D Shapes */}
       <div className="absolute top-20 -left-20 w-64 h-64 md:w-96 md:h-96 bg-navy-100 rounded-full blur-3xl opacity-20"></div>
       <div className="absolute top-40 right-10 w-48 h-48 md:w-72 md:h-72 bg-navy-200 rounded-full blur-3xl opacity-15"></div>
-      <div className="absolute bottom-20 left-1/4 w-56 h-56 md:w-80 md:h-80 bg-navy-150 rounded-full blur-3xl opacity-20"></div>
+      <div className="absolute bottom-20 left-1/4 w-56 h-56 md:w-80 md:h-80 bg-navy-200 rounded-full blur-3xl opacity-20"></div>
       <div className="absolute bottom-40 right-1/4 w-40 h-40 md:w-64 md:h-64 bg-navy-100 rounded-full blur-3xl opacity-15"></div>
 
       {/* Geometric shapes */}
