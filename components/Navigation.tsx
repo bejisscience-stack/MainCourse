@@ -1,10 +1,108 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { getCurrentUser, signOut } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
+import type { User } from '@supabase/supabase-js';
 
 export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    checkUser();
+    
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: string, session: any) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        const resolvedRole = profile?.role || session.user.user_metadata?.role || null;
+
+        if (resolvedRole === 'lecturer' && profile?.role !== 'lecturer') {
+          await supabase.from('profiles').update({ role: 'lecturer' }).eq('id', session.user.id);
+        }
+
+        setUserRole(resolvedRole);
+      } else {
+        setUserRole(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Close profile menu when clicking outside or navigating
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isProfileMenuOpen) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    if (isProfileMenuOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => {
+        document.removeEventListener('click', handleClickOutside);
+      };
+    }
+  }, [isProfileMenuOpen]);
+
+  const checkUser = async () => {
+    try {
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+      
+      if (currentUser) {
+        // Fetch user profile to get role
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', currentUser.id)
+          .single();
+
+        const resolvedRole = profile?.role || currentUser.user_metadata?.role || null;
+
+        // Normalize stored role if metadata says lecturer but profile missing
+        if (resolvedRole === 'lecturer' && profile?.role !== 'lecturer') {
+          await supabase.from('profiles').update({ role: 'lecturer' }).eq('id', currentUser.id);
+        }
+
+        setUserRole(resolvedRole);
+      } else {
+        setUserRole(null);
+      }
+    } catch (error) {
+      setUser(null);
+      setUserRole(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setUser(null);
+      router.push('/');
+      router.refresh();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-navy-100">
@@ -23,7 +121,7 @@ export default function Navigation() {
             <Link href="#about" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
               About
             </Link>
-            <Link href="#courses" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
+            <Link href="/courses" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
               Courses
             </Link>
             <Link href="#testimonials" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
@@ -36,18 +134,106 @@ export default function Navigation() {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link
-              href="/login"
-              className="text-navy-900 font-semibold hover:text-navy-700 transition-colors px-4 py-2"
-            >
-              Log In
-            </Link>
-            <Link
-              href="/signup"
-              className="bg-navy-900 text-white font-semibold px-6 py-2 rounded-lg hover:bg-navy-800 transition-colors"
-            >
-              Sign Up
-            </Link>
+            {loading ? (
+              <div className="text-navy-600 text-sm">Loading...</div>
+            ) : user ? (
+              <div className="relative">
+                {/* Profile Icon Button */}
+                <button
+                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                  className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2 rounded-full p-1.5 hover:bg-navy-50 transition-colors"
+                  aria-label="User menu"
+                >
+                  <div className="w-10 h-10 bg-navy-900 rounded-full flex items-center justify-center text-white font-semibold">
+                    {(user.user_metadata?.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <svg
+                    className={`w-4 h-4 text-navy-600 transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Profile Dropdown Menu */}
+                {isProfileMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-navy-100 py-2 z-50">
+                      <div className="px-4 py-3 border-b border-navy-100">
+                        <p className="text-sm font-semibold text-navy-900">
+                          {user.user_metadata?.full_name || 'User'}
+                        </p>
+                        <p className="text-xs text-navy-600 truncate">
+                          {user.email}
+                        </p>
+                        {userRole === 'lecturer' && (
+                          <span className="inline-block mt-2 px-2 py-0.5 text-xs font-medium bg-navy-100 text-navy-900 rounded">
+                            Lecturer
+                          </span>
+                        )}
+                      </div>
+                      <div className="py-1">
+                        {userRole === 'lecturer' && (
+                          <Link
+                            href="/lecturer/dashboard"
+                            onClick={() => setIsProfileMenuOpen(false)}
+                            className="flex items-center px-4 py-2 text-sm text-navy-700 hover:bg-navy-50 transition-colors"
+                          >
+                            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Dashboard
+                          </Link>
+                        )}
+                        <Link
+                          href="/courses"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="flex items-center px-4 py-2 text-sm text-navy-700 hover:bg-navy-50 transition-colors"
+                        >
+                          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                          </svg>
+                          My Courses
+                        </Link>
+                        <button
+                          onClick={() => {
+                            setIsProfileMenuOpen(false);
+                            handleSignOut();
+                          }}
+                          className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-navy-900 font-semibold hover:text-navy-700 transition-colors px-4 py-2"
+                >
+                  Log In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="bg-navy-900 text-white font-semibold px-6 py-2 rounded-lg hover:bg-navy-800 transition-colors"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -86,7 +272,7 @@ export default function Navigation() {
                 About
               </Link>
               <Link
-                href="#courses"
+                href="/courses"
                 className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -106,21 +292,83 @@ export default function Navigation() {
               >
                 Contact
               </Link>
-              <div className="pt-4 border-t border-navy-100 flex flex-col space-y-2">
-                <Link
-                  href="/login"
-                  className="text-navy-900 font-semibold text-center py-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Log In
-                </Link>
-                <Link
-                  href="/signup"
-                  className="bg-navy-900 text-white font-semibold text-center py-2 rounded-lg hover:bg-navy-800 transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Sign Up
-                </Link>
+              <div className="pt-4 border-t border-navy-100">
+                {loading ? (
+                  <div className="text-navy-600 text-sm text-center py-2">Loading...</div>
+                ) : user ? (
+                  <div className="space-y-2">
+                    {/* Mobile Profile Section */}
+                    <div className="flex items-center space-x-3 px-2 py-3 bg-navy-50 rounded-lg mb-2">
+                      <div className="w-10 h-10 bg-navy-900 rounded-full flex items-center justify-center text-white font-semibold">
+                        {(user.user_metadata?.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-navy-900 truncate">
+                          {user.user_metadata?.full_name || 'User'}
+                        </p>
+                        <p className="text-xs text-navy-600 truncate">
+                          {user.email}
+                        </p>
+                        {userRole === 'lecturer' && (
+                          <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium bg-navy-200 text-navy-900 rounded">
+                            Lecturer
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {userRole === 'lecturer' && (
+                      <Link
+                        href="/lecturer/dashboard"
+                        className="flex items-center w-full px-4 py-2 text-navy-900 font-semibold hover:bg-navy-50 rounded-lg transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Dashboard
+                      </Link>
+                    )}
+                    <Link
+                      href="/courses"
+                      className="flex items-center w-full px-4 py-2 text-navy-700 hover:bg-navy-50 rounded-lg transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                      My Courses
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleSignOut();
+                        setIsMenuOpen(false);
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-red-600 font-semibold hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      className="text-navy-900 font-semibold text-center py-2 block"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Log In
+                    </Link>
+                    <Link
+                      href="/signup"
+                      className="bg-navy-900 text-white font-semibold text-center py-2 rounded-lg hover:bg-navy-800 transition-colors block"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Sign Up
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

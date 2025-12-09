@@ -1,0 +1,147 @@
+-- Seed data for courses table
+-- Run this after creating the courses table to add sample courses
+
+INSERT INTO public.courses (
+  title,
+  description,
+  course_type,
+  price,
+  original_price,
+  author,
+  creator,
+  intro_video_url,
+  rating,
+  review_count,
+  is_bestseller
+) VALUES
+(
+  'Complete Video Editing Masterclass',
+  'Learn professional video editing techniques from scratch. Master Adobe Premiere Pro, After Effects, and more.',
+  'Editing',
+  9.99,
+  59.99,
+  'John Smith',
+  '365 Careers',
+  NULL,
+  4.6,
+  12662,
+  true
+),
+(
+  'Advanced Photo Editing with Photoshop',
+  'Take your photo editing skills to the next level with advanced Photoshop techniques and workflows.',
+  'Editing',
+  12.99,
+  79.99,
+  'Sarah Johnson',
+  'Creative Academy',
+  NULL,
+  4.7,
+  8934,
+  true
+),
+(
+  'Content Creation for Social Media',
+  'Learn how to create engaging content for Instagram, TikTok, YouTube, and more. Build your personal brand.',
+  'Content Creation',
+  14.99,
+  89.99,
+  'Mike Chen',
+  'Social Media Pro',
+  NULL,
+  4.8,
+  15234,
+  true
+),
+(
+  'YouTube Content Strategy & Growth',
+  'Master the art of YouTube content creation, from planning to publishing. Grow your channel from zero to hero.',
+  'Content Creation',
+  19.99,
+  99.99,
+  'Emma Wilson',
+  'Content Creators Hub',
+  NULL,
+  4.5,
+  6789,
+  false
+),
+(
+  'Full-Stack Web Development Bootcamp',
+  'Learn to build modern web applications from scratch. Master HTML, CSS, JavaScript, React, Node.js, and more.',
+  'Website Creation',
+  24.99,
+  149.99,
+  'David Brown',
+  'Code Academy',
+  NULL,
+  4.9,
+  23456,
+  true
+),
+(
+  'WordPress Website Builder Course',
+  'Create beautiful, professional websites using WordPress. No coding required!',
+  'Website Creation',
+  15.99,
+  79.99,
+  'Lisa Anderson',
+  'Web Design Pro',
+  NULL,
+  4.4,
+  11234,
+  false
+),
+(
+  'React & Next.js Complete Guide',
+  'Build modern, fast, and scalable web applications with React and Next.js. Master server-side rendering and more.',
+  'Website Creation',
+  29.99,
+  199.99,
+  'Alex Martinez',
+  'Tech Education',
+  NULL,
+  4.8,
+  18923,
+  true
+),
+(
+  'Podcast Production & Editing',
+  'Learn to produce and edit professional podcasts. From recording to publishing, master the entire process.',
+  'Content Creation',
+  17.99,
+  89.99,
+  'Rachel Green',
+  'Audio Production Co',
+  NULL,
+  4.6,
+  5678,
+  false
+),
+(
+  'Cinematic Color Grading',
+  'Learn professional color grading techniques used in Hollywood films. Master DaVinci Resolve.',
+  'Editing',
+  22.99,
+  129.99,
+  'Tom Harris',
+  'Film School Online',
+  NULL,
+  4.7,
+  3456,
+  false
+),
+(
+  'E-commerce Website Development',
+  'Build a complete e-commerce website with shopping cart, payment integration, and admin dashboard.',
+  'Website Creation',
+  34.99,
+  199.99,
+  'Chris Taylor',
+  'E-Commerce Experts',
+  NULL,
+  4.9,
+  9876,
+  true
+);
+

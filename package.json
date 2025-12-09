@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "migrate": "node scripts/run-migrations.js",
+    "migrate:show": "cat supabase/migrations/run-all-migrations.sql",
+    "migrate:psql": "node scripts/run-migrations-psql.js"
   },
   "dependencies": {
     "next": "14.2.5",
