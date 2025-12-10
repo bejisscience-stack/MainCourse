@@ -43,6 +43,22 @@ export default function MyCoursesPage() {
           window.location.href = '/login';
           return;
         }
+
+        // Check if user is a lecturer
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', currentUser.id)
+          .single();
+
+        const resolvedRole = profile?.role || currentUser.user_metadata?.role || null;
+
+        // Redirect lecturers to their dashboard
+        if (resolvedRole === 'lecturer') {
+          window.location.href = '/lecturer/dashboard';
+          return;
+        }
+
         setUser(currentUser);
         await fetchCourses(currentUser.id);
       } catch (err: any) {

@@ -137,23 +137,32 @@ export default function Navigation() {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="#about" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
-              About
-            </Link>
-            <Link href="/courses" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
-              Courses
-            </Link>
-            {user && (
-              <Link href="/my-courses" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
-                My Courses
+            {userRole !== 'lecturer' && (
+              <>
+                <Link href="#about" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
+                  About
+                </Link>
+                <Link href="/courses" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
+                  Courses
+                </Link>
+                {user && (
+                  <Link href="/my-courses" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
+                    My Courses
+                  </Link>
+                )}
+                <Link href="#testimonials" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
+                  Testimonials
+                </Link>
+                <Link href="#contact" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
+                  Contact
+                </Link>
+              </>
+            )}
+            {userRole === 'lecturer' && (
+              <Link href="/lecturer/dashboard" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
+                Dashboard
               </Link>
             )}
-            <Link href="#testimonials" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
-              Testimonials
-            </Link>
-            <Link href="#contact" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
-              Contact
-            </Link>
           </div>
 
           {/* Auth Buttons */}
@@ -203,28 +212,43 @@ export default function Navigation() {
                         )}
                       </div>
                       <div className="py-1">
-                        {userRole === 'lecturer' && (
-                          <Link
-                            href="/lecturer/dashboard"
-                            onClick={() => setIsProfileMenuOpen(false)}
-                            className="flex items-center px-4 py-2 text-sm text-navy-700 hover:bg-navy-50 transition-colors"
-                          >
-                            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            Dashboard
-                          </Link>
+                        {userRole === 'lecturer' ? (
+                          <>
+                            <Link
+                              href="/lecturer/dashboard"
+                              onClick={() => setIsProfileMenuOpen(false)}
+                              className="flex items-center px-4 py-2 text-sm text-navy-700 hover:bg-navy-50 transition-colors"
+                            >
+                              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              Dashboard
+                            </Link>
+                            <Link
+                              href="/lecturer/chat"
+                              onClick={() => setIsProfileMenuOpen(false)}
+                              className="flex items-center px-4 py-2 text-sm text-navy-700 hover:bg-navy-50 transition-colors"
+                            >
+                              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                              </svg>
+                              Chat
+                            </Link>
+                          </>
+                        ) : (
+                          <>
+                            <Link
+                              href="/courses"
+                              onClick={() => setIsProfileMenuOpen(false)}
+                              className="flex items-center px-4 py-2 text-sm text-navy-700 hover:bg-navy-50 transition-colors"
+                            >
+                              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                              </svg>
+                              My Courses
+                            </Link>
+                          </>
                         )}
-                        <Link
-                          href="/courses"
-                          onClick={() => setIsProfileMenuOpen(false)}
-                          className="flex items-center px-4 py-2 text-sm text-navy-700 hover:bg-navy-50 transition-colors"
-                        >
-                          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                          </svg>
-                          My Courses
-                        </Link>
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
@@ -292,43 +316,56 @@ export default function Navigation() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-navy-100">
             <div className="flex flex-col space-y-4">
-              <Link
-                href="#about"
-                className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                About
-              </Link>
-              <Link
-                href="/courses"
-                className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Courses
-              </Link>
-              {user && (
+              {userRole !== 'lecturer' && (
+                <>
+                  <Link
+                    href="#about"
+                    className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    About
+                  </Link>
+                  <Link
+                    href="/courses"
+                    className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Courses
+                  </Link>
+                  {user && (
+                    <Link
+                      href="/my-courses"
+                      className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      My Courses
+                    </Link>
+                  )}
+                  <Link
+                    href="#testimonials"
+                    className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Testimonials
+                  </Link>
+                  <Link
+                    href="#contact"
+                    className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Contact
+                  </Link>
+                </>
+              )}
+              {userRole === 'lecturer' && (
                 <Link
-                  href="/my-courses"
+                  href="/lecturer/dashboard"
                   className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  My Courses
+                  Dashboard
                 </Link>
               )}
-              <Link
-                href="#testimonials"
-                className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Testimonials
-              </Link>
-              <Link
-                href="#contact"
-                className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Contact
-              </Link>
               <div className="pt-4 border-t border-navy-100">
                 {loading ? (
                   <div className="text-navy-600 text-sm text-center py-2">Loading...</div>
@@ -353,28 +390,41 @@ export default function Navigation() {
                         )}
                       </div>
                     </div>
-                    {userRole === 'lecturer' && (
+                    {userRole === 'lecturer' ? (
+                      <>
+                        <Link
+                          href="/lecturer/dashboard"
+                          className="flex items-center w-full px-4 py-2 text-navy-900 font-semibold hover:bg-navy-50 rounded-lg transition-colors"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Dashboard
+                        </Link>
+                        <Link
+                          href="/lecturer/chat"
+                          className="flex items-center w-full px-4 py-2 text-navy-700 hover:bg-navy-50 rounded-lg transition-colors"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          Chat
+                        </Link>
+                      </>
+                    ) : (
                       <Link
-                        href="/lecturer/dashboard"
-                        className="flex items-center w-full px-4 py-2 text-navy-900 font-semibold hover:bg-navy-50 rounded-lg transition-colors"
+                        href="/my-courses"
+                        className="flex items-center w-full px-4 py-2 text-navy-700 hover:bg-navy-50 rounded-lg transition-colors"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                         </svg>
-                        Dashboard
+                        My Courses
                       </Link>
                     )}
-                    <Link
-                      href="/courses"
-                      className="flex items-center w-full px-4 py-2 text-navy-700 hover:bg-navy-50 rounded-lg transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                      </svg>
-                      My Courses
-                    </Link>
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);

@@ -18,6 +18,8 @@ export default function CoursesPage() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'All' | 'Editing' | 'Content Creation' | 'Website Creation'>('All');
   const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [lecturerCourseIds, setLecturerCourseIds] = useState<Set<string>>(new Set());
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<string>>(new Set());
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -83,7 +85,15 @@ export default function CoursesPage() {
         throw fetchError;
       }
 
-      setCourses(data || []);
+      // Filter out courses created by lecturer if user is a lecturer
+      let filteredCourses = data || [];
+      if (userRole === 'lecturer' && lecturerCourseIds.size > 0) {
+        filteredCourses = filteredCourses.filter(
+          (course) => !lecturerCourseIds.has(course.id)
+        );
+      }
+
+      setCourses(filteredCourses);
     } catch (err: any) {
       // Don't set error if request was aborted
       if (abortController.signal.aborted) {
@@ -108,12 +118,39 @@ export default function CoursesPage() {
   }, [filter]);
 
   useEffect(() => {
-    // Check if user is logged in
+    // Check if user is logged in and their role
     const checkUser = async () => {
       try {
         const currentUser = await getCurrentUser();
         setUser(currentUser);
+        
         if (currentUser) {
+          // Check user role
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', currentUser.id)
+            .single();
+
+          const resolvedRole = profile?.role || currentUser.user_metadata?.role || null;
+          setUserRole(resolvedRole);
+
+          // If lecturer, redirect to dashboard
+          if (resolvedRole === 'lecturer') {
+            window.location.href = '/lecturer/dashboard';
+            return;
+          }
+
+          // Fetch lecturer's courses to filter them out
+          const { data: lecturerCourses } = await supabase
+            .from('courses')
+            .select('id')
+            .eq('lecturer_id', currentUser.id);
+
+          if (lecturerCourses) {
+            setLecturerCourseIds(new Set(lecturerCourses.map((c) => c.id)));
+          }
+
           await fetchEnrollments(currentUser.id);
         }
       } catch (err) {
@@ -156,6 +193,30 @@ export default function CoursesPage() {
     if (!user) {
       // Redirect to login page
       window.location.href = '/login?redirect=/courses';
+      return;
+    }
+
+    // Prevent lecturers from enrolling
+    if (userRole === 'lecturer') {
+      setError('Lecturers cannot enroll in courses. Please use your dashboard to manage your courses.');
+      return;
+    }
+
+    // Check if this is the lecturer's own course
+    if (lecturerCourseIds.has(courseId)) {
+      setError('You cannot enroll in your own course.');
+      return;
+    }
+
+    // Double-check: verify course doesn't belong to this user
+    const { data: course } = await supabase
+      .from('courses')
+      .select('lecturer_id')
+      .eq('id', courseId)
+      .single();
+
+    if (course && course.lecturer_id === user.id) {
+      setError('You cannot enroll in your own course.');
       return;
     }
 
@@ -268,16 +329,22 @@ export default function CoursesPage() {
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {courses.map((course) => (
-                      <CourseCard
-                        key={course.id}
-                        course={course}
-                        isEnrolled={enrolledCourseIds.has(course.id)}
-                        isEnrolling={enrollingCourseId === course.id}
-                        onEnroll={handleEnroll}
-                        showEnrollButton={true}
-                      />
-                    ))}
+                    {courses.map((course) => {
+                      // Don't show enroll button if user is lecturer or if course belongs to lecturer
+                      const isOwnCourse = lecturerCourseIds.has(course.id);
+                      const shouldShowEnroll = !isOwnCourse && userRole !== 'lecturer';
+                      
+                      return (
+                        <CourseCard
+                          key={course.id}
+                          course={course}
+                          isEnrolled={enrolledCourseIds.has(course.id)}
+                          isEnrolling={enrollingCourseId === course.id}
+                          onEnroll={shouldShowEnroll ? handleEnroll : undefined}
+                          showEnrollButton={shouldShowEnroll}
+                        />
+                      );
+                    })}
                   </div>
                 </>
               )}
