@@ -16,6 +16,7 @@ interface LayoutContainerProps {
   currentUserId: string;
   initialMembers?: Member[];
   isLecturer?: boolean;
+  onAddCourse?: () => void;
   onSendMessage?: (channelId: string, content: string) => void;
   onReaction?: (messageId: string, emoji: string) => void;
   onChannelCreate?: (channel: Omit<Channel, 'id'>) => Promise<void>;
@@ -28,6 +29,7 @@ export default function LayoutContainer({
   currentUserId,
   initialMembers = [],
   isLecturer = false,
+  onAddCourse,
   onSendMessage,
   onReaction,
   onChannelCreate,
@@ -86,6 +88,8 @@ export default function LayoutContainer({
         servers={servers}
         activeServerId={activeServerId}
         onServerSelect={handleServerSelect}
+        onAddCourse={onAddCourse}
+        isLecturer={isLecturer}
       />
 
       {/* Channel sidebar */}

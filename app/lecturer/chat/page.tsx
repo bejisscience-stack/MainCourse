@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LayoutContainer from '@/components/chat/LayoutContainer';
 import ChatNavigation from '@/components/chat/ChatNavigation';
+import CourseCreationModal from '@/components/CourseCreationModal';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useLecturerCourses } from '@/hooks/useLecturerCourses';
@@ -16,10 +17,15 @@ import type { User } from '@supabase/supabase-js';
 export default function LecturerChatPage() {
   const router = useRouter();
   const { user, role: userRole, isLoading: userLoading } = useUser();
-  const { courses, isLoading: coursesLoading } = useLecturerCourses(user?.id || null);
+  const { courses, isLoading: coursesLoading, mutate: mutateCourses } = useLecturerCourses(user?.id || null);
   const [servers, setServers] = useState<Server[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showCourseModal, setShowCourseModal] = useState(false);
+
+  const handleAddCourse = useCallback(() => {
+    setShowCourseModal(true);
+  }, []);
 
   // Redirect if not lecturer or not logged in
   useEffect(() => {
@@ -32,13 +38,9 @@ export default function LecturerChatPage() {
     }
   }, [user, userRole, userLoading, router]);
 
-  useEffect(() => {
-    if (!coursesLoading && courses.length >= 0) {
-      loadChannelsAndMembers();
-    }
-  }, [courses, coursesLoading]);
-
-  const loadChannelsAndMembers = async () => {
+  const loadChannelsAndMembers = useCallback(async () => {
+    if (!user) return;
+    
     try {
       setError(null);
 
@@ -79,16 +81,54 @@ export default function LecturerChatPage() {
         }
       }
 
+      // Ensure required channels exist in database for each course
+      for (const course of courses) {
+        const courseChannels = (channelsData || []).filter((ch) => ch.course_id === course.id);
+        const hasLectures = courseChannels.some((ch) => ch.name.toLowerCase() === 'lectures' && ch.type === 'lectures');
+        const hasProjects = courseChannels.some((ch) => ch.name.toLowerCase() === 'projects');
+        
+        // Create required channels in database if they don't exist
+        const channelsToCreate: any[] = [];
+        if (!hasLectures) {
+          channelsToCreate.push({
+            course_id: course.id,
+            name: 'lectures',
+            type: 'lectures',
+            description: `Video lectures for ${course.title}`,
+            category_name: 'COURSE CHANNELS',
+            display_order: 0,
+          });
+        }
+        if (!hasProjects) {
+          channelsToCreate.push({
+            course_id: course.id,
+            name: 'projects',
+            type: 'text',
+            description: `Project submissions and discussions for ${course.title}`,
+            category_name: 'COURSE CHANNELS',
+            display_order: 1,
+          });
+        }
+        
+        if (channelsToCreate.length > 0) {
+          try {
+            const { data: newChannels, error: createError } = await supabase
+              .from('channels')
+              .insert(channelsToCreate)
+              .select();
+            
+            if (!createError && newChannels) {
+              channelsData.push(...newChannels);
+            }
+          } catch (err) {
+            console.warn('Error creating required channels:', err);
+          }
+        }
+      }
+
       // Transform courses into servers/channels structure
       const serversData: Server[] = (courses || []).map((course) => {
         const courseChannels = (channelsData || []).filter((ch) => ch.course_id === course.id);
-        
-        // Ensure Lectures channel exists and is first
-        const hasLectures = courseChannels.some((ch) => ch.name === 'lectures' && ch.type === 'lectures');
-        if (!hasLectures && courseChannels.length === 0) {
-          // Create Lectures channel if none exist
-          // This will be handled by the channel creation function
-        }
 
         // Group channels by category
         const channelsByCategory: { [key: string]: Channel[] } = {};
@@ -109,60 +149,19 @@ export default function LecturerChatPage() {
           });
         });
 
-        // Sort channels: lectures first
+        // Sort channels: lectures first, then projects, then by displayOrder
         Object.keys(channelsByCategory).forEach((cat) => {
           channelsByCategory[cat].sort((a, b) => {
+            // Lectures always first
             if (a.type === 'lectures' && b.type !== 'lectures') return -1;
             if (b.type === 'lectures' && a.type !== 'lectures') return 1;
+            // Projects second
+            if (a.name.toLowerCase() === 'projects' && b.name.toLowerCase() !== 'projects') return -1;
+            if (b.name.toLowerCase() === 'projects' && a.name.toLowerCase() !== 'projects') return 1;
+            // Then by displayOrder
             return (a.displayOrder || 0) - (b.displayOrder || 0);
           });
         });
-
-        // Create default channels if none exist
-        if (courseChannels.length === 0) {
-          channelsByCategory['COURSE CHANNELS'] = [
-            {
-              id: `channel-${course.id}-lectures`,
-              name: 'lectures',
-              type: 'lectures' as const,
-              description: `Video lectures for ${course.title}`,
-              courseId: course.id,
-              categoryName: 'COURSE CHANNELS',
-              displayOrder: 0,
-              messages: [],
-            },
-            {
-              id: `channel-${course.id}-general`,
-              name: 'general',
-              type: 'text' as const,
-              description: `General discussion for ${course.title}`,
-              courseId: course.id,
-              categoryName: 'COURSE CHANNELS',
-              displayOrder: 1,
-              messages: [],
-            },
-            {
-              id: `channel-${course.id}-announcements`,
-              name: 'announcements',
-              type: 'text' as const,
-              description: `Announcements for ${course.title}`,
-              courseId: course.id,
-              categoryName: 'COURSE CHANNELS',
-              displayOrder: 2,
-              messages: [],
-            },
-            {
-              id: `channel-${course.id}-qna`,
-              name: 'q-and-a',
-              type: 'text' as const,
-              description: `Questions and answers for ${course.title}`,
-              courseId: course.id,
-              categoryName: 'COURSE CHANNELS',
-              displayOrder: 3,
-              messages: [],
-            },
-          ];
-        }
 
         return {
           id: course.id,
@@ -216,7 +215,19 @@ export default function LecturerChatPage() {
       console.error('Error loading chat data:', err);
       setError(err.message || 'Failed to load chat. Please try again.');
     }
-  };
+  }, [user, courses]);
+
+  useEffect(() => {
+    if (!coursesLoading && user) {
+      loadChannelsAndMembers();
+    }
+  }, [coursesLoading, user, loadChannelsAndMembers]);
+
+  const handleCourseCreated = useCallback(() => {
+    mutateCourses();
+    loadChannelsAndMembers();
+    setShowCourseModal(false);
+  }, [mutateCourses, loadChannelsAndMembers]);
 
   const handleSendMessage = async (channelId: string, content: string) => {
     if (!user) return;
@@ -374,6 +385,12 @@ export default function LecturerChatPage() {
   return (
     <div className="flex flex-col h-screen">
       <ChatNavigation />
+      <CourseCreationModal
+        isOpen={showCourseModal}
+        onClose={() => setShowCourseModal(false)}
+        onSuccess={handleCourseCreated}
+        user={user}
+      />
       <div className="flex-1 overflow-hidden">
         {servers.length === 0 ? (
           <div className="flex-1 flex items-center justify-center bg-gray-900">
@@ -407,6 +424,7 @@ export default function LecturerChatPage() {
             currentUserId={user.id}
             initialMembers={members}
             isLecturer={true}
+            onAddCourse={handleAddCourse}
             onSendMessage={handleSendMessage}
             onReaction={handleReaction}
             onChannelCreate={handleChannelCreate}

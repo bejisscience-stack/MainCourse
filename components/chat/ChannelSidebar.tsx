@@ -60,12 +60,15 @@ export default function ChannelSidebar({
     );
   }
 
-  // Sort channels: lectures first, then by displayOrder
+  // Sort channels: lectures first, then projects, then by displayOrder
   const sortChannels = (channels: Channel[]) => {
     return [...channels].sort((a, b) => {
       // Lectures always first
       if (a.type === 'lectures' && b.type !== 'lectures') return -1;
       if (b.type === 'lectures' && a.type !== 'lectures') return 1;
+      // Projects second
+      if (a.name.toLowerCase() === 'projects' && b.name.toLowerCase() !== 'projects') return -1;
+      if (b.name.toLowerCase() === 'projects' && a.name.toLowerCase() !== 'projects') return 1;
       // Then by displayOrder
       return (a.displayOrder || 0) - (b.displayOrder || 0);
     });
@@ -104,11 +107,11 @@ export default function ChannelSidebar({
           return (
             <div key={category.id} className="mb-4">
               {/* Category header */}
-              <button
-                onClick={() => toggleCategory(category.id)}
-                className="w-full flex items-center justify-between px-2 py-1 text-gray-400 hover:text-gray-300 text-xs font-semibold uppercase tracking-wide group"
-              >
-                <span className="flex items-center gap-1">
+              <div className="w-full flex items-center justify-between px-2 py-1 text-gray-400 hover:text-gray-300 text-xs font-semibold uppercase tracking-wide group">
+                <button
+                  onClick={() => toggleCategory(category.id)}
+                  className="flex-1 flex items-center gap-1"
+                >
                   <svg
                     className={`w-3 h-3 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
                     fill="currentColor"
@@ -121,8 +124,28 @@ export default function ChannelSidebar({
                     />
                   </svg>
                   {category.name}
-                </span>
-              </button>
+                </button>
+                {isLecturer && onChannelCreate && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Open create channel modal
+                      setShowChannelManagement(true);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-white p-0.5 rounded hover:bg-gray-700"
+                    title="Create Channel"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
 
               {/* Channels in category */}
               {!isCollapsed &&
@@ -140,7 +163,13 @@ export default function ChannelSidebar({
                       }`}
                     >
                       <span className="text-lg">
-                        {channel.type === 'text' ? '#' : channel.type === 'voice' ? '🔊' : '📹'}
+                        {channel.type === 'lectures' 
+                          ? '📹' 
+                          : channel.name.toLowerCase() === 'projects' 
+                          ? '📁' 
+                          : channel.type === 'voice' 
+                          ? '🔊' 
+                          : '#'}
                       </span>
                       <span className="flex-1 text-left truncate">{channel.name}</span>
                     </button>

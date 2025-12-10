@@ -7,12 +7,16 @@ interface ServerSidebarProps {
   servers: Server[];
   activeServerId: string | null;
   onServerSelect: (serverId: string) => void;
+  onAddCourse?: () => void;
+  isLecturer?: boolean;
 }
 
 export default function ServerSidebar({
   servers,
   activeServerId,
   onServerSelect,
+  onAddCourse,
+  isLecturer = false,
 }: ServerSidebarProps) {
   const [hoveredServerId, setHoveredServerId] = useState<string | null>(null);
 
@@ -66,13 +70,16 @@ export default function ServerSidebar({
         );
       })}
 
-      {/* Add Server button */}
-      <button
-        className="w-12 h-12 rounded-full bg-gray-700 hover:bg-green-600 transition-all duration-200 flex items-center justify-center text-green-500 hover:text-white text-2xl font-light"
-        title="Add Server"
-      >
-        +
-      </button>
+      {/* Add Course button (lecturer only) */}
+      {isLecturer && onAddCourse && (
+        <button
+          className="w-12 h-12 rounded-full bg-gray-700 hover:bg-green-600 transition-all duration-200 flex items-center justify-center text-green-500 hover:text-white text-2xl font-light"
+          title="Create Course"
+          onClick={onAddCourse}
+        >
+          +
+        </button>
+      )}
     </div>
   );
 }

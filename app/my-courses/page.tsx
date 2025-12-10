@@ -193,7 +193,7 @@ export default function MyCoursesPage() {
                     course={course}
                     action={
                       <a
-                        href={`/courses/${course.id}`}
+                        href={`/courses/${course.id}/chat`}
                         className="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-semibold text-white bg-navy-900 rounded-lg hover:bg-navy-800 transition-colors"
                       >
                         View course

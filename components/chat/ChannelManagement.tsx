@@ -67,7 +67,24 @@ export default function ChannelManagement({
     setShowCreateModal(true);
   };
 
+  // Check if a channel is required (cannot be deleted)
+  const isRequiredChannel = (channel: Channel): boolean => {
+    return (
+      (channel.type === 'lectures' && channel.name.toLowerCase() === 'lectures') ||
+      (channel.name.toLowerCase() === 'projects')
+    );
+  };
+
   const handleDelete = async (channelId: string) => {
+    const channel = channels.find((c) => c.id === channelId);
+    if (!channel) return;
+
+    // Prevent deletion of required channels
+    if (isRequiredChannel(channel)) {
+      setError('Cannot delete required channels (Lectures and Projects)');
+      return;
+    }
+
     if (!confirm('Are you sure you want to delete this channel? This action cannot be undone.')) {
       return;
     }
@@ -118,7 +135,13 @@ export default function ChannelManagement({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-lg">
-                  {channel.type === 'text' ? '#' : channel.type === 'voice' ? '🔊' : '📹'}
+                  {channel.type === 'lectures' 
+                    ? '📹' 
+                    : channel.name.toLowerCase() === 'projects' 
+                    ? '📁' 
+                    : channel.type === 'voice' 
+                    ? '🔊' 
+                    : '#'}
                 </span>
                 <span className="text-white font-medium">{channel.name}</span>
                 <span className="text-gray-400 text-xs">({channel.type})</span>
@@ -127,35 +150,44 @@ export default function ChannelManagement({
                 <p className="text-gray-400 text-xs mt-1 truncate">{channel.description}</p>
               )}
             </div>
-            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={() => handleEdit(channel)}
-                className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
-                title="Edit"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
-              </button>
-              <button
-                onClick={() => handleDelete(channel.id)}
-                className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-600 rounded transition-colors"
-                title="Delete"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </button>
+            <div className="flex items-center gap-2">
+              {isRequiredChannel(channel) && (
+                <span className="text-xs text-indigo-400 font-medium">Required</span>
+              )}
+              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                {!isRequiredChannel(channel) && (
+                  <button
+                    onClick={() => handleEdit(channel)}
+                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+                    title="Edit"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </button>
+                )}
+                {!isRequiredChannel(channel) && (
+                  <button
+                    onClick={() => handleDelete(channel.id)}
+                    className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-600 rounded transition-colors"
+                    title="Delete"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}
