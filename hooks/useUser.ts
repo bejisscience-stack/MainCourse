@@ -52,7 +52,11 @@ async function fetchUserData(): Promise<UserData> {
       .from('profiles')
       .update({ role: 'lecturer' })
       .eq('id', user.id)
-      .catch(err => console.warn('Role update failed:', err));
+      .then(({ error }) => {
+        if (error) {
+          console.warn('Role update failed:', error);
+        }
+      });
   }
 
   return { user, profile, role };

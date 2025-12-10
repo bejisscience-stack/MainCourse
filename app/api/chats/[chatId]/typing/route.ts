@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
 
+export const dynamic = 'force-dynamic';
+
 // POST /api/chats/:chatId/typing
 export async function POST(
   request: NextRequest,

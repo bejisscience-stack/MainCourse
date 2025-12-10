@@ -60,10 +60,12 @@ export function useRealtimeTyping({
           filter: `channel_id=eq.${channelId}`,
         },
         async (payload) => {
-          const userId = payload.new?.user_id || payload.old?.user_id;
+          const newRecord = payload.new as { user_id?: string; expires_at?: string } | null;
+          const oldRecord = payload.old as { user_id?: string } | null;
+          const userId = newRecord?.user_id || oldRecord?.user_id;
           
           // Don't show current user's typing indicator
-          if (userId === currentUserId) return;
+          if (!userId || userId === currentUserId) return;
 
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             // Fetch user profile
@@ -74,7 +76,7 @@ export function useRealtimeTyping({
               .single();
 
             const username = profile?.full_name || profile?.email?.split('@')[0] || 'User';
-            const expiresAt = new Date(payload.new.expires_at).getTime();
+            const expiresAt = newRecord?.expires_at ? new Date(newRecord.expires_at).getTime() : Date.now();
 
             setTypingUsers((prev) => {
               const filtered = prev.filter((u) => u.userId !== userId);

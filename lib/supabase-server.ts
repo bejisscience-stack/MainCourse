@@ -7,11 +7,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
+// TypeScript type narrowing - these are guaranteed to be strings after the check above
+const SUPABASE_URL: string = supabaseUrl;
+const SUPABASE_ANON_KEY: string = supabaseAnonKey;
+
 /**
  * Create a Supabase client for server-side use with a user's access token
  */
 export function createServerSupabaseClient(accessToken: string) {
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -31,11 +35,11 @@ export function createServerSupabaseClient(accessToken: string) {
 export async function verifyTokenAndGetUser(accessToken: string) {
   try {
     // Call Supabase Auth API directly to verify the token
-    const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'apikey': supabaseAnonKey,
+        'apikey': SUPABASE_ANON_KEY,
       },
     });
 

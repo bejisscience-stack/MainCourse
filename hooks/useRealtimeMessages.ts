@@ -35,13 +35,20 @@ export function useRealtimeMessages({
         },
         async (payload) => {
           // Use payload data directly for instant updates, then fetch profile in background
-          const messageData = payload.new;
+          const messageData = payload.new as {
+            id: string;
+            content: string;
+            reply_to_id?: string | null;
+            edited_at?: string | null;
+            created_at: string;
+            user_id: string;
+          };
           
           // Create message immediately with basic data
           const message: Message = {
             id: messageData.id,
             content: messageData.content,
-            replyTo: messageData.reply_to_id,
+            replyTo: messageData.reply_to_id || undefined,
             edited: !!messageData.edited_at,
             timestamp: new Date(messageData.created_at).getTime(),
             user: {
@@ -128,12 +135,19 @@ export function useRealtimeMessages({
         },
         async (payload) => {
           // Handle message updates (edits) - use payload directly
-          const messageData = payload.new;
+          const messageData = payload.new as {
+            id: string;
+            content: string;
+            reply_to_id?: string | null;
+            edited_at?: string | null;
+            created_at: string;
+            user_id: string;
+          };
           
           const message: Message = {
             id: messageData.id,
             content: messageData.content,
-            replyTo: messageData.reply_to_id,
+            replyTo: messageData.reply_to_id || undefined,
             edited: !!messageData.edited_at,
             timestamp: new Date(messageData.created_at).getTime(),
             user: {
