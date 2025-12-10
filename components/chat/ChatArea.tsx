@@ -432,8 +432,13 @@ export default function ChatArea({
                 index === 0 || 
                 (messages[index - 1] && 'user' in messages[index - 1] && messages[index - 1].user.id !== message.user.id);
               
-              const messageWithRetry = 'failed' in message && message.failed
-                ? { ...message, onRetry: () => handleRetry(message.tempId || '') }
+              const isFailed = 'failed' in message && message.failed;
+              const tempId = 'tempId' in message ? message.tempId : undefined;
+              const messageWithRetry = isFailed
+                ? { 
+                    ...message, 
+                    onRetry: () => handleRetry(tempId || '') 
+                  }
                 : message;
 
               return (

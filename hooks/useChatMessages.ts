@@ -16,6 +16,7 @@ interface PendingMessage extends Message {
 interface FailedMessage extends Message {
   failed: true;
   error?: string;
+  tempId?: string;
 }
 
 type ChatMessage = Message | PendingMessage | FailedMessage;
