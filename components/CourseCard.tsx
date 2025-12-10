@@ -5,14 +5,14 @@ import { useState, memo, useCallback, useMemo, useEffect } from 'react';
 export interface Course {
   id: string;
   title: string;
-  description?: string;
+  description?: string | null;
   course_type: 'Editing' | 'Content Creation' | 'Website Creation';
   price: number;
-  original_price?: number;
+  original_price?: number | null;
   author: string;
   creator: string;
-  intro_video_url?: string;
-  thumbnail_url?: string;
+  intro_video_url?: string | null;
+  thumbnail_url?: string | null;
   rating: number;
   review_count: number;
   is_bestseller: boolean;
