@@ -41,6 +41,10 @@ export async function signIn({ email, password }: SignInData) {
     throw error;
   }
 
+  if (!data || !data.user) {
+    throw new Error('Sign in failed. No user data returned.');
+  }
+
   return data;
 }
 

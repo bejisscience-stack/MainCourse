@@ -1,36 +1,83 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Navigation from '@/components/Navigation';
 import CourseCard, { type Course } from '@/components/CourseCard';
 import BackgroundShapes from '@/components/BackgroundShapes';
 import { supabase } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/auth';
+import type { User } from '@supabase/supabase-js';
+
+const REQUEST_TIMEOUT = 10000; // 10 seconds
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'All' | 'Editing' | 'Content Creation' | 'Website Creation'>('All');
+  const [user, setUser] = useState<User | null>(null);
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<string>>(new Set());
+  const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    fetchCourses();
-  }, [filter]);
+  const fetchCourses = useCallback(async (retryCount = 0) => {
+    // Cancel previous request if it exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
 
-  const fetchCourses = async () => {
+    // Create new AbortController for this request
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     try {
       setLoading(true);
       setError(null);
 
+      // Create a timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Request timeout: The request took too long to complete'));
+        }, REQUEST_TIMEOUT);
+        
+        // Clear timeout if request is aborted
+        abortController.signal.addEventListener('abort', () => {
+          clearTimeout(timeoutId);
+        });
+      });
+
+      // Build query
       let query = supabase
         .from('courses')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100); // Limit results for better performance
 
       if (filter !== 'All') {
         query = query.eq('course_type', filter);
       }
 
-      const { data, error: fetchError } = await query;
+      // Execute query with timeout
+      const queryPromise = query;
+      
+      const result = await Promise.race([
+        queryPromise.then(result => {
+          if (abortController.signal.aborted) {
+            throw new Error('Request cancelled');
+          }
+          return result;
+        }),
+        timeoutPromise,
+      ]);
+
+      const { data, error: fetchError } = result as { data: Course[] | null; error: any };
+
+      // Check if request was aborted
+      if (abortController.signal.aborted) {
+        return;
+      }
 
       if (fetchError) {
         throw fetchError;
@@ -38,10 +85,105 @@ export default function CoursesPage() {
 
       setCourses(data || []);
     } catch (err: any) {
-      setError(err.message || 'Failed to load courses');
+      // Don't set error if request was aborted
+      if (abortController.signal.aborted) {
+        return;
+      }
+
+      // Retry logic for network errors or timeouts
+      if (retryCount < MAX_RETRIES && (err.message?.includes('timeout') || err.message?.includes('network') || err.code === 'PGRST116' || err.message?.includes('fetch'))) {
+        console.warn(`Retry attempt ${retryCount + 1}/${MAX_RETRIES} after error:`, err.message);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
+        return fetchCourses(retryCount + 1);
+      }
+
+      setError(err.message || 'Failed to load courses. Please try again.');
       console.error('Error fetching courses:', err);
     } finally {
-      setLoading(false);
+      // Only update loading state if request wasn't aborted
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
+    }
+  }, [filter]);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const checkUser = async () => {
+      try {
+        const currentUser = await getCurrentUser();
+        setUser(currentUser);
+        if (currentUser) {
+          await fetchEnrollments(currentUser.id);
+        }
+      } catch (err) {
+        console.error('Error checking user:', err);
+      }
+    };
+    
+    checkUser();
+    fetchCourses();
+    
+    // Cleanup: cancel ongoing request when component unmounts or filter changes
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [fetchCourses]);
+
+  const fetchEnrollments = async (userId: string) => {
+    try {
+      const { data: enrollments, error: enrollError } = await supabase
+        .from('enrollments')
+        .select('course_id')
+        .eq('user_id', userId);
+
+      if (enrollError) {
+        console.error('Error fetching enrollments:', enrollError);
+        return;
+      }
+
+      const enrolledIds = new Set(enrollments?.map((e) => e.course_id) || []);
+      setEnrolledCourseIds(enrolledIds);
+    } catch (err) {
+      console.error('Error fetching enrollments:', err);
+    }
+  };
+
+  const handleEnroll = async (courseId: string) => {
+    // Check if user is logged in
+    if (!user) {
+      // Redirect to login page
+      window.location.href = '/login?redirect=/courses';
+      return;
+    }
+
+    setError(null);
+    setEnrollingCourseId(courseId);
+
+    try {
+      const { error: insertError } = await supabase
+        .from('enrollments')
+        .insert([{ user_id: user.id, course_id: courseId }]);
+
+      if (insertError) {
+        // Ignore duplicate enroll attempts
+        if (insertError.code === '23505') {
+          // Already enrolled, refresh enrollments
+          await fetchEnrollments(user.id);
+          return;
+        }
+        throw insertError;
+      }
+
+      // Update enrolled courses
+      setEnrolledCourseIds((prev) => new Set([...prev, courseId]));
+    } catch (err: any) {
+      setError(err.message || 'Failed to enroll in course');
+      console.error('Error enrolling in course:', err);
+    } finally {
+      setEnrollingCourseId(null);
     }
   };
 
@@ -96,9 +238,15 @@ export default function CoursesPage() {
           {/* Error State */}
           {error && !loading && (
             <div className="text-center py-12">
-              <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg inline-block">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg inline-block max-w-md">
                 <p className="font-semibold">Error loading courses</p>
-                <p className="text-sm mt-1">{error}</p>
+                <p className="text-sm mt-1 mb-4">{error}</p>
+                <button
+                  onClick={() => fetchCourses()}
+                  className="bg-navy-900 text-white px-4 py-2 rounded-lg font-semibold hover:bg-navy-800 transition-colors"
+                >
+                  Try Again
+                </button>
               </div>
             </div>
           )}
@@ -113,11 +261,25 @@ export default function CoursesPage() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {courses.map((course) => (
-                    <CourseCard key={course.id} course={course} />
-                  ))}
-                </div>
+                <>
+                  {error && (
+                    <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm text-center">
+                      {error}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {courses.map((course) => (
+                      <CourseCard
+                        key={course.id}
+                        course={course}
+                        isEnrolled={enrolledCourseIds.has(course.id)}
+                        isEnrolling={enrollingCourseId === course.id}
+                        onEnroll={handleEnroll}
+                        showEnrollButton={true}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
             </>
           )}

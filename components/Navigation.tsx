@@ -13,10 +13,19 @@ export default function Navigation() {
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signOutLoading, setSignOutLoading] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
+    let isMounted = true;
     checkUser();
+    // Fallback: ensure loading clears even if auth call hangs
+    const loadingTimeout = setTimeout(() => {
+      if (isMounted) {
+        setLoading(false);
+      }
+    }, 3000);
     
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: string, session: any) => {
@@ -38,10 +47,13 @@ export default function Navigation() {
       } else {
         setUserRole(null);
       }
+      setLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
+      isMounted = false;
+      clearTimeout(loadingTimeout);
     };
   }, []);
 
@@ -95,13 +107,20 @@ export default function Navigation() {
 
   const handleSignOut = async () => {
     try {
+      setSignOutError(null);
+      setSignOutLoading(true);
       await signOut();
       setUser(null);
+      setUserRole(null);
+      setIsProfileMenuOpen(false);
+      setIsMenuOpen(false);
       router.push('/');
       router.refresh();
     } catch (error) {
       console.error('Error signing out:', error);
+      setSignOutError('Failed to sign out. Please try again.');
     }
+    setSignOutLoading(false);
   };
 
   return (
@@ -124,6 +143,11 @@ export default function Navigation() {
             <Link href="/courses" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
               Courses
             </Link>
+            {user && (
+              <Link href="/my-courses" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
+                My Courses
+              </Link>
+            )}
             <Link href="#testimonials" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
               Testimonials
             </Link>
@@ -206,13 +230,17 @@ export default function Navigation() {
                             setIsProfileMenuOpen(false);
                             handleSignOut();
                           }}
-                          className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          disabled={signOutLoading}
+                          className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                           </svg>
-                          Sign Out
+                          {signOutLoading ? 'Signing out...' : 'Sign Out'}
                         </button>
+                        {signOutError && (
+                          <div className="px-4 py-2 text-xs text-red-600">{signOutError}</div>
+                        )}
                       </div>
                     </div>
                   </>
@@ -278,6 +306,15 @@ export default function Navigation() {
               >
                 Courses
               </Link>
+              {user && (
+                <Link
+                  href="/my-courses"
+                  className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  My Courses
+                </Link>
+              )}
               <Link
                 href="#testimonials"
                 className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
@@ -340,16 +377,20 @@ export default function Navigation() {
                     </Link>
                     <button
                       onClick={() => {
-                        handleSignOut();
                         setIsMenuOpen(false);
+                        handleSignOut();
                       }}
-                      className="flex items-center w-full px-4 py-2 text-red-600 font-semibold hover:bg-red-50 rounded-lg transition-colors"
+                      disabled={signOutLoading}
+                      className="flex items-center w-full px-4 py-2 text-red-600 font-semibold hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                       </svg>
-                      Sign Out
+                      {signOutLoading ? 'Signing out...' : 'Sign Out'}
                     </button>
+                    {signOutError && (
+                      <div className="px-4 text-xs text-red-600">{signOutError}</div>
+                    )}
                   </div>
                 ) : (
                   <>

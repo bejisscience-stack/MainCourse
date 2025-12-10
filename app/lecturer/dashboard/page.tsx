@@ -617,7 +617,7 @@ export default function LecturerDashboard() {
                         required
                         value={formData.title}
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                        className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
                       />
                     </div>
 
@@ -629,7 +629,7 @@ export default function LecturerDashboard() {
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         rows={4}
-                        className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                        className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
                       />
                     </div>
 
@@ -641,7 +641,7 @@ export default function LecturerDashboard() {
                         required
                         value={formData.course_type}
                         onChange={(e) => setFormData({ ...formData, course_type: e.target.value as any })}
-                        className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                        className="w-full px-4 py-2 bg-white border border-navy-200 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
                       >
                         <option value="Editing">Editing</option>
                         <option value="Content Creation">Content Creation</option>
@@ -660,7 +660,7 @@ export default function LecturerDashboard() {
                           required
                           value={formData.price}
                           onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                          className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
                         />
                       </div>
                       <div>
@@ -672,7 +672,7 @@ export default function LecturerDashboard() {
                           step="0.01"
                           value={formData.original_price}
                           onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
-                          className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
                         />
                       </div>
                     </div>
@@ -687,7 +687,7 @@ export default function LecturerDashboard() {
                           required
                           value={formData.author}
                           onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                          className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
                         />
                       </div>
                       <div>
@@ -699,7 +699,7 @@ export default function LecturerDashboard() {
                           required
                           value={formData.creator}
                           onChange={(e) => setFormData({ ...formData, creator: e.target.value })}
-                          className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
                         />
                       </div>
                     </div>
@@ -775,7 +775,7 @@ export default function LecturerDashboard() {
                           value={formData.intro_video_url}
                           onChange={(e) => setFormData({ ...formData, intro_video_url: e.target.value })}
                           placeholder="https://..."
-                          className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
                         />
                       </div>
                     </div>
@@ -843,7 +843,7 @@ export default function LecturerDashboard() {
                           value={formData.thumbnail_url}
                           onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
                           placeholder="https://..."
-                          className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
                         />
                       </div>
                     </div>
