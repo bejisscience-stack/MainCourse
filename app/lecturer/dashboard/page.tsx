@@ -198,16 +198,9 @@ export default function LecturerDashboard() {
     startProgress();
 
     try {
-      // Check if bucket exists first
-      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
-      if (bucketError) {
-        console.error('Error listing buckets:', bucketError);
-      } else {
-        const bucketExists = buckets?.some(b => b.id === bucket);
-        if (!bucketExists) {
-          throw new Error(`Storage bucket '${bucket}' does not exist. Please run the storage migration first.`);
-        }
-      }
+      // Note: We don't check bucket existence here because listBuckets() may not
+      // return all buckets for regular users. Instead, we attempt the upload and
+      // let Supabase return a clear error if the bucket doesn't exist.
 
       // Add timeout to upload (5 minutes for large files)
       const uploadPromise = supabase.storage

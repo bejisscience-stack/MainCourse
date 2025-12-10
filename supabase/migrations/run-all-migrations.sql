@@ -201,3 +201,381 @@ CREATE POLICY "Lecturers can delete their own courses"
     lecturer_id = auth.uid()
   );
 
+-- ============================================
+-- Migration 009: Run Lecturer Updates
+-- ============================================
+-- Update the handle_new_user function to include role
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, role)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
+    COALESCE(NEW.raw_user_meta_data->>'role', 'student')
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Update existing profiles to have 'student' role if they don't have one
+UPDATE public.profiles 
+SET role = 'student' 
+WHERE role IS NULL;
+
+-- ============================================
+-- Migration 010: Create Storage Buckets
+-- ============================================
+-- CRITICAL: This migration creates the storage buckets needed for video uploads
+-- Create course-videos bucket
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'course-videos',
+  'course-videos',
+  true,
+  52428800, -- 50MB
+  ARRAY['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska']
+)
+ON CONFLICT (id) DO UPDATE SET
+  allowed_mime_types = ARRAY['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
+
+-- Create course-thumbnails bucket
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'course-thumbnails',
+  'course-thumbnails',
+  true,
+  5242880, -- 5MB
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Lecturers can upload videos" ON storage.objects;
+DROP POLICY IF EXISTS "Lecturers can update own videos" ON storage.objects;
+DROP POLICY IF EXISTS "Lecturers can delete own videos" ON storage.objects;
+DROP POLICY IF EXISTS "Lecturers can upload thumbnails" ON storage.objects;
+DROP POLICY IF EXISTS "Lecturers can update own thumbnails" ON storage.objects;
+DROP POLICY IF EXISTS "Lecturers can delete own thumbnails" ON storage.objects;
+DROP POLICY IF EXISTS "Public can view videos" ON storage.objects;
+DROP POLICY IF EXISTS "Public can view thumbnails" ON storage.objects;
+
+-- Policy: Lecturers can upload videos to their own folder
+CREATE POLICY "Lecturers can upload videos"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'course-videos' AND
+  auth.role() = 'authenticated' AND
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'lecturer'
+  ) AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- Policy: Lecturers can update their own videos
+CREATE POLICY "Lecturers can update own videos"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'course-videos' AND
+  auth.role() = 'authenticated' AND
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'lecturer'
+  ) AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- Policy: Lecturers can delete their own videos
+CREATE POLICY "Lecturers can delete own videos"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'course-videos' AND
+  auth.role() = 'authenticated' AND
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'lecturer'
+  ) AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- Policy: Lecturers can upload thumbnails to their own folder
+CREATE POLICY "Lecturers can upload thumbnails"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'course-thumbnails' AND
+  auth.role() = 'authenticated' AND
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'lecturer'
+  ) AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- Policy: Lecturers can update their own thumbnails
+CREATE POLICY "Lecturers can update own thumbnails"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'course-thumbnails' AND
+  auth.role() = 'authenticated' AND
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'lecturer'
+  ) AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- Policy: Lecturers can delete their own thumbnails
+CREATE POLICY "Lecturers can delete own thumbnails"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'course-thumbnails' AND
+  auth.role() = 'authenticated' AND
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'lecturer'
+  ) AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- Policy: Public can view videos
+CREATE POLICY "Public can view videos"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'course-videos');
+
+-- Policy: Public can view thumbnails
+CREATE POLICY "Public can view thumbnails"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'course-thumbnails');
+
+-- ============================================
+-- Migration 011: Create Enrollments Table
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.enrollments (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  course_id UUID REFERENCES public.courses(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()) NOT NULL
+);
+
+ALTER TABLE public.enrollments ENABLE ROW LEVEL SECURITY;
+
+-- Avoid duplicate enrollments
+CREATE UNIQUE INDEX IF NOT EXISTS enrollments_user_course_idx ON public.enrollments(user_id, course_id);
+CREATE INDEX IF NOT EXISTS enrollments_user_idx ON public.enrollments(user_id);
+CREATE INDEX IF NOT EXISTS enrollments_course_idx ON public.enrollments(course_id);
+
+-- Policies
+DROP POLICY IF EXISTS "Users can view own enrollments" ON public.enrollments;
+DROP POLICY IF EXISTS "Users can insert own enrollments" ON public.enrollments;
+DROP POLICY IF EXISTS "Users can delete own enrollments" ON public.enrollments;
+
+CREATE POLICY "Users can view own enrollments"
+  ON public.enrollments FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own enrollments"
+  ON public.enrollments FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own enrollments"
+  ON public.enrollments FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- ============================================
+-- Migration 012: Add Created At Index
+-- ============================================
+CREATE INDEX IF NOT EXISTS courses_created_at_idx ON public.courses(created_at DESC);
+
+-- ============================================
+-- Migration 013: Create Channels Table
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.channels (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  course_id UUID REFERENCES public.courses(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('text', 'voice', 'lectures')),
+  description TEXT,
+  category_name TEXT DEFAULT 'COURSE CHANNELS',
+  display_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()) NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()) NOT NULL,
+  UNIQUE(course_id, name)
+);
+
+-- Enable Row Level Security
+ALTER TABLE public.channels ENABLE ROW LEVEL SECURITY;
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS channels_course_id_idx ON public.channels(course_id);
+CREATE INDEX IF NOT EXISTS channels_type_idx ON public.channels(type);
+CREATE INDEX IF NOT EXISTS channels_display_order_idx ON public.channels(course_id, display_order);
+
+-- Policies
+DROP POLICY IF EXISTS "Lecturers can view channels for their courses" ON public.channels;
+DROP POLICY IF EXISTS "Lecturers can create channels for their courses" ON public.channels;
+DROP POLICY IF EXISTS "Lecturers can update channels for their courses" ON public.channels;
+DROP POLICY IF EXISTS "Lecturers can delete channels for their courses" ON public.channels;
+DROP POLICY IF EXISTS "Enrolled users can view channels" ON public.channels;
+
+-- Lecturers can manage channels for their courses
+CREATE POLICY "Lecturers can view channels for their courses"
+  ON public.channels FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.courses
+      WHERE courses.id = channels.course_id
+      AND courses.lecturer_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Lecturers can create channels for their courses"
+  ON public.channels FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.courses
+      WHERE courses.id = channels.course_id
+      AND courses.lecturer_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Lecturers can update channels for their courses"
+  ON public.channels FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.courses
+      WHERE courses.id = channels.course_id
+      AND courses.lecturer_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Lecturers can delete channels for their courses"
+  ON public.channels FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.courses
+      WHERE courses.id = channels.course_id
+      AND courses.lecturer_id = auth.uid()
+    )
+  );
+
+-- Enrolled users can view channels
+CREATE POLICY "Enrolled users can view channels"
+  ON public.channels FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.enrollments
+      WHERE enrollments.course_id = channels.course_id
+      AND enrollments.user_id = auth.uid()
+    )
+  );
+
+-- ============================================
+-- Migration 014: Create Videos Table
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.videos (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  channel_id UUID REFERENCES public.channels(id) ON DELETE CASCADE NOT NULL,
+  course_id UUID REFERENCES public.courses(id) ON DELETE CASCADE NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  video_url TEXT NOT NULL,
+  thumbnail_url TEXT,
+  duration INTEGER, -- Duration in seconds
+  display_order INTEGER NOT NULL DEFAULT 0,
+  is_published BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()) NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()) NOT NULL
+);
+
+-- Enable Row Level Security
+ALTER TABLE public.videos ENABLE ROW LEVEL SECURITY;
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS videos_channel_id_idx ON public.videos(channel_id);
+CREATE INDEX IF NOT EXISTS videos_course_id_idx ON public.videos(course_id);
+CREATE INDEX IF NOT EXISTS videos_display_order_idx ON public.videos(channel_id, display_order);
+
+-- Policies
+DROP POLICY IF EXISTS "Lecturers can manage videos for their courses" ON public.videos;
+DROP POLICY IF EXISTS "Enrolled users can view videos" ON public.videos;
+
+-- Lecturers can manage videos
+CREATE POLICY "Lecturers can manage videos for their courses"
+  ON public.videos FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.courses
+      WHERE courses.id = videos.course_id
+      AND courses.lecturer_id = auth.uid()
+    )
+  );
+
+-- Enrolled users can view published videos
+CREATE POLICY "Enrolled users can view videos"
+  ON public.videos FOR SELECT
+  USING (
+    is_published = true AND
+    EXISTS (
+      SELECT 1 FROM public.enrollments
+      WHERE enrollments.course_id = videos.course_id
+      AND enrollments.user_id = auth.uid()
+    )
+  );
+
+-- ============================================
+-- Migration 015: Create Video Progress Table
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.video_progress (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  video_id UUID REFERENCES public.videos(id) ON DELETE CASCADE NOT NULL,
+  course_id UUID REFERENCES public.courses(id) ON DELETE CASCADE NOT NULL,
+  progress_seconds INTEGER DEFAULT 0, -- Current position in video
+  duration_seconds INTEGER, -- Total video duration
+  is_completed BOOLEAN DEFAULT false,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()) NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT TIMEZONE('utc', NOW()) NOT NULL,
+  UNIQUE(user_id, video_id)
+);
+
+-- Enable Row Level Security
+ALTER TABLE public.video_progress ENABLE ROW LEVEL SECURITY;
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS video_progress_user_id_idx ON public.video_progress(user_id);
+CREATE INDEX IF NOT EXISTS video_progress_video_id_idx ON public.video_progress(video_id);
+CREATE INDEX IF NOT EXISTS video_progress_course_id_idx ON public.video_progress(course_id);
+CREATE INDEX IF NOT EXISTS video_progress_completed_idx ON public.video_progress(user_id, course_id, is_completed);
+
+-- Policies
+DROP POLICY IF EXISTS "Users can view their own progress" ON public.video_progress;
+DROP POLICY IF EXISTS "Users can update their own progress" ON public.video_progress;
+DROP POLICY IF EXISTS "Lecturers can view progress for their courses" ON public.video_progress;
+
+CREATE POLICY "Users can view their own progress"
+  ON public.video_progress FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own progress"
+  ON public.video_progress FOR ALL
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Lecturers can view progress for their courses"
+  ON public.video_progress FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.courses
+      WHERE courses.id = video_progress.course_id
+      AND courses.lecturer_id = auth.uid()
+    )
+  );
+

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, memo, useCallback, useMemo } from 'react';
+import { useState, memo, useCallback, useMemo, useEffect } from 'react';
 
 export interface Course {
   id: string;
@@ -33,7 +33,7 @@ function CourseCard({
   onEnroll,
   showEnrollButton = true 
 }: CourseCardProps) {
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isVideoExpanded, setIsVideoExpanded] = useState(false);
 
   const formatPrice = useMemo(() => {
     return (price: number) => new Intl.NumberFormat('en-US', {
@@ -51,9 +51,33 @@ function CourseCard({
 
   const handleThumbnailClick = useCallback(() => {
     if (course.intro_video_url) {
-      setIsVideoPlaying(true);
+      setIsVideoExpanded(true);
     }
   }, [course.intro_video_url]);
+
+  const handleCloseVideo = useCallback(() => {
+    setIsVideoExpanded(false);
+  }, []);
+
+  // Close modal on ESC key press
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isVideoExpanded) {
+        handleCloseVideo();
+      }
+    };
+
+    if (isVideoExpanded) {
+      document.addEventListener('keydown', handleEscape);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isVideoExpanded, handleCloseVideo]);
 
   const handleEnrollClick = useCallback(() => {
     if (onEnroll && !isEnrolled && !isEnrolling) {
@@ -62,43 +86,58 @@ function CourseCard({
   }, [onEnroll, isEnrolled, isEnrolling, course.id]);
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-100">
-      {/* Thumbnail/Video Section */}
-      <div className="relative w-full h-48 bg-gradient-to-br from-blue-600 via-purple-600 to-cyan-500 overflow-hidden">
-        {isVideoPlaying && course.intro_video_url ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-black">
-            <video
-              src={course.intro_video_url}
-              controls
-              autoPlay
-              preload="metadata"
-              playsInline
-              className="w-full h-full object-cover"
-              onEnded={() => setIsVideoPlaying(false)}
-            />
-          </div>
-        ) : (
-          <>
-            {/* Placeholder thumbnail with play button */}
+    <>
+      <div className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.08)] transition-all duration-300 border border-gray-100 hover:scale-[1.005]">
+        {/* Thumbnail Section */}
+        <div className="relative w-full h-28 bg-gradient-to-br from-blue-100 via-purple-50 to-cyan-50 overflow-hidden cursor-pointer group">
+          {course.thumbnail_url ? (
+            // Display actual thumbnail image
+            <>
+              <img
+                src={course.thumbnail_url}
+                alt={course.title}
+                className="w-full h-full object-cover"
+                onClick={handleThumbnailClick}
+              />
+              {/* Overlay with play button */}
+              {course.intro_video_url && (
+                <div 
+                  className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center"
+                  onClick={handleThumbnailClick}
+                >
+                  <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg
+                      className="w-6 h-6 text-navy-700 ml-1"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            // Fallback gradient placeholder
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="relative w-full h-full bg-gradient-to-br from-blue-700 via-purple-700 to-cyan-600">
-                {/* Decorative pattern */}
-                <div className="absolute inset-0 opacity-20">
-                  <div className="absolute top-4 left-4 w-32 h-32 border-2 border-white rounded-full"></div>
-                  <div className="absolute bottom-4 right-4 w-24 h-24 border-2 border-white rounded-full"></div>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-40 h-40 border-2 border-white rounded-full"></div>
+              <div className="relative w-full h-full bg-gradient-to-br from-blue-100/80 via-purple-50/80 to-cyan-50/80 backdrop-blur-sm">
+                {/* Subtle decorative pattern */}
+                <div className="absolute inset-0 opacity-10">
+                  <div className="absolute top-2 left-2 w-16 h-16 border border-white/30 rounded-full blur-sm"></div>
+                  <div className="absolute bottom-2 right-2 w-12 h-12 border border-white/30 rounded-full blur-sm"></div>
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 border border-white/30 rounded-full blur-sm"></div>
                 </div>
                 
                 {/* Play button overlay */}
                 {course.intro_video_url && (
                   <button
                     onClick={handleThumbnailClick}
-                    className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/50 transition-colors z-10"
+                    className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/20 transition-colors z-10"
                     aria-label="Play intro video"
                   >
-                    <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors">
+                    <div className="w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-sm">
                       <svg
-                        className="w-8 h-8 text-navy-900 ml-1"
+                        className="w-5 h-5 text-navy-700 ml-0.5"
                         fill="currentColor"
                         viewBox="0 0 24 24"
                       >
@@ -109,49 +148,48 @@ function CourseCard({
                 )}
               </div>
             </div>
-            
-            {/* Creator badge */}
-            <div className="absolute bottom-3 left-3 bg-blue-900/80 backdrop-blur-sm px-3 py-1.5 rounded-lg flex items-center space-x-2">
-              <svg
-                className="w-4 h-4 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-              <span className="text-white text-xs font-medium">{course.creator}</span>
-            </div>
-          </>
-        )}
-      </div>
+          )}
+          
+          {/* Creator badge - Smaller, semi-transparent */}
+          <div className="absolute bottom-2 left-2 bg-white/70 backdrop-blur-sm px-2 py-1 rounded-full flex items-center space-x-1.5 border border-white/50 z-20">
+            <svg
+              className="w-3 h-3 text-navy-700"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
+            </svg>
+            <span className="text-navy-700 text-[10px] font-medium">{course.creator}</span>
+          </div>
+        </div>
 
-      {/* Course Info Section */}
-      <div className="p-4 space-y-3">
+        {/* Course Info Section - Tighter spacing */}
+        <div className="p-4 space-y-2">
         {/* Title */}
-        <h3 className="text-lg font-bold text-gray-900 line-clamp-2 min-h-[3.5rem]">
+        <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 leading-tight">
           {course.title}
         </h3>
 
         {/* Author */}
-        <p className="text-sm text-gray-600">{course.author}</p>
+        <p className="text-sm text-gray-500">{course.author}</p>
 
         {/* Badges: Bestseller, Rating, Reviews */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           {course.is_bestseller && (
-            <span className="bg-teal-500 text-white text-xs font-semibold px-2.5 py-1 rounded">
+            <span className="bg-teal-100 text-teal-700 text-[10px] font-semibold px-2 py-0.5 rounded">
               Bestseller
             </span>
           )}
           {course.rating > 0 && (
-            <span className="bg-white border border-gray-200 text-gray-700 text-xs font-semibold px-2.5 py-1 rounded flex items-center space-x-1">
+            <span className="bg-white border border-gray-200 text-gray-600 text-[10px] font-medium px-2 py-0.5 rounded flex items-center space-x-1">
               <svg
-                className="w-3 h-3 text-yellow-500 fill-current"
+                className="w-2.5 h-2.5 text-yellow-500 fill-current"
                 viewBox="0 0 20 20"
               >
                 <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
@@ -160,15 +198,15 @@ function CourseCard({
             </span>
           )}
           {course.review_count > 0 && (
-            <span className="bg-white border border-gray-200 text-gray-700 text-xs font-semibold px-2.5 py-1 rounded">
+            <span className="bg-white border border-gray-200 text-gray-600 text-[10px] font-medium px-2 py-0.5 rounded">
               {course.review_count.toLocaleString()} {course.review_count === 1 ? 'rating' : 'ratings'}
             </span>
           )}
         </div>
 
         {/* Course Type */}
-        <div className="pt-2">
-          <span className="text-xs font-medium text-navy-700 bg-navy-50 px-2.5 py-1 rounded">
+        <div>
+          <span className="text-[10px] font-medium text-navy-700 bg-[#eef3ff] px-2 py-0.5 rounded">
             {course.course_type}
           </span>
         </div>
@@ -179,7 +217,7 @@ function CourseCard({
             {formattedPrice}
           </span>
           {formattedOriginalPrice && course.original_price && course.original_price > course.price && (
-            <span className="text-sm text-gray-500 line-through">
+            <span className="text-sm text-gray-400 line-through">
               {formattedOriginalPrice}
             </span>
           )}
@@ -187,14 +225,14 @@ function CourseCard({
 
         {/* Enroll Button */}
         {showEnrollButton && (
-          <div className="pt-3 border-t border-gray-100">
+          <div className="pt-2 border-t border-gray-100">
             {isEnrolled ? (
               <a
                 href={`/courses/${course.id}`}
-                className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-green-500 rounded-full hover:bg-green-600 transition-colors"
               >
                 <svg
-                  className="w-4 h-4 mr-2"
+                  className="w-3.5 h-3.5 mr-1.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -212,12 +250,12 @@ function CourseCard({
               <button
                 onClick={handleEnrollClick}
                 disabled={isEnrolling || !onEnroll}
-                className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-white bg-navy-900 rounded-lg hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-navy-900 rounded-full hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isEnrolling ? (
                   <>
                     <svg
-                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      className="animate-spin -ml-1 mr-2 h-3.5 w-3.5 text-white"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
@@ -241,7 +279,7 @@ function CourseCard({
                 ) : (
                   <>
                     <svg
-                      className="w-4 h-4 mr-2"
+                      className="w-3.5 h-3.5 mr-1.5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -260,8 +298,62 @@ function CourseCard({
             )}
           </div>
         )}
+        </div>
       </div>
-    </div>
+
+      {/* Expanded Video Modal */}
+      {isVideoExpanded && course.intro_video_url && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={handleCloseVideo}
+        >
+          <div 
+            className="relative w-full max-w-4xl bg-black rounded-lg overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={handleCloseVideo}
+              className="absolute top-4 right-4 z-10 w-8 h-8 bg-black/70 hover:bg-black/90 rounded-full flex items-center justify-center text-white transition-colors"
+              aria-label="Close video"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+            
+            {/* Video player */}
+            <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+              <video
+                src={course.intro_video_url}
+                controls
+                autoPlay
+                preload="metadata"
+                playsInline
+                className="absolute inset-0 w-full h-full"
+                onEnded={handleCloseVideo}
+              />
+            </div>
+            
+            {/* Video info */}
+            <div className="p-4 bg-black/90">
+              <h3 className="text-white font-semibold text-lg mb-1">{course.title}</h3>
+              <p className="text-gray-400 text-sm">{course.creator}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
