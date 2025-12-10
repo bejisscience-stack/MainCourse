@@ -11,24 +11,6 @@ import { useUser } from '@/hooks/useUser';
 import { useLecturerCourses } from '@/hooks/useLecturerCourses';
 import type { Course } from '@/hooks/useCourses';
 
-interface Course {
-  id: string;
-  title: string;
-  description: string | null;
-  course_type: 'Editing' | 'Content Creation' | 'Website Creation';
-  price: number;
-  original_price: number | null;
-  author: string;
-  creator: string;
-  intro_video_url: string | null;
-  thumbnail_url: string | null;
-  rating: number;
-  review_count: number;
-  is_bestseller: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 export default function LecturerDashboard() {
   const router = useRouter();
   const { user, role: userRole, isLoading: userLoading } = useUser();
