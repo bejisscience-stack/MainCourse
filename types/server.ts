@@ -1,3 +1,5 @@
+import type { Message } from './message';
+
 export interface Server {
   id: string;
   name: string;

@@ -1,61 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser, signOut } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { signOut } from '@/lib/auth';
+import { useUser } from '@/hooks/useUser';
 
-export default function Navigation() {
+function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const router = useRouter();
-
-  useEffect(() => {
-    let isMounted = true;
-    checkUser();
-    // Fallback: ensure loading clears even if auth call hangs
-    const loadingTimeout = setTimeout(() => {
-      if (isMounted) {
-        setLoading(false);
-      }
-    }, 3000);
-    
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: string, session: any) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-
-        const resolvedRole = profile?.role || session.user.user_metadata?.role || null;
-
-        if (resolvedRole === 'lecturer' && profile?.role !== 'lecturer') {
-          await supabase.from('profiles').update({ role: 'lecturer' }).eq('id', session.user.id);
-        }
-
-        setUserRole(resolvedRole);
-      } else {
-        setUserRole(null);
-      }
-      setLoading(false);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-      isMounted = false;
-      clearTimeout(loadingTimeout);
-    };
-  }, []);
+  const { user, role: userRole, isLoading: loading } = useUser();
 
   // Close profile menu when clicking outside or navigating
   useEffect(() => {
@@ -73,45 +30,11 @@ export default function Navigation() {
     }
   }, [isProfileMenuOpen]);
 
-  const checkUser = async () => {
-    try {
-      const currentUser = await getCurrentUser();
-      setUser(currentUser);
-      
-      if (currentUser) {
-        // Fetch user profile to get role
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', currentUser.id)
-          .single();
-
-        const resolvedRole = profile?.role || currentUser.user_metadata?.role || null;
-
-        // Normalize stored role if metadata says lecturer but profile missing
-        if (resolvedRole === 'lecturer' && profile?.role !== 'lecturer') {
-          await supabase.from('profiles').update({ role: 'lecturer' }).eq('id', currentUser.id);
-        }
-
-        setUserRole(resolvedRole);
-      } else {
-        setUserRole(null);
-      }
-    } catch (error) {
-      setUser(null);
-      setUserRole(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     try {
       setSignOutError(null);
       setSignOutLoading(true);
       await signOut();
-      setUser(null);
-      setUserRole(null);
       setIsProfileMenuOpen(false);
       setIsMenuOpen(false);
       router.push('/');
@@ -119,9 +42,10 @@ export default function Navigation() {
     } catch (error) {
       console.error('Error signing out:', error);
       setSignOutError('Failed to sign out. Please try again.');
+    } finally {
+      setSignOutLoading(false);
     }
-    setSignOutLoading(false);
-  };
+  }, [router]);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-navy-100">
@@ -468,4 +392,6 @@ export default function Navigation() {
     </nav>
   );
 }
+
+export default memo(Navigation);
 

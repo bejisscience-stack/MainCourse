@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
 import { supabase } from '@/lib/supabase';
-import { getCurrentUser } from '@/lib/auth';
-import type { User } from '@supabase/supabase-js';
+import { useUser } from '@/hooks/useUser';
+import { useLecturerCourses } from '@/hooks/useLecturerCourses';
+import type { Course } from '@/hooks/useCourses';
 
 interface Course {
   id: string;
@@ -29,10 +30,8 @@ interface Course {
 
 export default function LecturerDashboard() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user, role: userRole, isLoading: userLoading } = useUser();
+  const { courses, isLoading: coursesLoading, mutate: mutateCourses } = useLecturerCourses(user?.id || null);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -54,9 +53,18 @@ export default function LecturerDashboard() {
   const [thumbnailUploadProgress, setThumbnailUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Redirect if not lecturer or not logged in
   useEffect(() => {
-    checkUserAndLoadData();
-  }, []);
+    if (!userLoading) {
+      if (!user) {
+        router.push('/login');
+      } else if (userRole !== 'lecturer') {
+        router.push('/');
+      }
+    }
+  }, [user, userRole, userLoading, router]);
+
+  const loading = userLoading || coursesLoading;
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -79,65 +87,6 @@ export default function LecturerDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showModal]);
 
-  const checkUserAndLoadData = async () => {
-    try {
-      const currentUser = await getCurrentUser();
-      if (!currentUser) {
-        router.push('/login');
-        return;
-      }
-
-      setUser(currentUser);
-
-      // Fetch profile to check role
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser.id)
-        .single();
-
-      if (profileError) throw profileError;
-
-      const metadataRole = currentUser.user_metadata?.role;
-      const resolvedRole = profileData?.role || metadataRole;
-
-      if (resolvedRole === 'lecturer') {
-        // Normalize stored role if missing or outdated
-        if (profileData && profileData.role !== 'lecturer') {
-          await supabase
-            .from('profiles')
-            .update({ role: 'lecturer' })
-            .eq('id', currentUser.id);
-        }
-        setProfile(profileData ? { ...profileData, role: 'lecturer' } : profileData);
-        await fetchCourses(currentUser.id);
-      } else {
-        router.push('/');
-        return;
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load dashboard');
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCourses = async (lecturerId: string) => {
-    try {
-      const { data, error: fetchError } = await supabase
-        .from('courses')
-        .select('*')
-        .eq('lecturer_id', lecturerId)
-        .order('created_at', { ascending: false });
-
-      if (fetchError) throw fetchError;
-      setCourses(data || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load courses');
-      console.error('Error fetching courses:', err);
-    }
-  };
 
   const handleOpenModal = (course?: Course) => {
     setVideoFile(null);
@@ -168,8 +117,8 @@ export default function LecturerDashboard() {
         course_type: 'Editing',
         price: '',
         original_price: '',
-        author: profile?.full_name || user?.user_metadata?.full_name || '',
-        creator: profile?.full_name || user?.user_metadata?.full_name || '',
+        author: user?.user_metadata?.full_name || '',
+        creator: user?.user_metadata?.full_name || '',
         intro_video_url: '',
         thumbnail_url: '',
         is_bestseller: false,
@@ -472,7 +421,7 @@ export default function LecturerDashboard() {
         }
       }
 
-      await fetchCourses(user!.id);
+      mutateCourses();
       handleCloseModal();
     } catch (err: any) {
       setError(err.message || 'Failed to save course');
@@ -490,7 +439,7 @@ export default function LecturerDashboard() {
         .eq('id', courseId);
 
       if (deleteError) throw deleteError;
-      await fetchCourses(user!.id);
+      mutateCourses();
     } catch (err: any) {
       setError(err.message || 'Failed to delete course');
       console.error('Error deleting course:', err);
@@ -506,6 +455,11 @@ export default function LecturerDashboard() {
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-navy-900"></div>
             <p className="mt-4 text-navy-600">Loading dashboard...</p>
+            {error && (
+              <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm max-w-md mx-auto">
+                {error}
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -554,8 +508,25 @@ export default function LecturerDashboard() {
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-              {error}
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 animate-in fade-in">
+              <div className="flex items-start">
+                <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <div className="flex-1">
+                  <p className="font-semibold">Error loading dashboard</p>
+                  <p className="mt-1 text-sm">{error}</p>
+                </div>
+                <button
+                  onClick={() => setError(null)}
+                  className="ml-2 text-red-500 hover:text-red-700"
+                  aria-label="Dismiss error"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
           )}
 

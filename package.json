@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -12,10 +12,11 @@
     "migrate:psql": "node scripts/run-migrations-psql.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.39.3",
     "next": "14.2.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@supabase/supabase-js": "^2.39.3"
+    "swr": "^2.3.7"
   },
   "devDependencies": {
     "@types/node": "^20.11.24",
@@ -27,4 +28,3 @@
     "typescript": "^5.3.3"
   }
 }
-

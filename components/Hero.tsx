@@ -1,4 +1,6 @@
-export default function Hero() {
+import { memo } from 'react';
+
+function Hero() {
   return (
     <section className="pt-32 md:pt-40 pb-16 md:pb-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto text-center">
@@ -14,4 +16,6 @@ export default function Hero() {
     </section>
   );
 }
+
+export default memo(Hero);
 

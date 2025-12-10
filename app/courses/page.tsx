@@ -1,221 +1,83 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import CourseCard, { type Course } from '@/components/CourseCard';
 import BackgroundShapes from '@/components/BackgroundShapes';
 import { supabase } from '@/lib/supabase';
-import { getCurrentUser } from '@/lib/auth';
-import type { User } from '@supabase/supabase-js';
+import { useUser } from '@/hooks/useUser';
+import { useCourses } from '@/hooks/useCourses';
+import { useEnrollments } from '@/hooks/useEnrollments';
+import useSWR from 'swr';
 
-const REQUEST_TIMEOUT = 10000; // 10 seconds
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+type FilterType = 'All' | 'Editing' | 'Content Creation' | 'Website Creation';
+
+// Fetcher for lecturer courses
+async function fetchLecturerCourses(userId: string): Promise<Set<string>> {
+  const { data } = await supabase
+    .from('courses')
+    .select('id')
+    .eq('lecturer_id', userId);
+  return new Set(data?.map((c) => c.id) || []);
+}
 
 export default function CoursesPage() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'All' | 'Editing' | 'Content Creation' | 'Website Creation'>('All');
-  const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [lecturerCourseIds, setLecturerCourseIds] = useState<Set<string>>(new Set());
-  const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<string>>(new Set());
+  const router = useRouter();
+  const [filter, setFilter] = useState<FilterType>('All');
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchCourses = useCallback(async (retryCount = 0) => {
-    // Cancel previous request if it exists
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+  const { user, role: userRole, isLoading: userLoading } = useUser();
+  const { courses, isLoading: coursesLoading, mutate: mutateCourses } = useCourses(filter);
+  const { enrolledCourseIds, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
+
+  // Fetch lecturer courses if user is lecturer
+  const { data: lecturerCourseIds = new Set<string>() } = useSWR<Set<string>>(
+    userRole === 'lecturer' && user ? ['lecturer-courses', user.id] : null,
+    () => fetchLecturerCourses(user!.id),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 10000,
     }
+  );
 
-    // Create new AbortController for this request
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Create a timeout promise
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error('Request timeout: The request took too long to complete'));
-        }, REQUEST_TIMEOUT);
-        
-        // Clear timeout if request is aborted
-        abortController.signal.addEventListener('abort', () => {
-          clearTimeout(timeoutId);
-        });
-      });
-
-      // Build query
-      let query = supabase
-        .from('courses')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100); // Limit results for better performance
-
-      if (filter !== 'All') {
-        query = query.eq('course_type', filter);
-      }
-
-      // Execute query with timeout
-      const queryPromise = query;
-      
-      const result = await Promise.race([
-        queryPromise.then(result => {
-          if (abortController.signal.aborted) {
-            throw new Error('Request cancelled');
-          }
-          return result;
-        }),
-        timeoutPromise,
-      ]);
-
-      const { data, error: fetchError } = result as { data: Course[] | null; error: any };
-
-      // Check if request was aborted
-      if (abortController.signal.aborted) {
-        return;
-      }
-
-      if (fetchError) {
-        throw fetchError;
-      }
-
-      // Filter out courses created by lecturer if user is a lecturer
-      let filteredCourses = data || [];
-      if (userRole === 'lecturer' && lecturerCourseIds.size > 0) {
-        filteredCourses = filteredCourses.filter(
-          (course) => !lecturerCourseIds.has(course.id)
-        );
-      }
-
-      setCourses(filteredCourses);
-    } catch (err: any) {
-      // Don't set error if request was aborted
-      if (abortController.signal.aborted) {
-        return;
-      }
-
-      // Retry logic for network errors or timeouts
-      if (retryCount < MAX_RETRIES && (err.message?.includes('timeout') || err.message?.includes('network') || err.code === 'PGRST116' || err.message?.includes('fetch'))) {
-        console.warn(`Retry attempt ${retryCount + 1}/${MAX_RETRIES} after error:`, err.message);
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
-        return fetchCourses(retryCount + 1);
-      }
-
-      setError(err.message || 'Failed to load courses. Please try again.');
-      console.error('Error fetching courses:', err);
-    } finally {
-      // Only update loading state if request wasn't aborted
-      if (!abortController.signal.aborted) {
-        setLoading(false);
-      }
-    }
-  }, [filter]);
-
+  // Redirect lecturers immediately
   useEffect(() => {
-    // Check if user is logged in and their role
-    const checkUser = async () => {
-      try {
-        const currentUser = await getCurrentUser();
-        setUser(currentUser);
-        
-        if (currentUser) {
-          // Check user role
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', currentUser.id)
-            .single();
-
-          const resolvedRole = profile?.role || currentUser.user_metadata?.role || null;
-          setUserRole(resolvedRole);
-
-          // If lecturer, redirect to dashboard
-          if (resolvedRole === 'lecturer') {
-            window.location.href = '/lecturer/dashboard';
-            return;
-          }
-
-          // Fetch lecturer's courses to filter them out
-          const { data: lecturerCourses } = await supabase
-            .from('courses')
-            .select('id')
-            .eq('lecturer_id', currentUser.id);
-
-          if (lecturerCourses) {
-            setLecturerCourseIds(new Set(lecturerCourses.map((c) => c.id)));
-          }
-
-          await fetchEnrollments(currentUser.id);
-        }
-      } catch (err) {
-        console.error('Error checking user:', err);
-      }
-    };
-    
-    checkUser();
-    fetchCourses();
-    
-    // Cleanup: cancel ongoing request when component unmounts or filter changes
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [fetchCourses]);
-
-  const fetchEnrollments = async (userId: string) => {
-    try {
-      const { data: enrollments, error: enrollError } = await supabase
-        .from('enrollments')
-        .select('course_id')
-        .eq('user_id', userId);
-
-      if (enrollError) {
-        console.error('Error fetching enrollments:', enrollError);
-        return;
-      }
-
-      const enrolledIds = new Set(enrollments?.map((e) => e.course_id) || []);
-      setEnrolledCourseIds(enrolledIds);
-    } catch (err) {
-      console.error('Error fetching enrollments:', err);
+    if (!userLoading && userRole === 'lecturer') {
+      router.push('/lecturer/dashboard');
     }
-  };
+  }, [userRole, userLoading, router]);
 
-  const handleEnroll = async (courseId: string) => {
-    // Check if user is logged in
+  // Filter courses based on user role
+  const filteredCourses = useMemo(() => {
+    let result = courses;
+
+    // Filter by course type
+    if (filter !== 'All') {
+      result = result.filter((course) => course.course_type === filter);
+    }
+
+    // Filter out lecturer's own courses
+    if (userRole === 'lecturer' && lecturerCourseIds.size > 0) {
+      result = result.filter((course) => !lecturerCourseIds.has(course.id));
+    }
+
+    return result;
+  }, [courses, filter, userRole, lecturerCourseIds]);
+
+  const handleEnroll = useCallback(async (courseId: string) => {
     if (!user) {
-      // Redirect to login page
-      window.location.href = '/login?redirect=/courses';
+      router.push('/login?redirect=/courses');
       return;
     }
 
-    // Prevent lecturers from enrolling
     if (userRole === 'lecturer') {
       setError('Lecturers cannot enroll in courses. Please use your dashboard to manage your courses.');
       return;
     }
 
-    // Check if this is the lecturer's own course
     if (lecturerCourseIds.has(courseId)) {
-      setError('You cannot enroll in your own course.');
-      return;
-    }
-
-    // Double-check: verify course doesn't belong to this user
-    const { data: course } = await supabase
-      .from('courses')
-      .select('lecturer_id')
-      .eq('id', courseId)
-      .single();
-
-    if (course && course.lecturer_id === user.id) {
       setError('You cannot enroll in your own course.');
       return;
     }
@@ -229,31 +91,27 @@ export default function CoursesPage() {
         .insert([{ user_id: user.id, course_id: courseId }]);
 
       if (insertError) {
-        // Ignore duplicate enroll attempts
         if (insertError.code === '23505') {
           // Already enrolled, refresh enrollments
-          await fetchEnrollments(user.id);
+          mutateEnrollments();
           return;
         }
         throw insertError;
       }
 
-      // Update enrolled courses
-      setEnrolledCourseIds((prev) => new Set([...prev, courseId]));
+      // Optimistically update enrollments
+      mutateEnrollments();
     } catch (err: any) {
       setError(err.message || 'Failed to enroll in course');
       console.error('Error enrolling in course:', err);
     } finally {
       setEnrollingCourseId(null);
     }
-  };
+  }, [user, userRole, lecturerCourseIds, mutateEnrollments, router]);
 
-  const courseTypes: Array<'All' | 'Editing' | 'Content Creation' | 'Website Creation'> = [
-    'All',
-    'Editing',
-    'Content Creation',
-    'Website Creation',
-  ];
+  const courseTypes: FilterType[] = ['All', 'Editing', 'Content Creation', 'Website Creation'];
+
+  const isLoading = userLoading || coursesLoading;
 
   return (
     <main className="relative min-h-screen bg-white overflow-hidden">
@@ -288,22 +146,38 @@ export default function CoursesPage() {
             ))}
           </div>
 
-          {/* Loading State */}
-          {loading && (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-navy-900"></div>
-              <p className="mt-4 text-navy-600">Loading courses...</p>
+          {/* Loading State with Skeleton */}
+          {isLoading && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-white rounded-lg overflow-hidden shadow-md border border-gray-100 animate-pulse">
+                  <div className="w-full h-48 bg-gradient-to-br from-gray-200 to-gray-300"></div>
+                  <div className="p-4 space-y-3">
+                    <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    <div className="flex gap-2">
+                      <div className="h-5 bg-gray-200 rounded w-20"></div>
+                      <div className="h-5 bg-gray-200 rounded w-16"></div>
+                    </div>
+                    <div className="h-6 bg-gray-200 rounded w-24"></div>
+                    <div className="h-10 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
           {/* Error State */}
-          {error && !loading && (
+          {error && !isLoading && (
             <div className="text-center py-12">
               <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg inline-block max-w-md">
                 <p className="font-semibold">Error loading courses</p>
                 <p className="text-sm mt-1 mb-4">{error}</p>
                 <button
-                  onClick={() => fetchCourses()}
+                  onClick={() => {
+                    setError(null);
+                    mutateCourses();
+                  }}
                   className="bg-navy-900 text-white px-4 py-2 rounded-lg font-semibold hover:bg-navy-800 transition-colors"
                 >
                   Try Again
@@ -313,9 +187,9 @@ export default function CoursesPage() {
           )}
 
           {/* Courses Grid */}
-          {!loading && !error && (
+          {!isLoading && !error && (
             <>
-              {courses.length === 0 ? (
+              {filteredCourses.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-navy-600 text-lg">
                     No courses found{filter !== 'All' ? ` in ${filter}` : ''}.
@@ -329,8 +203,7 @@ export default function CoursesPage() {
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {courses.map((course) => {
-                      // Don't show enroll button if user is lecturer or if course belongs to lecturer
+                    {filteredCourses.map((course) => {
                       const isOwnCourse = lecturerCourseIds.has(course.id);
                       const shouldShowEnroll = !isOwnCourse && userRole !== 'lecturer';
                       
@@ -355,4 +228,3 @@ export default function CoursesPage() {
     </main>
   );
 }
-

@@ -29,7 +29,7 @@ export default function ChatArea({
     id: string;
     username: string;
     content: string;
-  } | null>(null);
+  } | undefined>(undefined);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const { messages, addMessage, addReaction, messagesEndRef } = useMessages(
@@ -60,7 +60,7 @@ export default function ChatArea({
 
     addMessage(newMessage);
     onSendMessage(channel.id, content);
-    setReplyTo(null);
+    setReplyTo(undefined);
   };
 
   const handleReply = (messageId: string) => {
@@ -225,7 +225,7 @@ export default function ChatArea({
       <MessageInput
         onSend={handleSend}
         replyTo={replyTo}
-        onCancelReply={() => setReplyTo(null)}
+        onCancelReply={() => setReplyTo(undefined)}
         placeholder={`Message #${channel.name}`}
       />
     </div>

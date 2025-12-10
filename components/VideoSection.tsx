@@ -1,17 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo, useMemo } from 'react';
 
 interface VideoSectionProps {
   studentCount: number;
 }
 
-export default function VideoSection({ studentCount }: VideoSectionProps) {
+function VideoSection({ studentCount }: VideoSectionProps) {
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const formatCount = (num: number) => {
-    return num.toLocaleString('en-US');
-  };
+  const formatCount = useMemo(() => {
+    return (num: number) => num.toLocaleString('en-US');
+  }, []);
+
+  const formattedCount = useMemo(() => formatCount(studentCount), [formatCount, studentCount]);
 
   return (
     <section data-video-section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
@@ -67,7 +69,7 @@ export default function VideoSection({ studentCount }: VideoSectionProps) {
               <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
             <span className="font-semibold text-base md:text-lg">
-              <span className="text-navy-900">{formatCount(studentCount)}+</span> Students Enrolled
+              <span className="text-navy-900">{formattedCount}+</span> Students Enrolled
             </span>
           </div>
         </div>
@@ -75,4 +77,6 @@ export default function VideoSection({ studentCount }: VideoSectionProps) {
     </section>
   );
 }
+
+export default memo(VideoSection);
 

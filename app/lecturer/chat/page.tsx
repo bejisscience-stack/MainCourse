@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LayoutContainer from '@/components/chat/LayoutContainer';
 import ChatNavigation from '@/components/chat/ChatNavigation';
-import { getCurrentUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { useUser } from '@/hooks/useUser';
+import { useLecturerCourses } from '@/hooks/useLecturerCourses';
 import type { Server, Channel } from '@/types/server';
 import type { Member } from '@/types/member';
 import type { Message as MessageType } from '@/types/message';
@@ -14,77 +15,37 @@ import type { User } from '@supabase/supabase-js';
 
 export default function LecturerChatPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, role: userRole, isLoading: userLoading } = useUser();
+  const { courses, isLoading: coursesLoading } = useLecturerCourses(user?.id || null);
   const [servers, setServers] = useState<Server[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Redirect if not lecturer or not logged in
   useEffect(() => {
-    let isMounted = true;
-    let timeoutId: NodeJS.Timeout;
-
-    // Add timeout to prevent infinite loading
-    timeoutId = setTimeout(() => {
-      if (isMounted) {
-        setError('Loading is taking too long. Please check your connection and try again.');
-        setLoading(false);
-      }
-    }, 15000); // 15 second timeout
-
-    const loadData = async () => {
-      try {
-        await checkUserAndLoadData();
-      } catch (err) {
-        if (isMounted) {
-          setError('Failed to load chat data. Please try again.');
-          setLoading(false);
-        }
-      } finally {
-        if (isMounted) {
-          clearTimeout(timeoutId);
-        }
-      }
-    };
-
-    loadData();
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timeoutId);
-    };
-  }, []);
-
-  const checkUserAndLoadData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const currentUser = await getCurrentUser();
-      if (!currentUser) {
+    if (!userLoading) {
+      if (!user) {
         router.push('/login');
-        return;
+      } else if (userRole !== 'lecturer') {
+        router.push('/');
       }
+    }
+  }, [user, userRole, userLoading, router]);
 
-      setUser(currentUser);
+  useEffect(() => {
+    if (!coursesLoading && courses.length >= 0) {
+      loadChannelsAndMembers();
+    }
+  }, [courses, coursesLoading]);
 
-      // Fetch user's courses (which become servers/channels)
-      const { data: courses, error: coursesError } = await supabase
-        .from('courses')
-        .select('*')
-        .eq('lecturer_id', currentUser.id)
-        .order('created_at', { ascending: false });
-
-      if (coursesError) {
-        console.error('Error fetching courses:', coursesError);
-        throw new Error(`Failed to load courses: ${coursesError.message}`);
-      }
+  const loadChannelsAndMembers = async () => {
+    try {
+      setError(null);
 
       // Handle case when there are no courses
       if (!courses || courses.length === 0) {
         setServers([]);
         setMembers([]);
-        setLoading(false);
         return;
       }
 
@@ -254,8 +215,6 @@ export default function LecturerChatPage() {
     } catch (err: any) {
       console.error('Error loading chat data:', err);
       setError(err.message || 'Failed to load chat. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -310,7 +269,7 @@ export default function LecturerChatPage() {
       if (error) throw error;
 
       // Refresh servers
-      await checkUserAndLoadData();
+      loadChannelsAndMembers();
     } catch (err: any) {
       console.error('Error creating channel:', err);
       throw err;
@@ -335,7 +294,7 @@ export default function LecturerChatPage() {
       if (error) throw error;
 
       // Refresh servers
-      await checkUserAndLoadData();
+      loadChannelsAndMembers();
     } catch (err: any) {
       console.error('Error updating channel:', err);
       throw err;
@@ -351,12 +310,14 @@ export default function LecturerChatPage() {
       if (error) throw error;
 
       // Refresh servers
-      await checkUserAndLoadData();
+      loadChannelsAndMembers();
     } catch (err: any) {
       console.error('Error deleting channel:', err);
       throw err;
     }
   };
+
+  const loading = userLoading || coursesLoading;
 
   if (loading) {
     return (
@@ -398,7 +359,7 @@ export default function LecturerChatPage() {
             <button
               onClick={() => {
                 setError(null);
-                checkUserAndLoadData();
+                loadChannelsAndMembers();
               }}
               className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
             >

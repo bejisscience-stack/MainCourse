@@ -1,12 +1,14 @@
 'use client';
 
-export default function FloatingButton() {
-  const scrollToEnroll = () => {
+import { memo, useCallback } from 'react';
+
+function FloatingButton() {
+  const scrollToEnroll = useCallback(() => {
     const videoSection = document.querySelector('[data-video-section]');
     if (videoSection) {
       videoSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  };
+  }, []);
 
   return (
     <button
@@ -23,10 +25,13 @@ export default function FloatingButton() {
         strokeWidth="2"
         viewBox="0 0 24 24"
         stroke="currentColor"
+        aria-hidden="true"
       >
         <path d="M13 7l5 5m0 0l-5 5m5-5H6" />
       </svg>
     </button>
   );
 }
+
+export default memo(FloatingButton);
 

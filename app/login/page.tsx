@@ -19,25 +19,50 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      setError('Request timed out. Please check your internet connection and try again.');
+      setLoading(false);
+    }, 30000); // 30 second timeout
+
     try {
+      console.log('Attempting to sign in...');
+      
+      // Validate Supabase connection
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        throw new Error('Supabase configuration is missing. Please check your environment variables.');
+      }
+
       const result = await signIn({ email, password });
+      clearTimeout(timeoutId);
       
       if (!result || !result.user) {
         throw new Error('Sign in failed. Please check your credentials.');
       }
 
+      console.log('Sign in successful, user:', result.user.id);
+
       const { user, session } = result;
 
       // Ensure session is established
       if (!session) {
+        console.log('No session found, waiting and retrying...');
         // Wait a bit for session to be established
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Try to get the session again
-        const { data: { session: newSession } } = await supabase.auth.getSession();
+        const { data: { session: newSession }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          throw new Error(`Session error: ${sessionError.message}`);
+        }
+        
         if (!newSession) {
           throw new Error('Session could not be established. Please try again.');
         }
+        
+        console.log('Session established successfully');
       }
 
       // Fetch role and redirect accordingly
@@ -59,7 +84,7 @@ export default function LoginPage() {
         if (resolvedRole === 'lecturer' && profile?.role !== 'lecturer') {
           await supabase.from('profiles').update({ role: 'lecturer' }).eq('id', user.id);
         }
-      } catch (profileErr) {
+      } catch (profileErr: any) {
         console.warn('Error fetching profile:', profileErr);
         // Use metadata role as fallback
         resolvedRole = user.user_metadata?.role || null;
@@ -76,11 +101,36 @@ export default function LoginPage() {
         destination = '/lecturer/dashboard';
       }
 
-      // Use window.location for a hard redirect to ensure session is recognized
-      window.location.href = destination;
+      console.log('Redirecting to:', destination);
+
+      // Use router with refresh to ensure session is recognized
+      router.push(destination);
+      router.refresh();
     } catch (err: any) {
+      clearTimeout(timeoutId);
       console.error('Sign in error:', err);
-      setError(err.message || 'Failed to sign in. Please check your credentials.');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to sign in. Please check your credentials.';
+      
+      if (err.message) {
+        errorMessage = err.message;
+      } else if (err.error_description) {
+        errorMessage = err.error_description;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      
+      // Handle specific Supabase errors
+      if (err.status === 400 || err.message?.includes('Invalid login credentials')) {
+        errorMessage = 'Invalid email or password. Please try again.';
+      } else if (err.message?.includes('network') || err.message?.includes('fetch')) {
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else if (err.message?.includes('timeout')) {
+        errorMessage = 'Request timed out. Please try again.';
+      }
+      
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -105,8 +155,16 @@ export default function LoginPage() {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-              {error}
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm animate-in fade-in">
+              <div className="flex items-start">
+                <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <div>
+                  <p className="font-semibold">Sign in failed</p>
+                  <p className="mt-1">{error}</p>
+                </div>
+              </div>
             </div>
           )}
 

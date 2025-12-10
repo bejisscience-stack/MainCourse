@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useVideos } from '@/hooks/useVideos';
 import type { Channel, Video, VideoProgress } from '@/types/server';
 
 interface LecturesChannelProps {
@@ -17,72 +18,15 @@ export default function LecturesChannel({
   currentUserId,
   isLecturer,
 }: LecturesChannelProps) {
-  const [videos, setVideos] = useState<Video[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { videos, isLoading: loading, mutate: mutateVideos } = useVideos(
+    channel.id,
+    courseId,
+    currentUserId
+  );
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-
-  useEffect(() => {
-    loadVideos();
-  }, [channel.id]);
-
-  const loadVideos = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('videos')
-        .select('*')
-        .eq('channel_id', channel.id)
-        .eq('course_id', courseId)
-        .order('display_order', { ascending: true });
-
-      if (error) throw error;
-
-      // Load progress for each video
-      const videoIds = (data || []).map((v) => v.id);
-      const { data: progressData } = await supabase
-        .from('video_progress')
-        .select('*')
-        .eq('user_id', currentUserId)
-        .in('video_id', videoIds);
-
-      const progressMap = new Map(
-        (progressData || []).map((p) => [p.video_id, p as VideoProgress])
-      );
-
-      const videosWithProgress: Video[] = (data || []).map((v) => ({
-        id: v.id,
-        channelId: v.channel_id,
-        courseId: v.course_id,
-        title: v.title,
-        description: v.description || undefined,
-        videoUrl: v.video_url,
-        thumbnailUrl: v.thumbnail_url || undefined,
-        duration: v.duration || undefined,
-        displayOrder: v.display_order,
-        isPublished: v.is_published,
-        progress: progressMap.get(v.id)
-          ? {
-              id: progressMap.get(v.id)!.id,
-              userId: progressMap.get(v.id)!.user_id,
-              videoId: progressMap.get(v.id)!.video_id,
-              courseId: progressMap.get(v.id)!.course_id,
-              progressSeconds: progressMap.get(v.id)!.progress_seconds,
-              durationSeconds: progressMap.get(v.id)!.duration_seconds || undefined,
-              isCompleted: progressMap.get(v.id)!.is_completed,
-              completedAt: progressMap.get(v.id)!.completed_at || undefined,
-            }
-          : undefined,
-      }));
-
-      setVideos(videosWithProgress);
-    } catch (err) {
-      console.error('Error loading videos:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const isVideoUnlocked = (videoIndex: number) => {
     if (videoIndex === 0) return true; // First video is always unlocked
@@ -185,10 +129,13 @@ export default function LecturesChannel({
                   {/* Thumbnail */}
                   <div className="relative aspect-video bg-gray-900">
                     {video.thumbnailUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={video.thumbnailUrl}
                         alt={video.title}
                         className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -317,7 +264,7 @@ export default function LecturesChannel({
           courseId={courseId}
           currentUserId={currentUserId}
           onClose={() => setSelectedVideo(null)}
-          onProgressUpdate={loadVideos}
+          onProgressUpdate={mutateVideos}
         />
       )}
 
@@ -328,7 +275,7 @@ export default function LecturesChannel({
           courseId={courseId}
           onClose={() => {
             setShowUploadModal(false);
-            loadVideos();
+            mutateVideos();
           }}
         />
       )}
@@ -354,8 +301,10 @@ function VideoPlayerModal({
   const [duration, setDuration] = useState(0);
   const [isCompleted, setIsCompleted] = useState(video.progress?.isCompleted || false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const progressUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastUpdateTimeRef = useRef<number>(0);
 
-  const handleTimeUpdate = async () => {
+  const handleTimeUpdate = useCallback(() => {
     if (!videoRef.current) return;
 
     const current = videoRef.current.currentTime;
@@ -364,36 +313,59 @@ function VideoPlayerModal({
     setCurrentTime(current);
     setDuration(total);
 
-    // Update progress every 5 seconds
-    if (Math.floor(current) % 5 === 0) {
-      const progressPercentage = (current / total) * 100;
-      const completed = progressPercentage >= 90; // Consider 90% as completed
+    // Debounce progress updates - only update every 5 seconds
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastUpdateTimeRef.current;
+    const shouldUpdate = Math.floor(current) % 5 === 0 && timeSinceLastUpdate >= 5000;
 
-      try {
-        const { error } = await supabase.from('video_progress').upsert(
-          {
-            user_id: currentUserId,
-            video_id: video.id,
-            course_id: courseId,
-            progress_seconds: Math.floor(current),
-            duration_seconds: Math.floor(total),
-            is_completed: completed,
-            completed_at: completed ? new Date().toISOString() : null,
-          },
-          { onConflict: 'user_id,video_id' }
-        );
-
-        if (error) throw error;
-
-        if (completed && !isCompleted) {
-          setIsCompleted(true);
-          onProgressUpdate();
-        }
-      } catch (err) {
-        console.error('Error updating progress:', err);
+    if (shouldUpdate) {
+      // Clear any pending timeout
+      if (progressUpdateTimeoutRef.current) {
+        clearTimeout(progressUpdateTimeoutRef.current);
       }
+
+      // Debounce the actual API call
+      progressUpdateTimeoutRef.current = setTimeout(async () => {
+        const progressPercentage = (current / total) * 100;
+        const completed = progressPercentage >= 90; // Consider 90% as completed
+
+        try {
+          const { error } = await supabase.from('video_progress').upsert(
+            {
+              user_id: currentUserId,
+              video_id: video.id,
+              course_id: courseId,
+              progress_seconds: Math.floor(current),
+              duration_seconds: Math.floor(total),
+              is_completed: completed,
+              completed_at: completed ? new Date().toISOString() : null,
+            },
+            { onConflict: 'user_id,video_id' }
+          );
+
+          if (error) throw error;
+
+          lastUpdateTimeRef.current = Date.now();
+
+          if (completed && !isCompleted) {
+            setIsCompleted(true);
+            onProgressUpdate();
+          }
+        } catch (err) {
+          console.error('Error updating progress:', err);
+        }
+      }, 1000); // Wait 1 second before actually updating
     }
-  };
+  }, [video.id, courseId, currentUserId, isCompleted, onProgressUpdate]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (progressUpdateTimeoutRef.current) {
+        clearTimeout(progressUpdateTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
@@ -424,6 +396,8 @@ function VideoPlayerModal({
             ref={videoRef}
             src={video.videoUrl}
             controls
+            preload="metadata"
+            playsInline
             className="w-full h-full"
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={() => {

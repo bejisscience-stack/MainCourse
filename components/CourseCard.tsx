@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo, useCallback, useMemo } from 'react';
 
 export interface Course {
   id: string;
@@ -26,7 +26,7 @@ interface CourseCardProps {
   showEnrollButton?: boolean;
 }
 
-export default function CourseCard({ 
+function CourseCard({ 
   course, 
   isEnrolled = false, 
   isEnrolling = false,
@@ -35,25 +35,31 @@ export default function CourseCard({
 }: CourseCardProps) {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
+  const formatPrice = useMemo(() => {
+    return (price: number) => new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
     }).format(price);
-  };
+  }, []);
 
-  const handleThumbnailClick = () => {
+  const formattedPrice = useMemo(() => formatPrice(course.price), [formatPrice, course.price]);
+  const formattedOriginalPrice = useMemo(() => 
+    course.original_price ? formatPrice(course.original_price) : null, 
+    [formatPrice, course.original_price]
+  );
+
+  const handleThumbnailClick = useCallback(() => {
     if (course.intro_video_url) {
       setIsVideoPlaying(true);
     }
-  };
+  }, [course.intro_video_url]);
 
-  const handleEnrollClick = () => {
+  const handleEnrollClick = useCallback(() => {
     if (onEnroll && !isEnrolled && !isEnrolling) {
       onEnroll(course.id);
     }
-  };
+  }, [onEnroll, isEnrolled, isEnrolling, course.id]);
 
   return (
     <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-100">
@@ -65,6 +71,8 @@ export default function CourseCard({
               src={course.intro_video_url}
               controls
               autoPlay
+              preload="metadata"
+              playsInline
               className="w-full h-full object-cover"
               onEnded={() => setIsVideoPlaying(false)}
             />
@@ -168,11 +176,11 @@ export default function CourseCard({
         {/* Price */}
         <div className="flex items-center space-x-2 pt-1">
           <span className="text-xl font-bold text-gray-900">
-            {formatPrice(course.price)}
+            {formattedPrice}
           </span>
-          {course.original_price && course.original_price > course.price && (
+          {formattedOriginalPrice && course.original_price && course.original_price > course.price && (
             <span className="text-sm text-gray-500 line-through">
-              {formatPrice(course.original_price)}
+              {formattedOriginalPrice}
             </span>
           )}
         </div>
@@ -256,4 +264,6 @@ export default function CourseCard({
     </div>
   );
 }
+
+export default memo(CourseCard);
 

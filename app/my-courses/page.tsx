@@ -1,125 +1,80 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
 import { supabase } from '@/lib/supabase';
-import { getCurrentUser } from '@/lib/auth';
-import type { User } from '@supabase/supabase-js';
-
-type CourseType = 'Editing' | 'Content Creation' | 'Website Creation';
-
-interface Course {
-  id: string;
-  title: string;
-  description: string | null;
-  course_type: CourseType;
-  price: number;
-  original_price: number | null;
-  author: string;
-  creator: string;
-  intro_video_url: string | null;
-  thumbnail_url: string | null;
-  rating: number;
-  review_count: number;
-  is_bestseller: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { useUser } from '@/hooks/useUser';
+import { useEnrollments } from '@/hooks/useEnrollments';
+import useSWR from 'swr';
+import type { Course } from '@/hooks/useCourses';
 
 export default function MyCoursesPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
-  const [discoverCourses, setDiscoverCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const { user, role: userRole, isLoading: userLoading } = useUser();
+  const { enrolledCourseIds, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
   const [enrolling, setEnrolling] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
+  // Redirect lecturers immediately
   useEffect(() => {
-    const load = async () => {
-      try {
-        const currentUser = await getCurrentUser();
-        if (!currentUser) {
-          window.location.href = '/login';
-          return;
-        }
+    if (!userLoading && userRole === 'lecturer') {
+      router.push('/lecturer/dashboard');
+    }
+  }, [userRole, userLoading, router]);
 
-        // Check if user is a lecturer
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', currentUser.id)
-          .single();
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, userLoading, router]);
 
-        const resolvedRole = profile?.role || currentUser.user_metadata?.role || null;
+  // Fetch enrolled courses
+  const enrolledIdsArray = useMemo(() => Array.from(enrolledCourseIds), [enrolledCourseIds]);
+  
+  const { data: enrolledCourses = [], isLoading: enrolledLoading } = useSWR<Course[]>(
+    enrolledIdsArray.length > 0 && user ? ['enrolled-courses', enrolledIdsArray] : null,
+    async () => {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*')
+        .in('id', enrolledIdsArray)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 10000,
+    }
+  );
 
-        // Redirect lecturers to their dashboard
-        if (resolvedRole === 'lecturer') {
-          window.location.href = '/lecturer/dashboard';
-          return;
-        }
+  // Fetch discover courses (not enrolled)
+  const { data: discoverCourses = [], isLoading: discoverLoading } = useSWR<Course[]>(
+    user ? ['discover-courses', enrolledIdsArray] : null,
+    async () => {
+      let query = supabase
+        .from('courses')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-        setUser(currentUser);
-        await fetchCourses(currentUser.id);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load courses');
-      } finally {
-        setLoading(false);
+      if (enrolledIdsArray.length > 0) {
+        query = query.not('id', 'in', `(${enrolledIdsArray.join(',')})`);
       }
-    };
-    load();
-  }, []);
 
-  const fetchCourses = async (userId: string) => {
-    setError(null);
-    // Fetch enrollments
-    const { data: enrollments, error: enrollError } = await supabase
-      .from('enrollments')
-      .select('course_id')
-      .eq('user_id', userId);
-
-    if (enrollError) {
-      throw enrollError;
-    }
-
-    const enrolledIds = enrollments?.map((e) => e.course_id) || [];
-
-    // Fetch enrolled courses
-    let enrolledData: Course[] = [];
-    if (enrolledIds.length > 0) {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .in('id', enrolledIds)
-        .order('created_at', { ascending: false });
+      const { data, error } = await query;
       if (error) throw error;
-      enrolledData = data || [];
+      return data || [];
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 10000,
     }
+  );
 
-    // Fetch discover courses (not enrolled)
-    let discoverData: Course[] = [];
-    if (enrolledIds.length === 0) {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      discoverData = data || [];
-    } else {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .not('id', 'in', `(${enrolledIds.join(',')})`);
-      if (error) throw error;
-      discoverData = data || [];
-    }
-
-    setEnrolledCourses(enrolledData);
-    setDiscoverCourses(discoverData || []);
-  };
-
-  const handleEnroll = async (courseId: string) => {
+  const handleEnroll = useCallback(async (courseId: string) => {
     if (!user) return;
     setError(null);
     setEnrolling(courseId);
@@ -127,21 +82,24 @@ export default function MyCoursesPage() {
       const { error: insertError } = await supabase
         .from('enrollments')
         .insert([{ user_id: user.id, course_id: courseId }]);
+      
       if (insertError) {
-        // Ignore duplicate enroll attempts
         if (insertError.code === '23505') {
-          await fetchCourses(user.id);
+          // Already enrolled
+          mutateEnrollments();
           return;
         }
         throw insertError;
       }
-      await fetchCourses(user.id);
+      
+      // Optimistically update enrollments
+      mutateEnrollments();
     } catch (err: any) {
       setError(err.message || 'Failed to enroll in course');
     } finally {
       setEnrolling(null);
     }
-  };
+  }, [user, mutateEnrollments]);
 
   const CourseCard = ({
     course,
@@ -175,7 +133,9 @@ export default function MyCoursesPage() {
     </div>
   );
 
-  if (loading) {
+  const isLoading = userLoading || enrolledLoading || discoverLoading;
+
+  if (isLoading) {
     return (
       <main className="relative min-h-screen bg-white overflow-hidden">
         <BackgroundShapes />
@@ -198,12 +158,20 @@ export default function MyCoursesPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-navy-900 mb-2">My Courses</h1>
-            <p className="text-navy-600">See what you’re enrolled in and discover new courses.</p>
+            <p className="text-navy-600">See what you're enrolled in and discover new courses.</p>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-              {error}
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm animate-in fade-in">
+              <div className="flex items-start">
+                <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <div className="flex-1">
+                  <p className="font-semibold">Error loading courses</p>
+                  <p className="mt-1 text-sm">{error}</p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -215,7 +183,7 @@ export default function MyCoursesPage() {
             </div>
             {enrolledCourses.length === 0 ? (
               <div className="bg-navy-50 border border-navy-100 rounded-lg p-6 text-center text-navy-700">
-                You haven’t enrolled in any courses yet.
+                You haven't enrolled in any courses yet.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -245,7 +213,7 @@ export default function MyCoursesPage() {
             </div>
             {discoverCourses.length === 0 ? (
               <div className="bg-navy-50 border border-navy-100 rounded-lg p-6 text-center text-navy-700">
-                You’re enrolled in all available courses. Check back later for more!
+                You're enrolled in all available courses. Check back later for more!
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -272,4 +240,3 @@ export default function MyCoursesPage() {
     </main>
   );
 }
-
