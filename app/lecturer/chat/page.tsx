@@ -230,25 +230,8 @@ export default function LecturerChatPage() {
   }, [mutateCourses, loadChannelsAndMembers]);
 
   const handleSendMessage = async (channelId: string, content: string) => {
-    if (!user) return;
-
-    // Extract course ID from channel ID (format: channel-{courseId}-{channelName})
-    const courseIdMatch = channelId.match(/channel-(.+?)-/);
-    if (!courseIdMatch) return;
-
-    const courseId = courseIdMatch[1];
-
-    // In a real implementation, you would save to database here
-    // For now, we'll just log it
-    console.log('Sending message:', { channelId, content, courseId, userId: user.id });
-
-    // TODO: Save message to database
-    // await supabase.from('messages').insert({
-    //   channel_id: channelId,
-    //   user_id: user.id,
-    //   content,
-    //   course_id: courseId,
-    // });
+    // Message sending is now handled by ChatArea component via API
+    // This callback is kept for compatibility but doesn't need to do anything
   };
 
   const handleReaction = async (messageId: string, emoji: string) => {

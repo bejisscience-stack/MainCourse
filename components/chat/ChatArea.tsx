@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Message from './Message';
 import MessageInput from './MessageInput';
 import LecturesChannel from './LecturesChannel';
 import type { Channel } from '@/types/server';
 import type { Message as MessageType } from '@/types/message';
-import { useMessages } from '@/hooks/useMessages';
+import { useChatMessages } from '@/hooks/useChatMessages';
+import { useRealtimeTyping } from '@/hooks/useRealtimeTyping';
+import { supabase } from '@/lib/supabase';
 
 interface ChatAreaProps {
   channel: Channel | null;
@@ -30,41 +32,215 @@ export default function ChatArea({
     username: string;
     content: string;
   } | undefined>(undefined);
+  const [isSending, setIsSending] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const scrollPositionRef = useRef<number>(0);
+  const userScrolledUpRef = useRef(false);
 
-  const { messages, addMessage, addReaction, messagesEndRef } = useMessages(
-    channel?.id || null,
-    channel?.messages || []
-  );
+  const {
+    messages,
+    isLoading,
+    error,
+    hasMore,
+    messagesEndRef,
+    addPendingMessage,
+    markMessageFailed,
+    removePendingMessage,
+    replacePendingMessage,
+    loadMore,
+    addReaction,
+    refetch,
+  } = useChatMessages({
+    channelId: channel?.id || null,
+    enabled: !!channel,
+  });
 
+  // Store messages ref for timeout check
+  const messagesRef = useRef(messages);
+  const timeoutRefsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  
   useEffect(() => {
-    if (channel?.messages) {
-      // Update messages when channel changes
+    messagesRef.current = messages;
+  }, [messages]);
+  
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutRefsRef.current.forEach((timeout) => clearTimeout(timeout));
+      timeoutRefsRef.current.clear();
+    };
+  }, []);
+
+  const { typingUsers } = useRealtimeTyping({
+    channelId: channel?.id || null,
+    currentUserId,
+    enabled: !!channel,
+  });
+
+  // Track scroll position to determine if user is reading old messages
+  const handleScroll = useCallback(() => {
+    if (!messagesContainerRef.current) return;
+
+    const container = messagesContainerRef.current;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    
+    userScrolledUpRef.current = !isNearBottom;
+    scrollPositionRef.current = scrollTop;
+  }, []);
+
+  // Auto-scroll to bottom only if user hasn't scrolled up
+  // Auto-scroll to bottom on new messages (only if user is at bottom)
+  useEffect(() => {
+    if (!userScrolledUpRef.current && messages.length > 0) {
+      // Use requestAnimationFrame for smooth, non-blocking scroll
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
+  }, [messages.length]);
+
+  // Handle pagination on scroll up
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    container.addEventListener('scroll', handleScroll);
+    
+    const handleScrollTop = () => {
+      if (container.scrollTop === 0 && hasMore && !isLoading) {
+        loadMore();
+      }
+    };
+
+    container.addEventListener('scroll', handleScrollTop);
+
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      container.removeEventListener('scroll', handleScrollTop);
+    };
+  }, [hasMore, isLoading, loadMore, handleScroll]);
+
+  const handleSend = useCallback(async (content: string) => {
+    if (!channel) {
+      console.error('Cannot send message: channel is null');
+      return;
+    }
+    
+    if (isSending) {
+      console.warn('Message send already in progress');
+      return;
+    }
+
+    if (!content || !content.trim()) {
+      console.warn('Cannot send empty message');
+      return;
+    }
+
+    // Get session once for both optimistic update and API call
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.user) {
+      console.error('Session error:', sessionError);
+      throw new Error('Not authenticated. Please log in again.');
+    }
+
+    // Add optimistic message INSTANTLY (before API call)
+    const tempId = addPendingMessage(content, replyTo?.id, session.user.id);
+    setIsSending(true);
+
+    try {
+
+      // Send message to API (non-blocking for UI)
+      const response = await fetch(`/api/chats/${channel.id}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        credentials: 'include', // Include cookies for session
+        body: JSON.stringify({
+          content,
+          replyTo: replyTo?.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.details || 'Failed to send message';
+        console.error('API error:', errorMessage, response.status);
+        throw new Error(errorMessage);
+      }
+
+      // Get the actual message from the response
+      const responseData = await response.json();
+      const serverMessage = responseData.message;
+      
+      // Immediately replace pending message with server response
+      // This ensures replacement even if real-time is delayed
+      if (serverMessage) {
+        const transformedMessage: MessageType = {
+          id: serverMessage.id,
+          content: serverMessage.content,
+          replyTo: serverMessage.replyTo,
+          edited: serverMessage.edited,
+          timestamp: serverMessage.timestamp,
+          user: serverMessage.user,
+        };
+        
+        // Use the hook's replacePendingMessage function
+        replacePendingMessage(tempId, transformedMessage);
+        console.log(`Immediately replacing pending ${tempId} with server message ${serverMessage.id}`);
+      }
+      
+      // Set a fallback timeout (3s) to ensure cleanup if something goes wrong
+      const fallbackTimeout = setTimeout(() => {
+        const currentMessages = messagesRef.current;
+        const stillPending = currentMessages.find((m) => 'tempId' in m && m.tempId === tempId);
+        const messageExists = currentMessages.some((m) => m.id === serverMessage?.id);
+        
+        if (stillPending && !messageExists && serverMessage) {
+          console.warn(`Fallback: Real-time didn't replace pending message after 3s, removing it`);
+          // Remove the stuck pending message
+          removePendingMessage(tempId);
+        }
+        timeoutRefsRef.current.delete(tempId);
+      }, 3000);
+      
+      timeoutRefsRef.current.set(tempId, fallbackTimeout);
+
+      setReplyTo(undefined);
+      onSendMessage(channel.id, content);
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      markMessageFailed(tempId, error.message || 'Failed to send');
+      // Re-throw to let MessageInput handle it
+      throw error;
+    } finally {
+      setIsSending(false);
+    }
+  }, [channel, replyTo, isSending, addPendingMessage, markMessageFailed, removePendingMessage, onSendMessage]);
+
+  const handleTyping = useCallback(async () => {
+    if (!channel) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      await fetch(`/api/chats/${channel.id}/typing`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+    } catch (error) {
+      // Silently fail - typing indicator is not critical
+      console.warn('Failed to send typing indicator:', error);
     }
   }, [channel]);
 
-  const handleSend = (content: string) => {
-    if (!channel) return;
-
-    const newMessage: MessageType = {
-      id: `msg-${Date.now()}-${Math.random()}`,
-      user: {
-        id: currentUserId,
-        username: 'You',
-        avatarUrl: '',
-      },
-      content,
-      timestamp: Date.now(),
-      replyTo: replyTo?.id,
-    };
-
-    addMessage(newMessage);
-    onSendMessage(channel.id, content);
-    setReplyTo(undefined);
-  };
-
-  const handleReply = (messageId: string) => {
-    const message = messages.find((m) => m.id === messageId);
+  const handleReply = useCallback((messageId: string) => {
+    const message = messages.find((m) => m.id === messageId && !('pending' in m) && !('failed' in m));
     if (message) {
       setReplyTo({
         id: message.id,
@@ -72,12 +248,20 @@ export default function ChatArea({
         content: message.content.substring(0, 50) + (message.content.length > 50 ? '...' : ''),
       });
     }
-  };
+  }, [messages]);
 
-  const handleReaction = (messageId: string, emoji: string) => {
+  const handleReaction = useCallback((messageId: string, emoji: string) => {
     addReaction(messageId, emoji, currentUserId);
     onReaction?.(messageId, emoji);
-  };
+  }, [addReaction, currentUserId, onReaction]);
+
+  const handleRetry = useCallback((tempId: string) => {
+    const failedMessage = messages.find((m) => 'tempId' in m && m.tempId === tempId);
+    if (failedMessage && 'content' in failedMessage) {
+      removePendingMessage(tempId);
+      handleSend(failedMessage.content);
+    }
+  }, [messages, removePendingMessage, handleSend]);
 
   if (!channel) {
     return (
@@ -181,7 +365,37 @@ export default function ChatArea({
         className="flex-1 overflow-y-auto px-4 py-4"
         style={{ scrollBehavior: 'smooth' }}
       >
-        {messages.length === 0 ? (
+        {isLoading && messages.length === 0 ? (
+          // Loading skeleton
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex gap-4 animate-pulse">
+                <div className="w-10 h-10 rounded-full bg-gray-700"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-700 rounded w-24"></div>
+                  <div className="h-4 bg-gray-700 rounded w-3/4"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : error && messages.length === 0 ? (
+          // Error state
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center text-gray-400 max-w-md">
+              <div className="bg-red-900/50 border border-red-700 text-red-200 px-6 py-4 rounded-lg mb-4">
+                <p className="font-semibold mb-2">Error loading messages</p>
+                <p className="text-sm">{error}</p>
+              </div>
+              <button
+                onClick={() => refetch()}
+                className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        ) : messages.length === 0 ? (
+          // Empty state
           <div className="flex items-center justify-center h-full text-gray-400">
             <div className="text-center">
               <svg
@@ -202,18 +416,34 @@ export default function ChatArea({
           </div>
         ) : (
           <>
+            {hasMore && (
+              <div className="text-center py-2">
+                <button
+                  onClick={loadMore}
+                  disabled={isLoading}
+                  className="text-sm text-indigo-400 hover:text-indigo-300 disabled:opacity-50"
+                >
+                  {isLoading ? 'Loading...' : 'Load older messages'}
+                </button>
+              </div>
+            )}
             {messages.map((message, index) => {
               const showAvatar =
-                index === 0 || messages[index - 1].user.id !== message.user.id;
+                index === 0 || 
+                (messages[index - 1] && 'user' in messages[index - 1] && messages[index - 1].user.id !== message.user.id);
+              
+              const messageWithRetry = 'failed' in message && message.failed
+                ? { ...message, onRetry: () => handleRetry(message.tempId || '') }
+                : message;
+
               return (
-                <div key={message.id}>
-                  <Message
-                    message={message}
-                    currentUserId={currentUserId}
-                    onReply={handleReply}
-                    onReaction={handleReaction}
-                  />
-                </div>
+                <Message
+                  key={message.id}
+                  message={messageWithRetry}
+                  currentUserId={currentUserId}
+                  onReply={handleReply}
+                  onReaction={handleReaction}
+                />
               );
             })}
             <div ref={messagesEndRef} />
@@ -221,12 +451,28 @@ export default function ChatArea({
         )}
       </div>
 
+      {/* Typing indicator */}
+      {typingUsers.length > 0 && (
+        <div className="px-4 py-2 text-sm text-gray-400 italic">
+          {typingUsers.length === 1 ? (
+            <span>{typingUsers[0].username} is typing...</span>
+          ) : typingUsers.length === 2 ? (
+            <span>{typingUsers[0].username} and {typingUsers[1].username} are typing...</span>
+          ) : (
+            <span>{typingUsers[0].username} and {typingUsers.length - 1} others are typing...</span>
+          )}
+        </div>
+      )}
+
       {/* Message input */}
       <MessageInput
         onSend={handleSend}
+        onTyping={handleTyping}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(undefined)}
         placeholder={`Message #${channel.name}`}
+        disabled={isSending}
+        isSending={isSending}
       />
     </div>
   );
