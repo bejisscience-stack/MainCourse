@@ -24,6 +24,7 @@ interface CourseCardProps {
   isEnrolling?: boolean;
   onEnroll?: (courseId: string) => void;
   showEnrollButton?: boolean;
+  customAction?: React.ReactNode;
 }
 
 function CourseCard({ 
@@ -31,7 +32,8 @@ function CourseCard({
   isEnrolled = false, 
   isEnrolling = false,
   onEnroll,
-  showEnrollButton = true 
+  showEnrollButton = true,
+  customAction
 }: CourseCardProps) {
   const [isVideoExpanded, setIsVideoExpanded] = useState(false);
 
@@ -223,10 +225,12 @@ function CourseCard({
           )}
         </div>
 
-        {/* Enroll Button */}
-        {showEnrollButton && (
+        {/* Enroll Button or Custom Action */}
+        {(showEnrollButton || customAction) && (
           <div className="pt-2 border-t border-gray-100">
-            {isEnrolled ? (
+            {customAction ? (
+              customAction
+            ) : isEnrolled ? (
               <a
                 href={`/courses/${course.id}`}
                 className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-green-500 rounded-full hover:bg-green-600 transition-colors"

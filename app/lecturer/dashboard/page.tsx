@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
+import CourseCard from '@/components/CourseCard';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useLecturerCourses } from '@/hooks/useLecturerCourses';
@@ -537,27 +538,46 @@ export default function LecturerDashboard() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {courses.map((course) => (
-                <div
+                <CourseCard
                   key={course.id}
-                  onClick={() => handleOpenModal(course)}
-                  className="bg-white border border-navy-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-navy-300"
-                >
-                  <div>
-                    <h3 className="text-xl font-bold text-navy-900 mb-2">{course.title}</h3>
-                    <p className="text-sm text-navy-600 mb-2">
-                      Type: <span className="font-semibold">{course.course_type}</span>
-                    </p>
-                    <p className="text-sm text-navy-600 mb-2">
-                      Price: <span className="font-semibold">${course.price}</span>
-                      {course.original_price && (
-                        <span className="line-through text-navy-400 ml-2">${course.original_price}</span>
-                      )}
-                    </p>
-                    {course.description && (
-                      <p className="text-sm text-navy-700 mt-2 line-clamp-2">{course.description}</p>
-                    )}
-                  </div>
-                </div>
+                  course={{
+                    id: course.id,
+                    title: course.title,
+                    description: course.description || undefined,
+                    course_type: course.course_type,
+                    price: course.price,
+                    original_price: course.original_price || undefined,
+                    author: course.author,
+                    creator: course.creator,
+                    intro_video_url: course.intro_video_url || undefined,
+                    thumbnail_url: course.thumbnail_url || undefined,
+                    rating: course.rating,
+                    review_count: course.review_count,
+                    is_bestseller: course.is_bestseller,
+                  }}
+                  showEnrollButton={false}
+                  customAction={
+                    <button
+                      onClick={() => handleOpenModal(course)}
+                      className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-navy-900 rounded-full hover:bg-navy-800 transition-colors"
+                    >
+                      <svg
+                        className="w-3.5 h-3.5 mr-1.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
+                      </svg>
+                      Edit Course
+                    </button>
+                  }
+                />
               ))}
             </div>
           )}
