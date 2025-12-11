@@ -97,7 +97,8 @@ export function useRealtimeMessages({
             let username = 'User';
             
             if (profile) {
-              username = profile.full_name || profile.email?.split('@')[0] || 'User';
+              // Prioritize full_name, then email username
+              username = profile.full_name?.trim() || profile.email?.split('@')[0] || 'User';
             } else {
               // If profile fetch failed, use a better identifier
               // Use first 8 chars of user_id as a temporary identifier
@@ -109,6 +110,15 @@ export function useRealtimeMessages({
               console.error('Profile error:', profileError);
               console.error('Using fallback username:', username);
               console.error('This suggests an RLS policy issue or profile doesn\'t exist');
+              console.error('Please check:');
+              console.error('1. RLS policy "Users can view profiles in same courses" is enabled');
+              console.error('2. User is enrolled in the same course');
+              console.error('3. Profile exists in profiles table');
+            }
+            
+            // Ensure username is never empty
+            if (!username || username.trim() === '') {
+              username = 'User';
             }
             
             const updatedMessage: Message = {
@@ -165,17 +175,30 @@ export function useRealtimeMessages({
             .select('id, full_name, email')
             .eq('id', messageData.user_id)
             .single()
-            .then(({ data: profile }) => {
+            .then(({ data: profile, error: profileErr }) => {
+              let username = 'User';
               if (profile) {
-                const updatedMessage: Message = {
-                  ...message,
-                  user: {
-                    ...message.user,
-                    username: profile.full_name || profile.email?.split('@')[0] || 'User',
-                  },
-                };
-                onNewMessage?.(updatedMessage);
+                username = profile.full_name?.trim() || profile.email?.split('@')[0] || 'User';
+              } else if (profileErr) {
+                console.warn('Failed to fetch profile for updated message:', profileErr);
+                // Use fallback
+                const userIdShort = messageData.user_id.substring(0, 8);
+                username = `User-${userIdShort}`;
               }
+              
+              // Ensure username is never empty
+              if (!username || username.trim() === '') {
+                username = 'User';
+              }
+              
+              const updatedMessage: Message = {
+                ...message,
+                user: {
+                  ...message.user,
+                  username,
+                },
+              };
+              onNewMessage?.(updatedMessage);
             });
         }
       )

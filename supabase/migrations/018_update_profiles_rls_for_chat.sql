@@ -33,3 +33,4 @@ CREATE POLICY "Users can view profiles in same courses"
       AND c.lecturer_id != e.user_id
     )
   );
+

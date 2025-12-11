@@ -290,3 +290,4 @@ If you're stuck:
 3. **DNS propagation time**: Be patient - it can take up to 48 hours (but usually much faster)
 4. **SSL is automatic**: Don't worry about SSL certificates - Vercel handles this automatically
 5. **Test before going live**: Use Vercel's preview URLs to test everything before configuring DNS
+

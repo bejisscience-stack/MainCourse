@@ -80,3 +80,4 @@ CREATE POLICY "Enrolled users can view channels"
       AND enrollments.user_id = auth.uid()
     )
   );
+

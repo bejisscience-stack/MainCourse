@@ -7,3 +7,4 @@ export interface Channel {
   description?: string;
   courseId?: string;
 }
+

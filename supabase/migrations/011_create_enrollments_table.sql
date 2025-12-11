@@ -32,3 +32,4 @@ CREATE POLICY "Users can delete own enrollments"
   ON public.enrollments FOR DELETE
   USING (auth.uid() = user_id);
 
+

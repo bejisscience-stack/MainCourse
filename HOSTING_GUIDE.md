@@ -238,12 +238,16 @@ Regardless of which platform you choose, you'll need these environment variables
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+NEXT_PUBLIC_SITE_URL=https://yourdomain.com  # Your production URL (required for email verification)
 ```
 
 **Where to find these:**
 1. Go to your Supabase project dashboard
 2. Navigate to Settings → API
 3. Copy the "Project URL" and "anon public" key
+4. Set `NEXT_PUBLIC_SITE_URL` to your production URL (e.g., `https://your-project.vercel.app` or your custom domain)
+
+**Important:** The `NEXT_PUBLIC_SITE_URL` is used for email verification redirects. Without it, users will be redirected to localhost after clicking verification links.
 
 ---
 
@@ -255,6 +259,9 @@ After deploying, make sure to:
 - [ ] Verify Supabase connection is working
 - [ ] Check that database migrations are applied
 - [ ] Test authentication flows
+- [ ] **Configure email verification redirects** (see `SUPABASE_REDIRECT_SETUP.md`)
+  - Add `NEXT_PUBLIC_SITE_URL` environment variable in Vercel
+  - Add redirect URLs in Supabase dashboard
 - [ ] Verify file uploads (if using Supabase Storage)
 - [ ] Set up custom domain (optional)
 - [ ] Configure CORS in Supabase if needed
@@ -304,3 +311,4 @@ If you encounter issues:
 2. Review build logs
 3. Verify environment variables
 4. Test locally first with `npm run build && npm start`
+

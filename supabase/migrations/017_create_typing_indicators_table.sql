@@ -97,3 +97,4 @@ BEGIN
   WHERE expires_at < TIMEZONE('utc', NOW());
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+

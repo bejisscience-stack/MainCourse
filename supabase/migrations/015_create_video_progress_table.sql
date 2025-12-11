@@ -46,3 +46,4 @@ CREATE POLICY "Lecturers can view progress for their courses"
       AND courses.lecturer_id = auth.uid()
     )
   );
+

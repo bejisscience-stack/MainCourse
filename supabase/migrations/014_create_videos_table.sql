@@ -50,3 +50,4 @@ CREATE POLICY "Enrolled users can view videos"
       AND enrollments.user_id = auth.uid()
     )
   );
+

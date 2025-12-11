@@ -61,10 +61,32 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch messages: ${response.statusText}`);
+        // Try to parse error details from response
+        let errorMessage = `Failed to fetch messages: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+            if (errorData.details) {
+              errorMessage += ` - ${errorData.details}`;
+            }
+          }
+        } catch (e) {
+          // If JSON parsing fails, use the status text
+          console.error('Failed to parse error response:', e);
+        }
+        throw new Error(errorMessage);
       }
 
-      const { messages: fetchedMessages } = await response.json();
+      const responseData = await response.json();
+      
+      // Validate response structure
+      if (!responseData || !Array.isArray(responseData.messages)) {
+        console.error('Invalid response structure:', responseData);
+        throw new Error('Invalid response from server. Expected messages array.');
+      }
+      
+      const { messages: fetchedMessages } = responseData;
 
       if (before) {
         // Pagination - prepend older messages

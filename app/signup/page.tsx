@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signUp } from '@/lib/auth';
+import { signUp, resendVerificationEmail } from '@/lib/auth';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -14,6 +14,8 @@ export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,21 +26,58 @@ export default function SignUpPage() {
       const { user } = await signUp({ email, password, fullName, role });
       
       if (user) {
+        // Check if email confirmation is required
+        const needsEmailConfirmation = !user.email_confirmed_at;
+        
+        console.log('Signup result:', {
+          userId: user.id,
+          email: user.email,
+          emailConfirmed: user.email_confirmed_at,
+          needsConfirmation: needsEmailConfirmation,
+        });
+        
+        if (needsEmailConfirmation) {
+          // Show success message but don't redirect - user needs to verify email
+          setSuccess(true);
+        } else {
+          // Email already confirmed (shouldn't happen normally, but handle it)
+          setSuccess(true);
+          setTimeout(() => {
+            if (role === 'lecturer') {
+              router.push('/lecturer');
+            } else {
+              router.push('/my-courses');
+            }
+            router.refresh();
+          }, 2000);
+        }
+      } else {
+        setError('Account created but no user data returned. Please check your email for verification.');
         setSuccess(true);
-        // Redirect based on role
-        setTimeout(() => {
-          if (role === 'lecturer') {
-            router.push('/lecturer');
-          } else {
-            router.push('/my-courses');
-          }
-          router.refresh();
-        }, 2000);
       }
     } catch (err: any) {
+      console.error('Signup error:', err);
       setError(err.message || 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    if (!email) return;
+    
+    setResending(true);
+    setResendSuccess(false);
+    setError(null);
+    
+    try {
+      await resendVerificationEmail(email);
+      setResendSuccess(true);
+    } catch (err: any) {
+      console.error('Resend error:', err);
+      setError(err.message || 'Failed to resend verification email. Please try again.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -62,8 +101,40 @@ export default function SignUpPage() {
 
         {success ? (
           <div className="text-center space-y-4">
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-              Account created successfully! Redirecting...
+            <div className="bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-lg">
+              <h3 className="font-semibold text-lg mb-2">Check your email!</h3>
+              <p className="text-sm mb-3">
+                We've sent a verification email to <strong>{email}</strong>
+              </p>
+              <p className="text-sm text-blue-700 mb-4">
+                Please click the link in the email to verify your account before signing in.
+              </p>
+              
+              {resendSuccess && (
+                <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-2 rounded text-sm mb-3">
+                  ✓ Verification email resent! Check your inbox.
+                </div>
+              )}
+              
+              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-2 rounded text-xs mt-3 mb-3">
+                <strong>Tip:</strong> Check your spam folder if you don't see the email.
+              </div>
+              
+              <div className="flex flex-col gap-2 mt-4">
+                <button
+                  onClick={handleResendEmail}
+                  disabled={resending}
+                  className="text-sm font-semibold text-blue-700 hover:text-blue-900 underline disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resending ? 'Sending...' : "Didn't receive email? Resend"}
+                </button>
+                <Link 
+                  href="/login" 
+                  className="text-sm font-semibold text-blue-700 hover:text-blue-900 underline"
+                >
+                  Go to login page
+                </Link>
+              </div>
             </div>
           </div>
         ) : (

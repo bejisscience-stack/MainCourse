@@ -10,3 +10,4 @@ export interface User {
 export interface Member extends User {
   status: 'online' | 'offline' | 'away' | 'busy';
 }
+

@@ -15,3 +15,4 @@ export interface Reaction {
   count: number;
   users: string[]; // User IDs who reacted
 }
+

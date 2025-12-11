@@ -62,22 +62,36 @@ export async function GET(
       .eq('id', courseId)
       .single();
     
-    const lecturerId = course?.lecturer_id;
+    if (courseError || !course) {
+      console.error('Course error:', courseError);
+      return NextResponse.json(
+        { error: 'Course not found', details: courseError?.message || 'The course associated with this channel does not exist' },
+        { status: 404 }
+      );
+    }
+    
+    const lecturerId = course.lecturer_id;
 
     // Check enrollment or lecturer status
-    const { data: enrollment } = await supabase
+    const { data: enrollment, error: enrollmentError } = await supabase
       .from('enrollments')
       .select('id')
       .eq('user_id', user.id)
       .eq('course_id', courseId)
       .single();
 
+    // enrollmentError is expected if user is not enrolled (no rows found)
+    // Only treat it as an error if it's not a "not found" type error
+    if (enrollmentError && enrollmentError.code !== 'PGRST116') {
+      console.error('Enrollment check error:', enrollmentError);
+    }
+
     const isLecturer = lecturerId === user.id;
     const isEnrolled = !!enrollment;
 
     if (!isEnrolled && !isLecturer) {
       return NextResponse.json(
-        { error: 'Forbidden: You do not have access to this channel' },
+        { error: 'Access denied', details: 'You must be enrolled in this course or be the course lecturer to view messages' },
         { status: 403 }
       );
     }
@@ -106,8 +120,32 @@ export async function GET(
 
     if (error) {
       console.error('Error fetching messages:', error);
+      console.error('Error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        channelId: chatId,
+        courseId,
+        userId: user.id,
+        isLecturer,
+        isEnrolled,
+      });
+      
+      // Provide more helpful error messages based on error code
+      let errorMessage = 'Failed to fetch messages';
+      let errorDetails = error.message;
+      
+      if (error.code === 'PGRST301' || error.message?.includes('permission denied') || error.message?.includes('row-level security')) {
+        errorMessage = 'Permission denied';
+        errorDetails = 'You do not have permission to view messages in this channel. Please ensure you are enrolled in the course or are the course lecturer.';
+      } else if (error.code === '42P01') {
+        errorMessage = 'Database error';
+        errorDetails = 'The messages table may not exist. Please check your database migrations.';
+      }
+      
       return NextResponse.json(
-        { error: 'Failed to fetch messages', details: error.message },
+        { error: errorMessage, details: errorDetails },
         { status: 500 }
       );
     }
@@ -132,6 +170,10 @@ export async function GET(
       if (profiles && !profilesError && profiles.length > 0) {
         profiles.forEach((profile: any) => {
           profileMap.set(profile.id, profile);
+          // Log if full_name is missing
+          if (!profile.full_name || profile.full_name.trim() === '') {
+            console.warn(`Profile for user ${profile.id} exists but full_name is empty. Email: ${profile.email}`);
+          }
         });
         console.log(`Successfully fetched ${profiles.length} profiles out of ${userIds.length} users`);
       } else {
@@ -148,8 +190,13 @@ export async function GET(
             
             if (singleProfile && !singleError) {
               profileMap.set(userId, singleProfile);
+              // Log if full_name is missing
+              if (!singleProfile.full_name || singleProfile.full_name.trim() === '') {
+                console.warn(`Profile for user ${userId} exists but full_name is empty. Email: ${singleProfile.email}`);
+              }
             } else {
               console.warn(`Failed to fetch profile for user ${userId}:`, singleError);
+              console.warn(`This might be due to RLS policy. Check if migration 018_update_profiles_rls_for_chat.sql was run.`);
             }
           } catch (err: any) {
             console.warn(`Exception fetching profile for user ${userId}:`, err);
@@ -177,13 +224,20 @@ export async function GET(
       let username = 'User';
       
       if (profile) {
-        username = profile.full_name || profile.email?.split('@')[0] || 'User';
+        // Prioritize full_name, then email username, then fallback
+        username = profile.full_name?.trim() || profile.email?.split('@')[0] || 'User';
       } else {
-        // If profile fetch failed, use a better identifier
-        // Try to extract something from user_id (first 8 chars) as temporary identifier
+        // If profile fetch failed, try to get from auth metadata or use email pattern
+        // This should rarely happen if RLS is set up correctly
+        console.warn(`Profile not found for user ${msg.user_id}, using fallback`);
+        // Try to extract a readable identifier from user_id
         const userIdShort = msg.user_id.substring(0, 8);
         username = `User-${userIdShort}`;
-        console.warn(`Using fallback username for user ${msg.user_id}: ${username}`);
+      }
+      
+      // Ensure username is never empty
+      if (!username || username.trim() === '') {
+        username = 'User';
       }
       
       return {
@@ -352,9 +406,19 @@ export async function POST(
     }
 
     // Transform message with better username resolution
-    const username = profile 
-      ? (profile.full_name || profile.email?.split('@')[0] || 'User')
-      : (user.email?.split('@')[0] || user.id.substring(0, 8) || 'User');
+    let username = 'User';
+    if (profile) {
+      username = profile.full_name?.trim() || profile.email?.split('@')[0] || 'User';
+    } else if (user.email) {
+      username = user.email.split('@')[0];
+    } else {
+      username = user.id.substring(0, 8);
+    }
+    
+    // Ensure username is never empty
+    if (!username || username.trim() === '') {
+      username = 'User';
+    }
 
     const transformedMessage = {
       id: message.id,
