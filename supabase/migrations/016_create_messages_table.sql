@@ -109,3 +109,4 @@ CREATE TRIGGER on_message_updated
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 
 
+

@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getCachedUsername, prefetchProfiles } from './useRealtimeMessages';
 
 interface TypingUser {
   userId: string;
@@ -13,6 +14,9 @@ interface UseRealtimeTypingOptions {
   enabled?: boolean;
 }
 
+// Typing indicator TTL (5 seconds)
+const TYPING_TTL = 5000;
+
 export function useRealtimeTyping({
   channelId,
   currentUserId,
@@ -21,6 +25,7 @@ export function useRealtimeTyping({
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const subscriptionRef = useRef<any>(null);
   const cleanupIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastChannelIdRef = useRef<string | null>(null);
 
   // Clean up expired typing indicators
   useEffect(() => {
@@ -28,9 +33,10 @@ export function useRealtimeTyping({
 
     const cleanup = () => {
       const now = Date.now();
-      setTypingUsers((prev) =>
-        prev.filter((user) => user.expiresAt > now)
-      );
+      setTypingUsers((prev) => {
+        const filtered = prev.filter((user) => user.expiresAt > now);
+        return filtered.length !== prev.length ? filtered : prev;
+      });
     };
 
     cleanupIntervalRef.current = setInterval(cleanup, 1000);
@@ -38,9 +44,18 @@ export function useRealtimeTyping({
     return () => {
       if (cleanupIntervalRef.current) {
         clearInterval(cleanupIntervalRef.current);
+        cleanupIntervalRef.current = null;
       }
     };
   }, [channelId, enabled]);
+
+  // Clear typing users when channel changes
+  useEffect(() => {
+    if (lastChannelIdRef.current !== channelId) {
+      setTypingUsers([]);
+      lastChannelIdRef.current = channelId;
+    }
+  }, [channelId]);
 
   useEffect(() => {
     if (!enabled || !channelId) {
@@ -50,7 +65,11 @@ export function useRealtimeTyping({
 
     // Subscribe to typing indicators
     const channel = supabase
-      .channel(`typing:${channelId}`)
+      .channel(`typing:${channelId}`, {
+        config: {
+          broadcast: { self: false },
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -63,20 +82,23 @@ export function useRealtimeTyping({
           const newRecord = payload.new as { user_id?: string; expires_at?: string } | null;
           const oldRecord = payload.old as { user_id?: string } | null;
           const userId = newRecord?.user_id || oldRecord?.user_id;
-          
+
           // Don't show current user's typing indicator
           if (!userId || userId === currentUserId) return;
 
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            // Fetch user profile
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('id, username, email')
-              .eq('id', userId)
-              .single();
+            // Try to get username from cache first (instant)
+            let username = getCachedUsername(userId);
+            
+            // If not cached, fetch it
+            if (username === 'User') {
+              await prefetchProfiles([userId]);
+              username = getCachedUsername(userId);
+            }
 
-            const username = profile?.username || profile?.email?.split('@')[0] || 'User';
-            const expiresAt = newRecord?.expires_at ? new Date(newRecord.expires_at).getTime() : Date.now();
+            const expiresAt = newRecord?.expires_at 
+              ? new Date(newRecord.expires_at).getTime()
+              : Date.now() + TYPING_TTL;
 
             setTypingUsers((prev) => {
               const filtered = prev.filter((u) => u.userId !== userId);
@@ -91,51 +113,43 @@ export function useRealtimeTyping({
 
     subscriptionRef.current = channel;
 
-    // Also fetch current typing indicators
+    // Fetch current typing indicators on mount
     const fetchCurrentTyping = async () => {
-      const { data, error } = await supabase
-        .from('typing_indicators')
-        .select('user_id, expires_at')
-        .eq('channel_id', channelId)
-        .gt('expires_at', new Date().toISOString());
-      
-      if (error) {
-        console.warn('Error fetching typing indicators:', error);
-        return;
-      }
-      
-      // Fetch profiles separately if we have user IDs
-      if (data && data.length > 0) {
-        const userIds = data.map((item) => item.user_id).filter((id) => id !== currentUserId);
-        if (userIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, username, email')
-            .in('id', userIds);
-          
-          const profileMap = new Map();
-          if (profiles) {
-            profiles.forEach((profile) => {
-              profileMap.set(profile.id, profile);
-            });
-          }
-          
-          const users: TypingUser[] = data
-            .filter((item) => item.user_id !== currentUserId)
-            .map((item) => {
-              const profile = profileMap.get(item.user_id);
-              return {
-                userId: item.user_id,
-                username: profile?.username || profile?.email?.split('@')[0] || 'User',
-                expiresAt: new Date(item.expires_at).getTime(),
-              };
-            });
-          
-          setTypingUsers(users);
-        } else {
+      try {
+        const { data, error } = await supabase
+          .from('typing_indicators')
+          .select('user_id, expires_at')
+          .eq('channel_id', channelId)
+          .gt('expires_at', new Date().toISOString());
+
+        if (error || !data || data.length === 0) {
           setTypingUsers([]);
+          return;
         }
-      } else {
+
+        const userIds = data
+          .map((item) => item.user_id)
+          .filter((id) => id !== currentUserId);
+
+        if (userIds.length === 0) {
+          setTypingUsers([]);
+          return;
+        }
+
+        // Prefetch profiles
+        await prefetchProfiles(userIds);
+
+        const users: TypingUser[] = data
+          .filter((item) => item.user_id !== currentUserId)
+          .map((item) => ({
+            userId: item.user_id,
+            username: getCachedUsername(item.user_id),
+            expiresAt: new Date(item.expires_at).getTime(),
+          }));
+
+        setTypingUsers(users);
+      } catch (err) {
+        console.warn('Error fetching typing indicators:', err);
         setTypingUsers([]);
       }
     };
@@ -147,9 +161,11 @@ export function useRealtimeTyping({
         supabase.removeChannel(subscriptionRef.current);
         subscriptionRef.current = null;
       }
-      setTypingUsers([]);
     };
   }, [channelId, currentUserId, enabled]);
 
-  return { typingUsers };
+  // Memoize the return value to prevent unnecessary re-renders
+  const stableTypingUsers = useMemo(() => typingUsers, [typingUsers]);
+
+  return { typingUsers: stableTypingUsers };
 }

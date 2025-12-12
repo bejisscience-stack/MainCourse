@@ -82,3 +82,4 @@ Go to your Vercel project → **Settings** → **Environment Variables** and add
 That's it! Once you complete these steps, email verification will work! 🎉
 
 
+

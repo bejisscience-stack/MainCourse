@@ -351,14 +351,18 @@ export async function POST(
     const body = await request.json();
     const { content, replyTo, attachments } = body;
 
-    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    // Allow messages with content OR attachments (or both)
+    const hasContent = content && typeof content === 'string' && content.trim().length > 0;
+    const hasAttachments = attachments && Array.isArray(attachments) && attachments.length > 0;
+    
+    if (!hasContent && !hasAttachments) {
       return NextResponse.json(
-        { error: 'Message content is required' },
+        { error: 'Message must have content or attachments' },
         { status: 400 }
       );
     }
 
-    if (content.length > 4000) {
+    if (hasContent && content.length > 4000) {
       return NextResponse.json(
         { error: 'Message content is too long (max 4000 characters)' },
         { status: 400 }
@@ -448,8 +452,10 @@ export async function POST(
       );
     }
 
-    // Sanitize content (basic XSS prevention)
-    const sanitizedContent = content.trim().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    // Sanitize content (basic XSS prevention) - allow empty content for attachment-only messages
+    const sanitizedContent = hasContent 
+      ? content.trim().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      : '';
 
     // Insert message
     const { data: message, error: insertError } = await supabase

@@ -5,9 +5,11 @@ import Message from './Message';
 import MessageInput from './MessageInput';
 import LecturesChannel from './LecturesChannel';
 import type { Channel } from '@/types/server';
-import type { Message as MessageType } from '@/types/message';
+import type { Message as MessageType, MessageAttachment } from '@/types/message';
 import { useChatMessages } from '@/hooks/useChatMessages';
 import { useRealtimeTyping } from '@/hooks/useRealtimeTyping';
+import { useMuteStatus } from '@/hooks/useMuteStatus';
+import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import { supabase } from '@/lib/supabase';
 
 interface ChatAreaProps {
@@ -33,14 +35,30 @@ export default function ChatArea({
     content: string;
   } | undefined>(undefined);
   const [isSending, setIsSending] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const scrollPositionRef = useRef<number>(0);
   const userScrolledUpRef = useRef(false);
+  const prevChannelIdRef = useRef<string | null>(null);
+  const prevMessageCountRef = useRef(0);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Get mute status with real-time updates
+  const { isMuted } = useMuteStatus({
+    channelId: channel?.id || null,
+    userId: currentUserId,
+    enabled: !!channel,
+  });
+
+  // Get unread messages hook for marking channel as read
+  const channelIds = useMemo(() => channel ? [channel.id] : [], [channel?.id]);
+  const { markAsRead } = useUnreadMessages({ channelIds, enabled: !!channel });
 
   // Clear replyTo when channel changes
   useEffect(() => {
-    setReplyTo(undefined);
+    if (prevChannelIdRef.current !== channel?.id) {
+      setReplyTo(undefined);
+      userScrolledUpRef.current = false;
+      prevChannelIdRef.current = channel?.id || null;
+    }
   }, [channel?.id]);
 
   const {
@@ -48,6 +66,7 @@ export default function ChatArea({
     isLoading,
     error,
     hasMore,
+    isConnected,
     messagesEndRef,
     addPendingMessage,
     markMessageFailed,
@@ -64,16 +83,19 @@ export default function ChatArea({
   // Store messages ref for timeout check
   const messagesRef = useRef(messages);
   const timeoutRefsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
-  
+
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
-  
+
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       timeoutRefsRef.current.forEach((timeout) => clearTimeout(timeout));
       timeoutRefsRef.current.clear();
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -83,145 +105,131 @@ export default function ChatArea({
     enabled: !!channel,
   });
 
-  // Check mute status
-  useEffect(() => {
-    if (!channel || !currentUserId) {
-      setIsMuted(false);
-      return;
-    }
-
-    const checkMuteStatus = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        const response = await fetch(`/api/chats/${channel.id}/mute?userId=${currentUserId}`, {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setIsMuted(data.muted || false);
-        }
-      } catch (error) {
-        console.warn('Failed to check mute status:', error);
-      }
-    };
-
-    checkMuteStatus();
-  }, [channel, currentUserId]);
-
-  // Mark channel as read when opened
+  // Mark channel as read when opened or when new messages arrive
   useEffect(() => {
     if (!channel || !currentUserId) return;
+    
+    // Mark as read after a short delay to ensure the channel is viewed
+    const timeoutId = setTimeout(() => {
+      markAsRead(channel.id);
+    }, 500);
 
-    const markAsRead = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
+    return () => clearTimeout(timeoutId);
+  }, [channel?.id, currentUserId, markAsRead]);
 
-        await fetch(`/api/chats/${channel.id}/unread`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-        });
-      } catch (error) {
-        console.warn('Failed to mark channel as read:', error);
-      }
-    };
-
-    markAsRead();
-  }, [channel?.id, currentUserId]);
-
-  // Track scroll position to determine if user is reading old messages
+  // Smart scroll management
   const handleScroll = useCallback(() => {
     if (!messagesContainerRef.current) return;
 
     const container = messagesContainerRef.current;
     const { scrollTop, scrollHeight, clientHeight } = container;
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
     
-    userScrolledUpRef.current = !isNearBottom;
-    scrollPositionRef.current = scrollTop;
-  }, []);
+    // User is considered "scrolled up" if more than 150px from bottom
+    userScrolledUpRef.current = distanceFromBottom > 150;
 
-  // Auto-scroll to bottom only if user hasn't scrolled up
-  // Auto-scroll to bottom on new messages (only if user is at bottom)
-  useEffect(() => {
-    if (!userScrolledUpRef.current && messages.length > 0) {
-      // Use requestAnimationFrame for smooth, non-blocking scroll
-      requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      });
+    // Load more when near top
+    if (scrollTop < 100 && hasMore && !isLoading) {
+      loadMore();
     }
-  }, [messages.length]);
+  }, [hasMore, isLoading, loadMore]);
 
-  // Handle pagination on scroll up
+  // Smooth scroll to bottom
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    
+    scrollTimeoutRef.current = setTimeout(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
+      }
+    }, 50);
+  }, [messagesEndRef]);
+
+  // Auto-scroll on new messages if user is near bottom
+  useEffect(() => {
+    const messageCount = messages.length;
+    const isNewMessage = messageCount > prevMessageCountRef.current;
+    prevMessageCountRef.current = messageCount;
+
+    if (isNewMessage && !userScrolledUpRef.current && messageCount > 0) {
+      scrollToBottom('smooth');
+    }
+  }, [messages.length, scrollToBottom]);
+
+  // Scroll to bottom on initial load or channel change
+  useEffect(() => {
+    if (messages.length > 0 && !isLoading) {
+      // Use instant scroll for initial load
+      scrollToBottom('instant');
+    }
+  }, [channel?.id, isLoading]);
+
+  // Add scroll listener
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
 
-    container.addEventListener('scroll', handleScroll);
-    
-    const handleScrollTop = () => {
-      if (container.scrollTop === 0 && hasMore && !isLoading) {
-        loadMore();
-      }
-    };
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
 
-    container.addEventListener('scroll', handleScrollTop);
-
-    return () => {
-      container.removeEventListener('scroll', handleScroll);
-      container.removeEventListener('scroll', handleScrollTop);
-    };
-  }, [hasMore, isLoading, loadMore, handleScroll]);
-
-  const handleSend = useCallback(async (content: string, attachments?: any[]) => {
+  const handleSend = useCallback(async (content: string, attachments?: MessageAttachment[]) => {
     if (!channel) {
       console.error('Cannot send message: channel is null');
       return;
     }
-    
+
     if (isSending) {
       console.warn('Message send already in progress');
       return;
     }
 
-    if (!content || !content.trim()) {
+    if (!content?.trim() && (!attachments || attachments.length === 0)) {
       console.warn('Cannot send empty message');
       return;
     }
 
-    // Get session once for both optimistic update and API call
+    // Get session once
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !session?.user) {
       console.error('Session error:', sessionError);
       throw new Error('Not authenticated. Please log in again.');
     }
 
-    // Capture replyTo at the time of sending to ensure we have the current value
+    // Capture replyTo at the time of sending
     const currentReplyTo = replyTo;
-    
-    // Add optimistic message INSTANTLY (before API call)
-    const tempId = addPendingMessage(content, currentReplyTo?.id, session.user.id, attachments);
+
+    // Add optimistic message INSTANTLY with reply preview
+    const tempId = addPendingMessage(
+      content || '', 
+      currentReplyTo?.id, 
+      session.user.id, 
+      attachments,
+      currentReplyTo ? {
+        id: currentReplyTo.id,
+        username: currentReplyTo.username,
+        content: currentReplyTo.content,
+      } : undefined
+    );
+
     setIsSending(true);
 
-    try {
+    // Scroll to bottom immediately
+    userScrolledUpRef.current = false;
+    scrollToBottom('smooth');
 
-      // Send message to API (non-blocking for UI)
+    try {
       const response = await fetch(`/api/chats/${channel.id}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        credentials: 'include', // Include cookies for session
+        credentials: 'include',
         body: JSON.stringify({
-          content,
+          content: content || '',
           replyTo: currentReplyTo?.id || null,
           attachments,
         }),
@@ -230,16 +238,13 @@ export default function ChatArea({
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error || errorData.details || 'Failed to send message';
-        console.error('API error:', errorMessage, response.status);
         throw new Error(errorMessage);
       }
 
-      // Get the actual message from the response
       const responseData = await response.json();
       const serverMessage = responseData.message;
-      
+
       // Immediately replace pending message with server response
-      // This ensures replacement even if real-time is delayed
       if (serverMessage) {
         const transformedMessage: MessageType = {
           id: serverMessage.id,
@@ -251,40 +256,36 @@ export default function ChatArea({
           timestamp: serverMessage.timestamp,
           user: serverMessage.user,
         };
-        
-        // Use the hook's replacePendingMessage function
+
         replacePendingMessage(tempId, transformedMessage);
-        console.log(`Immediately replacing pending ${tempId} with server message ${serverMessage.id}`);
       }
-      
-      // Set a fallback timeout (3s) to ensure cleanup if something goes wrong
+
+      // Fallback timeout to cleanup stuck pending messages
       const fallbackTimeout = setTimeout(() => {
         const currentMessages = messagesRef.current;
         const stillPending = currentMessages.find((m) => 'tempId' in m && m.tempId === tempId);
         const messageExists = currentMessages.some((m) => m.id === serverMessage?.id);
-        
+
         if (stillPending && !messageExists && serverMessage) {
-          console.warn(`Fallback: Real-time didn't replace pending message after 3s, removing it`);
-          // Remove the stuck pending message
+          console.warn('Fallback: Removing stuck pending message');
           removePendingMessage(tempId);
         }
         timeoutRefsRef.current.delete(tempId);
-      }, 3000);
-      
+      }, 5000);
+
       timeoutRefsRef.current.set(tempId, fallbackTimeout);
 
-      // Clear replyTo only after successful send
+      // Clear replyTo on success
       setReplyTo(undefined);
       onSendMessage(channel.id, content);
     } catch (error: any) {
       console.error('Error sending message:', error);
       markMessageFailed(tempId, error.message || 'Failed to send');
-      // Re-throw to let MessageInput handle it
       throw error;
     } finally {
       setIsSending(false);
     }
-  }, [channel, replyTo, isSending, addPendingMessage, markMessageFailed, removePendingMessage, onSendMessage]);
+  }, [channel, replyTo, isSending, addPendingMessage, markMessageFailed, removePendingMessage, replacePendingMessage, onSendMessage, scrollToBottom]);
 
   const handleTyping = useCallback(async () => {
     if (!channel) return;
@@ -299,9 +300,8 @@ export default function ChatArea({
           'Authorization': `Bearer ${session.access_token}`,
         },
       });
-    } catch (error) {
+    } catch {
       // Silently fail - typing indicator is not critical
-      console.warn('Failed to send typing indicator:', error);
     }
   }, [channel]);
 
@@ -325,9 +325,15 @@ export default function ChatArea({
     const failedMessage = messages.find((m) => 'tempId' in m && m.tempId === tempId);
     if (failedMessage && 'content' in failedMessage) {
       removePendingMessage(tempId);
-      handleSend(failedMessage.content);
+      handleSend(failedMessage.content, failedMessage.attachments);
     }
   }, [messages, removePendingMessage, handleSend]);
+
+  // Scroll to bottom button handler
+  const handleScrollToBottom = useCallback(() => {
+    userScrolledUpRef.current = false;
+    scrollToBottom('smooth');
+  }, [scrollToBottom]);
 
   if (!channel) {
     return (
@@ -365,187 +371,203 @@ export default function ChatArea({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-900">
+    <div className="flex-1 flex flex-col bg-gray-900 relative">
       {/* Channel header */}
-      <div className="h-12 px-4 border-b border-gray-700 flex items-center shadow-sm">
+      <div className="h-12 px-4 border-b border-gray-700 flex items-center shadow-sm flex-shrink-0 bg-gray-900 z-10">
         <div className="flex items-center gap-2">
           <span className="text-gray-400 text-xl">#</span>
           <h2 className="text-white font-semibold text-sm">{channel.name}</h2>
+          {!isConnected && (
+            <span className="flex items-center gap-1 text-yellow-500 text-xs">
+              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+              Connecting...
+            </span>
+          )}
         </div>
         {channel.description && (
-          <span className="ml-4 text-gray-400 text-xs">{channel.description}</span>
+          <span className="ml-4 text-gray-400 text-xs hidden md:block">{channel.description}</span>
         )}
-        <div className="ml-auto flex items-center gap-4">
-          <button className="text-gray-400 hover:text-white transition-colors" title="Threads">
+        <div className="ml-auto flex items-center gap-2 md:gap-4">
+          <button className="text-gray-400 hover:text-white transition-colors p-1" title="Threads">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </button>
-          <button className="text-gray-400 hover:text-white transition-colors" title="Notifications">
+          <button className="text-gray-400 hover:text-white transition-colors p-1" title="Pinned Messages">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
           </button>
-          <button className="text-gray-400 hover:text-white transition-colors" title="Pinned Messages">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-              />
-            </svg>
-          </button>
-          <button className="text-gray-400 hover:text-white transition-colors" title="Members">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-              />
-            </svg>
-          </button>
-          <div className="w-px h-6 bg-gray-700"></div>
-          <input
-            type="text"
-            placeholder="Search"
-            className="bg-gray-800 text-gray-300 text-sm px-3 py-1.5 rounded w-40 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
+          <div className="hidden md:flex items-center">
+            <div className="w-px h-6 bg-gray-700 mx-2"></div>
+            <input
+              type="text"
+              placeholder="Search"
+              className="bg-gray-800 text-gray-300 text-sm px-3 py-1.5 rounded w-32 lg:w-40 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
         </div>
       </div>
 
       {/* Messages container */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-4"
-        style={{ scrollBehavior: 'smooth' }}
+        className="flex-1 overflow-y-auto overflow-x-hidden"
+        style={{ 
+          scrollBehavior: 'auto',
+          overscrollBehavior: 'contain',
+        }}
       >
-        {isLoading && messages.length === 0 ? (
-          // Loading skeleton
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex gap-4 animate-pulse">
-                <div className="w-10 h-10 rounded-full bg-gray-700"></div>
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-700 rounded w-24"></div>
-                  <div className="h-4 bg-gray-700 rounded w-3/4"></div>
+        <div className="min-h-full flex flex-col justify-end py-4">
+          {isLoading && messages.length === 0 ? (
+            // Loading skeleton
+            <div className="space-y-4 px-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="flex gap-4 animate-pulse">
+                  <div className="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-700 rounded w-24"></div>
+                    <div className="h-4 bg-gray-700 rounded" style={{ width: `${60 + Math.random() * 30}%` }}></div>
+                    {i % 3 === 0 && <div className="h-4 bg-gray-700 rounded w-1/2"></div>}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : error && messages.length === 0 ? (
-          // Error state
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center text-gray-400 max-w-md">
-              <div className="bg-red-900/50 border border-red-700 text-red-200 px-6 py-4 rounded-lg mb-4">
-                <p className="font-semibold mb-2">Error loading messages</p>
-                <p className="text-sm">{error}</p>
-              </div>
-              <button
-                onClick={() => refetch()}
-                className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                Try Again
-              </button>
+              ))}
             </div>
-          </div>
-        ) : messages.length === 0 ? (
-          // Empty state
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <div className="text-center">
-              <svg
-                className="w-12 h-12 mx-auto mb-4 opacity-50"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                />
-              </svg>
-              <p>No messages yet. Start the conversation!</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {hasMore && (
-              <div className="text-center py-2">
+          ) : error && messages.length === 0 ? (
+            // Error state
+            <div className="flex items-center justify-center flex-1 px-4">
+              <div className="text-center text-gray-400 max-w-md">
+                <div className="bg-red-900/50 border border-red-700 text-red-200 px-6 py-4 rounded-lg mb-4">
+                  <p className="font-semibold mb-2">Error loading messages</p>
+                  <p className="text-sm">{error}</p>
+                </div>
                 <button
-                  onClick={loadMore}
-                  disabled={isLoading}
-                  className="text-sm text-indigo-400 hover:text-indigo-300 disabled:opacity-50"
+                  onClick={() => refetch()}
+                  className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
                 >
-                  {isLoading ? 'Loading...' : 'Load older messages'}
+                  Try Again
                 </button>
               </div>
-            )}
-            {messages.map((message, index) => {
-              // Safely check if we should show avatar
-              const prevMessage = index > 0 ? messages[index - 1] : null;
-              const showAvatar =
-                index === 0 || 
-                (prevMessage && 
-                 'user' in prevMessage && 
-                 prevMessage.user && 
-                 'user' in message && 
-                 message.user &&
-                 prevMessage.user.id !== message.user.id);
-              
-              const isFailed = 'failed' in message && message.failed;
-              const tempId = 'tempId' in message ? message.tempId : undefined;
-              const messageWithRetry = isFailed
-                ? { 
-                    ...message, 
-                    onRetry: () => handleRetry(tempId || '') 
+            </div>
+          ) : messages.length === 0 ? (
+            // Empty state
+            <div className="flex items-center justify-center flex-1 px-4 text-gray-400">
+              <div className="text-center">
+                <svg
+                  className="w-12 h-12 mx-auto mb-4 opacity-50"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+                <p className="text-base font-medium mb-1">No messages yet</p>
+                <p className="text-sm text-gray-500">Start the conversation!</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Load more button */}
+              {hasMore && (
+                <div className="text-center py-3 px-4">
+                  <button
+                    onClick={loadMore}
+                    disabled={isLoading}
+                    className="text-sm text-indigo-400 hover:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Loading...
+                      </span>
+                    ) : (
+                      'Load older messages'
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Messages */}
+              <div className="space-y-0.5">
+                {messages.map((message, index) => {
+                  const prevMessage = index > 0 ? messages[index - 1] : null;
+                  const showAvatar =
+                    index === 0 ||
+                    (prevMessage &&
+                      'user' in prevMessage &&
+                      prevMessage.user &&
+                      'user' in message &&
+                      message.user &&
+                      prevMessage.user.id !== message.user.id);
+
+                  const isFailed = 'failed' in message && message.failed;
+                  const tempId = 'tempId' in message ? message.tempId : undefined;
+                  const messageWithRetry = isFailed
+                    ? {
+                        ...message,
+                        onRetry: () => handleRetry(tempId || ''),
+                      }
+                    : message;
+
+                  if (!message || !('id' in message) || !('user' in message)) {
+                    return null;
                   }
-                : message;
 
-              // Ensure message has required properties before rendering
-              if (!message || !('id' in message) || !('user' in message)) {
-                console.warn('Invalid message format:', message);
-                return null;
-              }
-
-              return (
-                <Message
-                  key={message.id}
-                  message={messageWithRetry}
-                  currentUserId={currentUserId}
-                  onReply={handleReply}
-                  onReaction={handleReaction}
-                  isLecturer={isLecturer}
-                  channelId={channel.id}
-                />
-              );
-            })}
-            <div ref={messagesEndRef} />
-          </>
-        )}
+                  return (
+                    <Message
+                      key={message.id}
+                      message={messageWithRetry}
+                      currentUserId={currentUserId}
+                      onReply={handleReply}
+                      onReaction={handleReaction}
+                      isLecturer={isLecturer}
+                      channelId={channel.id}
+                      showAvatar={showAvatar}
+                    />
+                  );
+                })}
+              </div>
+              <div ref={messagesEndRef} className="h-1" />
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Scroll to bottom button */}
+      {userScrolledUpRef.current && messages.length > 10 && (
+        <button
+          onClick={handleScrollToBottom}
+          className="absolute bottom-24 right-6 bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-full shadow-lg transition-all transform hover:scale-105 z-20"
+          title="Scroll to bottom"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </button>
+      )}
 
       {/* Typing indicator */}
       {typingUsers.length > 0 && (
-        <div className="px-4 py-2 text-sm text-gray-400 italic">
+        <div className="px-4 py-2 text-sm text-gray-400 italic flex items-center gap-2 bg-gray-900 border-t border-gray-800">
+          <div className="flex gap-1">
+            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+          </div>
           {typingUsers.length === 1 ? (
-            <span>{typingUsers[0].username} is typing...</span>
+            <span><strong>{typingUsers[0].username}</strong> is typing...</span>
           ) : typingUsers.length === 2 ? (
-            <span>{typingUsers[0].username} and {typingUsers[1].username} are typing...</span>
+            <span><strong>{typingUsers[0].username}</strong> and <strong>{typingUsers[1].username}</strong> are typing...</span>
           ) : (
-            <span>{typingUsers[0].username} and {typingUsers.length - 1} others are typing...</span>
+            <span><strong>{typingUsers[0].username}</strong> and {typingUsers.length - 1} others are typing...</span>
           )}
         </div>
       )}

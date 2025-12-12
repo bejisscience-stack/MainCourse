@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Message } from '@/types/message';
-import { useRealtimeMessages } from './useRealtimeMessages';
+import type { Message, MessageAttachment } from '@/types/message';
+import { useRealtimeMessages, prefetchProfiles, getCachedUsername } from './useRealtimeMessages';
 
 interface UseChatMessagesOptions {
   channelId: string | null;
@@ -21,6 +21,19 @@ interface FailedMessage extends Message {
 
 type ChatMessage = Message | PendingMessage | FailedMessage;
 
+// Dedupe pending message matching
+function findMatchingPending(
+  pendingMap: Map<string, PendingMessage>,
+  message: Message
+): PendingMessage | undefined {
+  return Array.from(pendingMap.values()).find((p) => {
+    const contentMatches = p.content.trim() === message.content.trim();
+    const userMatches = p.user.id === message.user.id;
+    const timeClose = Math.abs(p.timestamp - message.timestamp) < 15000; // 15 second window
+    return contentMatches && userMatches && timeClose;
+  });
+}
+
 export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,9 +42,14 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isLoadingRef = useRef(false);
   const pendingMessagesRef = useRef<Map<string, PendingMessage>>(new Map());
+  const lastChannelIdRef = useRef<string | null>(null);
+  const fetchAbortRef = useRef<AbortController | null>(null);
 
-  // Fetch messages from API
-  const fetchMessages = useCallback(async (before?: string) => {
+  // Stable message map for deduplication
+  const messageIdsRef = useRef<Set<string>>(new Set());
+
+  // Fetch messages from API with optimizations
+  const fetchMessages = useCallback(async (before?: string, signal?: AbortSignal) => {
     if (!channelId || isLoadingRef.current) return;
 
     isLoadingRef.current = true;
@@ -39,7 +57,6 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
     setError(null);
 
     try {
-      // Get session - Supabase auto-refreshes if needed
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session?.access_token) {
         throw new Error('Not authenticated. Please log in again.');
@@ -56,12 +73,12 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Include cookies for session
-        cache: 'no-store', // Ensure fresh data
+        credentials: 'include',
+        cache: 'no-store',
+        signal,
       });
 
       if (!response.ok) {
-        // Try to parse error details from response
         let errorMessage = `Failed to fetch messages: ${response.statusText}`;
         try {
           const errorData = await response.json();
@@ -71,37 +88,44 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
               errorMessage += ` - ${errorData.details}`;
             }
           }
-        } catch (e) {
-          // If JSON parsing fails, use the status text
-          console.error('Failed to parse error response:', e);
+        } catch {
+          // Use status text
         }
         throw new Error(errorMessage);
       }
 
       const responseData = await response.json();
-      
-      // Validate response structure
+
       if (!responseData || !Array.isArray(responseData.messages)) {
-        console.error('Invalid response structure:', responseData);
-        throw new Error('Invalid response from server. Expected messages array.');
+        throw new Error('Invalid response from server.');
       }
-      
+
       const { messages: fetchedMessages } = responseData;
 
+      // Prefetch profiles for faster future lookups
+      const userIds = [...new Set(fetchedMessages.map((m: Message) => m.user.id))];
+      prefetchProfiles(userIds);
+
+      // Update message IDs set
+      fetchedMessages.forEach((m: Message) => messageIdsRef.current.add(m.id));
+
       if (before) {
-        // Pagination - prepend older messages
         setMessages((prev) => {
           const existingIds = new Set(prev.map((m) => m.id));
           const newMessages = fetchedMessages.filter((m: Message) => !existingIds.has(m.id));
           return [...newMessages, ...prev];
         });
       } else {
-        // Initial load - replace all messages
+        messageIdsRef.current = new Set(fetchedMessages.map((m: Message) => m.id));
         setMessages(fetchedMessages);
       }
 
       setHasMore(fetchedMessages.length === 50);
     } catch (err: any) {
+      if (err.name === 'AbortError') {
+        // Request was cancelled, don't show error
+        return;
+      }
       console.error('Error fetching messages:', err);
       setError(err.message || 'Failed to load messages');
     } finally {
@@ -110,59 +134,72 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
     }
   }, [channelId]);
 
-  // Load initial messages
+  // Handle channel changes - clear and refetch
   useEffect(() => {
-    if (!enabled) {
+    // Abort any pending fetch
+    if (fetchAbortRef.current) {
+      fetchAbortRef.current.abort();
+      fetchAbortRef.current = null;
+    }
+
+    const channelChanged = lastChannelIdRef.current !== channelId;
+    lastChannelIdRef.current = channelId;
+
+    if (!enabled || !channelId) {
       setMessages([]);
       setError(null);
+      messageIdsRef.current.clear();
+      pendingMessagesRef.current.clear();
       return;
     }
-    
-    if (!channelId) {
-      // Don't clear messages immediately when channelId becomes null
-      // Wait a bit to see if a new channel is being selected
-      // This prevents flickering when switching channels
-      const timeoutId = setTimeout(() => {
-        setMessages([]);
-        setError(null);
-      }, 100);
-      return () => clearTimeout(timeoutId);
+
+    if (channelChanged) {
+      // Clear immediately for instant visual feedback
+      setMessages([]);
+      setError(null);
+      setHasMore(true);
+      messageIdsRef.current.clear();
+      pendingMessagesRef.current.clear();
+      setIsLoading(true);
     }
 
-    fetchMessages();
+    // Create new abort controller
+    const abortController = new AbortController();
+    fetchAbortRef.current = abortController;
+
+    fetchMessages(undefined, abortController.signal);
+
+    return () => {
+      if (fetchAbortRef.current) {
+        fetchAbortRef.current.abort();
+      }
+    };
   }, [channelId, enabled, fetchMessages]);
 
-  // Handle new real-time messages (optimized for speed)
+  // Handle new real-time messages (optimized for instant updates)
   const handleNewMessage = useCallback((message: Message) => {
-    // Use functional update for instant state update
     setMessages((prev) => {
-      // First, check if message already exists by ID (most reliable - handles profile updates)
-      const existingIndex = prev.findIndex((m) => m.id === message.id);
-      if (existingIndex !== -1) {
-        // Update existing message (useful for profile updates from "Loading..." to actual name)
-        return prev.map((m, idx) => 
-          idx === existingIndex ? message : m
-        );
+      // Check if message already exists
+      const existingIdx = prev.findIndex((m) => m.id === message.id);
+      if (existingIdx !== -1) {
+        // Update existing message (e.g., when profile loads)
+        const existing = prev[existingIdx];
+        // Only update if the new message has more data
+        if (
+          message.user.username !== 'User' ||
+          message.replyPreview ||
+          message.attachments
+        ) {
+          return prev.map((m, idx) => (idx === existingIdx ? { ...existing, ...message } : m));
+        }
+        return prev;
       }
 
-      // Try to match and replace pending messages
-      // Match by content AND user ID (more lenient on time to catch delayed real-time updates)
-      const pending = Array.from(pendingMessagesRef.current.values()).find(
-        (p) => {
-          const contentMatches = p.content.trim() === message.content.trim();
-          const userMatches = p.user.id === message.user.id;
-          // More lenient time window (10 seconds) to catch delayed real-time updates
-          const timeClose = Math.abs(p.timestamp - message.timestamp) < 10000; // 10 seconds window
-          
-          // Match: content AND user AND time must all match
-          return contentMatches && userMatches && timeClose;
-        }
-      );
-
+      // Try to match and replace pending message
+      const pending = findMatchingPending(pendingMessagesRef.current, message);
       if (pending) {
-        // Replace pending message with real message instantly
-        pendingMessagesRef.current.delete(pending.tempId!);
-        console.log(`Replacing pending message ${pending.tempId} with real message ${message.id}`);
+        pendingMessagesRef.current.delete(pending.tempId);
+        messageIdsRef.current.add(message.id);
         return prev.map((m) => {
           if ('tempId' in m && m.tempId === pending.tempId) {
             return message;
@@ -171,39 +208,60 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
         });
       }
 
-      // Add new message (from other users or if matching failed)
-      return [...prev, message];
+      // Add new message if not already in list
+      if (!messageIdsRef.current.has(message.id)) {
+        messageIdsRef.current.add(message.id);
+        return [...prev, message];
+      }
+
+      return prev;
     });
   }, []);
 
+  // Handle message updates
+  const handleMessageUpdate = useCallback((message: Message) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === message.id ? message : m))
+    );
+  }, []);
+
+  // Handle message deletions
+  const handleMessageDelete = useCallback((messageId: string) => {
+    messageIdsRef.current.delete(messageId);
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+  }, []);
+
   // Real-time subscription
-  useRealtimeMessages({
+  const { isConnected } = useRealtimeMessages({
     channelId,
     enabled,
     onNewMessage: handleNewMessage,
+    onMessageUpdate: handleMessageUpdate,
+    onMessageDelete: handleMessageDelete,
   });
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    if (messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages.length]);
-
-  // Add optimistic message
-  const addPendingMessage = useCallback((content: string, replyTo?: string, userId?: string, attachments?: any[]): string => {
-    const tempId = `pending-${Date.now()}-${Math.random()}`;
+  // Add optimistic message with instant display
+  const addPendingMessage = useCallback((
+    content: string, 
+    replyTo?: string, 
+    userId?: string, 
+    attachments?: MessageAttachment[],
+    replyPreview?: { id: string; username: string; content: string }
+  ): string => {
+    const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    
     const pendingMessage: PendingMessage = {
       id: tempId,
       tempId,
       content,
       replyTo,
+      replyPreview,
       attachments,
       timestamp: Date.now(),
       pending: true,
       user: {
         id: userId || '',
-        username: 'You',
+        username: getCachedUsername(userId || '') || 'You',
         avatarUrl: '',
       },
     };
@@ -241,6 +299,8 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
   // Replace pending message with real message (for immediate server response)
   const replacePendingMessage = useCallback((tempId: string, realMessage: Message) => {
     pendingMessagesRef.current.delete(tempId);
+    messageIdsRef.current.add(realMessage.id);
+    
     setMessages((prev) => {
       const hasRealMessage = prev.some((m) => m.id === realMessage.id);
       if (hasRealMessage) {
@@ -261,21 +321,21 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
   const loadMore = useCallback(() => {
     if (!hasMore || isLoading || messages.length === 0) return;
 
-    const oldestMessage = messages[0];
-    if ('timestamp' in oldestMessage) {
+    const oldestMessage = messages.find(m => !('pending' in m));
+    if (oldestMessage && 'timestamp' in oldestMessage) {
       const before = new Date(oldestMessage.timestamp).toISOString();
       fetchMessages(before);
     }
   }, [hasMore, isLoading, messages, fetchMessages]);
 
-  // Update message
+  // Update single message
   const updateMessage = useCallback((messageId: string, updates: Partial<Message>) => {
     setMessages((prev) =>
       prev.map((msg) => (msg.id === messageId ? { ...msg, ...updates } : msg))
     );
   }, []);
 
-  // Add reaction
+  // Add reaction (optimistic)
   const addReaction = useCallback((messageId: string, emoji: string, userId: string) => {
     setMessages((prev) =>
       prev.map((msg) => {
@@ -285,7 +345,6 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
         const hasReacted = existingReaction?.users.includes(userId);
 
         if (hasReacted) {
-          // Remove reaction
           const updatedReactions = msg.reactions
             ?.map((r) => {
               if (r.emoji === emoji) {
@@ -303,7 +362,6 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
             reactions: updatedReactions.length > 0 ? updatedReactions : undefined,
           };
         } else {
-          // Add reaction
           const updatedReactions = existingReaction
             ? msg.reactions?.map((r) =>
                 r.emoji === emoji
@@ -318,11 +376,24 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
     );
   }, []);
 
+  // Refetch all messages
+  const refetch = useCallback(() => {
+    if (fetchAbortRef.current) {
+      fetchAbortRef.current.abort();
+    }
+    const abortController = new AbortController();
+    fetchAbortRef.current = abortController;
+    messageIdsRef.current.clear();
+    setMessages([]);
+    fetchMessages(undefined, abortController.signal);
+  }, [fetchMessages]);
+
   return {
     messages,
     isLoading,
     error,
     hasMore,
+    isConnected,
     messagesEndRef,
     addPendingMessage,
     markMessageFailed,
@@ -331,6 +402,6 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
     loadMore,
     updateMessage,
     addReaction,
-    refetch: () => fetchMessages(),
+    refetch,
   };
 }

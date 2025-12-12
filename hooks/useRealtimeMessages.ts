@@ -1,20 +1,152 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Message } from '@/types/message';
+import type { Message, ReplyPreview } from '@/types/message';
+
+// Global profile cache for instant lookups
+const profileCache = new Map<string, { username: string; email?: string; avatarUrl?: string; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 interface UseRealtimeMessagesOptions {
   channelId: string | null;
   enabled?: boolean;
   onNewMessage?: (message: Message) => void;
+  onMessageUpdate?: (message: Message) => void;
+  onMessageDelete?: (messageId: string) => void;
+}
+
+// Pre-fetch and cache profiles for a list of user IDs
+export async function prefetchProfiles(userIds: string[]) {
+  const now = Date.now();
+  const uncachedIds = userIds.filter(id => {
+    const cached = profileCache.get(id);
+    return !cached || (now - cached.timestamp > CACHE_TTL);
+  });
+
+  if (uncachedIds.length === 0) return;
+
+  try {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, username, email')
+      .in('id', uncachedIds);
+
+    if (profiles) {
+      profiles.forEach(profile => {
+        profileCache.set(profile.id, {
+          username: profile.username?.trim() || profile.email?.split('@')[0] || 'User',
+          email: profile.email,
+          avatarUrl: '',
+          timestamp: now,
+        });
+      });
+    }
+  } catch (error) {
+    console.warn('Failed to prefetch profiles:', error);
+  }
+}
+
+// Get username from cache or return fallback
+export function getCachedUsername(userId: string): string {
+  const cached = profileCache.get(userId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.username;
+  }
+  return 'User';
+}
+
+// Fetch and cache a single profile
+async function fetchAndCacheProfile(userId: string): Promise<string> {
+  const cached = profileCache.get(userId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.username;
+  }
+
+  try {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('id, username, email')
+      .eq('id', userId)
+      .single();
+
+    if (profile && !error) {
+      const username = profile.username?.trim() || profile.email?.split('@')[0] || 'User';
+      profileCache.set(userId, {
+        username,
+        email: profile.email,
+        avatarUrl: '',
+        timestamp: Date.now(),
+      });
+      return username;
+    }
+  } catch (err) {
+    console.warn(`Failed to fetch profile for ${userId}:`, err);
+  }
+
+  return 'User';
+}
+
+// Fetch reply preview for a message
+async function fetchReplyPreview(replyToId: string): Promise<ReplyPreview | undefined> {
+  try {
+    const { data: replyMessage, error } = await supabase
+      .from('messages')
+      .select('id, content, user_id')
+      .eq('id', replyToId)
+      .single();
+
+    if (error || !replyMessage) return undefined;
+
+    const username = await fetchAndCacheProfile(replyMessage.user_id);
+
+    return {
+      id: replyMessage.id,
+      username,
+      content: replyMessage.content.substring(0, 50) + (replyMessage.content.length > 50 ? '...' : ''),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+// Fetch attachments for a message
+async function fetchAttachments(messageId: string) {
+  try {
+    const { data: attachments } = await supabase
+      .from('message_attachments')
+      .select('*')
+      .eq('message_id', messageId);
+
+    if (attachments && attachments.length > 0) {
+      return attachments.map((att: any) => ({
+        id: att.id,
+        fileUrl: att.file_url,
+        fileName: att.file_name,
+        fileType: att.file_type,
+        fileSize: att.file_size,
+        mimeType: att.mime_type,
+      }));
+    }
+  } catch {
+    // Silent fail for attachments
+  }
+  return undefined;
 }
 
 export function useRealtimeMessages({
   channelId,
   enabled = true,
   onNewMessage,
+  onMessageUpdate,
+  onMessageDelete,
 }: UseRealtimeMessagesOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const subscriptionRef = useRef<any>(null);
+  const callbacksRef = useRef({ onNewMessage, onMessageUpdate, onMessageDelete });
+
+  // Keep callbacks fresh
+  useEffect(() => {
+    callbacksRef.current = { onNewMessage, onMessageUpdate, onMessageDelete };
+  }, [onNewMessage, onMessageUpdate, onMessageDelete]);
 
   useEffect(() => {
     if (!enabled || !channelId) {
@@ -22,9 +154,14 @@ export function useRealtimeMessages({
       return;
     }
 
-    // Subscribe to new messages
+    // Subscribe to message changes
     const channel = supabase
-      .channel(`messages:${channelId}`)
+      .channel(`messages:${channelId}`, {
+        config: {
+          broadcast: { self: false },
+          presence: { key: '' },
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -34,7 +171,6 @@ export function useRealtimeMessages({
           filter: `channel_id=eq.${channelId}`,
         },
         async (payload) => {
-          // Use payload data directly for instant updates, then fetch profile in background
           const messageData = payload.new as {
             id: string;
             content: string;
@@ -43,8 +179,11 @@ export function useRealtimeMessages({
             created_at: string;
             user_id: string;
           };
-          
-          // Create message immediately with basic data
+
+          // Try to get username from cache first for INSTANT display
+          const cachedUsername = getCachedUsername(messageData.user_id);
+
+          // Create message immediately with cached or fallback username
           const message: Message = {
             id: messageData.id,
             content: messageData.content,
@@ -53,93 +192,34 @@ export function useRealtimeMessages({
             timestamp: new Date(messageData.created_at).getTime(),
             user: {
               id: messageData.user_id,
-              username: 'Loading...', // Will be updated when profile loads
+              username: cachedUsername,
               avatarUrl: '',
             },
-            // Attachments and replyPreview will be fetched separately if needed
           };
 
-          // Send message immediately for instant UI update
-          onNewMessage?.(message);
+          // Send message IMMEDIATELY
+          callbacksRef.current.onNewMessage?.(message);
 
-          // Fetch profile in background and update IMMEDIATELY
-          // Use a more reliable approach - fetch with error handling and retry
-          (async () => {
-            let profile = null;
-            let profileError = null;
-            
-            // Try fetching profile with retry logic (3 attempts)
-            for (let attempt = 0; attempt < 3; attempt++) {
-              try {
-                const result = await supabase
-                  .from('profiles')
-                  .select('id, username, email')
-                  .eq('id', messageData.user_id)
-                  .single();
+          // Fetch additional data in background and update
+          const [actualUsername, replyPreview, attachments] = await Promise.all([
+            cachedUsername === 'User' ? fetchAndCacheProfile(messageData.user_id) : Promise.resolve(cachedUsername),
+            messageData.reply_to_id ? fetchReplyPreview(messageData.reply_to_id) : Promise.resolve(undefined),
+            fetchAttachments(messageData.id),
+          ]);
 
-                if (result.data && !result.error) {
-                  profile = result.data;
-                  break;
-                } else {
-                  profileError = result.error;
-                  console.warn(`Profile fetch attempt ${attempt + 1} failed:`, result.error);
-                }
-              } catch (err: any) {
-                profileError = err;
-                console.warn(`Profile fetch attempt ${attempt + 1} error:`, err);
-                if (attempt < 2) {
-                  // Wait a bit before retry (exponential backoff)
-                  await new Promise(resolve => setTimeout(resolve, 200 * (attempt + 1)));
-                }
-              }
-            }
-
-            // Determine username with better fallback logic
-            let username = 'User';
-            
-            if (profile) {
-              // Prioritize profile.username (required), then email username
-              const profileUsername = profile.username?.trim();
-              const emailUsername = profile.email?.split('@')[0];
-              
-              if (profileUsername && profileUsername.length > 0) {
-                username = profileUsername;
-              } else if (emailUsername && emailUsername.length > 0) {
-                username = emailUsername;
-              } else {
-                username = 'User';
-              }
-            } else {
-              // If profile fetch failed, log the failure but use generic User
-              // Never use User-ID format as it's not user-friendly
-              console.error(`CRITICAL: Failed to fetch profile for user ${messageData.user_id} after 3 attempts.`);
-              console.error('Profile error:', profileError);
-              console.error('Using fallback username: User');
-              console.error('This suggests an RLS policy issue or profile doesn\'t exist');
-              console.error('Please check:');
-              console.error('1. RLS policy "Users can view profiles in same courses" is enabled');
-              console.error('2. User is enrolled in the same course');
-              console.error('3. Profile exists in profiles table');
-              username = 'User';
-            }
-            
-            // Ensure username is never empty
-            if (!username || username.trim() === '') {
-              username = 'User';
-            }
-            
+          // Only update if we have additional data
+          if (actualUsername !== cachedUsername || replyPreview || attachments) {
             const updatedMessage: Message = {
               ...message,
               user: {
                 ...message.user,
-                username,
+                username: actualUsername,
               },
+              replyPreview,
+              attachments,
             };
-            
-            // Always update the message (even if profile fetch failed, use fallback)
-            // This ensures "Loading..." gets replaced
-            onNewMessage?.(updatedMessage);
-          })();
+            callbacksRef.current.onNewMessage?.(updatedMessage);
+          }
         }
       )
       .on(
@@ -151,7 +231,6 @@ export function useRealtimeMessages({
           filter: `channel_id=eq.${channelId}`,
         },
         async (payload) => {
-          // Handle message updates (edits) - use payload directly
           const messageData = payload.new as {
             id: string;
             content: string;
@@ -160,66 +239,53 @@ export function useRealtimeMessages({
             created_at: string;
             user_id: string;
           };
-          
+
+          const username = await fetchAndCacheProfile(messageData.user_id);
+          const [replyPreview, attachments] = await Promise.all([
+            messageData.reply_to_id ? fetchReplyPreview(messageData.reply_to_id) : Promise.resolve(undefined),
+            fetchAttachments(messageData.id),
+          ]);
+
           const message: Message = {
             id: messageData.id,
             content: messageData.content,
             replyTo: messageData.reply_to_id || undefined,
+            replyPreview,
+            attachments,
             edited: !!messageData.edited_at,
             timestamp: new Date(messageData.created_at).getTime(),
             user: {
               id: messageData.user_id,
-              username: 'Loading...',
+              username,
               avatarUrl: '',
             },
           };
 
-          onNewMessage?.(message);
-
-          // Fetch profile in background
-          supabase
-            .from('profiles')
-            .select('id, username, email')
-            .eq('id', messageData.user_id)
-            .single()
-            .then(({ data: profile, error: profileErr }) => {
-              let username = 'User';
-              if (profile) {
-                // Prioritize profile.username (required), then email username
-                const profileUsername = profile.username?.trim();
-                const emailUsername = profile.email?.split('@')[0];
-                
-                if (profileUsername && profileUsername.length > 0) {
-                  username = profileUsername;
-                } else if (emailUsername && emailUsername.length > 0) {
-                  username = emailUsername;
-                } else {
-                  username = 'User';
-                }
-              } else if (profileErr) {
-                console.warn('Failed to fetch profile for updated message:', profileErr);
-                // Use generic User instead of User-ID format
-                username = 'User';
-              }
-              
-              // Ensure username is never empty
-              if (!username || username.trim() === '') {
-                username = 'User';
-              }
-              
-              const updatedMessage: Message = {
-                ...message,
-                user: {
-                  ...message.user,
-                  username,
-                },
-              };
-              onNewMessage?.(updatedMessage);
-            });
+          callbacksRef.current.onMessageUpdate?.(message);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+          filter: `channel_id=eq.${channelId}`,
+        },
+        (payload) => {
+          const oldMessage = payload.old as { id: string };
+          if (oldMessage?.id) {
+            callbacksRef.current.onMessageDelete?.(oldMessage.id);
+          }
         }
       )
       .subscribe((status) => {
         setIsConnected(status === 'SUBSCRIBED');
+        if (status === 'SUBSCRIBED') {
+          console.log(`[RT] Connected to channel ${channelId}`);
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          console.warn(`[RT] Disconnected from channel ${channelId}: ${status}`);
+        }
       });
 
     subscriptionRef.current = channel;
@@ -231,7 +297,7 @@ export function useRealtimeMessages({
       }
       setIsConnected(false);
     };
-  }, [channelId, enabled, onNewMessage]);
+  }, [channelId, enabled]);
 
   return { isConnected };
 }

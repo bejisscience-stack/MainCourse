@@ -99,3 +99,4 @@ After deploying your website, you need to configure Supabase to use your product
 - Both custom domains and Vercel preview URLs should be added to Supabase redirect URLs
 
 
+

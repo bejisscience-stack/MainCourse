@@ -154,3 +154,4 @@ After completing the above steps:
 **Note:** The code changes are already complete. You just need to enable email confirmations in the Supabase dashboard and verify your URL configurations.
 
 
+
