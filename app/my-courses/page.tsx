@@ -31,12 +31,13 @@ export default function MyCoursesPage() {
     }
   }, [user, userLoading, router]);
 
-  // Fetch enrolled courses
+  // Fetch enrolled courses - use stable key with user ID
   const enrolledIdsArray = useMemo(() => Array.from(enrolledCourseIds), [enrolledCourseIds]);
   
-  const { data: enrolledCourses = [], isLoading: enrolledLoading } = useSWR<Course[]>(
-    enrolledIdsArray.length > 0 && user ? ['enrolled-courses', enrolledIdsArray] : null,
+  const { data: enrolledCourses = [], isLoading: enrolledLoading, mutate: mutateEnrolledCourses } = useSWR<Course[]>(
+    user ? ['enrolled-courses', user.id] : null,
     async () => {
+      if (enrolledIdsArray.length === 0) return [];
       const { data, error } = await supabase
         .from('courses')
         .select('*')
@@ -51,9 +52,9 @@ export default function MyCoursesPage() {
     }
   );
 
-  // Fetch discover courses (not enrolled)
-  const { data: discoverCourses = [], isLoading: discoverLoading } = useSWR<Course[]>(
-    user ? ['discover-courses', enrolledIdsArray] : null,
+  // Fetch discover courses (not enrolled) - use stable key with user ID
+  const { data: discoverCourses = [], isLoading: discoverLoading, mutate: mutateDiscoverCourses } = useSWR<Course[]>(
+    user ? ['discover-courses', user.id] : null,
     async () => {
       let query = supabase
         .from('courses')
@@ -78,28 +79,75 @@ export default function MyCoursesPage() {
     if (!user) return;
     setError(null);
     setEnrolling(courseId);
+    
+    // Find the course being enrolled for optimistic update
+    const courseToEnroll = discoverCourses.find(c => c.id === courseId);
+    if (!courseToEnroll) {
+      setError('Course not found');
+      setEnrolling(null);
+      return;
+    }
+    
+    // Store current state for rollback
+    const previousEnrolledIds = new Set(enrolledCourseIds);
+    const previousEnrolledCourses = [...enrolledCourses];
+    const previousDiscoverCourses = [...discoverCourses];
+    
     try {
+      // Optimistically update enrollments set immediately
+      const newEnrolledIds = new Set(previousEnrolledIds);
+      newEnrolledIds.add(courseId);
+      await mutateEnrollments(newEnrolledIds, false);
+      
+      // Optimistically update course lists immediately (using stable keys)
+      const newEnrolledCourses = [...previousEnrolledCourses, courseToEnroll];
+      const newDiscoverCourses = previousDiscoverCourses.filter(c => c.id !== courseId);
+      
+      await mutateEnrolledCourses(newEnrolledCourses, false);
+      await mutateDiscoverCourses(newDiscoverCourses, false);
+      
+      // Now perform the actual enrollment
       const { error: insertError } = await supabase
         .from('enrollments')
         .insert([{ user_id: user.id, course_id: courseId }]);
       
       if (insertError) {
         if (insertError.code === '23505') {
-          // Already enrolled
-          mutateEnrollments();
+          // Already enrolled - revalidate to sync state
+          await Promise.all([
+            mutateEnrollments(),
+            mutateEnrolledCourses(),
+            mutateDiscoverCourses(),
+          ]);
           return;
         }
         throw insertError;
       }
       
-      // Optimistically update enrollments
-      mutateEnrollments();
+      // Revalidate all queries to ensure consistency with server
+      await Promise.all([
+        mutateEnrollments(),
+        mutateEnrolledCourses(),
+        mutateDiscoverCourses(),
+      ]);
     } catch (err: any) {
       setError(err.message || 'Failed to enroll in course');
+      // Revert optimistic updates on error
+      await Promise.all([
+        mutateEnrollments(previousEnrolledIds, false),
+        mutateEnrolledCourses(previousEnrolledCourses, false),
+        mutateDiscoverCourses(previousDiscoverCourses, false),
+      ]);
+      // Then revalidate to get correct state
+      await Promise.all([
+        mutateEnrollments(),
+        mutateEnrolledCourses(),
+        mutateDiscoverCourses(),
+      ]);
     } finally {
       setEnrolling(null);
     }
-  }, [user, mutateEnrollments]);
+  }, [user, mutateEnrollments, enrolledCourseIds, enrolledCourses, discoverCourses, mutateEnrolledCourses, mutateDiscoverCourses]);
 
   const CourseCard = ({
     course,

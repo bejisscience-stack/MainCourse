@@ -8,6 +8,8 @@ import ChatNavigation from '@/components/chat/ChatNavigation';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useEnrollments } from '@/hooks/useEnrollments';
+import { useActiveChannel } from '@/hooks/useActiveChannel';
+import { useActiveServer } from '@/hooks/useActiveServer';
 import type { Server, Channel } from '@/types/server';
 import type { Member } from '@/types/member';
 import type { Message as MessageType } from '@/types/message';
@@ -18,11 +20,14 @@ export default function CourseChatPage() {
   const courseId = params?.courseId as string;
   const { user, role: userRole, isLoading: userLoading } = useUser();
   const { enrolledCourseIds, isLoading: enrollmentsLoading } = useEnrollments(user?.id || null);
+  const [activeServerId, setActiveServerId] = useActiveServer();
+  const [activeChannelId, setActiveChannelId] = useActiveChannel();
   const [course, setCourse] = useState<any>(null);
   const [servers, setServers] = useState<Server[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoadingCourse, setIsLoadingCourse] = useState(true);
+  const [hasAutoSelectedChannel, setHasAutoSelectedChannel] = useState(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -183,6 +188,9 @@ export default function CourseChatPage() {
       };
 
       setServers([server]);
+      
+      // Set active server to this course
+      setActiveServerId(courseId);
 
       // Fetch members (enrolled students and lecturer)
       try {
@@ -251,6 +259,33 @@ export default function CourseChatPage() {
       loadCourseAndChannels();
     }
   }, [courseId, user, userLoading, enrollmentsLoading, loadCourseAndChannels]);
+
+  // Reset auto-select flag when courseId changes
+  useEffect(() => {
+    setHasAutoSelectedChannel(false);
+  }, [courseId]);
+
+  // Auto-select lectures channel when servers are loaded
+  useEffect(() => {
+    if (servers.length > 0 && !hasAutoSelectedChannel && courseId) {
+      // Find the lectures channel
+      const server = servers[0];
+      const allChannels = server.channels.flatMap(cat => cat.channels);
+      const lecturesChannel = allChannels.find(
+        ch => ch.type === 'lectures' && ch.name.toLowerCase() === 'lectures'
+      );
+      
+      // Only auto-select if no channel is currently selected, or if the selected channel is not from this course
+      const currentChannel = allChannels.find(ch => ch.id === activeChannelId);
+      if (lecturesChannel && (!activeChannelId || !currentChannel)) {
+        setActiveChannelId(lecturesChannel.id);
+        setHasAutoSelectedChannel(true);
+      } else if (activeChannelId && currentChannel) {
+        // Channel is already selected for this course, mark as done
+        setHasAutoSelectedChannel(true);
+      }
+    }
+  }, [servers, activeChannelId, courseId, hasAutoSelectedChannel, setActiveChannelId]);
 
   const handleSendMessage = async (channelId: string, content: string) => {
     // Message sending is now handled by ChatArea component via API
