@@ -280,8 +280,21 @@ export default function ChatArea({
       onSendMessage(channel.id, content);
     } catch (error: any) {
       console.error('Error sending message:', error);
-      markMessageFailed(tempId, error.message || 'Failed to send');
-      throw error;
+      
+      // Handle muted error gracefully - don't throw, just show the message
+      const errorMessage = error.message || 'Failed to send';
+      const isMutedError = errorMessage.toLowerCase().includes('muted');
+      
+      if (isMutedError) {
+        // For muted users, remove the pending message and don't show failed state
+        removePendingMessage(tempId);
+      } else {
+        // For other errors, mark as failed so user can retry
+        markMessageFailed(tempId, errorMessage);
+      }
+      
+      // Don't throw - this prevents the ugly runtime error popup
+      // The error is already handled via markMessageFailed or removePendingMessage
     } finally {
       setIsSending(false);
     }

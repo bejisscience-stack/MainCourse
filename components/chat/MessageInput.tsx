@@ -118,16 +118,26 @@ export default function MessageInput({
         textareaRef.current?.focus();
       });
     } catch (err: any) {
-      // Restore content on error
-      setContent(contentToSend);
-      setAttachments(attachmentsToSend);
-      setError(err.message || 'Failed to send message');
+      const errorMessage = err.message || 'Failed to send message';
+      const isMutedError = errorMessage.toLowerCase().includes('muted');
       
-      // Still focus back on error so user can fix and resend
+      if (isMutedError) {
+        // For muted users, show a friendly error but don't restore content
+        // (they can't send anyway)
+        setError('You have been muted by the lecturer and cannot send messages.');
+      } else {
+        // For other errors, restore content so user can retry
+        setContent(contentToSend);
+        setAttachments(attachmentsToSend);
+        setError(errorMessage);
+      }
+      
+      // Still focus back on error so user can see the message
       requestAnimationFrame(() => {
         textareaRef.current?.focus();
       });
-      throw err;
+      
+      // Don't throw - this prevents the ugly runtime error popup
     }
   }, [content, attachments, disabled, isSending, isMuted, isUploading, onSend]);
 
