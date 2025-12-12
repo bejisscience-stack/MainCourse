@@ -753,7 +753,7 @@ function VideoEditModal({
         if (uploadError) throw uploadError;
 
         const { data: urlData } = supabase.storage.from('course-thumbnails').getPublicUrl(filePath);
-        thumbnailUrl = urlData?.publicUrl || null;
+        thumbnailUrl = urlData?.publicUrl ?? undefined;
       }
 
       const { error: updateError } = await supabase
