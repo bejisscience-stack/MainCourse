@@ -33,9 +33,15 @@ export default function ChatArea({
     content: string;
   } | undefined>(undefined);
   const [isSending, setIsSending] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
   const userScrolledUpRef = useRef(false);
+
+  // Clear replyTo when channel changes
+  useEffect(() => {
+    setReplyTo(undefined);
+  }, [channel?.id]);
 
   const {
     messages,
@@ -76,6 +82,59 @@ export default function ChatArea({
     currentUserId,
     enabled: !!channel,
   });
+
+  // Check mute status
+  useEffect(() => {
+    if (!channel || !currentUserId) {
+      setIsMuted(false);
+      return;
+    }
+
+    const checkMuteStatus = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const response = await fetch(`/api/chats/${channel.id}/mute?userId=${currentUserId}`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setIsMuted(data.muted || false);
+        }
+      } catch (error) {
+        console.warn('Failed to check mute status:', error);
+      }
+    };
+
+    checkMuteStatus();
+  }, [channel, currentUserId]);
+
+  // Mark channel as read when opened
+  useEffect(() => {
+    if (!channel || !currentUserId) return;
+
+    const markAsRead = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        await fetch(`/api/chats/${channel.id}/unread`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        });
+      } catch (error) {
+        console.warn('Failed to mark channel as read:', error);
+      }
+    };
+
+    markAsRead();
+  }, [channel?.id, currentUserId]);
 
   // Track scroll position to determine if user is reading old messages
   const handleScroll = useCallback(() => {
@@ -121,7 +180,7 @@ export default function ChatArea({
     };
   }, [hasMore, isLoading, loadMore, handleScroll]);
 
-  const handleSend = useCallback(async (content: string) => {
+  const handleSend = useCallback(async (content: string, attachments?: any[]) => {
     if (!channel) {
       console.error('Cannot send message: channel is null');
       return;
@@ -144,8 +203,11 @@ export default function ChatArea({
       throw new Error('Not authenticated. Please log in again.');
     }
 
+    // Capture replyTo at the time of sending to ensure we have the current value
+    const currentReplyTo = replyTo;
+    
     // Add optimistic message INSTANTLY (before API call)
-    const tempId = addPendingMessage(content, replyTo?.id, session.user.id);
+    const tempId = addPendingMessage(content, currentReplyTo?.id, session.user.id, attachments);
     setIsSending(true);
 
     try {
@@ -160,7 +222,8 @@ export default function ChatArea({
         credentials: 'include', // Include cookies for session
         body: JSON.stringify({
           content,
-          replyTo: replyTo?.id,
+          replyTo: currentReplyTo?.id || null,
+          attachments,
         }),
       });
 
@@ -182,6 +245,8 @@ export default function ChatArea({
           id: serverMessage.id,
           content: serverMessage.content,
           replyTo: serverMessage.replyTo,
+          replyPreview: serverMessage.replyPreview,
+          attachments: serverMessage.attachments,
           edited: serverMessage.edited,
           timestamp: serverMessage.timestamp,
           user: serverMessage.user,
@@ -208,6 +273,7 @@ export default function ChatArea({
       
       timeoutRefsRef.current.set(tempId, fallbackTimeout);
 
+      // Clear replyTo only after successful send
       setReplyTo(undefined);
       onSendMessage(channel.id, content);
     } catch (error: any) {
@@ -428,9 +494,16 @@ export default function ChatArea({
               </div>
             )}
             {messages.map((message, index) => {
+              // Safely check if we should show avatar
+              const prevMessage = index > 0 ? messages[index - 1] : null;
               const showAvatar =
                 index === 0 || 
-                (messages[index - 1] && 'user' in messages[index - 1] && messages[index - 1].user.id !== message.user.id);
+                (prevMessage && 
+                 'user' in prevMessage && 
+                 prevMessage.user && 
+                 'user' in message && 
+                 message.user &&
+                 prevMessage.user.id !== message.user.id);
               
               const isFailed = 'failed' in message && message.failed;
               const tempId = 'tempId' in message ? message.tempId : undefined;
@@ -441,6 +514,12 @@ export default function ChatArea({
                   }
                 : message;
 
+              // Ensure message has required properties before rendering
+              if (!message || !('id' in message) || !('user' in message)) {
+                console.warn('Invalid message format:', message);
+                return null;
+              }
+
               return (
                 <Message
                   key={message.id}
@@ -448,6 +527,8 @@ export default function ChatArea({
                   currentUserId={currentUserId}
                   onReply={handleReply}
                   onReaction={handleReaction}
+                  isLecturer={isLecturer}
+                  channelId={channel.id}
                 />
               );
             })}
@@ -478,6 +559,8 @@ export default function ChatArea({
         placeholder={`Message #${channel.name}`}
         disabled={isSending}
         isSending={isSending}
+        channelId={channel.id}
+        isMuted={isMuted}
       />
     </div>
   );

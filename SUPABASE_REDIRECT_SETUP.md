@@ -98,3 +98,4 @@ After deploying your website, you need to configure Supabase to use your product
 - The callback route uses `force-dynamic` to ensure it works correctly
 - Both custom domains and Vercel preview URLs should be added to Supabase redirect URLs
 
+

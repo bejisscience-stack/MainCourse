@@ -112,10 +112,21 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
 
   // Load initial messages
   useEffect(() => {
-    if (!enabled || !channelId) {
+    if (!enabled) {
       setMessages([]);
       setError(null);
       return;
+    }
+    
+    if (!channelId) {
+      // Don't clear messages immediately when channelId becomes null
+      // Wait a bit to see if a new channel is being selected
+      // This prevents flickering when switching channels
+      const timeoutId = setTimeout(() => {
+        setMessages([]);
+        setError(null);
+      }, 100);
+      return () => clearTimeout(timeoutId);
     }
 
     fetchMessages();
@@ -180,13 +191,14 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
   }, [messages.length]);
 
   // Add optimistic message
-  const addPendingMessage = useCallback((content: string, replyTo?: string, userId?: string): string => {
+  const addPendingMessage = useCallback((content: string, replyTo?: string, userId?: string, attachments?: any[]): string => {
     const tempId = `pending-${Date.now()}-${Math.random()}`;
     const pendingMessage: PendingMessage = {
       id: tempId,
       tempId,
       content,
       replyTo,
+      attachments,
       timestamp: Date.now(),
       pending: true,
       user: {

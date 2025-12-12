@@ -56,6 +56,7 @@ export function useRealtimeMessages({
               username: 'Loading...', // Will be updated when profile loads
               avatarUrl: '',
             },
+            // Attachments and replyPreview will be fetched separately if needed
           };
 
           // Send message immediately for instant UI update

@@ -125,3 +125,4 @@ Once deployed, you can verify the environment variables are set correctly:
 - Check Supabase Dashboard → Authentication → URL Configuration
 - See `ENABLE_EMAIL_VERIFICATION.md` for complete email setup guide
 
+

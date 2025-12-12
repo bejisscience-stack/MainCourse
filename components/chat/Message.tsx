@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, memo } from 'react';
+import { useState, memo, useRef, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import type { Message as MessageType } from '@/types/message';
 
 interface MessageProps {
@@ -8,11 +9,25 @@ interface MessageProps {
   currentUserId: string;
   onReply?: (messageId: string) => void;
   onReaction?: (messageId: string, emoji: string) => void;
+  isLecturer?: boolean;
+  channelId?: string;
 }
 
-const Message = memo(function Message({ message, currentUserId, onReply, onReaction }: MessageProps) {
+const Message = memo(function Message({ 
+  message, 
+  currentUserId, 
+  onReply, 
+  onReaction,
+  isLecturer = false,
+  channelId,
+}: MessageProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [showMuteMenu, setShowMuteMenu] = useState(false);
+  const [showUsernameMenu, setShowUsernameMenu] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const messageRef = useRef<HTMLDivElement>(null);
+  const usernameMenuRef = useRef<HTMLDivElement>(null);
 
   const formatTimestamp = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -32,11 +47,137 @@ const Message = memo(function Message({ message, currentUserId, onReply, onReact
 
   const commonReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
+  // Check if user is muted (for lecturers)
+  const checkMuteStatus = useCallback(async () => {
+    if (!isLecturer || !channelId || message.user.id === currentUserId) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch(`/api/chats/${channelId}/mute?userId=${message.user.id}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIsMuted(data.muted || false);
+      }
+    } catch (error) {
+      console.warn('Failed to check mute status:', error);
+    }
+  }, [isLecturer, channelId, message.user.id, currentUserId]);
+
+  const handleMute = async () => {
+    if (!isLecturer || !channelId || message.user.id === currentUserId) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch(`/api/chats/${channelId}/mute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ userId: message.user.id }),
+      });
+
+      if (response.ok) {
+        setIsMuted(true);
+        setShowMuteMenu(false);
+      }
+    } catch (error) {
+      console.error('Failed to mute user:', error);
+    }
+  };
+
+  const handleUnmute = async () => {
+    if (!isLecturer || !channelId || message.user.id === currentUserId) return;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch(`/api/chats/${channelId}/mute?userId=${message.user.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        setIsMuted(false);
+        setShowMuteMenu(false);
+      }
+    } catch (error) {
+      console.error('Failed to unmute user:', error);
+    }
+  };
+
+  const scrollToOriginal = () => {
+    if (message.replyTo) {
+      const originalMessage = document.querySelector(`[data-message-id="${message.replyTo}"]`);
+      if (originalMessage) {
+        originalMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Highlight briefly
+        originalMessage.classList.add('ring-2', 'ring-indigo-500');
+        setTimeout(() => {
+          originalMessage.classList.remove('ring-2', 'ring-indigo-500');
+        }, 2000);
+      }
+    }
+  };
+
+  // Check mute status when menu opens
+  useEffect(() => {
+    if (showMenu && isLecturer && message.user.id !== currentUserId) {
+      checkMuteStatus();
+    }
+  }, [showMenu, isLecturer, message.user.id, currentUserId, checkMuteStatus]);
+
+  // Check mute status when username menu opens
+  useEffect(() => {
+    if (showUsernameMenu && isLecturer && message.user.id !== currentUserId) {
+      checkMuteStatus();
+    }
+  }, [showUsernameMenu, isLecturer, message.user.id, currentUserId, checkMuteStatus]);
+
+  // Close username menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (usernameMenuRef.current && !usernameMenuRef.current.contains(event.target as Node)) {
+        setShowUsernameMenu(false);
+      }
+    };
+
+    if (showUsernameMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showUsernameMenu]);
+
   return (
     <div
+      ref={messageRef}
+      data-message-id={message.id}
       className="group px-4 py-1 hover:bg-gray-800/50 transition-colors"
-      onMouseEnter={() => setShowMenu(true)}
-      onMouseLeave={() => setShowMenu(false)}
+      onMouseEnter={() => {
+        setShowMenu(true);
+        if (isLecturer && message.user.id !== currentUserId) {
+          checkMuteStatus();
+        }
+      }}
+      onMouseLeave={() => {
+        setShowMenu(false);
+        setShowMuteMenu(false);
+        // Don't close username menu on mouse leave - let click outside handle it
+      }}
     >
       <div className="flex gap-4">
         {/* Avatar */}
@@ -55,24 +196,233 @@ const Message = memo(function Message({ message, currentUserId, onReply, onReact
         </div>
 
         {/* Message content */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 relative">
+          {/* Reply preview */}
+          {message.replyPreview && (
+            <div 
+              onClick={scrollToOriginal}
+              className="mb-1 px-3 py-1 border-l-2 border-indigo-500 bg-gray-800/50 rounded text-xs text-gray-400 cursor-pointer hover:bg-gray-800 transition-colors"
+            >
+              <span className="text-indigo-400 font-medium">{message.replyPreview.username}</span>
+              <span className="ml-2">{message.replyPreview.content}</span>
+            </div>
+          )}
+
           {/* Header */}
-          <div className="flex items-baseline gap-2 mb-1">
-            <span className="text-white font-semibold text-sm hover:underline cursor-pointer">
-              {message.user.username}
-            </span>
+          <div className="flex items-baseline gap-2 mb-1 relative group/header">
+            <div className="relative" ref={usernameMenuRef}>
+              <span 
+                className={`text-white font-semibold text-sm hover:underline cursor-pointer ${
+                  isLecturer && message.user.id !== currentUserId ? 'hover:text-indigo-400' : ''
+                }`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (isLecturer && message.user.id !== currentUserId) {
+                    setShowUsernameMenu(!showUsernameMenu);
+                    checkMuteStatus();
+                  }
+                }}
+                onMouseDown={(e) => {
+                  // Prevent text selection when clicking
+                  if (isLecturer && message.user.id !== currentUserId) {
+                    e.preventDefault();
+                  }
+                }}
+                title={isLecturer && message.user.id !== currentUserId ? 'Click to mute/unmute user' : ''}
+              >
+                {message.user.username}
+              </span>
+              {showUsernameMenu && isLecturer && message.user.id !== currentUserId && (
+                <div className="absolute left-0 top-6 bg-gray-800 border border-gray-700 rounded shadow-xl z-50 min-w-[140px]">
+                  {isMuted ? (
+                    <button
+                      onClick={async () => {
+                        await handleUnmute();
+                        setShowUsernameMenu(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                      </svg>
+                      Unmute user
+                    </button>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        await handleMute();
+                        setShowUsernameMenu(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                      </svg>
+                      Mute user
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
             <span className="text-gray-400 text-xs">{formatTimestamp(message.timestamp)}</span>
             {message.edited && (
               <span className="text-gray-500 text-xs italic">(edited)</span>
             )}
+            {isMuted && (
+              <span className="text-red-400 text-xs">🔇 Muted</span>
+            )}
+            {/* Hover menu - positioned inline with header */}
+            {showMenu && (
+              <div className="absolute right-0 top-0 flex items-center gap-1 bg-gray-800 border border-gray-700 rounded shadow-lg p-1 z-10 ml-auto">
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setShowReactionPicker(!showReactionPicker);
+                    }}
+                    className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
+                    title="Add Reaction"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </button>
+                  {/* Reaction picker */}
+                  {showReactionPicker && (
+                    <div className="absolute right-0 top-6 bg-gray-800 border border-gray-700 rounded shadow-lg p-2 flex gap-1 z-20">
+                      {commonReactions.map((emoji) => (
+                        <button
+                          key={emoji}
+                          onClick={() => {
+                            onReaction?.(message.id, emoji);
+                            setShowReactionPicker(false);
+                            setShowMenu(false);
+                          }}
+                          className="p-2 hover:bg-gray-700 rounded text-xl transition-colors"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    onReply?.(message.id);
+                    setShowMenu(false);
+                  }}
+                  className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
+                  title="Reply"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                    />
+                  </svg>
+                </button>
+                {isLecturer && message.user.id !== currentUserId && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowMuteMenu(!showMuteMenu)}
+                      className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
+                      title="Mute/Unmute user"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
+                        />
+                      </svg>
+                    </button>
+                    {showMuteMenu && (
+                      <div className="absolute right-0 mt-1 bg-gray-800 border border-gray-700 rounded shadow-lg z-30 min-w-[120px]">
+                        {isMuted ? (
+                          <button
+                            onClick={handleUnmute}
+                            className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 transition-colors"
+                          >
+                            Unmute user
+                          </button>
+                        ) : (
+                          <button
+                            onClick={handleMute}
+                            className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 transition-colors"
+                          >
+                            Mute user
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <button
+                  className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
+                  title="More options"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                    />
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Message text */}
-          <div className={`text-gray-300 text-sm whitespace-pre-wrap break-words ${
-            message.pending ? 'opacity-60' : message.failed ? 'opacity-80' : ''
-          }`}>
-            {message.content}
-          </div>
+          {message.content && (
+            <div className={`text-gray-300 text-sm whitespace-pre-wrap break-words ${
+              message.pending ? 'opacity-60' : message.failed ? 'opacity-80' : ''
+            }`}>
+              {message.content}
+            </div>
+          )}
+
+          {/* Attachments */}
+          {message.attachments && message.attachments.length > 0 && (
+            <div className="mt-2 space-y-2">
+              {message.attachments.map((att) => (
+                <div key={att.id} className="rounded-lg overflow-hidden border border-gray-700">
+                  {att.fileType === 'image' || att.fileType === 'gif' ? (
+                    <img
+                      src={att.fileUrl}
+                      alt={att.fileName}
+                      className="max-w-md max-h-96 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => window.open(att.fileUrl, '_blank')}
+                    />
+                  ) : att.fileType === 'video' ? (
+                    <video
+                      src={att.fileUrl}
+                      controls
+                      className="max-w-md max-h-96"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Pending indicator */}
           {message.pending && (
@@ -126,76 +476,6 @@ const Message = memo(function Message({ message, currentUserId, onReply, onReact
             </div>
           )}
 
-          {/* Hover menu */}
-          {showMenu && (
-            <div className="absolute right-4 mt-1 flex items-center gap-1 bg-gray-800 border border-gray-700 rounded shadow-lg p-1 z-10">
-              <button
-                onClick={() => {
-                  setShowReactionPicker(!showReactionPicker);
-                }}
-                className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
-                title="Add Reaction"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </button>
-              <button
-                onClick={() => {
-                  onReply?.(message.id);
-                  setShowMenu(false);
-                }}
-                className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
-                title="Reply"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-                  />
-                </svg>
-              </button>
-              <button
-                className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
-                title="More options"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                  />
-                </svg>
-              </button>
-            </div>
-          )}
-
-          {/* Reaction picker */}
-          {showReactionPicker && (
-            <div className="absolute mt-2 bg-gray-800 border border-gray-700 rounded shadow-lg p-2 flex gap-1 z-20">
-              {commonReactions.map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={() => {
-                    onReaction?.(message.id, emoji);
-                    setShowReactionPicker(false);
-                    setShowMenu(false);
-                  }}
-                  className="p-2 hover:bg-gray-700 rounded text-xl transition-colors"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </div>

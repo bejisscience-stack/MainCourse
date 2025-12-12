@@ -176,3 +176,4 @@ After completing all steps above:
 
 After fixing the Site URL, wait a few minutes and try signing up again. The email should arrive within 1-2 minutes.
 
+

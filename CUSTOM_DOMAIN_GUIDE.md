@@ -291,3 +291,4 @@ If you're stuck:
 4. **SSL is automatic**: Don't worry about SSL certificates - Vercel handles this automatically
 5. **Test before going live**: Use Vercel's preview URLs to test everything before configuring DNS
 
+

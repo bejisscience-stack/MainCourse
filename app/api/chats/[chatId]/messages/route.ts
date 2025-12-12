@@ -219,6 +219,67 @@ export async function GET(
       console.warn(`Warning: Failed to fetch profiles for ${missingIds.length} users:`, missingIds);
     }
 
+    // Fetch attachments for all messages
+    const messageIds = (messages || []).map((msg: any) => msg.id);
+    const attachmentsMap = new Map();
+    
+    if (messageIds.length > 0) {
+      const { data: attachments } = await supabase
+        .from('message_attachments')
+        .select('*')
+        .in('message_id', messageIds);
+      
+      if (attachments) {
+        attachments.forEach((att: any) => {
+          if (!attachmentsMap.has(att.message_id)) {
+            attachmentsMap.set(att.message_id, []);
+          }
+          attachmentsMap.get(att.message_id).push({
+            id: att.id,
+            fileUrl: att.file_url,
+            fileName: att.file_name,
+            fileType: att.file_type,
+            fileSize: att.file_size,
+            mimeType: att.mime_type,
+          });
+        });
+      }
+    }
+
+    // Fetch reply previews for messages that have replies
+    const replyToIds = (messages || []).filter((msg: any) => msg.reply_to_id).map((msg: any) => msg.reply_to_id);
+    const replyPreviewsMap = new Map();
+    
+    if (replyToIds.length > 0) {
+      const { data: replyMessages } = await supabase
+        .from('messages')
+        .select('id, content, user_id')
+        .in('id', replyToIds);
+      
+      if (replyMessages) {
+        for (const replyMsg of replyMessages) {
+          const replyProfile = profileMap.get(replyMsg.user_id);
+          let replyUsername = 'User';
+          
+          if (replyProfile) {
+            const profileUsername = replyProfile.username?.trim();
+            const emailUsername = replyProfile.email?.split('@')[0];
+            if (profileUsername && profileUsername.length > 0) {
+              replyUsername = profileUsername;
+            } else if (emailUsername && emailUsername.length > 0) {
+              replyUsername = emailUsername;
+            }
+          }
+          
+          replyPreviewsMap.set(replyMsg.id, {
+            id: replyMsg.id,
+            username: replyUsername,
+            content: replyMsg.content.substring(0, 50) + (replyMsg.content.length > 50 ? '...' : ''),
+          });
+        }
+      }
+    }
+
     const transformedMessages = (messages || []).map((msg: any) => {
       const profile = profileMap.get(msg.user_id);
       let username = 'User';
@@ -251,10 +312,15 @@ export async function GET(
         username = 'User';
       }
       
+      const messageAttachments = attachmentsMap.get(msg.id) || [];
+      const replyPreview = msg.reply_to_id ? replyPreviewsMap.get(msg.reply_to_id) : undefined;
+      
       return {
         id: msg.id,
         content: msg.content,
         replyTo: msg.reply_to_id,
+        replyPreview,
+        attachments: messageAttachments.length > 0 ? messageAttachments : undefined,
         edited: !!msg.edited_at,
         timestamp: new Date(msg.created_at).getTime(),
         user: {
@@ -283,7 +349,7 @@ export async function POST(
   try {
     const { chatId } = params;
     const body = await request.json();
-    const { content, replyTo } = body;
+    const { content, replyTo, attachments } = body;
 
     if (!content || typeof content !== 'string' || content.trim().length === 0) {
       return NextResponse.json(
@@ -367,6 +433,21 @@ export async function POST(
       );
     }
 
+    // Check if user is muted
+    const { data: mutedUser } = await supabase
+      .from('muted_users')
+      .select('id')
+      .eq('channel_id', chatId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (mutedUser) {
+      return NextResponse.json(
+        { error: 'You have been muted by the lecturer' },
+        { status: 403 }
+      );
+    }
+
     // Sanitize content (basic XSS prevention)
     const sanitizedContent = content.trim().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
 
@@ -397,6 +478,29 @@ export async function POST(
         { error: 'Failed to send message', details: insertError.message },
         { status: 500 }
       );
+    }
+
+    // Insert attachments if provided
+    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+      const attachmentRecords = attachments.map((att: any) => ({
+        message_id: message.id,
+        channel_id: chatId,
+        course_id: courseId,
+        file_url: att.fileUrl,
+        file_name: att.fileName,
+        file_type: att.fileType,
+        file_size: att.fileSize,
+        mime_type: att.mimeType,
+      }));
+
+      const { error: attachmentsError } = await supabase
+        .from('message_attachments')
+        .insert(attachmentRecords);
+
+      if (attachmentsError) {
+        console.error('Error inserting attachments:', attachmentsError);
+        // Don't fail the whole request, just log the error
+      }
     }
 
     // Fetch user profile separately with better error handling
@@ -443,10 +547,67 @@ export async function POST(
       username = 'User';
     }
 
+    // Fetch attachments for this message
+    let messageAttachments = [];
+    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+      const { data: fetchedAttachments } = await supabase
+        .from('message_attachments')
+        .select('*')
+        .eq('message_id', message.id);
+      
+      if (fetchedAttachments) {
+        messageAttachments = fetchedAttachments.map((att: any) => ({
+          id: att.id,
+          fileUrl: att.file_url,
+          fileName: att.file_name,
+          fileType: att.file_type,
+          fileSize: att.file_size,
+          mimeType: att.mime_type,
+        }));
+      }
+    }
+
+    // Fetch reply preview if this is a reply
+    let replyPreview = undefined;
+    if (message.reply_to_id) {
+      const { data: replyMessage } = await supabase
+        .from('messages')
+        .select('id, content, user_id')
+        .eq('id', message.reply_to_id)
+        .single();
+      
+      if (replyMessage) {
+        const { data: replyProfile } = await supabase
+          .from('profiles')
+          .select('id, username, email')
+          .eq('id', replyMessage.user_id)
+          .single();
+        
+        let replyUsername = 'User';
+        if (replyProfile) {
+          const profileUsername = replyProfile.username?.trim();
+          const emailUsername = replyProfile.email?.split('@')[0];
+          if (profileUsername && profileUsername.length > 0) {
+            replyUsername = profileUsername;
+          } else if (emailUsername && emailUsername.length > 0) {
+            replyUsername = emailUsername;
+          }
+        }
+        
+        replyPreview = {
+          id: replyMessage.id,
+          username: replyUsername,
+          content: replyMessage.content.substring(0, 50) + (replyMessage.content.length > 50 ? '...' : ''),
+        };
+      }
+    }
+
     const transformedMessage = {
       id: message.id,
       content: message.content,
       replyTo: message.reply_to_id,
+      replyPreview,
+      attachments: messageAttachments.length > 0 ? messageAttachments : undefined,
       edited: !!message.edited_at,
       timestamp: new Date(message.created_at).getTime(),
       user: {

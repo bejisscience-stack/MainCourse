@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { Server, ChannelCategory, Channel } from '@/types/server';
 import ChannelManagement from './ChannelManagement';
+import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 
 interface ChannelSidebarProps {
   server: Server | null;
@@ -50,16 +51,6 @@ export default function ChannelSidebar({
     });
   };
 
-  if (!server) {
-    return (
-      <div className="w-60 bg-gray-800 flex flex-col">
-        <div className="p-4 border-b border-gray-700">
-          <h2 className="text-white font-semibold">Select a server</h2>
-        </div>
-      </div>
-    );
-  }
-
   // Sort channels: lectures first, then projects, then by displayOrder
   const sortChannels = (channels: Channel[]) => {
     return [...channels].sort((a, b) => {
@@ -74,7 +65,33 @@ export default function ChannelSidebar({
     });
   };
 
-  const allChannels = server.channels.flatMap((cat) => cat.channels);
+  // Calculate channel IDs - must be done before early return to maintain hook order
+  // Use useMemo to prevent recreating the array on every render
+  const channelIds = useMemo(() => {
+    if (!server) return [];
+    const allChannels = server.channels.flatMap((cat) => cat.channels);
+    return allChannels.map((ch) => ch.id);
+  }, [server]);
+  
+  // IMPORTANT: Hooks must be called before any early returns
+  // This ensures hooks are always called in the same order
+  const { getUnreadCount } = useUnreadMessages({
+    channelIds,
+    enabled: !!server,
+  });
+  
+  // Calculate allChannels for use after early return
+  const allChannels = server?.channels.flatMap((cat) => cat.channels) || [];
+
+  if (!server) {
+    return (
+      <div className="w-60 bg-gray-800 flex flex-col">
+        <div className="p-4 border-b border-gray-700">
+          <h2 className="text-white font-semibold">Select a server</h2>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-60 bg-gray-800 flex flex-col">
@@ -151,6 +168,8 @@ export default function ChannelSidebar({
               {!isCollapsed &&
                 sortChannels(category.channels).map((channel) => {
                   const isActive = activeChannelId === channel.id;
+                  const unreadCount = getUnreadCount(channel.id);
+                  const hasUnread = unreadCount > 0;
 
                   return (
                     <button
@@ -159,6 +178,8 @@ export default function ChannelSidebar({
                       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors group ${
                         isActive
                           ? 'bg-gray-700 text-white'
+                          : hasUnread
+                          ? 'text-white font-semibold hover:bg-gray-700'
                           : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300'
                       }`}
                     >
@@ -172,6 +193,11 @@ export default function ChannelSidebar({
                           : '#'}
                       </span>
                       <span className="flex-1 text-left truncate">{channel.name}</span>
+                      {hasUnread && (
+                        <span className="bg-indigo-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
                     </button>
                   );
                 })}

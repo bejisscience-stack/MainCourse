@@ -59,21 +59,36 @@ export default function LayoutContainer({
   }, [activeServerId, servers, setActiveServerId]);
 
   useEffect(() => {
-    if (activeServer && !activeChannelId) {
+    if (activeServer && !activeChannelId && activeServer.channels.length > 0) {
       // Prefer lectures channel first, then text channels
       const allChannels = activeServer.channels.flatMap((cat) => cat.channels);
-      const lecturesChannel = allChannels.find((ch) => ch.type === 'lectures');
-      const textChannel = allChannels.find((ch) => ch.type === 'text');
-      const firstChannel = lecturesChannel || textChannel || allChannels[0];
-      if (firstChannel) {
-        setActiveChannelId(firstChannel.id);
+      if (allChannels.length > 0) {
+        const lecturesChannel = allChannels.find((ch) => ch.type === 'lectures');
+        const textChannel = allChannels.find((ch) => ch.type === 'text');
+        const firstChannel = lecturesChannel || textChannel || allChannels[0];
+        if (firstChannel) {
+          setActiveChannelId(firstChannel.id);
+        }
       }
     }
   }, [activeServer, activeChannelId, setActiveChannelId]);
 
   const handleServerSelect = (serverId: string) => {
+    const newServer = servers.find((s) => s.id === serverId);
     setActiveServerId(serverId);
-    // Reset channel selection when switching servers
+    
+    // Try to find a matching channel in the new server before clearing
+    if (newServer && activeChannelId) {
+      const allChannels = newServer.channels.flatMap((cat) => cat.channels);
+      const matchingChannel = allChannels.find((ch) => ch.id === activeChannelId);
+      if (matchingChannel) {
+        // Keep the same channel if it exists in the new server
+        return;
+      }
+    }
+    
+    // Reset channel selection only if no matching channel found
+    // The useEffect below will auto-select a channel
     setActiveChannelId(null);
   };
 
