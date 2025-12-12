@@ -52,3 +52,4 @@ CREATE TRIGGER on_course_created_create_channels
   FOR EACH ROW
   EXECUTE FUNCTION public.create_default_channels_for_course();
 
+

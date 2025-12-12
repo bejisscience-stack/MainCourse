@@ -576,7 +576,7 @@ export async function POST(
     }
 
     // Fetch attachments for this message
-    let messageAttachments = [];
+    let messageAttachments: { id: string; fileUrl: string; fileName: string; fileType: string; fileSize: number; mimeType: string; }[] = [];
     if (attachments && Array.isArray(attachments) && attachments.length > 0) {
       const { data: fetchedAttachments } = await supabase
         .from('message_attachments')

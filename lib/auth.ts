@@ -87,80 +87,13 @@ export async function resendVerificationEmail(email: string) {
 }
 
 export async function signIn({ email, password }: SignInData) {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      location: 'lib/auth.ts:89',
-      message: 'signIn function entry',
-      data: { emailLength: email.length, passwordLength: password.length },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'D'
-    })
-  }).catch(() => {});
-  // #endregion
   try {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'lib/auth.ts:91',
-        message: 'Before supabase.auth.signInWithPassword',
-        data: {},
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'D'
-      })
-    }).catch(() => {});
-    // #endregion
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'lib/auth.ts:91',
-        message: 'After supabase.auth.signInWithPassword',
-        data: {
-          hasError: !!error,
-          hasData: !!data,
-          hasUser: !!data?.user,
-          hasSession: !!data?.session,
-          errorMessage: error?.message
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'D'
-      })
-    }).catch(() => {});
-    // #endregion
 
     if (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'lib/auth.ts:96',
-          message: 'Supabase sign in error',
-          data: { errorMessage: error.message, errorStatus: error.status },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'C'
-        })
-      }).catch(() => {});
-      // #endregion
-      console.error('Supabase sign in error:', error);
       // Provide more user-friendly error messages
       if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
         throw new Error('Please verify your email address before signing in. Check your inbox for the verification email.');
@@ -172,57 +105,11 @@ export async function signIn({ email, password }: SignInData) {
     }
 
     if (!data || !data.user) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'lib/auth.ts:108',
-          message: 'No data or user returned',
-          data: { hasData: !!data, hasUser: !!data?.user },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'C'
-        })
-      }).catch(() => {});
-      // #endregion
       throw new Error('Sign in failed. No user data returned.');
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'lib/auth.ts:112',
-        message: 'signIn function exit success',
-        data: { hasUser: !!data.user, hasSession: !!data.session },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'D'
-      })
-    }).catch(() => {});
-    // #endregion
     return data;
   } catch (err: any) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        location: 'lib/auth.ts:113',
-        message: 'signIn function catch block',
-        data: { errorMessage: err?.message || String(err), errorCode: err?.code },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'C'
-      })
-    }).catch(() => {});
-    // #endregion
-    console.error('Sign in function error:', err);
     // Re-throw with better error message if it's a network error
     if (err.message?.includes('fetch') || err.message?.includes('network') || err.code === 'ECONNREFUSED') {
       throw new Error('Unable to connect to the server. Please check your internet connection and try again.');

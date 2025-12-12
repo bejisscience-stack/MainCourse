@@ -1,4 +1,4 @@
-export type ChannelType = 'text' | 'voice';
+export type ChannelType = 'text' | 'voice' | 'lectures';
 
 export interface Channel {
   id: string;

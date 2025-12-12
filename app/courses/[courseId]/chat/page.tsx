@@ -176,18 +176,74 @@ export default function CourseChatPage() {
         });
       });
 
-      const server: Server = {
-        id: courseData.id,
-        name: courseData.title,
-        icon: courseData.title.charAt(0).toUpperCase(),
-        channels: Object.entries(channelsByCategory).map(([categoryName, channels]) => ({
-          id: `category-${courseData.id}-${categoryName}`,
-          name: categoryName,
-          channels,
-        })),
-      };
+      // Fetch all courses from the same lecturer
+      let allLecturerCourses: any[] = [courseData];
+      if (courseData.lecturer_id) {
+        const { data: lecturerCourses } = await supabase
+          .from('courses')
+          .select('*')
+          .eq('lecturer_id', courseData.lecturer_id)
+          .order('created_at', { ascending: false });
+        
+        if (lecturerCourses && lecturerCourses.length > 0) {
+          allLecturerCourses = lecturerCourses;
+        }
+      }
 
-      setServers([server]);
+      // Fetch channels for all lecturer courses
+      const lecturerCourseIds = allLecturerCourses.map(c => c.id);
+      const { data: allChannelsData } = await supabase
+        .from('channels')
+        .select('*')
+        .in('course_id', lecturerCourseIds)
+        .order('display_order', { ascending: true });
+
+      // Transform all courses into servers
+      const serversData: Server[] = allLecturerCourses.map((course) => {
+        const courseChannels = (allChannelsData || []).filter((ch) => ch.course_id === course.id);
+        
+        const channelsByCategory: { [key: string]: Channel[] } = {};
+        courseChannels.forEach((ch) => {
+          const category = ch.category_name || 'COURSE CHANNELS';
+          if (!channelsByCategory[category]) {
+            channelsByCategory[category] = [];
+          }
+          channelsByCategory[category].push({
+            id: ch.id,
+            name: ch.name,
+            type: ch.type as 'text' | 'voice' | 'lectures',
+            description: ch.description || undefined,
+            courseId: course.id,
+            categoryName: ch.category_name || undefined,
+            displayOrder: ch.display_order || 0,
+            messages: [],
+          });
+        });
+
+        // Sort channels
+        Object.keys(channelsByCategory).forEach((cat) => {
+          channelsByCategory[cat].sort((a, b) => {
+            if (a.type === 'lectures' && b.type !== 'lectures') return -1;
+            if (b.type === 'lectures' && a.type !== 'lectures') return 1;
+            if (a.name.toLowerCase() === 'projects' && b.name.toLowerCase() !== 'projects') return -1;
+            if (b.name.toLowerCase() === 'projects' && a.name.toLowerCase() !== 'projects') return 1;
+            return (a.displayOrder || 0) - (b.displayOrder || 0);
+          });
+        });
+
+        return {
+          id: course.id,
+          name: course.title,
+          icon: course.title.charAt(0).toUpperCase(),
+          channels: Object.entries(channelsByCategory).map(([categoryName, channels]) => ({
+            id: `category-${course.id}-${categoryName}`,
+            name: categoryName,
+            channels,
+          })),
+        };
+      });
+
+      setServers(serversData);
       
       // Set active server to this course
       setActiveServerId(courseId);
@@ -397,6 +453,7 @@ export default function CourseChatPage() {
             currentUserId={user.id}
             initialMembers={members}
             isLecturer={false}
+            enrolledCourseIds={enrolledCourseIds}
             onSendMessage={handleSendMessage}
             onReaction={handleReaction}
             showDMButton={false}

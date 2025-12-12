@@ -512,9 +512,9 @@ export default function ChatArea({
               <div className="space-y-0.5">
                 {messages.map((message, index) => {
                   const prevMessage = index > 0 ? messages[index - 1] : null;
-                  const showAvatar =
+                  const showAvatar: boolean =
                     index === 0 ||
-                    (prevMessage &&
+                    !!(prevMessage &&
                       'user' in prevMessage &&
                       prevMessage.user &&
                       'user' in message &&
@@ -589,7 +589,8 @@ export default function ChatArea({
       {(() => {
         // Check if this is a restricted channel (Lectures or Projects)
         const channelName = channel.name?.toLowerCase() || '';
-        const isLecturesChannel = channelName === 'lectures' && channel.type === 'lectures';
+        const channelType = channel.type as string;
+        const isLecturesChannel = channelName === 'lectures' && channelType === 'lectures';
         const isProjectsChannel = channelName === 'projects';
         const isRestrictedChannel = isLecturesChannel || isProjectsChannel;
         const canSendMessages = !isRestrictedChannel || isLecturer;

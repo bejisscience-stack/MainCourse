@@ -273,6 +273,7 @@ export default function StudentChatPage() {
             currentUserId={user.id}
             initialMembers={members}
             isLecturer={false}
+            enrolledCourseIds={enrolledCourseIds}
             onSendMessage={handleSendMessage}
             onReaction={handleReaction}
           />

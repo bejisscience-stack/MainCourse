@@ -18,6 +18,7 @@ interface LayoutContainerProps {
   currentUserId: string;
   initialMembers?: Member[];
   isLecturer?: boolean;
+  enrolledCourseIds?: Set<string>;
   onAddCourse?: () => void;
   onSendMessage?: (channelId: string, content: string) => void;
   onReaction?: (messageId: string, emoji: string) => void;
@@ -32,6 +33,7 @@ export default function LayoutContainer({
   currentUserId,
   initialMembers = [],
   isLecturer = false,
+  enrolledCourseIds = new Set(),
   onAddCourse,
   onSendMessage,
   onReaction,
@@ -153,6 +155,7 @@ export default function LayoutContainer({
         onServerSelect={handleServerSelect}
         onAddCourse={onAddCourse}
         isLecturer={isLecturer}
+        enrolledCourseIds={enrolledCourseIds}
         showDMButton={showDMButton}
       />
 

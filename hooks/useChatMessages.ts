@@ -103,7 +103,7 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
       const { messages: fetchedMessages } = responseData;
 
       // Prefetch profiles for faster future lookups
-      const userIds = [...new Set(fetchedMessages.map((m: Message) => m.user.id))];
+      const userIds = Array.from(new Set(fetchedMessages.map((m: Message) => m.user.id))) as string[];
       prefetchProfiles(userIds);
 
       // Update message IDs set

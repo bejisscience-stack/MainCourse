@@ -13,13 +13,15 @@ export interface ChannelCategory {
   channels: Channel[];
 }
 
+export type ChannelType = 'text' | 'voice' | 'lectures';
+
 export interface Channel {
   id: string;
   name: string;
-  type: 'text' | 'voice' | 'lectures';
+  type: ChannelType;
   description?: string;
   messages?: Message[];
-  courseId?: string; // Link to course if created from course
+  courseId?: string;
   categoryName?: string;
   displayOrder?: number;
   videos?: Video[];

@@ -35,31 +35,16 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Ensure session is restored on page load
 if (typeof window !== 'undefined') {
-  // Check if session exists in localStorage and restore it
-  // Supabase automatically restores sessions with persistSession: true,
-  // but we verify it here for debugging
-  supabase.auth.getSession().then(({ data: { session }, error }) => {
-    if (error) {
-      console.warn('Error getting session on init:', error);
-      return;
-    }
-    if (session) {
-      console.log('Session restored from localStorage:', session.user.id);
-    } else {
-      console.log('No session found in localStorage');
-    }
-  }).catch(err => {
-    console.warn('Error restoring session:', err);
+  // Supabase automatically restores sessions with persistSession: true
+  // We verify it silently here and handle any errors gracefully
+  supabase.auth.getSession().catch(() => {
+    // Silent fail - session will be null if not available
   });
 
   // Listen for storage events to sync session across tabs
   window.addEventListener('storage', (e) => {
     if (e.key === 'supabase.auth.token') {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          console.log('Session synced from another tab');
-        }
-      });
+      supabase.auth.getSession().catch(() => {});
     }
   });
 }
