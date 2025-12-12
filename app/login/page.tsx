@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from '@/lib/auth';
@@ -13,9 +13,112 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const isSubmittingRef = useRef(false);
+  const navigationStartedRef = useRef(false);
+
+  // #region agent log
+  useEffect(() => {
+    fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'app/login/page.tsx:16',
+        message: 'LoginForm mounted',
+        data: {
+          email: email.length > 0 ? '***' : '',
+          password: password.length > 0 ? '***' : ''
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'E'
+      })
+    }).catch(() => {});
+    // Reset refs on mount to handle remounting scenarios
+    isSubmittingRef.current = false;
+    navigationStartedRef.current = false;
+    return () => {
+      fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'app/login/page.tsx:16',
+          message: 'LoginForm unmounted',
+          data: {},
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'E'
+        })
+      }).catch(() => {});
+    };
+  }, []);
+  // #endregion
 
   const handleSubmit = async (e: React.FormEvent) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'app/login/page.tsx:17',
+        message: 'handleSubmit called',
+        data: {
+          emailLength: email.length,
+          passwordLength: password.length,
+          loading,
+          isSubmitting: isSubmittingRef.current,
+          navigationStarted: navigationStartedRef.current,
+          error: error || null
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A'
+      })
+    }).catch(() => {});
+    // #endregion
     e.preventDefault();
+    
+    // Prevent double submission
+    if (isSubmittingRef.current || navigationStartedRef.current) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'app/login/page.tsx:30',
+          message: 'Submission blocked - already submitting or navigating',
+          data: {
+            isSubmitting: isSubmittingRef.current,
+            navigationStarted: navigationStartedRef.current
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'A'
+        })
+      }).catch(() => {});
+      // #endregion
+      return;
+    }
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'app/login/page.tsx:19',
+        message: 'preventDefault called, setting loading=true',
+        data: { emailLength: email.length, passwordLength: password.length },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A'
+      })
+    }).catch(() => {});
+    // #endregion
+    isSubmittingRef.current = true;
     setError(null);
     setLoading(true);
 
@@ -33,10 +136,59 @@ function LoginForm() {
         throw new Error('Supabase configuration is missing. Please check your environment variables.');
       }
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'app/login/page.tsx:36',
+          message: 'Before signIn call',
+          data: { emailLength: email.length, passwordLength: password.length },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'C'
+        })
+      }).catch(() => {});
+      // #endregion
       const result = await signIn({ email, password });
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'app/login/page.tsx:36',
+          message: 'After signIn call',
+          data: {
+            hasResult: !!result,
+            hasUser: !!result?.user,
+            hasSession: !!result?.session
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'C'
+        })
+      }).catch(() => {});
+      // #endregion
       clearTimeout(timeoutId);
       
       if (!result || !result.user) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'app/login/page.tsx:39',
+            message: 'No result or user, throwing error',
+            data: { hasResult: !!result, hasUser: !!result?.user },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'C'
+          })
+        }).catch(() => {});
+        // #endregion
         throw new Error('Sign in failed. Please check your credentials.');
       }
 
@@ -119,17 +271,94 @@ function LoginForm() {
       // Wait a moment to ensure session is fully persisted before redirecting
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Use router.push without refresh to avoid clearing session
-      // The session should already be persisted in localStorage
-      router.push(destination);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'app/login/page.tsx:124',
+          message: 'Before router.push',
+          data: {
+            destination,
+            emailLength: email.length,
+            passwordLength: password.length,
+            loading
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'B'
+        })
+      }).catch(() => {});
+      // #endregion
       
-      // Refresh after a short delay to ensure the new page recognizes the session
-      setTimeout(() => {
-        router.refresh();
-      }, 200);
+      // Mark navigation as started to prevent any further submissions
+      navigationStartedRef.current = true;
+      
+      // Use window.location for more reliable navigation that won't be intercepted
+      // This ensures the navigation completes and the component unmounts properly
+      window.location.href = destination;
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'app/login/page.tsx:151',
+          message: 'After window.location.href assignment',
+          data: { destination },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'B'
+        })
+      }).catch(() => {});
+      // #endregion
     } catch (err: any) {
       clearTimeout(timeoutId);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'app/login/page.tsx:130',
+          message: 'Error caught in handleSubmit',
+          data: {
+            errorMessage: err?.message || String(err),
+            errorStatus: err?.status,
+            emailLength: email.length,
+            passwordLength: password.length,
+            loading,
+            navigationStarted: navigationStartedRef.current
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'C'
+        })
+      }).catch(() => {});
+      // #endregion
       console.error('Sign in error:', err);
+      
+      // Don't reset state if navigation has already started
+      if (navigationStartedRef.current) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'app/login/page.tsx:168',
+            message: 'Error after navigation started, skipping state reset',
+            data: {},
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'B'
+          })
+        }).catch(() => {});
+        // #endregion
+        return;
+      }
       
       // Provide more specific error messages
       let errorMessage = 'Failed to sign in. Please check your credentials.';
@@ -151,8 +380,39 @@ function LoginForm() {
         errorMessage = 'Request timed out. Please try again.';
       }
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'app/login/page.tsx:154',
+          message: 'Before setError and setLoading(false)',
+          data: { errorMessage, emailLength: email.length, passwordLength: password.length },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'C'
+        })
+      }).catch(() => {});
+      // #endregion
       setError(errorMessage);
       setLoading(false);
+      isSubmittingRef.current = false;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'app/login/page.tsx:156',
+          message: 'After setError and setLoading(false)',
+          data: { errorMessage, emailLength: email.length, passwordLength: password.length },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'C'
+        })
+      }).catch(() => {});
+      // #endregion
     }
   };
 
@@ -201,7 +461,24 @@ function LoginForm() {
                 autoComplete="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      location: 'app/login/page.tsx:204',
+                      message: 'Email onChange',
+                      data: { newLength: e.target.value.length, oldLength: email.length },
+                      timestamp: Date.now(),
+                      sessionId: 'debug-session',
+                      runId: 'run1',
+                      hypothesisId: 'E'
+                    })
+                  }).catch(() => {});
+                  // #endregion
+                  setEmail(e.target.value);
+                }}
                 className="appearance-none relative block w-full px-4 py-3 bg-white border border-navy-200 placeholder-gray-400 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-colors"
                 placeholder="Enter your email"
               />
@@ -218,7 +495,24 @@ function LoginForm() {
                 autoComplete="current-password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      location: 'app/login/page.tsx:221',
+                      message: 'Password onChange',
+                      data: { newLength: e.target.value.length, oldLength: password.length },
+                      timestamp: Date.now(),
+                      sessionId: 'debug-session',
+                      runId: 'run1',
+                      hypothesisId: 'E'
+                    })
+                  }).catch(() => {});
+                  // #endregion
+                  setPassword(e.target.value);
+                }}
                 className="appearance-none relative block w-full px-4 py-3 bg-white border border-navy-200 placeholder-gray-400 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-colors"
                 placeholder="Enter your password"
               />
