@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 export interface SignUpData {
   email: string;
   password: string;
-  fullName?: string;
+  username: string;
   role?: 'student' | 'lecturer';
 }
 
@@ -12,7 +12,17 @@ export interface SignInData {
   password: string;
 }
 
-export async function signUp({ email, password, fullName, role = 'student' }: SignUpData) {
+export async function signUp({ email, password, username, role = 'student' }: SignUpData) {
+  // Validate username format
+  if (!username || username.trim().length < 3 || username.trim().length > 30) {
+    throw new Error('Username must be between 3 and 30 characters');
+  }
+  
+  // Check username pattern (letters, numbers, underscores only)
+  if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) {
+    throw new Error('Username can only contain letters, numbers, and underscores');
+  }
+
   // Get the base URL for redirects (works in both dev and production)
   const getRedirectUrl = () => {
     if (typeof window !== 'undefined') {
@@ -34,7 +44,7 @@ export async function signUp({ email, password, fullName, role = 'student' }: Si
     options: {
       emailRedirectTo: redirectUrl,
       data: {
-        full_name: fullName || '',
+        username: username.trim(),
         role: role,
       },
     },
@@ -42,7 +52,8 @@ export async function signUp({ email, password, fullName, role = 'student' }: Si
 
   if (error) {
     console.error('Signup error:', error);
-    throw error;
+    // Surface DB-trigger validation errors as-is when possible
+    throw new Error(error.message || 'Failed to create account. Please try again.');
   }
 
   // Log signup response for debugging

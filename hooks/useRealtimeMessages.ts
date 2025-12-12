@@ -72,7 +72,7 @@ export function useRealtimeMessages({
               try {
                 const result = await supabase
                   .from('profiles')
-                  .select('id, full_name, email')
+                  .select('id, username, email')
                   .eq('id', messageData.user_id)
                   .single();
 
@@ -97,23 +97,29 @@ export function useRealtimeMessages({
             let username = 'User';
             
             if (profile) {
-              // Prioritize full_name, then email username
-              username = profile.full_name?.trim() || profile.email?.split('@')[0] || 'User';
-            } else {
-              // If profile fetch failed, use a better identifier
-              // Use first 8 chars of user_id as a temporary identifier
-              const userIdShort = messageData.user_id.substring(0, 8);
-              username = `User-${userIdShort}`;
+              // Prioritize profile.username (required), then email username
+              const profileUsername = profile.username?.trim();
+              const emailUsername = profile.email?.split('@')[0];
               
-              // Log the failure for debugging
+              if (profileUsername && profileUsername.length > 0) {
+                username = profileUsername;
+              } else if (emailUsername && emailUsername.length > 0) {
+                username = emailUsername;
+              } else {
+                username = 'User';
+              }
+            } else {
+              // If profile fetch failed, log the failure but use generic User
+              // Never use User-ID format as it's not user-friendly
               console.error(`CRITICAL: Failed to fetch profile for user ${messageData.user_id} after 3 attempts.`);
               console.error('Profile error:', profileError);
-              console.error('Using fallback username:', username);
+              console.error('Using fallback username: User');
               console.error('This suggests an RLS policy issue or profile doesn\'t exist');
               console.error('Please check:');
               console.error('1. RLS policy "Users can view profiles in same courses" is enabled');
               console.error('2. User is enrolled in the same course');
               console.error('3. Profile exists in profiles table');
+              username = 'User';
             }
             
             // Ensure username is never empty
@@ -172,18 +178,27 @@ export function useRealtimeMessages({
           // Fetch profile in background
           supabase
             .from('profiles')
-            .select('id, full_name, email')
+            .select('id, username, email')
             .eq('id', messageData.user_id)
             .single()
             .then(({ data: profile, error: profileErr }) => {
               let username = 'User';
               if (profile) {
-                username = profile.full_name?.trim() || profile.email?.split('@')[0] || 'User';
+                // Prioritize profile.username (required), then email username
+                const profileUsername = profile.username?.trim();
+                const emailUsername = profile.email?.split('@')[0];
+                
+                if (profileUsername && profileUsername.length > 0) {
+                  username = profileUsername;
+                } else if (emailUsername && emailUsername.length > 0) {
+                  username = emailUsername;
+                } else {
+                  username = 'User';
+                }
               } else if (profileErr) {
                 console.warn('Failed to fetch profile for updated message:', profileErr);
-                // Use fallback
-                const userIdShort = messageData.user_id.substring(0, 8);
-                username = `User-${userIdShort}`;
+                // Use generic User instead of User-ID format
+                username = 'User';
               }
               
               // Ensure username is never empty

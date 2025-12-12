@@ -71,11 +71,11 @@ export function useRealtimeTyping({
             // Fetch user profile
             const { data: profile } = await supabase
               .from('profiles')
-              .select('id, full_name, email')
+              .select('id, username, email')
               .eq('id', userId)
               .single();
 
-            const username = profile?.full_name || profile?.email?.split('@')[0] || 'User';
+            const username = profile?.username || profile?.email?.split('@')[0] || 'User';
             const expiresAt = newRecord?.expires_at ? new Date(newRecord.expires_at).getTime() : Date.now();
 
             setTypingUsers((prev) => {
@@ -110,7 +110,7 @@ export function useRealtimeTyping({
         if (userIds.length > 0) {
           const { data: profiles } = await supabase
             .from('profiles')
-            .select('id, full_name, email')
+            .select('id, username, email')
             .in('id', userIds);
           
           const profileMap = new Map();
@@ -126,7 +126,7 @@ export function useRealtimeTyping({
               const profile = profileMap.get(item.user_id);
               return {
                 userId: item.user_id,
-                username: profile?.full_name || profile?.email?.split('@')[0] || 'User',
+                username: profile?.username || profile?.email?.split('@')[0] || 'User',
                 expiresAt: new Date(item.expires_at).getTime(),
               };
             });

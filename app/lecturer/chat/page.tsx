@@ -191,16 +191,29 @@ export default function LecturerChatPage() {
             if (userIds.length > 0) {
               const { data: profiles } = await supabase
                 .from('profiles')
-                .select('id, full_name, email')
+                .select('id, username, email')
                 .in('id', userIds);
 
               const membersData: Member[] =
-                profiles?.map((profile) => ({
-                  id: profile.id,
-                  username: profile.full_name || profile.email?.split('@')[0] || 'User',
-                  avatarUrl: '',
-                  status: 'online' as const,
-                })) || [];
+                profiles?.map((profile) => {
+                  // Prioritize profile.username, then email prefix
+                  const profileUsername = profile.username?.trim();
+                  const emailUsername = profile.email?.split('@')[0];
+                  
+                  let username = 'User';
+                  if (profileUsername && profileUsername.length > 0) {
+                    username = profileUsername;
+                  } else if (emailUsername && emailUsername.length > 0) {
+                    username = emailUsername;
+                  }
+                  
+                  return {
+                    id: profile.id,
+                    username,
+                    avatarUrl: '',
+                    status: 'online' as const,
+                  };
+                }) || [];
 
               setMembers(membersData);
             }

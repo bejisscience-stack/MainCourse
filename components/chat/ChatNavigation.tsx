@@ -26,16 +26,24 @@ export default function ChatNavigation() {
         // Get user name from profile
         const { data: profile } = await supabase
           .from('profiles')
-          .select('full_name')
+          .select('username')
           .eq('id', currentUser.id)
           .single();
         
-        setUserName(
-          profile?.full_name || 
-          currentUser.user_metadata?.full_name || 
-          currentUser.email?.split('@')[0] || 
-          'User'
-        );
+        // Prioritize profile.username, then auth metadata username, then email prefix
+        const profileUsername = profile?.username?.trim();
+        const metadataUsername = currentUser.user_metadata?.username?.trim();
+        const emailUsername = currentUser.email?.split('@')[0];
+        
+        if (profileUsername && profileUsername.length > 0) {
+          setUserName(profileUsername);
+        } else if (metadataUsername && metadataUsername.length > 0) {
+          setUserName(metadataUsername);
+        } else if (emailUsername && emailUsername.length > 0) {
+          setUserName(emailUsername);
+        } else {
+          setUserName('User');
+        }
       }
     } catch (error) {
       console.error('Error loading user:', error);

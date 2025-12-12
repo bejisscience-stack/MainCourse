@@ -102,7 +102,7 @@ function Navigation() {
                   aria-label="User menu"
                 >
                   <div className="w-10 h-10 bg-navy-900 rounded-full flex items-center justify-center text-white font-semibold">
-                    {(user.user_metadata?.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                    {(user.user_metadata?.username || user.email || 'U').charAt(0).toUpperCase()}
                   </div>
                   <svg
                     className={`w-4 h-4 text-navy-600 transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`}
@@ -124,7 +124,7 @@ function Navigation() {
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-navy-100 py-2 z-50">
                       <div className="px-4 py-3 border-b border-navy-100">
                         <p className="text-sm font-semibold text-navy-900">
-                          {user.user_metadata?.full_name || 'User'}
+                          {user.user_metadata?.username || 'User'}
                         </p>
                         <p className="text-xs text-navy-600 truncate">
                           {user.email}
@@ -298,11 +298,11 @@ function Navigation() {
                     {/* Mobile Profile Section */}
                     <div className="flex items-center space-x-3 px-2 py-3 bg-navy-50 rounded-lg mb-2">
                       <div className="w-10 h-10 bg-navy-900 rounded-full flex items-center justify-center text-white font-semibold">
-                        {(user.user_metadata?.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                        {(user.user_metadata?.username || user.email || 'U').charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-navy-900 truncate">
-                          {user.user_metadata?.full_name || 'User'}
+                          {user.user_metadata?.username || 'User'}
                         </p>
                         <p className="text-xs text-navy-600 truncate">
                           {user.email}

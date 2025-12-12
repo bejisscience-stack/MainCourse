@@ -164,15 +164,15 @@ export async function GET(
       // First try batch fetch
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name, email')
+        .select('id, username, email')
         .in('id', userIds);
 
       if (profiles && !profilesError && profiles.length > 0) {
         profiles.forEach((profile: any) => {
           profileMap.set(profile.id, profile);
-          // Log if full_name is missing
-          if (!profile.full_name || profile.full_name.trim() === '') {
-            console.warn(`Profile for user ${profile.id} exists but full_name is empty. Email: ${profile.email}`);
+          // Log if username is missing
+          if (!profile.username || profile.username.trim() === '') {
+            console.warn(`Profile for user ${profile.id} exists but username is empty. Email: ${profile.email}`);
           }
         });
         console.log(`Successfully fetched ${profiles.length} profiles out of ${userIds.length} users`);
@@ -184,15 +184,15 @@ export async function GET(
           try {
             const { data: singleProfile, error: singleError } = await supabase
               .from('profiles')
-              .select('id, full_name, email')
+              .select('id, username, email')
               .eq('id', userId)
               .single();
             
             if (singleProfile && !singleError) {
               profileMap.set(userId, singleProfile);
-              // Log if full_name is missing
-              if (!singleProfile.full_name || singleProfile.full_name.trim() === '') {
-                console.warn(`Profile for user ${userId} exists but full_name is empty. Email: ${singleProfile.email}`);
+              // Log if username is missing
+              if (!singleProfile.username || singleProfile.username.trim() === '') {
+                console.warn(`Profile for user ${userId} exists but username is empty. Email: ${singleProfile.email}`);
               }
             } else {
               console.warn(`Failed to fetch profile for user ${userId}:`, singleError);
@@ -224,15 +224,26 @@ export async function GET(
       let username = 'User';
       
       if (profile) {
-        // Prioritize full_name, then email username, then fallback
-        username = profile.full_name?.trim() || profile.email?.split('@')[0] || 'User';
+        // Prioritize profile.username (required), then email username, then fallback
+        const profileUsername = profile.username?.trim();
+        const emailUsername = profile.email?.split('@')[0];
+        
+        if (profileUsername && profileUsername.length > 0) {
+          username = profileUsername;
+        } else if (emailUsername && emailUsername.length > 0) {
+          username = emailUsername;
+        } else {
+          // If both are empty, use a generic name
+          username = 'User';
+        }
       } else {
-        // If profile fetch failed, try to get from auth metadata or use email pattern
-        // This should rarely happen if RLS is set up correctly
-        console.warn(`Profile not found for user ${msg.user_id}, using fallback`);
-        // Try to extract a readable identifier from user_id
-        const userIdShort = msg.user_id.substring(0, 8);
-        username = `User-${userIdShort}`;
+        // If profile fetch failed, try one more time with a direct query
+        // This handles cases where batch fetch might have failed due to RLS
+        console.warn(`Profile not found in map for user ${msg.user_id}, attempting direct fetch`);
+        // Note: We can't do async operations in map, so we'll use a better fallback
+        // The profile should have been fetched above, so this is a last resort
+        // Use email pattern if available, otherwise generic User
+        username = 'User';
       }
       
       // Ensure username is never empty
@@ -392,7 +403,7 @@ export async function POST(
     let profile = null;
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('id, full_name, email')
+      .select('id, username, email')
       .eq('id', user.id)
       .single();
 
@@ -408,11 +419,23 @@ export async function POST(
     // Transform message with better username resolution
     let username = 'User';
     if (profile) {
-      username = profile.full_name?.trim() || profile.email?.split('@')[0] || 'User';
+      // Prioritize profile.username (required), then email username
+      const profileUsername = profile.username?.trim();
+      const emailUsername = profile.email?.split('@')[0];
+      
+      if (profileUsername && profileUsername.length > 0) {
+        username = profileUsername;
+      } else if (emailUsername && emailUsername.length > 0) {
+        username = emailUsername;
+      } else {
+        username = 'User';
+      }
     } else if (user.email) {
+      // Fallback to email username if profile not found
       username = user.email.split('@')[0];
     } else {
-      username = user.id.substring(0, 8);
+      // Last resort: use generic User (never use User-ID format)
+      username = 'User';
     }
     
     // Ensure username is never empty

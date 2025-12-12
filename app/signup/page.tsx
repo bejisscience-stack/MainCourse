@@ -9,7 +9,7 @@ export default function SignUpPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
   const [role, setRole] = useState<'student' | 'lecturer'>('student');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -21,7 +21,7 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      const { user } = await signUp({ email, password, fullName, role });
+      const { user } = await signUp({ email, password, username, role });
       
       if (user) {
         setSuccess(true);
@@ -76,19 +76,27 @@ export default function SignUpPage() {
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-navy-700 mb-2">
-                  Full Name
+                <label htmlFor="username" className="block text-sm font-medium text-navy-700 mb-2">
+                  Username <span className="text-red-500">*</span>
                 </label>
                 <input
-                  id="fullName"
-                  name="fullName"
+                  id="username"
+                  name="username"
                   type="text"
-                  autoComplete="name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  autoComplete="username"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.trim())}
+                  minLength={3}
+                  maxLength={30}
+                  pattern="[a-zA-Z0-9_]+"
+                  title="Username must be 3-30 characters and contain only letters, numbers, and underscores"
                   className="appearance-none relative block w-full px-4 py-3 bg-white border border-navy-200 placeholder-gray-400 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-colors"
-                  placeholder="Enter your full name"
+                  placeholder="Choose a unique username (3-30 chars, letters, numbers, _)"
                 />
+                <p className="mt-1 text-xs text-navy-600">
+                  Username must be unique and can only contain letters, numbers, and underscores
+                </p>
               </div>
 
               <div>

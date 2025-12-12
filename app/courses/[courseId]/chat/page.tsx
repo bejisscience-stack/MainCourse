@@ -203,17 +203,30 @@ export default function CourseChatPage() {
           if (userIds.length > 0) {
             const { data: profiles } = await supabase
               .from('profiles')
-              .select('id, full_name, email, role')
+              .select('id, username, email, role')
               .in('id', userIds);
 
             const membersData: Member[] =
-              profiles?.map((profile) => ({
-                id: profile.id,
-                username: profile.full_name || profile.email?.split('@')[0] || 'User',
-                avatarUrl: '',
-                status: 'online' as const,
-                role: profile.role || 'student',
-              })) || [];
+              profiles?.map((profile) => {
+                // Prioritize profile.username, then email prefix
+                const profileUsername = profile.username?.trim();
+                const emailUsername = profile.email?.split('@')[0];
+                
+                let username = 'User';
+                if (profileUsername && profileUsername.length > 0) {
+                  username = profileUsername;
+                } else if (emailUsername && emailUsername.length > 0) {
+                  username = emailUsername;
+                }
+                
+                return {
+                  id: profile.id,
+                  username,
+                  avatarUrl: '',
+                  status: 'online' as const,
+                  role: profile.role || 'student',
+                };
+              }) || [];
 
             setMembers(membersData);
           }

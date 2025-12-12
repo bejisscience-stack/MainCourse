@@ -6,7 +6,7 @@ import type { User } from '@supabase/supabase-js';
 interface Profile {
   id: string;
   role: string | null;
-  full_name: string | null;
+  username: string | null;
 }
 
 interface UserData {
@@ -25,7 +25,7 @@ async function fetchUserSession(): Promise<User | null> {
 async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, role, full_name')
+    .select('id, role, username')
     .eq('id', userId)
     .single();
 

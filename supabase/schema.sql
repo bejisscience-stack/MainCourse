@@ -6,7 +6,10 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
-  full_name TEXT,
+  -- Username is required + unique (used throughout the app)
+  username TEXT NOT NULL,
+  -- Role is used for lecturer/student permissions
+  role TEXT DEFAULT 'student' CHECK (role IN ('student', 'lecturer')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL
 );
@@ -32,12 +35,39 @@ CREATE POLICY "Users can insert own profile"
 -- Function to automatically create a profile when a user signs up
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  user_username TEXT;
 BEGIN
-  INSERT INTO public.profiles (id, email, full_name)
+  -- Get username from metadata (required)
+  user_username := NEW.raw_user_meta_data->>'username';
+  
+  -- Validate username is provided
+  IF user_username IS NULL OR TRIM(user_username) = '' THEN
+    RAISE EXCEPTION 'Username is required for registration';
+  END IF;
+  
+  -- Trim and validate username format
+  user_username := TRIM(user_username);
+  
+  IF LENGTH(user_username) < 3 OR LENGTH(user_username) > 30 THEN
+    RAISE EXCEPTION 'Username must be between 3 and 30 characters';
+  END IF;
+  
+  IF NOT (user_username ~ '^[a-zA-Z0-9_]+$') THEN
+    RAISE EXCEPTION 'Username can only contain letters, numbers, and underscores';
+  END IF;
+  
+  -- Check uniqueness
+  IF EXISTS (SELECT 1 FROM public.profiles WHERE username = user_username) THEN
+    RAISE EXCEPTION 'Username already exists. Please choose a different username.';
+  END IF;
+  
+  INSERT INTO public.profiles (id, email, username, role)
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', '')
+    user_username,
+    COALESCE(NEW.raw_user_meta_data->>'role', 'student')
   );
   RETURN NEW;
 END;
@@ -64,6 +94,9 @@ CREATE OR REPLACE TRIGGER on_profile_updated
 
 -- Optional: Create an index on email for faster lookups
 CREATE INDEX IF NOT EXISTS profiles_email_idx ON public.profiles(email);
+
+-- Enforce unique usernames
+CREATE UNIQUE INDEX IF NOT EXISTS profiles_username_idx ON public.profiles(username);
 
 -- Courses table
 CREATE TABLE IF NOT EXISTS public.courses (

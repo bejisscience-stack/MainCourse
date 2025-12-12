@@ -144,13 +144,13 @@ export default function StudentChatPage() {
           if (userIds.size > 0) {
             const { data: profiles } = await supabase
               .from('profiles')
-              .select('id, full_name, email, role')
+              .select('id, username, email, role')
               .in('id', Array.from(userIds));
 
             const membersData: Member[] =
               profiles?.map((profile) => ({
                 id: profile.id,
-                username: profile.full_name || profile.email?.split('@')[0] || 'User',
+                username: profile.username || profile.email?.split('@')[0] || 'User',
                 avatarUrl: '',
                 status: 'online' as const,
                 role: profile.role || 'student',
