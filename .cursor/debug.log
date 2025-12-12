@@ -56,3 +56,71 @@
 {"location":"app/login/page.tsx:36","message":"After signIn call","data":{"hasResult":true,"hasUser":true,"hasSession":true},"timestamp":1765569075285,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
 {"location":"app/login/page.tsx:124","message":"Before router.push","data":{"destination":"/my-courses","emailLength":26,"passwordLength":8,"loading":false},"timestamp":1765569075964,"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}
 {"location":"app/login/page.tsx:151","message":"After window.location.href assignment","data":{"destination":"/my-courses"},"timestamp":1765569075965,"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}
+{"location":"app/login/page.tsx:16","message":"LoginForm mounted","data":{"email":"","password":""},"timestamp":1765570859915,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:16","message":"LoginForm unmounted","data":{},"timestamp":1765570859916,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:16","message":"LoginForm mounted","data":{"email":"","password":""},"timestamp":1765570859916,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":26,"oldLength":0},"timestamp":1765570861913,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":1,"oldLength":0},"timestamp":1765570862314,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":2,"oldLength":1},"timestamp":1765570862506,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":3,"oldLength":2},"timestamp":1765570862731,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":4,"oldLength":3},"timestamp":1765570862918,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":5,"oldLength":4},"timestamp":1765570863118,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":6,"oldLength":5},"timestamp":1765570863255,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":7,"oldLength":6},"timestamp":1765570863349,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":8,"oldLength":7},"timestamp":1765570863630,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:17","message":"handleSubmit called","data":{"emailLength":26,"passwordLength":8,"loading":false,"isSubmitting":false,"navigationStarted":false,"error":null},"timestamp":1765570863911,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"app/login/page.tsx:19","message":"preventDefault called, setting loading=true","data":{"emailLength":26,"passwordLength":8},"timestamp":1765570863912,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"app/login/page.tsx:36","message":"Before signIn call","data":{"emailLength":26,"passwordLength":8},"timestamp":1765570863912,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"lib/auth.ts:89","message":"signIn function entry","data":{"emailLength":26,"passwordLength":8},"timestamp":1765570863913,"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}
+{"location":"lib/auth.ts:91","message":"Before supabase.auth.signInWithPassword","data":{},"timestamp":1765570863913,"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}
+{"location":"lib/auth.ts:91","message":"After supabase.auth.signInWithPassword","data":{"hasError":false,"hasData":true,"hasUser":true,"hasSession":true},"timestamp":1765570864359,"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}
+{"location":"lib/auth.ts:112","message":"signIn function exit success","data":{"hasUser":true,"hasSession":true},"timestamp":1765570864359,"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}
+{"location":"app/login/page.tsx:36","message":"After signIn call","data":{"hasResult":true,"hasUser":true,"hasSession":true},"timestamp":1765570864359,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"app/login/page.tsx:124","message":"Before router.push","data":{"destination":"/","emailLength":26,"passwordLength":8,"loading":false},"timestamp":1765570864701,"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}
+{"location":"app/login/page.tsx:151","message":"After window.location.href assignment","data":{"destination":"/"},"timestamp":1765570864703,"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}
+{"location":"app/login/page.tsx:16","message":"LoginForm mounted","data":{"email":"","password":""},"timestamp":1765570908871,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:16","message":"LoginForm unmounted","data":{},"timestamp":1765570908871,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:16","message":"LoginForm mounted","data":{"email":"","password":""},"timestamp":1765570908871,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":1,"oldLength":0},"timestamp":1765570910328,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":2,"oldLength":1},"timestamp":1765570910406,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":3,"oldLength":2},"timestamp":1765570910570,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":4,"oldLength":3},"timestamp":1765570910642,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":5,"oldLength":4},"timestamp":1765570910741,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":6,"oldLength":5},"timestamp":1765570910944,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":7,"oldLength":6},"timestamp":1765570911070,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":8,"oldLength":7},"timestamp":1765570911180,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":9,"oldLength":8},"timestamp":1765570911338,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":10,"oldLength":9},"timestamp":1765570911430,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":11,"oldLength":10},"timestamp":1765570911549,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":12,"oldLength":11},"timestamp":1765570911745,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":13,"oldLength":12},"timestamp":1765570911944,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":14,"oldLength":13},"timestamp":1765570912141,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":15,"oldLength":14},"timestamp":1765570912267,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":16,"oldLength":15},"timestamp":1765570912353,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":17,"oldLength":16},"timestamp":1765570912452,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":18,"oldLength":17},"timestamp":1765570912528,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":19,"oldLength":18},"timestamp":1765570912750,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":20,"oldLength":19},"timestamp":1765570912925,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":21,"oldLength":20},"timestamp":1765570913025,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:204","message":"Email onChange","data":{"newLength":22,"oldLength":21},"timestamp":1765570913308,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":1,"oldLength":0},"timestamp":1765570914522,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":2,"oldLength":1},"timestamp":1765570914729,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":1,"oldLength":2},"timestamp":1765570915188,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":0,"oldLength":1},"timestamp":1765570915363,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":1,"oldLength":0},"timestamp":1765570915541,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":2,"oldLength":1},"timestamp":1765570915765,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":3,"oldLength":2},"timestamp":1765570916001,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":4,"oldLength":3},"timestamp":1765570916232,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":5,"oldLength":4},"timestamp":1765570916441,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":6,"oldLength":5},"timestamp":1765570916526,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:221","message":"Password onChange","data":{"newLength":7,"oldLength":6},"timestamp":1765570916630,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"app/login/page.tsx:17","message":"handleSubmit called","data":{"emailLength":22,"passwordLength":7,"loading":false,"isSubmitting":false,"navigationStarted":false,"error":null},"timestamp":1765570916768,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"app/login/page.tsx:19","message":"preventDefault called, setting loading=true","data":{"emailLength":22,"passwordLength":7},"timestamp":1765570916769,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"app/login/page.tsx:36","message":"Before signIn call","data":{"emailLength":22,"passwordLength":7},"timestamp":1765570916769,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"lib/auth.ts:89","message":"signIn function entry","data":{"emailLength":22,"passwordLength":7},"timestamp":1765570916770,"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}
+{"location":"lib/auth.ts:91","message":"Before supabase.auth.signInWithPassword","data":{},"timestamp":1765570916770,"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}
+{"location":"lib/auth.ts:91","message":"After supabase.auth.signInWithPassword","data":{"hasError":false,"hasData":true,"hasUser":true,"hasSession":true},"timestamp":1765570917155,"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}
+{"location":"lib/auth.ts:112","message":"signIn function exit success","data":{"hasUser":true,"hasSession":true},"timestamp":1765570917155,"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}
+{"location":"app/login/page.tsx:36","message":"After signIn call","data":{"hasResult":true,"hasUser":true,"hasSession":true},"timestamp":1765570917156,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"app/login/page.tsx:124","message":"Before router.push","data":{"destination":"/lecturer/dashboard","emailLength":22,"passwordLength":7,"loading":false},"timestamp":1765570917498,"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}
+{"location":"app/login/page.tsx:151","message":"After window.location.href assignment","data":{"destination":"/lecturer/dashboard"},"timestamp":1765570917503,"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}
