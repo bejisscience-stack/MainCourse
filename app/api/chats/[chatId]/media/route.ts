@@ -138,11 +138,11 @@ export async function POST(
       );
     }
 
-    // Check if user is muted
+    // Check if user is muted by this lecturer (lecturer-wise mute)
     const { data: mutedUser } = await supabase
       .from('muted_users')
       .select('id')
-      .eq('channel_id', chatId)
+      .eq('lecturer_id', course?.lecturer_id)
       .eq('user_id', user.id)
       .single();
 

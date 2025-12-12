@@ -3,7 +3,7 @@ import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabas
 
 export const dynamic = 'force-dynamic';
 
-// POST /api/chats/:chatId/mute - Mute a user in a channel
+// POST /api/chats/:chatId/mute - Mute a user (across all lecturer's channels)
 export async function POST(
   request: NextRequest,
   { params }: { params: { chatId: string } }
@@ -75,23 +75,33 @@ export async function POST(
       );
     }
 
-    // Insert mute record
+    // Prevent lecturer from muting themselves
+    if (userId === user.id) {
+      return NextResponse.json(
+        { error: 'Cannot mute yourself' },
+        { status: 400 }
+      );
+    }
+
+    // Insert mute record - lecturer-wise (mutes user across ALL lecturer's channels)
     const { data: mutedUser, error: muteError } = await supabase
       .from('muted_users')
       .insert({
+        lecturer_id: user.id, // The lecturer who is muting
+        user_id: userId,      // The user being muted
+        muted_by: user.id,
+        // Keep channel_id and course_id for reference (optional)
         channel_id: chatId,
         course_id: channel.course_id,
-        user_id: userId,
-        muted_by: user.id,
       })
       .select()
       .single();
 
     if (muteError) {
       if (muteError.code === '23505') {
-        // Already muted
+        // Already muted by this lecturer
         return NextResponse.json(
-          { error: 'User is already muted' },
+          { error: 'User is already muted in all your channels' },
           { status: 409 }
         );
       }
@@ -102,7 +112,11 @@ export async function POST(
       );
     }
 
-    return NextResponse.json({ muted: true, mutedUser }, { status: 201 });
+    return NextResponse.json({ 
+      muted: true, 
+      mutedUser,
+      message: 'User has been muted across all your channels'
+    }, { status: 201 });
   } catch (error: any) {
     console.error('Error in POST /api/chats/[chatId]/mute:', error);
     return NextResponse.json(
@@ -112,7 +126,7 @@ export async function POST(
   }
 }
 
-// DELETE /api/chats/:chatId/mute - Unmute a user in a channel
+// DELETE /api/chats/:chatId/mute - Unmute a user (across all lecturer's channels)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { chatId: string } }
@@ -149,7 +163,7 @@ export async function DELETE(
 
     const supabase = createServerSupabaseClient(token);
 
-    // Get channel and course
+    // Get channel and course to verify lecturer
     const { data: channel, error: channelError } = await supabase
       .from('channels')
       .select('id, course_id')
@@ -184,11 +198,11 @@ export async function DELETE(
       );
     }
 
-    // Delete mute record
+    // Delete mute record by lecturer_id (unmutes across ALL lecturer's channels)
     const { error: unmuteError } = await supabase
       .from('muted_users')
       .delete()
-      .eq('channel_id', chatId)
+      .eq('lecturer_id', user.id)
       .eq('user_id', userId);
 
     if (unmuteError) {
@@ -199,7 +213,10 @@ export async function DELETE(
       );
     }
 
-    return NextResponse.json({ unmuted: true }, { status: 200 });
+    return NextResponse.json({ 
+      unmuted: true,
+      message: 'User has been unmuted across all your channels'
+    }, { status: 200 });
   } catch (error: any) {
     console.error('Error in DELETE /api/chats/[chatId]/mute:', error);
     return NextResponse.json(
@@ -209,7 +226,7 @@ export async function DELETE(
   }
 }
 
-// GET /api/chats/:chatId/mute - Check if user is muted
+// GET /api/chats/:chatId/mute - Check if user is muted in this channel
 export async function GET(
   request: NextRequest,
   { params }: { params: { chatId: string } }
@@ -240,11 +257,39 @@ export async function GET(
     const supabase = createServerSupabaseClient(token);
     const checkUserId = userId || user.id;
 
-    // Check if user is muted
+    // Get the channel's course to find the lecturer
+    const { data: channel, error: channelError } = await supabase
+      .from('channels')
+      .select('course_id')
+      .eq('id', chatId)
+      .single();
+
+    if (channelError || !channel) {
+      return NextResponse.json(
+        { error: 'Channel not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get the course's lecturer
+    const { data: course, error: courseError } = await supabase
+      .from('courses')
+      .select('lecturer_id')
+      .eq('id', channel.course_id)
+      .single();
+
+    if (courseError || !course) {
+      return NextResponse.json(
+        { error: 'Course not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if user is muted by this lecturer (lecturer-wise mute check)
     const { data: mutedUser, error: muteError } = await supabase
       .from('muted_users')
-      .select('id, user_id, muted_by, created_at')
-      .eq('channel_id', chatId)
+      .select('id, user_id, muted_by, lecturer_id, created_at')
+      .eq('lecturer_id', course.lecturer_id)
       .eq('user_id', checkUserId)
       .single();
 
@@ -256,7 +301,12 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ muted: !!mutedUser, mutedUser: mutedUser || null });
+    return NextResponse.json({ 
+      muted: !!mutedUser, 
+      mutedUser: mutedUser || null,
+      // Let the user know they're muted across all lecturer's channels
+      scope: mutedUser ? 'all_lecturer_channels' : null
+    });
   } catch (error: any) {
     console.error('Error in GET /api/chats/[chatId]/mute:', error);
     return NextResponse.json(
@@ -265,6 +315,3 @@ export async function GET(
     );
   }
 }
-
-
-

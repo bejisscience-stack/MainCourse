@@ -12,7 +12,7 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
   const [isLoading, setIsLoading] = useState(false);
   const subscriptionRef = useRef<any>(null);
 
-  // Fetch current mute status
+  // Fetch current mute status from API (handles lecturer-wise logic server-side)
   const fetchMuteStatus = useCallback(async () => {
     if (!channelId || !userId || !enabled) {
       setIsMuted(false);
@@ -48,6 +48,7 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
   }, [channelId, userId, enabled]);
 
   // Subscribe to real-time mute status changes
+  // Listen for changes where this user is affected (user_id matches)
   useEffect(() => {
     if (!channelId || !userId || !enabled) {
       setIsMuted(false);
@@ -57,29 +58,23 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
     // Initial fetch
     fetchMuteStatus();
 
-    // Subscribe to mute changes
+    // Subscribe to mute changes for this specific user
+    // The mute is now lecturer-wise, so we listen for any mute record affecting this user
     const channel = supabase
-      .channel(`mute:${channelId}:${userId}`)
+      .channel(`mute_status:${userId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'muted_users',
-          filter: `channel_id=eq.${channelId}`,
+          filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          const record = payload.new as { user_id?: string } | null;
-          const oldRecord = payload.old as { user_id?: string } | null;
-          const affectedUserId = record?.user_id || oldRecord?.user_id;
-
-          if (affectedUserId === userId) {
-            if (payload.eventType === 'INSERT') {
-              setIsMuted(true);
-            } else if (payload.eventType === 'DELETE') {
-              setIsMuted(false);
-            }
-          }
+          // When any mute record changes for this user, re-fetch to check status
+          // This handles the lecturer-wise muting since we need to check if the
+          // mute affects the current channel's lecturer
+          fetchMuteStatus();
         }
       )
       .subscribe();
@@ -94,7 +89,7 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
     };
   }, [channelId, userId, enabled, fetchMuteStatus]);
 
-  // Mute a user (for lecturers)
+  // Mute a user (for lecturers) - mutes across ALL lecturer's channels
   const muteUser = useCallback(async (targetUserId: string) => {
     if (!channelId) return false;
 
@@ -111,6 +106,11 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
         body: JSON.stringify({ userId: targetUserId }),
       });
 
+      if (response.ok) {
+        const data = await response.json();
+        console.log('User muted:', data.message);
+      }
+
       return response.ok;
     } catch (error) {
       console.error('Failed to mute user:', error);
@@ -118,7 +118,7 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
     }
   }, [channelId]);
 
-  // Unmute a user (for lecturers)
+  // Unmute a user (for lecturers) - unmutes across ALL lecturer's channels
   const unmuteUser = useCallback(async (targetUserId: string) => {
     if (!channelId) return false;
 
@@ -132,6 +132,11 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
           'Authorization': `Bearer ${session.access_token}`,
         },
       });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('User unmuted:', data.message);
+      }
 
       return response.ok;
     } catch (error) {
@@ -153,6 +158,7 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
 export function useUserMuteStatus(channelId: string | null, targetUserId: string | null) {
   const [isMuted, setIsMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const subscriptionRef = useRef<any>(null);
 
   const checkMuteStatus = useCallback(async () => {
     if (!channelId || !targetUserId) {
@@ -186,9 +192,36 @@ export function useUserMuteStatus(channelId: string | null, targetUserId: string
   }, [channelId, targetUserId]);
 
   useEffect(() => {
+    if (!channelId || !targetUserId) return;
+    
     checkMuteStatus();
-  }, [checkMuteStatus]);
+
+    // Subscribe to mute changes for this target user
+    const channel = supabase
+      .channel(`user_mute_status:${targetUserId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'muted_users',
+          filter: `user_id=eq.${targetUserId}`,
+        },
+        () => {
+          checkMuteStatus();
+        }
+      )
+      .subscribe();
+
+    subscriptionRef.current = channel;
+
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
+    };
+  }, [channelId, targetUserId, checkMuteStatus]);
 
   return { isMuted, isLoading, refetch: checkMuteStatus };
 }
-
