@@ -6,12 +6,14 @@ interface MemberSidebarProps {
   members: Member[];
   onlineMembers: Member[];
   offlineMembers: Member[];
+  onCollapse?: () => void;
 }
 
 export default function MemberSidebar({
   members,
   onlineMembers,
   offlineMembers,
+  onCollapse,
 }: MemberSidebarProps) {
   const getStatusColor = (status: Member['status']) => {
     switch (status) {
@@ -27,18 +29,39 @@ export default function MemberSidebar({
   };
 
   return (
-    <div className="w-60 bg-gray-800 flex flex-col">
+    <div className="w-full h-full bg-gray-800 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="h-12 px-4 border-b border-gray-700 flex items-center">
+      <div className="h-12 px-4 border-b border-gray-700 flex items-center gap-2 flex-shrink-0">
         <input
           type="text"
           placeholder="Search"
-          className="bg-gray-700 text-gray-300 text-sm px-3 py-1.5 rounded w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="bg-gray-700 text-gray-300 text-sm px-3 py-1.5 rounded flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
+        {onCollapse && (
+          <button
+            onClick={onCollapse}
+            className="text-gray-400 hover:text-gray-300 transition-colors p-1 flex-shrink-0"
+            title="Collapse members"
+          >
+            <svg
+              className="w-4 h-4 transition-transform rotate-180"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Members list */}
-      <div className="flex-1 overflow-y-auto px-2 py-2">
+      <div className="flex-1 overflow-y-auto px-2 py-2 min-h-0">
         {/* Online members */}
         {onlineMembers.length > 0 && (
           <div className="mb-4">

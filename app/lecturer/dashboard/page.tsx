@@ -358,7 +358,7 @@ export default function LecturerDashboard() {
 
         if (insertError) throw insertError;
 
-        // Automatically create "Lectures" channel as the first channel
+        // Automatically create default channels: "Lectures" and "Projects"
         if (newCourse) {
           await supabase.from('channels').insert([
             {
@@ -371,27 +371,11 @@ export default function LecturerDashboard() {
             },
             {
               course_id: newCourse.id,
-              name: 'general',
+              name: 'projects',
               type: 'text',
-              description: `General discussion for ${courseData.title}`,
+              description: `Project submissions and discussions for ${courseData.title}`,
               category_name: 'COURSE CHANNELS',
               display_order: 1,
-            },
-            {
-              course_id: newCourse.id,
-              name: 'announcements',
-              type: 'text',
-              description: `Announcements for ${courseData.title}`,
-              category_name: 'COURSE CHANNELS',
-              display_order: 2,
-            },
-            {
-              course_id: newCourse.id,
-              name: 'q-and-a',
-              type: 'text',
-              description: `Questions and answers for ${courseData.title}`,
-              category_name: 'COURSE CHANNELS',
-              display_order: 3,
             },
           ]);
         }

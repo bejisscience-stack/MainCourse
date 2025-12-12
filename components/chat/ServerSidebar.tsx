@@ -9,6 +9,7 @@ interface ServerSidebarProps {
   onServerSelect: (serverId: string) => void;
   onAddCourse?: () => void;
   isLecturer?: boolean;
+  showDMButton?: boolean;
 }
 
 export default function ServerSidebar({
@@ -17,24 +18,29 @@ export default function ServerSidebar({
   onServerSelect,
   onAddCourse,
   isLecturer = false,
+  showDMButton = true,
 }: ServerSidebarProps) {
   const [hoveredServerId, setHoveredServerId] = useState<string | null>(null);
 
   return (
     <div className="w-16 bg-gray-900 flex flex-col items-center py-3 space-y-2 overflow-y-auto">
-      {/* Home/Direct Messages button */}
-      <button
-        className={`w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-500 transition-all duration-200 flex items-center justify-center text-white font-bold text-lg ${
-          activeServerId === 'home' ? 'rounded-2xl' : ''
-        }`}
-        onClick={() => onServerSelect('home')}
-        onMouseEnter={() => setHoveredServerId('home')}
-        onMouseLeave={() => setHoveredServerId(null)}
-      >
-        <span>DM</span>
-      </button>
+      {/* Home/Direct Messages button - only show if showDMButton is true */}
+      {showDMButton && (
+        <>
+          <button
+            className={`w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-500 transition-all duration-200 flex items-center justify-center text-white font-bold text-lg ${
+              activeServerId === 'home' ? 'rounded-2xl' : ''
+            }`}
+            onClick={() => onServerSelect('home')}
+            onMouseEnter={() => setHoveredServerId('home')}
+            onMouseLeave={() => setHoveredServerId(null)}
+          >
+            <span>DM</span>
+          </button>
 
-      <div className="w-8 h-0.5 bg-gray-700"></div>
+          <div className="w-8 h-0.5 bg-gray-700"></div>
+        </>
+      )}
 
       {/* Server list */}
       {servers.map((server) => {

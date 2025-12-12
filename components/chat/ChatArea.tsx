@@ -586,17 +586,32 @@ export default function ChatArea({
       )}
 
       {/* Message input */}
-      <MessageInput
-        onSend={handleSend}
-        onTyping={handleTyping}
-        replyTo={replyTo}
-        onCancelReply={() => setReplyTo(undefined)}
-        placeholder={`Message #${channel.name}`}
-        disabled={isSending}
-        isSending={isSending}
-        channelId={channel.id}
-        isMuted={isMuted}
-      />
+      {(() => {
+        // Check if this is a restricted channel (Lectures or Projects)
+        const channelName = channel.name?.toLowerCase() || '';
+        const isLecturesChannel = channelName === 'lectures' && channel.type === 'lectures';
+        const isProjectsChannel = channelName === 'projects';
+        const isRestrictedChannel = isLecturesChannel || isProjectsChannel;
+        const canSendMessages = !isRestrictedChannel || isLecturer;
+
+        return (
+          <MessageInput
+            onSend={handleSend}
+            onTyping={handleTyping}
+            replyTo={replyTo}
+            onCancelReply={() => setReplyTo(undefined)}
+            placeholder={
+              !canSendMessages
+                ? 'Only the course lecturer can send messages in this channel'
+                : `Message #${channel.name}`
+            }
+            disabled={isSending || !canSendMessages}
+            isSending={isSending}
+            channelId={channel.id}
+            isMuted={isMuted || !canSendMessages}
+          />
+        );
+      })()}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import Navigation from '@/components/Navigation';
 import Hero from '@/components/Hero';
 import VideoSection from '@/components/VideoSection';
+import CoursesCarousel from '@/components/CoursesCarousel';
 import FloatingButton from '@/components/FloatingButton';
 import BackgroundShapes from '@/components/BackgroundShapes';
 import { useRouter } from 'next/navigation';
@@ -42,6 +43,7 @@ export default function Home() {
       <div className="relative z-10">
         <Hero />
         <VideoSection studentCount={studentCount} />
+        <CoursesCarousel />
       </div>
       <FloatingButton />
     </main>

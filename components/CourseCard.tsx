@@ -232,7 +232,7 @@ function CourseCard({
               customAction
             ) : isEnrolled ? (
               <a
-                href={`/courses/${course.id}`}
+                href={`/courses/${course.id}/chat`}
                 className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-green-500 rounded-full hover:bg-green-600 transition-colors"
               >
                 <svg
@@ -248,7 +248,7 @@ function CourseCard({
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                Enrolled - View Course
+                Go To Course
               </a>
             ) : (
               <button

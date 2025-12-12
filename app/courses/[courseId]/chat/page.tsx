@@ -364,6 +364,7 @@ export default function CourseChatPage() {
             isLecturer={false}
             onSendMessage={handleSendMessage}
             onReaction={handleReaction}
+            showDMButton={false}
           />
         )}
       </div>

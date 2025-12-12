@@ -396,7 +396,7 @@ export async function POST(
     // Get channel and verify access
     const { data: channel, error: channelError } = await supabase
       .from('channels')
-      .select('id, course_id')
+      .select('id, course_id, name, type')
       .eq('id', chatId)
       .single();
 
@@ -417,7 +417,15 @@ export async function POST(
       .eq('id', courseId)
       .single();
     
-    const lecturerId = course?.lecturer_id;
+    if (courseError || !course) {
+      console.error('Course error:', courseError);
+      return NextResponse.json(
+        { error: 'Course not found', details: courseError?.message || 'The course associated with this channel does not exist' },
+        { status: 404 }
+      );
+    }
+    
+    const lecturerId = course.lecturer_id;
 
     // Check enrollment or lecturer status
     const { data: enrollment } = await supabase
@@ -433,6 +441,20 @@ export async function POST(
     if (!isEnrolled && !isLecturer) {
       return NextResponse.json(
         { error: 'Forbidden: You do not have access to this channel' },
+        { status: 403 }
+      );
+    }
+
+    // Check if this is a restricted channel (Lectures or Projects)
+    const channelName = channel.name?.toLowerCase() || '';
+    const isLecturesChannel = channelName === 'lectures' && channel.type === 'lectures';
+    const isProjectsChannel = channelName === 'projects';
+    const isRestrictedChannel = isLecturesChannel || isProjectsChannel;
+
+    // Only lecturers can send messages in Lectures and Projects channels
+    if (isRestrictedChannel && !isLecturer) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only the course lecturer can send messages in this channel' },
         { status: 403 }
       );
     }

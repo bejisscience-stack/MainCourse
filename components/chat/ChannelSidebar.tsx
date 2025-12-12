@@ -13,6 +13,7 @@ interface ChannelSidebarProps {
   onChannelUpdate?: (channelId: string, updates: Partial<Channel>) => Promise<void>;
   onChannelDelete?: (channelId: string) => Promise<void>;
   isLecturer?: boolean;
+  onCollapse?: () => void;
 }
 
 // Channel icon component
@@ -37,6 +38,7 @@ export default function ChannelSidebar({
   onChannelUpdate,
   onChannelDelete,
   isLecturer = false,
+  onCollapse,
 }: ChannelSidebarProps) {
   const [showChannelManagement, setShowChannelManagement] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(() => {
@@ -103,7 +105,7 @@ export default function ChannelSidebar({
 
   if (!server) {
     return (
-      <div className="w-60 bg-gray-800 flex flex-col">
+      <div className="w-full h-full bg-gray-800 flex flex-col">
         <div className="p-4 border-b border-gray-700">
           <h2 className="text-white font-semibold">Select a course</h2>
         </div>
@@ -115,27 +117,50 @@ export default function ChannelSidebar({
   }
 
   return (
-    <div className="w-60 bg-gray-800 flex flex-col relative">
+    <div className="w-full h-full bg-gray-800 flex flex-col relative overflow-hidden">
       {/* Server header */}
       <div className="h-12 px-4 border-b border-gray-700 flex items-center justify-between shadow-lg flex-shrink-0">
         <h2 className="text-white font-semibold text-sm truncate flex-1">{server.name}</h2>
-        {totalUnread > 0 && (
-          <span className="bg-indigo-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center mr-2">
-            {totalUnread > 99 ? '99+' : totalUnread}
-          </span>
-        )}
-        {isLecturer && (
-          <button
-            onClick={() => setShowChannelManagement(true)}
-            className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700 transition-colors"
-            title="Manage Channels"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {totalUnread > 0 && (
+            <span className="bg-indigo-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+              {totalUnread > 99 ? '99+' : totalUnread}
+            </span>
+          )}
+          {onCollapse && (
+            <button
+              onClick={onCollapse}
+              className="text-gray-400 hover:text-gray-300 transition-colors p-1"
+              title="Collapse channels"
+            >
+              <svg
+                className="w-4 h-4 transition-transform rotate-180"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+          )}
+          {isLecturer && (
+            <button
+              onClick={() => setShowChannelManagement(true)}
+              className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700 transition-colors"
+              title="Manage Channels"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Channels list */}
@@ -229,33 +254,6 @@ export default function ChannelSidebar({
             </div>
           );
         })}
-      </div>
-
-      {/* User profile footer */}
-      <div className="h-14 bg-gray-900 px-2 py-2 flex items-center gap-2 border-t border-gray-700 flex-shrink-0">
-        <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-semibold">
-          U
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-white text-sm font-medium truncate">Username</div>
-          <div className="text-green-400 text-xs flex items-center gap-1">
-            <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-            Online
-          </div>
-        </div>
-        <div className="flex gap-0.5">
-          <button className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-          </button>
-          <button className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
-        </div>
       </div>
 
       {/* Channel Management Modal */}
