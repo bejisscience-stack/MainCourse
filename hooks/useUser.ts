@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import useSWR from 'swr';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
@@ -74,12 +75,24 @@ export function useUser() {
     }
   );
 
-  // Listen for auth changes
-  if (typeof window !== 'undefined') {
-    supabase.auth.onAuthStateChange(() => {
+  // Listen for auth changes - properly set up in useEffect with cleanup
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Set up auth state change listener
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session?.user?.id);
+      // Mutate the SWR cache when auth state changes
       mutate();
     });
-  }
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [mutate]);
 
   return {
     user: data?.user || null,

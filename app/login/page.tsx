@@ -44,7 +44,8 @@ function LoginForm() {
 
       const { user, session } = result;
 
-      // Ensure session is established
+      // Ensure session is established and persisted
+      let finalSession = session;
       if (!session) {
         console.log('No session found, waiting and retrying...');
         // Wait a bit for session to be established
@@ -62,7 +63,19 @@ function LoginForm() {
           throw new Error('Session could not be established. Please try again.');
         }
         
+        finalSession = newSession;
         console.log('Session established successfully');
+      }
+
+      // Verify session is persisted in localStorage
+      if (finalSession && typeof window !== 'undefined') {
+        const storedSession = localStorage.getItem('supabase.auth.token');
+        if (!storedSession) {
+          console.warn('Session not found in localStorage, waiting for persistence...');
+          // Wait a bit more for localStorage to be updated
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        console.log('Session persisted successfully');
       }
 
       // Fetch role and redirect accordingly
@@ -103,9 +116,17 @@ function LoginForm() {
 
       console.log('Redirecting to:', destination);
 
-      // Use router with refresh to ensure session is recognized
+      // Wait a moment to ensure session is fully persisted before redirecting
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Use router.push without refresh to avoid clearing session
+      // The session should already be persisted in localStorage
       router.push(destination);
-      router.refresh();
+      
+      // Refresh after a short delay to ensure the new page recognizes the session
+      setTimeout(() => {
+        router.refresh();
+      }, 200);
     } catch (err: any) {
       clearTimeout(timeoutId);
       console.error('Sign in error:', err);
