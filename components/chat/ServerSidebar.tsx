@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useEnrollments } from '@/hooks/useEnrollments';
+import PaymentDialog from '@/components/PaymentDialog';
 import type { Server } from '@/types/server';
+import type { Course } from '@/components/CourseCard';
 
 interface ServerSidebarProps {
   servers: Server[];
@@ -29,9 +31,53 @@ export default function ServerSidebar({
   const [hoveredServerId, setHoveredServerId] = useState<string | null>(null);
   const [enrollmentModal, setEnrollmentModal] = useState<{ courseId: string; courseName: string } | null>(null);
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [courseForPayment, setCourseForPayment] = useState<Course | null>(null);
   const router = useRouter();
   const { user } = useUser();
   const { mutate: mutateEnrollments } = useEnrollments(user?.id || null);
+
+  // Fetch course details when enrollment modal is shown
+  useEffect(() => {
+    if (enrollmentModal) {
+      const fetchCourse = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('courses')
+            .select('*')
+            .eq('id', enrollmentModal.courseId)
+            .single();
+
+          if (error) throw error;
+
+          if (data) {
+            const course: Course = {
+              id: data.id,
+              title: data.title,
+              description: data.description,
+              course_type: data.course_type as 'Editing' | 'Content Creation' | 'Website Creation',
+              price: data.price,
+              original_price: data.original_price,
+              author: data.author || '',
+              creator: data.creator || '',
+              intro_video_url: data.intro_video_url,
+              thumbnail_url: data.thumbnail_url,
+              rating: data.rating || 0,
+              review_count: data.review_count || 0,
+              is_bestseller: data.is_bestseller || false,
+            };
+            setCourseForPayment(course);
+          }
+        } catch (err) {
+          console.error('Error fetching course:', err);
+          setEnrollmentModal(null);
+        }
+      };
+
+      fetchCourse();
+    } else {
+      setCourseForPayment(null);
+    }
+  }, [enrollmentModal]);
 
   const handleServerClick = (serverId: string) => {
     const isEnrolled = enrolledCourseIds.has(serverId);
@@ -49,38 +95,64 @@ export default function ServerSidebar({
     onServerSelect(serverId);
   };
 
-  const handleEnroll = async () => {
-    if (!enrollmentModal || !user) return;
+  const handleEnroll = async (courseId: string) => {
+    if (!user) return;
+    
+    // Prevent duplicate enrollment attempts
+    if (enrolledCourseIds.has(courseId)) {
+      setEnrollmentModal(null);
+      setCourseForPayment(null);
+      onServerSelect(courseId);
+      router.push(`/courses/${courseId}/chat`);
+      return;
+    }
     
     setIsEnrolling(true);
     try {
-      const { error } = await supabase
+      // Perform the actual enrollment with verification
+      const { data: insertedData, error } = await supabase
         .from('enrollments')
-        .insert([{ user_id: user.id, course_id: enrollmentModal.courseId }]);
+        .insert([{ user_id: user.id, course_id: courseId }])
+        .select()
+        .single();
 
       if (error) {
         if (error.code === '23505') {
           // Already enrolled, just refresh
           await mutateEnrollments();
           setEnrollmentModal(null);
-          onServerSelect(enrollmentModal.courseId);
-          router.push(`/courses/${enrollmentModal.courseId}/chat`);
+          setCourseForPayment(null);
+          onServerSelect(courseId);
+          router.push(`/courses/${courseId}/chat`);
           return;
         }
         throw error;
       }
 
-      // Refresh enrollments and navigate
-      await mutateEnrollments();
-      setEnrollmentModal(null);
-      onServerSelect(enrollmentModal.courseId);
-      router.push(`/courses/${enrollmentModal.courseId}/chat`);
+      // Verify we got exactly one enrollment back for the correct course
+      if (insertedData && insertedData.course_id === courseId) {
+        // Refresh enrollments and navigate
+        await mutateEnrollments();
+        setEnrollmentModal(null);
+        setCourseForPayment(null);
+        onServerSelect(courseId);
+        router.push(`/courses/${courseId}/chat`);
+      } else {
+        throw new Error('Enrollment verification failed');
+      }
     } catch (err: any) {
       console.error('Enrollment error:', err);
       alert(err.message || 'Failed to enroll in course. Please try again.');
+      // Revalidate to get correct state
+      await mutateEnrollments();
     } finally {
       setIsEnrolling(false);
     }
+  };
+
+  const handlePaymentDialogClose = () => {
+    setEnrollmentModal(null);
+    setCourseForPayment(null);
   };
 
   return (
@@ -185,79 +257,14 @@ export default function ServerSidebar({
         )}
       </div>
 
-      {/* Enrollment Modal */}
-      {enrollmentModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700">
-            <div className="p-6">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-                  🔒
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-white font-bold text-xl mb-1">Enroll in Course</h3>
-                  <p className="text-gray-400 text-sm">This course is locked</p>
-                </div>
-                <button
-                  onClick={() => setEnrollmentModal(null)}
-                  className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="mb-6">
-                <p className="text-gray-300 mb-4">
-                  Would you like to enroll in <span className="font-semibold text-white">{enrollmentModal.courseName}</span>?
-                </p>
-                <div className="bg-gray-900/50 rounded-xl p-4 border border-gray-700">
-                  <div className="flex items-start gap-3">
-                    <svg className="w-5 h-5 text-indigo-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div className="text-sm text-gray-400">
-                      <p className="text-gray-300 font-medium mb-1">What you'll get:</p>
-                      <ul className="space-y-1 text-gray-400">
-                        <li>• Access to all course content</li>
-                        <li>• Video lectures and materials</li>
-                        <li>• Course discussions and projects</li>
-                        <li>• Direct communication with instructor</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={handleEnroll}
-                  disabled={isEnrolling}
-                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold px-6 py-3 rounded-xl hover:from-indigo-500 hover:to-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
-                >
-                  {isEnrolling ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      Enrolling...
-                    </span>
-                  ) : (
-                    'Enroll Now'
-                  )}
-                </button>
-                <button
-                  onClick={() => setEnrollmentModal(null)}
-                  disabled={isEnrolling}
-                  className="px-6 py-3 bg-gray-700 text-gray-300 font-semibold rounded-xl hover:bg-gray-600 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Payment Dialog */}
+      {courseForPayment && (
+        <PaymentDialog
+          course={courseForPayment}
+          isOpen={!!courseForPayment}
+          onClose={handlePaymentDialogClose}
+          onEnroll={handleEnroll}
+        />
       )}
     </>
   );

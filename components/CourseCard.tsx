@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, memo, useCallback, useMemo, useEffect } from 'react';
+import PaymentDialog from './PaymentDialog';
 
 export interface Course {
   id: string;
@@ -36,6 +37,7 @@ function CourseCard({
   customAction
 }: CourseCardProps) {
   const [isVideoExpanded, setIsVideoExpanded] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   const formatPrice = useMemo(() => {
     return (price: number) => new Intl.NumberFormat('en-US', {
@@ -83,9 +85,20 @@ function CourseCard({
 
   const handleEnrollClick = useCallback(() => {
     if (onEnroll && !isEnrolled && !isEnrolling) {
-      onEnroll(course.id);
+      setShowPaymentDialog(true);
     }
-  }, [onEnroll, isEnrolled, isEnrolling, course.id]);
+  }, [onEnroll, isEnrolled, isEnrolling]);
+
+  const handlePaymentDialogClose = useCallback(() => {
+    setShowPaymentDialog(false);
+  }, []);
+
+  const handlePaymentSubmit = useCallback((courseId: string) => {
+    if (onEnroll) {
+      onEnroll(courseId);
+    }
+    setShowPaymentDialog(false);
+  }, [onEnroll]);
 
   return (
     <>
@@ -357,6 +370,14 @@ function CourseCard({
           </div>
         </div>
       )}
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        course={course}
+        isOpen={showPaymentDialog}
+        onClose={handlePaymentDialogClose}
+        onEnroll={handlePaymentSubmit}
+      />
     </>
   );
 }

@@ -4,11 +4,13 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
+import PaymentDialog from '@/components/PaymentDialog';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useEnrollments } from '@/hooks/useEnrollments';
 import useSWR from 'swr';
 import type { Course } from '@/hooks/useCourses';
+import type { Course as CourseCardCourse } from '@/components/CourseCard';
 
 export default function MyCoursesPage() {
   const router = useRouter();
@@ -16,6 +18,7 @@ export default function MyCoursesPage() {
   const { enrolledCourseIds, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [paymentDialogCourse, setPaymentDialogCourse] = useState<CourseCardCourse | null>(null);
 
   // Redirect lecturers immediately
   useEffect(() => {
@@ -31,11 +34,11 @@ export default function MyCoursesPage() {
     }
   }, [user, userLoading, router]);
 
-  // Fetch enrolled courses - use stable key with user ID
-  const enrolledIdsArray = useMemo(() => Array.from(enrolledCourseIds), [enrolledCourseIds]);
+  // Fetch enrolled courses - use stable key with user ID and enrolled IDs
+  const enrolledIdsArray = useMemo(() => Array.from(enrolledCourseIds).sort(), [enrolledCourseIds]);
   
   const { data: enrolledCourses = [], isLoading: enrolledLoading, mutate: mutateEnrolledCourses } = useSWR<Course[]>(
-    user ? ['enrolled-courses', user.id] : null,
+    user ? ['enrolled-courses', user.id, enrolledIdsArray.join(',')] : null,
     async () => {
       if (enrolledIdsArray.length === 0) return [];
       const { data, error } = await supabase
@@ -54,20 +57,23 @@ export default function MyCoursesPage() {
 
   // Fetch discover courses (not enrolled) - use stable key with user ID
   const { data: discoverCourses = [], isLoading: discoverLoading, mutate: mutateDiscoverCourses } = useSWR<Course[]>(
-    user ? ['discover-courses', user.id] : null,
+    user ? ['discover-courses', user.id, enrolledIdsArray.join(',')] : null,
     async () => {
-      let query = supabase
+      // Fetch all courses first
+      const { data: allCourses, error } = await supabase
         .from('courses')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (enrolledIdsArray.length > 0) {
-        query = query.not('id', 'in', `(${enrolledIdsArray.join(',')})`);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      
+      // Filter out enrolled courses in JavaScript (more reliable than Supabase .not() syntax)
+      if (enrolledIdsArray.length > 0) {
+        const enrolledSet = new Set(enrolledIdsArray);
+        return (allCourses || []).filter(course => !enrolledSet.has(course.id));
+      }
+      
+      return allCourses || [];
     },
     {
       revalidateOnFocus: false,
@@ -77,10 +83,17 @@ export default function MyCoursesPage() {
 
   const handleEnroll = useCallback(async (courseId: string) => {
     if (!user) return;
+    
+    // Prevent duplicate enrollment attempts
+    if (enrolledCourseIds.has(courseId)) {
+      setError('You are already enrolled in this course');
+      return;
+    }
+    
     setError(null);
     setEnrolling(courseId);
     
-    // Find the course being enrolled for optimistic update
+    // Find the course being enrolled
     const courseToEnroll = discoverCourses.find(c => c.id === courseId);
     if (!courseToEnroll) {
       setError('Course not found');
@@ -94,22 +107,12 @@ export default function MyCoursesPage() {
     const previousDiscoverCourses = [...discoverCourses];
     
     try {
-      // Optimistically update enrollments set immediately
-      const newEnrolledIds = new Set(previousEnrolledIds);
-      newEnrolledIds.add(courseId);
-      await mutateEnrollments(newEnrolledIds, false);
-      
-      // Optimistically update course lists immediately (using stable keys)
-      const newEnrolledCourses = [...previousEnrolledCourses, courseToEnroll];
-      const newDiscoverCourses = previousDiscoverCourses.filter(c => c.id !== courseId);
-      
-      await mutateEnrolledCourses(newEnrolledCourses, false);
-      await mutateDiscoverCourses(newDiscoverCourses, false);
-      
-      // Now perform the actual enrollment
-      const { error: insertError } = await supabase
+      // Perform the actual enrollment FIRST to ensure data consistency
+      const { data: insertedData, error: insertError } = await supabase
         .from('enrollments')
-        .insert([{ user_id: user.id, course_id: courseId }]);
+        .insert([{ user_id: user.id, course_id: courseId }])
+        .select()
+        .single();
       
       if (insertError) {
         if (insertError.code === '23505') {
@@ -119,9 +122,25 @@ export default function MyCoursesPage() {
             mutateEnrolledCourses(),
             mutateDiscoverCourses(),
           ]);
+          setEnrolling(null);
           return;
         }
         throw insertError;
+      }
+      
+      // Verify we got exactly one enrollment back for the correct course
+      if (insertedData && insertedData.course_id === courseId) {
+        // Update enrollments set
+        const newEnrolledIds = new Set(previousEnrolledIds);
+        newEnrolledIds.add(courseId);
+        await mutateEnrollments(newEnrolledIds, false);
+        
+        // Update course lists
+        const newEnrolledCourses = [...previousEnrolledCourses, courseToEnroll];
+        const newDiscoverCourses = previousDiscoverCourses.filter(c => c.id !== courseId);
+        
+        await mutateEnrolledCourses(newEnrolledCourses, false);
+        await mutateDiscoverCourses(newDiscoverCourses, false);
       }
       
       // Revalidate all queries to ensure consistency with server
@@ -132,6 +151,7 @@ export default function MyCoursesPage() {
       ]);
     } catch (err: any) {
       setError(err.message || 'Failed to enroll in course');
+      console.error('Enrollment error:', err);
       // Revert optimistic updates on error
       await Promise.all([
         mutateEnrollments(previousEnrolledIds, false),
@@ -265,26 +285,55 @@ export default function MyCoursesPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {discoverCourses.map((course) => (
-                  <CourseCard
-                    key={course.id}
-                    course={course}
-                    action={
-                      <button
-                        onClick={() => handleEnroll(course.id)}
-                        disabled={enrolling === course.id}
-                        className="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-semibold text-white bg-navy-900 rounded-lg hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {enrolling === course.id ? 'Enrolling...' : 'Enroll'}
-                      </button>
-                    }
-                  />
-                ))}
+                {discoverCourses.map((course) => {
+                  // Convert Course to CourseCardCourse format
+                  const courseCardCourse: CourseCardCourse = {
+                    id: course.id,
+                    title: course.title,
+                    description: course.description,
+                    course_type: course.course_type as 'Editing' | 'Content Creation' | 'Website Creation',
+                    price: course.price,
+                    original_price: course.original_price,
+                    author: course.author || '',
+                    creator: course.creator || '',
+                    intro_video_url: course.intro_video_url,
+                    thumbnail_url: course.thumbnail_url,
+                    rating: course.rating || 0,
+                    review_count: course.review_count || 0,
+                    is_bestseller: course.is_bestseller || false,
+                  };
+
+                  return (
+                    <CourseCard
+                      key={course.id}
+                      course={course}
+                      action={
+                        <button
+                          onClick={() => setPaymentDialogCourse(courseCardCourse)}
+                          disabled={enrolling === course.id}
+                          className="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-semibold text-white bg-navy-900 rounded-lg hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {enrolling === course.id ? 'Enrolling...' : 'Enroll'}
+                        </button>
+                      }
+                    />
+                  );
+                })}
               </div>
             )}
           </section>
         </div>
       </div>
+
+      {/* Payment Dialog */}
+      {paymentDialogCourse && (
+        <PaymentDialog
+          course={paymentDialogCourse}
+          isOpen={!!paymentDialogCourse}
+          onClose={() => setPaymentDialogCourse(null)}
+          onEnroll={handleEnroll}
+        />
+      )}
     </main>
   );
 }

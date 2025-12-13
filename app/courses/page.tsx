@@ -82,32 +82,48 @@ export default function CoursesPage() {
       return;
     }
 
+    // Prevent duplicate enrollment attempts
+    if (enrolledCourseIds.has(courseId)) {
+      setError('You are already enrolled in this course');
+      return;
+    }
+
     setError(null);
     setEnrollingCourseId(courseId);
 
     try {
-      const { error: insertError } = await supabase
+      // Perform the actual enrollment with verification
+      const { data: insertedData, error: insertError } = await supabase
         .from('enrollments')
-        .insert([{ user_id: user.id, course_id: courseId }]);
+        .insert([{ user_id: user.id, course_id: courseId }])
+        .select()
+        .single();
 
       if (insertError) {
         if (insertError.code === '23505') {
           // Already enrolled, refresh enrollments
-          mutateEnrollments();
+          await mutateEnrollments();
           return;
         }
         throw insertError;
       }
 
-      // Optimistically update enrollments
-      mutateEnrollments();
+      // Verify we got exactly one enrollment back for the correct course
+      if (insertedData && insertedData.course_id === courseId) {
+        // Update enrollments cache
+        await mutateEnrollments();
+      } else {
+        throw new Error('Enrollment verification failed');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to enroll in course');
       console.error('Error enrolling in course:', err);
+      // Revalidate to get correct state
+      await mutateEnrollments();
     } finally {
       setEnrollingCourseId(null);
     }
-  }, [user, userRole, lecturerCourseIds, mutateEnrollments, router]);
+  }, [user, userRole, lecturerCourseIds, enrolledCourseIds, mutateEnrollments, router]);
 
   const courseTypes: FilterType[] = ['All', 'Editing', 'Content Creation', 'Website Creation'];
 
