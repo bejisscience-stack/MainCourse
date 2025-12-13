@@ -126,18 +126,19 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
         const filePath = `${course.id}/${user.id}/${fileName}`;
 
         const { data, error: uploadError } = await supabase.storage
-          .from('chat-media') // Using existing bucket, or create a new one for payments
+          .from('payment-screenshots')
           .upload(filePath, imageData.file, {
             cacheControl: '3600',
             upsert: false,
           });
 
         if (uploadError) {
+          console.error('Upload error details:', uploadError);
           throw new Error(`Failed to upload ${imageData.file.name}: ${uploadError.message}`);
         }
 
         const { data: urlData } = supabase.storage
-          .from('chat-media')
+          .from('payment-screenshots')
           .getPublicUrl(filePath);
 
         if (urlData?.publicUrl) {
@@ -256,6 +257,44 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
             <p className="text-sm text-gray-600 mb-1">Unique Course Code</p>
             <p className="text-2xl font-mono font-bold text-navy-900 tracking-wider">{courseCode}</p>
             <p className="text-xs text-gray-500 mt-1">Please include this code in your transaction reference</p>
+          </div>
+
+          {/* Payment Instructions Images */}
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-3">Payment Instructions:</p>
+              <div className="space-y-4">
+                {/* First Instruction Image - Account Number Entry */}
+                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                  <p className="text-xs font-medium text-gray-700 mb-3">Step 1: Enter Account Number</p>
+                  <div className="relative w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/payment-instructions/payment-step-1.png"
+                      alt="Payment instruction step 1 - Enter account number GE00BG0000000013231"
+                      className="w-full h-auto object-contain block"
+                      style={{ maxHeight: '600px' }}
+                      loading="lazy"
+                    />
+                  </div>
+                </div>
+
+                {/* Second Instruction Image - Payment Details */}
+                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                  <p className="text-xs font-medium text-gray-700 mb-3">Step 2: Complete Payment Details</p>
+                  <div className="relative w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/payment-instructions/payment-step-2.png"
+                      alt="Payment instruction step 2 - Complete payment with unique code in description field"
+                      className="w-full h-auto object-contain block"
+                      style={{ maxHeight: '600px' }}
+                      loading="lazy"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* File Upload Section */}
