@@ -8,7 +8,7 @@ interface PaymentDialogProps {
   course: Course;
   isOpen: boolean;
   onClose: () => void;
-  onEnroll: (courseId: string) => void;
+  onEnroll: (courseId: string, screenshotUrls: string[]) => Promise<void> | void;
 }
 
 // Generate a unique 5-digit code from course ID (uppercase letters and numbers)
@@ -146,12 +146,17 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
         }
       }
 
-      // Here you could save the payment information to a database table
-      // For now, we'll just proceed with enrollment
-      
-      // Close dialog and proceed with enrollment
-      onClose();
-      onEnroll(course.id);
+      // Payment screenshots have been uploaded successfully
+      // Proceed with enrollment request, passing screenshot URLs
+      // Note: onEnroll will handle success/error and close dialog appropriately
+      try {
+        await onEnroll(course.id, uploadedUrls);
+        // If we get here, enrollment request was successful, dialog will be closed by onEnroll
+      } catch (enrollError: any) {
+        // If enrollment request fails, show error but keep dialog open so user can retry
+        setUploadError(enrollError.message || 'Failed to submit enrollment request. Payment screenshots were uploaded successfully. Please try again.');
+        throw enrollError; // Re-throw so calling code knows it failed
+      }
     } catch (err: any) {
       console.error('Upload error:', err);
       setUploadError(err.message || 'Failed to upload images. Please try again.');
@@ -223,7 +228,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
           {/* Header */}
           <div>
             <h2 className="text-2xl font-bold text-navy-900 mb-2">Payment Instructions</h2>
-            <p className="text-gray-600">Please follow the instructions below to complete your enrollment</p>
+            <p className="text-gray-600">Please follow the instructions below to submit your enrollment request</p>
           </div>
 
           {/* Course Information */}
@@ -379,7 +384,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
               </svg>
               <div>
                 <p className="text-sm font-medium text-yellow-800">Processing Time</p>
-                <p className="text-sm text-yellow-700 mt-1">It needs 2 Hours to Accept your enrollment after payment verification.</p>
+                <p className="text-sm text-yellow-700 mt-1">Your enrollment request will be sent to admin for approval after payment verification. Processing typically takes 2 hours.</p>
               </div>
             </div>
           </div>
@@ -422,7 +427,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
                   <span>Uploading...</span>
                 </>
               ) : (
-                <span>Submit Payment</span>
+                <span>Submit Payment & Request Enrollment</span>
               )}
             </button>
           </div>

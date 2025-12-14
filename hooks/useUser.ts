@@ -27,12 +27,16 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
     .from('profiles')
     .select('id, role, username')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== 'PGRST116') {
-    console.warn('Profile fetch error:', error);
+  if (error) {
+    console.error('[useUser] Profile fetch error:', error);
+    console.error('[useUser] Error code:', error.code);
+    console.error('[useUser] Error message:', error.message);
+    return null;
   }
 
+  console.log('[useUser] Fetched profile for user:', userId, 'Profile data:', data, 'Role:', data?.role);
   return data || null;
 }
 
@@ -45,9 +49,19 @@ async function fetchUserData(): Promise<UserData> {
   }
 
   const profile = await fetchProfile(user.id);
+  // Always prioritize profile role over metadata (database is source of truth)
   const role = profile?.role || user.user_metadata?.role || null;
 
-  // Normalize role if needed (non-blocking)
+  console.log('[useUser] ========== ROLE FETCH ==========');
+  console.log('[useUser] User ID:', user.id);
+  console.log('[useUser] Profile:', profile);
+  console.log('[useUser] Profile role:', profile?.role);
+  console.log('[useUser] Metadata role:', user.user_metadata?.role);
+  console.log('[useUser] Final role determined:', role);
+  console.log('[useUser] =================================');
+
+  // Normalize role if needed (non-blocking) - but only if role is lecturer
+  // Don't update if it's admin
   if (role === 'lecturer' && profile && profile.role !== 'lecturer') {
     supabase
       .from('profiles')
@@ -68,9 +82,9 @@ export function useUser() {
     'user-data',
     fetchUserData,
     {
-      revalidateOnFocus: false,
+      revalidateOnFocus: true, // Revalidate when window gets focus to catch role changes
       revalidateOnReconnect: true,
-      dedupingInterval: 5000, // Dedupe requests within 5 seconds
+      dedupingInterval: 2000, // Reduce deduping interval to catch role changes faster
       fallbackData: { user: null, profile: null, role: null },
     }
   );

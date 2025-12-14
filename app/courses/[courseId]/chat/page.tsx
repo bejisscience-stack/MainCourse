@@ -36,7 +36,7 @@ export default function CourseChatPage() {
     }
   }, [user, userLoading, router]);
 
-  // Redirect lecturers to their chat page
+  // Redirect lecturers to their chat page (but allow admins)
   useEffect(() => {
     if (!userLoading && userRole === 'lecturer') {
       router.push('/lecturer/chat');
@@ -49,8 +49,9 @@ export default function CourseChatPage() {
       setIsLoadingCourse(true);
       setError(null);
 
-      // Check if user is enrolled
-      if (!enrolledCourseIds.has(courseId)) {
+      // Admins can access all courses without enrollment
+      // Regular users must be enrolled
+      if (userRole !== 'admin' && !enrolledCourseIds.has(courseId)) {
         setError('You are not enrolled in this course.');
         setIsLoadingCourse(false);
         return;

@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import CourseCard, { type Course } from '@/components/CourseCard';
+import CourseEnrollmentCard from '@/components/CourseEnrollmentCard';
 import { useCourses } from '@/hooks/useCourses';
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { useUser } from '@/hooks/useUser';
@@ -70,37 +71,38 @@ export default function CoursesCarousel() {
     setEnrollingCourseId(courseId);
 
     try {
-      // Perform the actual enrollment with verification
-      const { data: insertedData, error: insertError } = await supabase
-        .from('enrollments')
-        .insert([{ user_id: user.id, course_id: courseId }])
-        .select()
-        .single();
-
-      if (insertError) {
-        if (insertError.code === '23505') {
-          // Already enrolled, refresh enrollments
-          await mutateEnrollments();
-          return;
-        }
-        throw insertError;
+      // Get access token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
       }
 
-      // Verify we got exactly one enrollment back for the correct course
-      if (insertedData && insertedData.course_id === courseId) {
-        // Update enrollments cache
-        await mutateEnrollments();
-      } else {
-        throw new Error('Enrollment verification failed');
+      // Create enrollment request via API
+      const response = await fetch('/api/enrollment-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ courseId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create enrollment request');
       }
-    } catch (err) {
-      console.error('Error enrolling in course:', err);
+
+      // Success - refresh page to show updated state
+      router.refresh();
+    } catch (err: any) {
+      console.error('Error requesting enrollment:', err);
       // Revalidate to get correct state
       await mutateEnrollments();
     } finally {
       setEnrollingCourseId(null);
     }
-  }, [user, userRole, enrolledCourseIds, mutateEnrollments, router]);
+  }, [user, userRole, enrolledCourseIds, router, mutateEnrollments]);
 
   if (isLoading) {
     return (
@@ -198,12 +200,13 @@ export default function CoursesCarousel() {
                       : 'flex-1 max-w-xs scale-90 opacity-75 z-0'
                   }`}
                 >
-                  <CourseCard
+                  <CourseEnrollmentCard
                     course={course}
                     isEnrolled={isEnrolled}
-                    isEnrolling={isEnrolling}
-                    onEnroll={handleEnroll}
+                    isEnrolling={false}
+                    onEnroll={undefined}
                     showEnrollButton={true}
+                    userId={user?.id || null}
                   />
                 </div>
               );

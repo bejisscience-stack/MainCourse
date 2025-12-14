@@ -4,11 +4,13 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import CourseCard, { type Course } from '@/components/CourseCard';
+import CourseEnrollmentCard from '@/components/CourseEnrollmentCard';
 import BackgroundShapes from '@/components/BackgroundShapes';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useCourses } from '@/hooks/useCourses';
 import { useEnrollments } from '@/hooks/useEnrollments';
+import { useEnrollmentRequestStatus } from '@/hooks/useEnrollmentRequests';
 import useSWR from 'swr';
 
 type FilterType = 'All' | 'Editing' | 'Content Creation' | 'Website Creation';
@@ -42,11 +44,12 @@ export default function CoursesPage() {
     }
   );
 
-  // Redirect lecturers immediately
+  // Redirect lecturers immediately (but not admins)
   useEffect(() => {
     if (!userLoading && userRole === 'lecturer') {
       router.push('/lecturer/dashboard');
     }
+    // Admins can view all courses, so don't redirect them
   }, [userRole, userLoading, router]);
 
   // Filter courses based on user role
@@ -92,38 +95,37 @@ export default function CoursesPage() {
     setEnrollingCourseId(courseId);
 
     try {
-      // Perform the actual enrollment with verification
-      const { data: insertedData, error: insertError } = await supabase
-        .from('enrollments')
-        .insert([{ user_id: user.id, course_id: courseId }])
-        .select()
-        .single();
-
-      if (insertError) {
-        if (insertError.code === '23505') {
-          // Already enrolled, refresh enrollments
-          await mutateEnrollments();
-          return;
-        }
-        throw insertError;
+      // Get access token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
       }
 
-      // Verify we got exactly one enrollment back for the correct course
-      if (insertedData && insertedData.course_id === courseId) {
-        // Update enrollments cache
-        await mutateEnrollments();
-      } else {
-        throw new Error('Enrollment verification failed');
+      // Create enrollment request via API
+      const response = await fetch('/api/enrollment-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ courseId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create enrollment request');
       }
+
+      // Success - revalidate enrollment requests
+      router.refresh();
     } catch (err: any) {
-      setError(err.message || 'Failed to enroll in course');
-      console.error('Error enrolling in course:', err);
-      // Revalidate to get correct state
-      await mutateEnrollments();
+      setError(err.message || 'Failed to request enrollment');
+      console.error('Error requesting enrollment:', err);
     } finally {
       setEnrollingCourseId(null);
     }
-  }, [user, userRole, lecturerCourseIds, enrolledCourseIds, mutateEnrollments, router]);
+  }, [user, userRole, lecturerCourseIds, enrolledCourseIds, router]);
 
   const courseTypes: FilterType[] = ['All', 'Editing', 'Content Creation', 'Website Creation'];
 
@@ -224,13 +226,14 @@ export default function CoursesPage() {
                       const shouldShowEnroll = !isOwnCourse && userRole !== 'lecturer';
                       
                       return (
-                        <CourseCard
+                        <CourseEnrollmentCard
                           key={course.id}
                           course={course}
                           isEnrolled={enrolledCourseIds.has(course.id)}
-                          isEnrolling={enrollingCourseId === course.id}
-                          onEnroll={shouldShowEnroll ? handleEnroll : undefined}
+                          isEnrolling={false}
+                          onEnroll={undefined}
                           showEnrollButton={shouldShowEnroll}
+                          userId={user?.id || null}
                         />
                       );
                     })}

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
 import PaymentDialog from '@/components/PaymentDialog';
+import CourseEnrollmentCard from '@/components/CourseEnrollmentCard';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useEnrollments } from '@/hooks/useEnrollments';
@@ -81,93 +82,8 @@ export default function MyCoursesPage() {
     }
   );
 
-  const handleEnroll = useCallback(async (courseId: string) => {
-    if (!user) return;
-    
-    // Prevent duplicate enrollment attempts
-    if (enrolledCourseIds.has(courseId)) {
-      setError('You are already enrolled in this course');
-      return;
-    }
-    
-    setError(null);
-    setEnrolling(courseId);
-    
-    // Find the course being enrolled
-    const courseToEnroll = discoverCourses.find(c => c.id === courseId);
-    if (!courseToEnroll) {
-      setError('Course not found');
-      setEnrolling(null);
-      return;
-    }
-    
-    // Store current state for rollback
-    const previousEnrolledIds = new Set(enrolledCourseIds);
-    const previousEnrolledCourses = [...enrolledCourses];
-    const previousDiscoverCourses = [...discoverCourses];
-    
-    try {
-      // Perform the actual enrollment FIRST to ensure data consistency
-      const { data: insertedData, error: insertError } = await supabase
-        .from('enrollments')
-        .insert([{ user_id: user.id, course_id: courseId }])
-        .select()
-        .single();
-      
-      if (insertError) {
-        if (insertError.code === '23505') {
-          // Already enrolled - revalidate to sync state
-          await Promise.all([
-            mutateEnrollments(),
-            mutateEnrolledCourses(),
-            mutateDiscoverCourses(),
-          ]);
-          setEnrolling(null);
-          return;
-        }
-        throw insertError;
-      }
-      
-      // Verify we got exactly one enrollment back for the correct course
-      if (insertedData && insertedData.course_id === courseId) {
-        // Update enrollments set
-        const newEnrolledIds = new Set(previousEnrolledIds);
-        newEnrolledIds.add(courseId);
-        await mutateEnrollments(newEnrolledIds, false);
-        
-        // Update course lists
-        const newEnrolledCourses = [...previousEnrolledCourses, courseToEnroll];
-        const newDiscoverCourses = previousDiscoverCourses.filter(c => c.id !== courseId);
-        
-        await mutateEnrolledCourses(newEnrolledCourses, false);
-        await mutateDiscoverCourses(newDiscoverCourses, false);
-      }
-      
-      // Revalidate all queries to ensure consistency with server
-      await Promise.all([
-        mutateEnrollments(),
-        mutateEnrolledCourses(),
-        mutateDiscoverCourses(),
-      ]);
-    } catch (err: any) {
-      setError(err.message || 'Failed to enroll in course');
-      console.error('Enrollment error:', err);
-      // Revert optimistic updates on error
-      await Promise.all([
-        mutateEnrollments(previousEnrolledIds, false),
-        mutateEnrolledCourses(previousEnrolledCourses, false),
-        mutateDiscoverCourses(previousDiscoverCourses, false),
-      ]);
-      // Then revalidate to get correct state
-      await Promise.all([
-        mutateEnrollments(),
-        mutateEnrolledCourses(),
-        mutateDiscoverCourses(),
-      ]);
-    } finally {
-      setEnrolling(null);
-    }
-  }, [user, mutateEnrollments, enrolledCourseIds, enrolledCourses, discoverCourses, mutateEnrolledCourses, mutateDiscoverCourses]);
+  // Note: Enrollment requests are now handled through PaymentDialog in CourseEnrollmentCard
+  // This handler is no longer needed but kept for compatibility
 
   const CourseCard = ({
     course,
@@ -304,18 +220,14 @@ export default function MyCoursesPage() {
                   };
 
                   return (
-                    <CourseCard
+                    <CourseEnrollmentCard
                       key={course.id}
-                      course={course}
-                      action={
-                        <button
-                          onClick={() => setPaymentDialogCourse(courseCardCourse)}
-                          disabled={enrolling === course.id}
-                          className="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-semibold text-white bg-navy-900 rounded-lg hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {enrolling === course.id ? 'Enrolling...' : 'Enroll'}
-                        </button>
-                      }
+                      course={courseCardCourse}
+                      isEnrolled={false}
+                      isEnrolling={false}
+                      onEnroll={undefined}
+                      showEnrollButton={true}
+                      userId={user?.id || null}
                     />
                   );
                 })}
