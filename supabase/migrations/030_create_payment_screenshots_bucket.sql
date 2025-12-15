@@ -54,3 +54,4 @@ ON storage.objects FOR SELECT
 USING (bucket_id = 'payment-screenshots');
 
 
+

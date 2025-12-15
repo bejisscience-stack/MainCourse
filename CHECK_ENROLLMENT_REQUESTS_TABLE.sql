@@ -31,3 +31,4 @@ SELECT COUNT(*) as total_requests
 FROM public.enrollment_requests;
 
 
+

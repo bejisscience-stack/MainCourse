@@ -86,16 +86,22 @@ export default function MessageInput({
   }, [onTyping]);
 
   const handleSend = useCallback(async () => {
-    const trimmedContent = content.trim();
+    // Capture current values at call time to allow concurrent sends
+    const currentContent = content;
+    const currentAttachments = [...attachments];
+    const trimmedContent = currentContent.trim();
 
-    if ((!trimmedContent && attachments.length === 0) || disabled || isSending || isMuted || isUploading) {
+    // Allow sending even if previous message is still sending
+    // Only block if disabled, muted, or currently uploading files
+    if ((!trimmedContent && currentAttachments.length === 0) || disabled || isMuted || isUploading) {
       return;
     }
 
     const contentToSend = trimmedContent;
-    const attachmentsToSend = [...attachments];
+    const attachmentsToSend = [...currentAttachments];
     
     // Clear input immediately for instant feedback
+    // This allows user to type and send next message immediately
     setContent('');
     setAttachments([]);
     setUploadingFiles([]);
@@ -127,8 +133,9 @@ export default function MessageInput({
         setError('You have been muted by the lecturer and cannot send messages.');
       } else {
         // For other errors, restore content so user can retry
-        setContent(contentToSend);
-        setAttachments(attachmentsToSend);
+        // Only restore if input is empty (user hasn't typed new content)
+        setContent(prev => prev === '' ? contentToSend : prev);
+        setAttachments(prev => prev.length === 0 ? attachmentsToSend : prev);
         setError(errorMessage);
       }
       
@@ -139,17 +146,18 @@ export default function MessageInput({
       
       // Don't throw - this prevents the ugly runtime error popup
     }
-  }, [content, attachments, disabled, isSending, isMuted, isUploading, onSend]);
+  }, [content, attachments, disabled, isMuted, isUploading, onSend]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
-      if ((content.trim() || attachments.length > 0) && !disabled && !isSending && !isUploading) {
+      // Allow sending even if previous message is still sending
+      if ((content.trim() || attachments.length > 0) && !disabled && !isUploading) {
         handleSend();
       }
     }
-  }, [content, attachments.length, disabled, isSending, isUploading, handleSend]);
+  }, [content, attachments.length, disabled, isUploading, handleSend]);
 
   const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
@@ -389,7 +397,8 @@ export default function MessageInput({
     }
   }, [replyTo]);
 
-  const canSend = (content.trim() || attachments.length > 0) && !disabled && !isSending && !isMuted && !isUploading;
+  // Allow sending even if previous message is still sending (isSending is only for UI feedback)
+  const canSend = (content.trim() || attachments.length > 0) && !disabled && !isMuted && !isUploading;
 
   return (
     <div
@@ -585,11 +594,14 @@ export default function MessageInput({
 
       {/* Input container */}
       <form
-        onSubmit={async (e) => {
+        onSubmit={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          // Fire and forget - don't await, allow multiple concurrent sends
           if (canSend) {
-            await handleSend();
+            handleSend().catch(() => {
+              // Error already handled in handleSend
+            });
           }
         }}
         className={`flex items-end gap-2 bg-gray-700 rounded-lg px-3 py-2 transition-all ${
@@ -644,7 +656,7 @@ export default function MessageInput({
           onBlur={() => setIsFocused(false)}
           placeholder={isMuted ? 'You have been muted by the lecturer.' : placeholder}
           rows={1}
-          disabled={disabled || isSending || isMuted}
+          disabled={disabled || isMuted}
           className="flex-1 bg-transparent text-white placeholder-gray-400 resize-none outline-none text-sm max-h-[200px] overflow-y-auto disabled:cursor-not-allowed py-1"
           style={{ minHeight: '24px' }}
         />
@@ -654,7 +666,7 @@ export default function MessageInput({
           type="button"
           className="text-gray-400 hover:text-gray-300 p-1.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Add emoji"
-          disabled={disabled || isSending || isMuted}
+          disabled={disabled || isMuted}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

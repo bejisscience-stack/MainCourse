@@ -46,3 +46,4 @@ SET search_path = public;
 
 COMMENT ON FUNCTION public.approve_enrollment_request IS 'Approves an enrollment request and creates the enrollment';
 
+

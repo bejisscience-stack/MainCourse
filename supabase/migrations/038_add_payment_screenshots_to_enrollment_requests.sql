@@ -9,3 +9,4 @@ ADD COLUMN IF NOT EXISTS payment_screenshots JSONB DEFAULT '[]'::jsonb;
 COMMENT ON COLUMN public.enrollment_requests.payment_screenshots IS 'Array of payment screenshot URLs uploaded by the user';
 
 
+

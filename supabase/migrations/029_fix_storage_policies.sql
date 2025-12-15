@@ -105,3 +105,4 @@ ON storage.objects FOR SELECT
 USING (bucket_id = 'course-thumbnails');
 
 
+

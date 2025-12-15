@@ -58,3 +58,4 @@ SET search_path = public;
 
 COMMENT ON FUNCTION public.get_enrollment_requests_admin IS 'Fetches enrollment requests for admins, bypasses RLS policies';
 
+

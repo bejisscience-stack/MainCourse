@@ -46,3 +46,4 @@ SET search_path = public;
 
 COMMENT ON FUNCTION public.reject_enrollment_request IS 'Rejects an enrollment request and removes the enrollment if it exists';
 
+

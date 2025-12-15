@@ -188,3 +188,4 @@ ALTER TABLE public.enrollments
 ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
 
 
+

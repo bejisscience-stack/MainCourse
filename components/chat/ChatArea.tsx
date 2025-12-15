@@ -35,6 +35,7 @@ export default function ChatArea({
     content: string;
   } | undefined>(undefined);
   const [isSending, setIsSending] = useState(false);
+  const pendingSendsRef = useRef(0);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const userScrolledUpRef = useRef(false);
   const prevChannelIdRef = useRef<string | null>(null);
@@ -181,11 +182,6 @@ export default function ChatArea({
       return;
     }
 
-    if (isSending) {
-      console.warn('Message send already in progress');
-      return;
-    }
-
     if (!content?.trim() && (!attachments || attachments.length === 0)) {
       console.warn('Cannot send empty message');
       return;
@@ -214,6 +210,8 @@ export default function ChatArea({
       } : undefined
     );
 
+    // Track sending state for UI feedback only (not blocking)
+    pendingSendsRef.current += 1;
     setIsSending(true);
 
     // Scroll to bottom immediately
@@ -296,9 +294,11 @@ export default function ChatArea({
       // Don't throw - this prevents the ugly runtime error popup
       // The error is already handled via markMessageFailed or removePendingMessage
     } finally {
-      setIsSending(false);
+      // Decrement pending sends counter and update UI state
+      pendingSendsRef.current = Math.max(0, pendingSendsRef.current - 1);
+      setIsSending(pendingSendsRef.current > 0);
     }
-  }, [channel, replyTo, isSending, addPendingMessage, markMessageFailed, removePendingMessage, replacePendingMessage, onSendMessage, scrollToBottom]);
+  }, [channel, replyTo, addPendingMessage, markMessageFailed, removePendingMessage, replacePendingMessage, onSendMessage, scrollToBottom]);
 
   const handleTyping = useCallback(async () => {
     if (!channel) return;
@@ -606,7 +606,7 @@ export default function ChatArea({
                 ? 'Only the course lecturer can send messages in this channel'
                 : `Message #${channel.name}`
             }
-            disabled={isSending || !canSendMessages}
+            disabled={!canSendMessages}
             isSending={isSending}
             channelId={channel.id}
             isMuted={isMuted || !canSendMessages}
