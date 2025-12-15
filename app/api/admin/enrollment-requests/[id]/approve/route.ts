@@ -19,7 +19,7 @@ async function checkAdmin(supabase: any, userId: string): Promise<boolean> {
 // POST: Approve an enrollment request (admin only)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -51,75 +51,55 @@ export async function POST(
       );
     }
 
-    const { id } = params;
+    // Await params (Next.js 15 requirement)
+    const { id } = await params;
 
-    // Get the enrollment request
-    const { data: enrollmentRequest, error: fetchError } = await supabase
-      .from('enrollment_requests')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (fetchError || !enrollmentRequest) {
+    if (!id) {
       return NextResponse.json(
-        { error: 'Enrollment request not found' },
-        { status: 404 }
-      );
-    }
-
-    if (enrollmentRequest.status !== 'pending') {
-      return NextResponse.json(
-        { error: `Enrollment request is already ${enrollmentRequest.status}` },
+        { error: 'Enrollment request ID is required' },
         { status: 400 }
       );
     }
 
-    // Use the database function to approve (ensures consistency)
+    console.log('[Approve API] Attempting to approve request:', id);
+    
+    // Use the database function to approve (ensures consistency and bypasses RLS)
+    // Note: approve_enrollment_request returns void, so data will be null on success
     const { error: approveError } = await supabase.rpc('approve_enrollment_request', {
       request_id: id,
     });
 
     if (approveError) {
-      console.error('Error approving enrollment request:', approveError);
+      console.error('[Approve API] Error approving enrollment request:', {
+        code: approveError.code,
+        message: approveError.message,
+        details: approveError.details,
+        hint: approveError.hint
+      });
       return NextResponse.json(
-        { error: 'Failed to approve enrollment request', details: approveError.message },
+        { 
+          error: 'Failed to approve enrollment request', 
+          details: approveError.message || 'Unknown error occurred',
+          code: approveError.code
+        },
         { status: 500 }
       );
     }
+    
+    console.log('[Approve API] Approval successful');
 
-    // Fetch updated request with related data
-    const { data: updatedRequest } = await supabase
-      .from('enrollment_requests')
-      .select(`
-        id,
-        user_id,
-        course_id,
-        status,
-        created_at,
-        updated_at,
-        reviewed_by,
-        reviewed_at,
-        profiles:user_id (
-          id,
-          username,
-          email
-        ),
-        courses (
-          id,
-          title
-        )
-      `)
-      .eq('id', id)
-      .single();
-
+    // Return success - the frontend will refresh the list automatically
     return NextResponse.json({
       message: 'Enrollment request approved successfully',
-      request: updatedRequest,
+      success: true
     });
   } catch (error: any) {
     console.error('Error in POST /api/admin/enrollment-requests/[id]/approve:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: error.message || 'An unexpected error occurred'
+      },
       { status: 500 }
     );
   }

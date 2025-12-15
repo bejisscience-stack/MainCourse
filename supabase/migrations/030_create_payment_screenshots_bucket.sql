@@ -53,3 +53,4 @@ CREATE POLICY "Public can view payment screenshots"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'payment-screenshots');
 
+

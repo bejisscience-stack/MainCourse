@@ -13,6 +13,7 @@ const SUPABASE_ANON_KEY: string = supabaseAnonKey;
 
 /**
  * Create a Supabase client for server-side use with a user's access token
+ * The Authorization header should be sufficient for RLS policies to work
  */
 export function createServerSupabaseClient(accessToken: string) {
   return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -24,6 +25,7 @@ export function createServerSupabaseClient(accessToken: string) {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
+      detectSessionInUrl: false,
     },
   });
 }

@@ -10,3 +10,4 @@ SELECT id, email, username, role
 FROM public.profiles 
 WHERE email = 'your-email@example.com';
 
+

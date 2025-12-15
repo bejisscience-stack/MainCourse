@@ -53,3 +53,4 @@ CREATE TRIGGER on_course_created_create_channels
   EXECUTE FUNCTION public.create_default_channels_for_course();
 
 
+

@@ -187,3 +187,4 @@ CREATE TRIGGER on_enrollment_request_updated
 ALTER TABLE public.enrollments 
 ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
 
+

@@ -26,15 +26,56 @@ export default function AdminDashboard() {
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<EnrollmentRequest | null>(null);
 
+  // Fetch all requests for stats, and filtered requests for the table
+  const {
+    requests: allRequests,
+    isLoading: allRequestsLoading,
+    error: allRequestsError,
+    mutate: mutateAllRequests,
+    approveRequest: approveAllRequests,
+    rejectRequest: rejectAllRequests,
+  } = useAdminEnrollmentRequests(undefined); // Always fetch all for stats
+
+  // Ensure we pass the correct status filter - 'all' means fetch all, otherwise use the filter
+  const requestStatusFilter = statusFilter === 'all' ? undefined : statusFilter;
+  
   const {
     requests,
     isLoading: requestsLoading,
     error: fetchError,
     approveRequest,
     rejectRequest,
-  } = useAdminEnrollmentRequests(statusFilter === 'all' ? undefined : statusFilter);
+    mutate: mutateRequests,
+  } = useAdminEnrollmentRequests(requestStatusFilter);
+  
+  // Debug logging
+  useEffect(() => {
+    if (requests.length > 0) {
+      console.log('[Admin Dashboard] Current requests:', requests.map(r => ({
+        id: r.id,
+        course: r.courses?.title || 'Unknown',
+        status: r.status,
+        user: r.profiles?.username || r.profiles?.email || 'Unknown'
+      })));
+    }
+  }, [requests]);
 
   const { courses, isLoading: coursesLoading } = useCourses('All');
+
+  // Update both requests lists when approve/reject happens
+  const handleApproveWithRefresh = async (requestId: string) => {
+    // Approve using the filtered hook (which will update its own list)
+    await approveRequest(requestId);
+    // Also refresh all requests for stats
+    await mutateAllRequests();
+  };
+
+  const handleRejectWithRefresh = async (requestId: string) => {
+    // Reject using the filtered hook (which will update its own list)
+    await rejectRequest(requestId);
+    // Also refresh all requests for stats
+    await mutateAllRequests();
+  };
 
   // Direct database check on mount - bypass hook cache
   // Only run once on mount, not when dependencies change
@@ -154,7 +195,7 @@ export default function AdminDashboard() {
     setProcessingId(requestId);
 
     try {
-      await approveRequest(requestId);
+      await handleApproveWithRefresh(requestId);
       setSuccessMessage('Enrollment request approved successfully');
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
@@ -170,7 +211,7 @@ export default function AdminDashboard() {
     setProcessingId(requestId);
 
     try {
-      await rejectRequest(requestId);
+      await handleRejectWithRefresh(requestId);
       setSuccessMessage('Enrollment request rejected successfully');
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
@@ -234,10 +275,10 @@ export default function AdminDashboard() {
     }
   };
 
-  // Calculate stats for overview
-  const pendingCount = requests.filter(r => r.status === 'pending').length;
-  const approvedCount = requests.filter(r => r.status === 'approved').length;
-  const rejectedCount = requests.filter(r => r.status === 'rejected').length;
+  // Calculate stats for overview using all requests (not filtered)
+  const pendingCount = allRequests.filter(r => r.status === 'pending').length;
+  const approvedCount = allRequests.filter(r => r.status === 'approved').length;
+  const rejectedCount = allRequests.filter(r => r.status === 'rejected').length;
   const totalCourses = courses.length;
 
   // Show loading while checking admin status via direct DB query
@@ -421,6 +462,45 @@ export default function AdminDashboard() {
 
           {activeTab === 'enrollment-requests' && (
             <div>
+              {/* Manual Refresh Button and Debug Info */}
+              <div className="mb-4 flex justify-between items-center">
+                <div className="text-sm text-gray-600">
+                  Showing {requests.length} request{requests.length !== 1 ? 's' : ''} 
+                  {statusFilter !== 'all' && ` (${statusFilter})`}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      // Test endpoint to see what's in the database
+                      const token = (await supabase.auth.getSession()).data.session?.access_token;
+                      if (token) {
+                        const response = await fetch('/api/admin/enrollment-requests/test', {
+                          headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await response.json();
+                        console.log('[Admin Dashboard] Test endpoint results:', data);
+                        alert(`Direct Query: ${data.directQuery?.count || 0}\nRPC Pending: ${data.rpcPending?.count || 0}\nRPC All: ${data.rpcAll?.count || 0}\n\nCheck console for details.`);
+                      }
+                    }}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors text-sm flex items-center gap-2"
+                  >
+                    Test DB
+                  </button>
+                  <button
+                    onClick={() => {
+                      mutateRequests();
+                      mutateAllRequests();
+                    }}
+                    className="px-4 py-2 bg-navy-900 text-white rounded-lg font-semibold hover:bg-navy-800 transition-colors text-sm flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh
+                  </button>
+                </div>
+              </div>
+              
               {/* Filter Buttons */}
               <div className="flex flex-wrap gap-3 mb-6">
                 {(['all', 'pending', 'approved', 'rejected'] as const).map((filter) => (
@@ -439,12 +519,12 @@ export default function AdminDashboard() {
               </div>
 
               {/* Requests Table */}
-              {fetchError ? (
+              {(fetchError || allRequestsError) ? (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg text-center">
                   <p className="font-semibold">Error loading requests</p>
-                  <p className="text-sm mt-1">{fetchError.message}</p>
+                  <p className="text-sm mt-1">{(fetchError || allRequestsError)?.message}</p>
                 </div>
-              ) : requestsLoading ? (
+              ) : (requestsLoading || allRequestsLoading) ? (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
                   <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-navy-900 mb-4"></div>
                   <p className="text-navy-700">Loading enrollment requests...</p>

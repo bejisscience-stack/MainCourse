@@ -104,3 +104,4 @@ CREATE POLICY "Public can view thumbnails"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'course-thumbnails');
 
+

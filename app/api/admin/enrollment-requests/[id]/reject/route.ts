@@ -19,7 +19,7 @@ async function checkAdmin(supabase: any, userId: string): Promise<boolean> {
 // POST: Reject an enrollment request (admin only)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -51,75 +51,48 @@ export async function POST(
       );
     }
 
-    const { id } = params;
+    // Await params (Next.js 15 requirement)
+    const { id } = await params;
 
-    // Get the enrollment request
-    const { data: enrollmentRequest, error: fetchError } = await supabase
-      .from('enrollment_requests')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (fetchError || !enrollmentRequest) {
+    if (!id) {
       return NextResponse.json(
-        { error: 'Enrollment request not found' },
-        { status: 404 }
-      );
-    }
-
-    if (enrollmentRequest.status !== 'pending') {
-      return NextResponse.json(
-        { error: `Enrollment request is already ${enrollmentRequest.status}` },
+        { error: 'Enrollment request ID is required' },
         { status: 400 }
       );
     }
 
-    // Use the database function to reject (ensures consistency)
-    const { error: rejectError } = await supabase.rpc('reject_enrollment_request', {
+    // Use the database function to reject (ensures consistency and bypasses RLS)
+    // The RPC function handles all the logic including checking if request exists and is pending
+    const { data: rejectResult, error: rejectError } = await supabase.rpc('reject_enrollment_request', {
       request_id: id,
     });
 
     if (rejectError) {
       console.error('Error rejecting enrollment request:', rejectError);
       return NextResponse.json(
-        { error: 'Failed to reject enrollment request', details: rejectError.message },
+        { 
+          error: 'Failed to reject enrollment request', 
+          details: rejectError.message || 'Unknown error occurred',
+          code: rejectError.code
+        },
         { status: 500 }
       );
     }
 
-    // Fetch updated request with related data
-    const { data: updatedRequest } = await supabase
-      .from('enrollment_requests')
-      .select(`
-        id,
-        user_id,
-        course_id,
-        status,
-        created_at,
-        updated_at,
-        reviewed_by,
-        reviewed_at,
-        profiles:user_id (
-          id,
-          username,
-          email
-        ),
-        courses (
-          id,
-          title
-        )
-      `)
-      .eq('id', id)
-      .single();
+    console.log('[Reject API] Rejection successful');
 
+    // Return success - the frontend will refresh the list
     return NextResponse.json({
       message: 'Enrollment request rejected successfully',
-      request: updatedRequest,
+      success: true
     });
   } catch (error: any) {
     console.error('Error in POST /api/admin/enrollment-requests/[id]/reject:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: error.message || 'An unexpected error occurred'
+      },
       { status: 500 }
     );
   }

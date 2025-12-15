@@ -5,15 +5,20 @@ export const dynamic = 'force-dynamic';
 
 // Helper function to check if user is admin using RPC function (bypasses RLS)
 async function checkAdmin(supabase: any, userId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .rpc('check_is_admin', { user_id: userId });
+  try {
+    const { data, error } = await supabase
+      .rpc('check_is_admin', { user_id: userId });
 
-  if (error) {
-    console.error('Error checking admin status:', error);
+    if (error) {
+      console.error('[Admin API] Error checking admin status:', error);
+      return false;
+    }
+
+    return data === true;
+  } catch (err) {
+    console.error('[Admin API] Exception checking admin:', err);
     return false;
   }
-
-  return data === true;
 }
 
 // GET: Fetch all enrollment requests (admin only)
@@ -52,27 +57,55 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status'); // 'pending', 'approved', 'rejected', or null for all
 
-    // Fetch enrollment requests first (without joins to avoid RLS issues)
-    let query = supabase
-      .from('enrollment_requests')
-      .select('id, user_id, course_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots')
-      .order('created_at', { ascending: false });
+    // Ensure we pass null instead of empty string for "all" requests
+    const filterStatus = status && status !== 'all' && status.trim() !== '' ? status : null;
 
-    if (status) {
-      query = query.eq('status', status);
+    console.log('[Admin API] Fetching requests, filter:', filterStatus || 'all');
+
+    // Try RPC function first (bypasses RLS)
+    let requests: any[] = [];
+    let requestsError: any = null;
+
+    try {
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('get_enrollment_requests_admin', { 
+          filter_status: filterStatus
+        });
+      
+      if (rpcError) {
+        console.error('[Admin API] RPC error:', rpcError);
+        
+        // If function doesn't exist, fallback to direct query
+        if (rpcError.code === '42883' || rpcError.message?.includes('does not exist')) {
+          console.log('[Admin API] RPC function not found, using direct query fallback');
+          
+          let query = supabase
+            .from('enrollment_requests')
+            .select('id, user_id, course_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots')
+            .order('created_at', { ascending: false });
+
+          if (filterStatus) {
+            query = query.eq('status', filterStatus);
+          }
+
+          const result = await query;
+          requests = result.data || [];
+          requestsError = result.error;
+        } else {
+          requestsError = rpcError;
+        }
+      } else {
+        requests = rpcData || [];
+        console.log('[Admin API] RPC succeeded, found', requests.length, 'requests');
+      }
+    } catch (rpcErr: any) {
+      console.error('[Admin API] Exception calling RPC:', rpcErr);
+      requestsError = rpcErr;
     }
 
-    const { data: requests, error: requestsError } = await query;
-
-    if (requestsError) {
-      console.error('Error fetching enrollment requests:', requestsError);
-      console.error('Error details:', {
-        code: requestsError.code,
-        message: requestsError.message,
-        details: requestsError.details,
-        hint: requestsError.hint,
-      });
-      
+    // If we have an error and no requests, return error
+    if (requestsError && requests.length === 0) {
+      console.error('[Admin API] Failed to fetch requests:', requestsError);
       return NextResponse.json(
         { 
           error: 'Failed to fetch enrollment requests',
@@ -83,39 +116,55 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!requests || requests.length === 0) {
+    // If no requests, return empty array
+    if (requests.length === 0) {
+      console.log('[Admin API] No requests found');
       return NextResponse.json({ requests: [] });
     }
+
+    console.log('[Admin API] Processing', requests.length, 'requests');
 
     // Get unique user IDs and course IDs
     const userIds = [...new Set(requests.map(r => r.user_id).filter(Boolean))];
     const courseIds = [...new Set(requests.map(r => r.course_id).filter(Boolean))];
 
-    // Fetch profiles for all users (admin can view all profiles)
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, username, email')
-      .in('id', userIds);
+    // Fetch profiles and courses
+    let profiles: any[] = [];
+    let courses: any[] = [];
+    
+    try {
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, username, email')
+          .in('id', userIds);
 
-    if (profilesError) {
-      console.error('Error fetching profiles:', profilesError);
-      // Continue without profiles rather than failing completely
+        if (!profilesError && profilesData) {
+          profiles = profilesData;
+        }
+      }
+    } catch (err) {
+      console.error('[Admin API] Error fetching profiles:', err);
     }
 
-    // Fetch courses
-    const { data: courses, error: coursesError } = await supabase
-      .from('courses')
-      .select('id, title, thumbnail_url')
-      .in('id', courseIds);
+    try {
+      if (courseIds.length > 0) {
+        const { data: coursesData, error: coursesError } = await supabase
+          .from('courses')
+          .select('id, title, thumbnail_url')
+          .in('id', courseIds);
 
-    if (coursesError) {
-      console.error('Error fetching courses:', coursesError);
-      // Continue without courses rather than failing completely
+        if (!coursesError && coursesData) {
+          courses = coursesData;
+        }
+      }
+    } catch (err) {
+      console.error('[Admin API] Error fetching courses:', err);
     }
 
     // Create lookup maps
-    const profilesMap = new Map((profiles || []).map(p => [p.id, p]));
-    const coursesMap = new Map((courses || []).map(c => [c.id, c]));
+    const profilesMap = new Map(profiles.map(p => [p.id, p]));
+    const coursesMap = new Map(courses.map(c => [c.id, c]));
 
     // Combine the data
     const requestsWithRelations = requests.map(request => ({
@@ -124,9 +173,14 @@ export async function GET(request: NextRequest) {
       courses: coursesMap.get(request.course_id) || null,
     }));
 
-    return NextResponse.json({ requests: requestsWithRelations });
+    console.log('[Admin API] Returning', requestsWithRelations.length, 'requests with relations');
+
+    return NextResponse.json({ 
+      requests: requestsWithRelations
+    });
   } catch (error: any) {
-    console.error('Error in GET /api/admin/enrollment-requests:', error);
+    console.error('[Admin API] Unhandled exception:', error);
+    console.error('[Admin API] Error stack:', error.stack);
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -136,4 +190,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

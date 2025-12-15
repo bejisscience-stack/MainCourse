@@ -171,6 +171,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Format payment screenshots as JSONB array
+    const formattedScreenshots = Array.isArray(paymentScreenshots) 
+      ? paymentScreenshots 
+      : paymentScreenshots 
+        ? [paymentScreenshots] 
+        : [];
+
     // Create enrollment request
     const { data: enrollmentRequest, error: insertError } = await supabase
       .from('enrollment_requests')
@@ -178,13 +185,20 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         course_id: courseId,
         status: 'pending',
-        payment_screenshots: paymentScreenshots || [],
+        payment_screenshots: formattedScreenshots.length > 0 ? formattedScreenshots : [],
       })
       .select()
       .single();
 
     if (insertError) {
-      console.error('Error creating enrollment request:', insertError);
+      console.error('Error creating enrollment request:', {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        userId: user.id,
+        courseId: courseId,
+      });
       
       // Check for specific error codes
       if (insertError.code === '23505') {
@@ -203,8 +217,20 @@ export async function POST(request: NextRequest) {
         );
       }
       
+      if (insertError.code === '42501') {
+        // Insufficient privilege - RLS policy issue
+        return NextResponse.json(
+          { error: 'Permission denied. Please ensure you are logged in correctly.', details: insertError.message },
+          { status: 403 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: 'Failed to create enrollment request', details: insertError.message },
+        { 
+          error: 'Failed to create enrollment request', 
+          details: insertError.message || 'Unknown database error',
+          code: insertError.code
+        },
         { status: 500 }
       );
     }
