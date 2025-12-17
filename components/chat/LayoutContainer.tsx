@@ -78,19 +78,24 @@ export default function LayoutContainer({
           .eq('id', user.id)
           .single();
         
-        // Prioritize profile.username, then auth metadata username, then email prefix
+        // Always use profiles.username (required field in database)
+        // Fallback to metadata/email only if profile doesn't exist (shouldn't happen)
         const profileUsername = profile?.username?.trim();
-        const metadataUsername = user.user_metadata?.username?.trim();
-        const emailUsername = user.email?.split('@')[0];
         
         if (profileUsername && profileUsername.length > 0) {
           setUserName(profileUsername);
-        } else if (metadataUsername && metadataUsername.length > 0) {
-          setUserName(metadataUsername);
-        } else if (emailUsername && emailUsername.length > 0) {
-          setUserName(emailUsername);
         } else {
-          setUserName('User');
+          // Fallback only if profile doesn't exist (shouldn't happen in normal flow)
+          const metadataUsername = user.user_metadata?.username?.trim();
+          const emailUsername = user.email?.split('@')[0];
+          
+          if (metadataUsername && metadataUsername.length > 0) {
+            setUserName(metadataUsername);
+          } else if (emailUsername && emailUsername.length > 0) {
+            setUserName(emailUsername);
+          } else {
+            setUserName('User');
+          }
         }
       } catch (error) {
         console.error('Error loading username:', error);

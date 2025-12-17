@@ -53,9 +53,9 @@ export default function AdminDashboard() {
     if (requests.length > 0) {
       console.log('[Admin Dashboard] Current requests:', requests.map(r => ({
         id: r.id,
-        course: r.courses?.title || 'Unknown',
+        course: r.courses?.title || 'Unknown Course',
         status: r.status,
-        user: r.profiles?.username || r.profiles?.email || 'Unknown'
+        user: r.profiles?.username || (r.profiles?.email ? r.profiles.email.split('@')[0] : 'User')
       })));
     }
   }, [requests]);
@@ -575,7 +575,7 @@ export default function AdminDashboard() {
                             >
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm font-medium text-gray-900">
-                                  {userProfile?.username || userProfile?.email?.split('@')[0] || 'Unknown'}
+                                  {userProfile?.username || (userProfile?.email ? userProfile.email.split('@')[0] : 'User')}
                                 </div>
                                 <div className="text-sm text-gray-500">
                                   {userProfile?.email}

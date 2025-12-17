@@ -49,7 +49,7 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
   const messageIdsRef = useRef<Set<string>>(new Set());
 
   // Fetch messages from API with optimizations
-  const fetchMessages = useCallback(async (before?: string, signal?: AbortSignal) => {
+  const fetchMessages = useCallback(async (before?: string, signal?: AbortSignal, retryCount = 0) => {
     if (!channelId || isLoadingRef.current) return;
 
     isLoadingRef.current = true;
@@ -57,8 +57,21 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
     setError(null);
 
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.access_token) {
+      // Get session and refresh if needed
+      let { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      // If no session or session error, try to refresh
+      if (sessionError || !session) {
+        console.warn('Session error, attempting refresh:', sessionError);
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !refreshedSession) {
+          throw new Error('Not authenticated. Please log in again.');
+        }
+        session = refreshedSession;
+      }
+
+      // Ensure we have an access token
+      if (!session?.access_token) {
         throw new Error('Not authenticated. Please log in again.');
       }
 
@@ -78,6 +91,18 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
         signal,
       });
 
+      // Handle unauthorized errors with session refresh retry
+      if (response.status === 401 && retryCount < 1) {
+        console.warn('Unauthorized error, refreshing session and retrying...');
+        // Try to refresh the session
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (!refreshError && refreshedSession?.access_token) {
+          // Retry once with the refreshed token
+          return fetchMessages(before, signal, retryCount + 1);
+        }
+      }
+
       if (!response.ok) {
         let errorMessage = `Failed to fetch messages: ${response.statusText}`;
         try {
@@ -91,6 +116,12 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
         } catch {
           // Use status text
         }
+        
+        // If it's an auth error, suggest re-login
+        if (response.status === 401) {
+          errorMessage = 'Your session has expired. Please refresh the page or log in again.';
+        }
+        
         throw new Error(errorMessage);
       }
 

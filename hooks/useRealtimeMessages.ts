@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { normalizeProfileUsername } from '@/lib/username';
 import type { Message, ReplyPreview } from '@/types/message';
 
 // Global profile cache for instant lookups
@@ -32,8 +33,10 @@ export async function prefetchProfiles(userIds: string[]) {
 
     if (profiles) {
       profiles.forEach(profile => {
+        // Always use profiles.username (required field in database)
+        const username = normalizeProfileUsername(profile);
         profileCache.set(profile.id, {
-          username: profile.username?.trim() || profile.email?.split('@')[0] || 'User',
+          username,
           email: profile.email,
           avatarUrl: '',
           timestamp: now,
@@ -69,7 +72,7 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
       .single();
 
     if (profile && !error) {
-      const username = profile.username?.trim() || profile.email?.split('@')[0] || 'User';
+      const username = normalizeProfileUsername(profile);
       profileCache.set(userId, {
         username,
         email: profile.email,

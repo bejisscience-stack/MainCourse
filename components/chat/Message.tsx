@@ -3,6 +3,8 @@
 import { useState, memo, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useUserMuteStatus } from '@/hooks/useMuteStatus';
+import { useFriends } from '@/hooks/useFriends';
+import { useFriendRequests } from '@/hooks/useFriendRequests';
 import type { Message as MessageType, MessageAttachment } from '@/types/message';
 
 interface MessageProps {
@@ -126,6 +128,15 @@ const Message = memo(function Message({
     canMute ? message.user.id : null
   );
 
+  // Get friends and friend requests to check relationship status
+  const { friends } = useFriends();
+  const { sentRequests, receivedRequests, sendRequest, isLoading: requestsLoading } = useFriendRequests();
+  
+  const isFriend = friends.some(f => f.id === message.user.id);
+  const hasSentRequest = sentRequests.some(r => r.receiver_id === message.user.id);
+  const hasReceivedRequest = receivedRequests.some(r => r.sender_id === message.user.id);
+  const canSendFriendRequest = message.user.id !== currentUserId && !isFriend && !hasSentRequest && !hasReceivedRequest;
+
   const handleMute = useCallback(async () => {
     if (!channelId || message.user.id === currentUserId) return;
 
@@ -175,6 +186,25 @@ const Message = memo(function Message({
       console.error('Failed to unmute user:', error);
     }
   }, [channelId, message.user.id, currentUserId, refetchMuteStatus]);
+
+  const handleSendFriendRequest = useCallback(async () => {
+    if (!canSendFriendRequest || requestsLoading) return;
+
+    if (!message.user?.id) {
+      console.error('Cannot send friend request: message user ID is missing');
+      alert('Cannot send friend request: User information is missing');
+      return;
+    }
+
+    try {
+      await sendRequest(message.user.id);
+      setShowMenu(false);
+    } catch (error: any) {
+      console.error('Failed to send friend request:', error);
+      const errorMessage = error?.message || 'Failed to send friend request';
+      alert(errorMessage);
+    }
+  }, [canSendFriendRequest, message.user?.id, sendRequest, requestsLoading]);
 
   const scrollToOriginal = useCallback(() => {
     if (message.replyTo) {
@@ -245,14 +275,14 @@ const Message = memo(function Message({
           {showAvatar ? (
             <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
               {message.user.avatarUrl ? (
-                <img
-                  src={message.user.avatarUrl}
-                  alt={message.user.username}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                message.user.username.charAt(0).toUpperCase()
-              )}
+                  <img
+                    src={message.user.avatarUrl}
+                    alt={message.user?.username || 'User'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  (message.user?.username && message.user.username !== 'User' ? message.user.username.charAt(0) : 'U').toUpperCase()
+                )}
             </div>
           ) : (
             <div className="w-10" /> // Spacer for alignment
@@ -292,8 +322,9 @@ const Message = memo(function Message({
                       setShowUserMenu(!showUserMenu);
                     }
                   }}
+                  title={message.user?.username || 'User'}
                 >
-                  {message.user.username}
+                  {message.user?.username && message.user.username !== 'User' ? message.user.username : 'User'}
                 </span>
                 
                 {/* User context menu */}
@@ -481,6 +512,48 @@ const Message = memo(function Message({
                   )}
                 </svg>
               </button>
+            )}
+
+            {/* Friend Request button - directly in hover menu */}
+            {message.user.id !== currentUserId && (
+              <>
+                {canSendFriendRequest && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSendFriendRequest();
+                    }}
+                    disabled={requestsLoading}
+                    className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={requestsLoading ? 'Sending...' : 'Send Friend Request'}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                  </button>
+                )}
+                {isFriend && (
+                  <div className="p-1.5 text-green-400" title="Friends">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
+                {hasSentRequest && (
+                  <div className="p-1.5 text-yellow-400" title="Request Sent">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                )}
+                {hasReceivedRequest && (
+                  <div className="p-1.5 text-blue-400" title="Request Received">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                  </div>
+                )}
+              </>
             )}
 
             {/* More options */}

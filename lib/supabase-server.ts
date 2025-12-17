@@ -13,19 +13,24 @@ const SUPABASE_ANON_KEY: string = supabaseAnonKey;
 
 /**
  * Create a Supabase client for server-side use with a user's access token
- * The Authorization header should be sufficient for RLS policies to work
+ * The Authorization header sets the auth context for RLS policies
+ * 
+ * IMPORTANT: For RLS to work, PostgREST automatically extracts the user from the JWT
+ * in the Authorization header and sets auth.uid() accordingly.
  */
 export function createServerSupabaseClient(accessToken: string) {
   return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: {
       headers: {
         Authorization: `Bearer ${accessToken}`,
+        apikey: SUPABASE_ANON_KEY, // Required for PostgREST to process the request
       },
     },
     auth: {
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
+      flowType: 'pkce',
     },
   });
 }

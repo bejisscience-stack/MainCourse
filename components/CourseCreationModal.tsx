@@ -11,6 +11,10 @@ interface CourseCreationModalProps {
   user: User | null;
 }
 
+interface Profile {
+  username: string | null;
+}
+
 export default function CourseCreationModal({
   isOpen,
   onClose,
@@ -40,18 +44,42 @@ export default function CourseCreationModal({
   // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen && user) {
-      setFormData({
-        title: '',
-        description: '',
-        course_type: 'Editing',
-        price: '',
-        original_price: '',
-        author: user.user_metadata?.username || '',
-        creator: user.user_metadata?.username || '',
-        intro_video_url: '',
-        thumbnail_url: '',
-        is_bestseller: false,
-      });
+      // Fetch profile to get username from profiles table
+      supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.id)
+        .single()
+        .then(({ data: profile }) => {
+          setFormData({
+            title: '',
+            description: '',
+            course_type: 'Editing',
+            price: '',
+            original_price: '',
+            // Always use profiles.username (required field in database)
+            author: profile?.username || '',
+            creator: profile?.username || '',
+            intro_video_url: '',
+            thumbnail_url: '',
+            is_bestseller: false,
+          });
+        })
+        .catch(() => {
+          // Fallback if profile fetch fails
+          setFormData({
+            title: '',
+            description: '',
+            course_type: 'Editing',
+            price: '',
+            original_price: '',
+            author: '',
+            creator: '',
+            intro_video_url: '',
+            thumbnail_url: '',
+            is_bestseller: false,
+          });
+        });
       setVideoFile(null);
       setThumbnailFile(null);
       setVideoUploadProgress(0);

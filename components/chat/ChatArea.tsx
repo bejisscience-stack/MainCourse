@@ -455,7 +455,17 @@ export default function ChatArea({
                   <p className="text-sm">{error}</p>
                 </div>
                 <button
-                  onClick={() => refetch()}
+                  onClick={async () => {
+                    // Refresh session before retrying if it's an auth error
+                    if (error.includes('Unauthorized') || error.includes('session') || error.includes('Session')) {
+                      try {
+                        await supabase.auth.refreshSession();
+                      } catch (refreshError) {
+                        console.warn('Session refresh failed:', refreshError);
+                      }
+                    }
+                    refetch();
+                  }}
                   className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
                 >
                   Try Again

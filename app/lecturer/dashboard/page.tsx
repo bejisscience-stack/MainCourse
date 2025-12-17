@@ -13,7 +13,7 @@ import type { Course } from '@/hooks/useCourses';
 
 export default function LecturerDashboard() {
   const router = useRouter();
-  const { user, role: userRole, isLoading: userLoading } = useUser();
+  const { user, profile, role: userRole, isLoading: userLoading } = useUser();
   const { courses, isLoading: coursesLoading, mutate: mutateCourses } = useLecturerCourses(user?.id || null);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -100,8 +100,8 @@ export default function LecturerDashboard() {
         course_type: 'Editing',
         price: '',
         original_price: '',
-        author: user?.user_metadata?.username || '',
-        creator: user?.user_metadata?.username || '',
+        author: profile?.username || '',
+        creator: profile?.username || '',
         intro_video_url: '',
         thumbnail_url: '',
         is_bestseller: false,

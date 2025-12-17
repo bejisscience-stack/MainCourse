@@ -8,6 +8,7 @@ import ChatNavigation from '@/components/chat/ChatNavigation';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useEnrollments } from '@/hooks/useEnrollments';
+import { normalizeProfileUsername } from '@/lib/username';
 import type { Server, Channel } from '@/types/server';
 import type { Member } from '@/types/member';
 
@@ -148,13 +149,16 @@ export default function StudentChatPage() {
               .in('id', Array.from(userIds));
 
             const membersData: Member[] =
-              profiles?.map((profile) => ({
-                id: profile.id,
-                username: profile.username || profile.email?.split('@')[0] || 'User',
-                avatarUrl: '',
-                status: 'online' as const,
-                role: profile.role || 'student',
-              })) || [];
+              profiles?.map((profile) => {
+                const username = normalizeProfileUsername(profile);
+                return {
+                  id: profile.id,
+                  username,
+                  avatarUrl: '',
+                  status: 'online' as const,
+                  role: profile.role || 'student',
+                };
+              }) || [];
 
             setMembers(membersData);
           }

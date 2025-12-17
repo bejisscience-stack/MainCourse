@@ -9,6 +9,7 @@ import CourseCreationModal from '@/components/CourseCreationModal';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useLecturerCourses } from '@/hooks/useLecturerCourses';
+import { normalizeProfileUsername } from '@/lib/username';
 import type { Server, Channel } from '@/types/server';
 import type { Member } from '@/types/member';
 import type { Message as MessageType } from '@/types/message';
@@ -196,17 +197,7 @@ export default function LecturerChatPage() {
 
               const membersData: Member[] =
                 profiles?.map((profile) => {
-                  // Prioritize profile.username, then email prefix
-                  const profileUsername = profile.username?.trim();
-                  const emailUsername = profile.email?.split('@')[0];
-                  
-                  let username = 'User';
-                  if (profileUsername && profileUsername.length > 0) {
-                    username = profileUsername;
-                  } else if (emailUsername && emailUsername.length > 0) {
-                    username = emailUsername;
-                  }
-                  
+                  const username = normalizeProfileUsername(profile);
                   return {
                     id: profile.id,
                     username,

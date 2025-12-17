@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { normalizeProfileUsername } from '@/lib/username';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,8 +30,15 @@ export async function GET(
     const { user, error: userError } = await verifyTokenAndGetUser(token);
     if (userError || !user) {
       console.error('Auth error:', userError);
+      
+      // Provide more helpful error message for session issues
+      let errorDetails = userError?.message || 'Invalid or expired token';
+      if (errorDetails.includes('session') || errorDetails.includes('Session')) {
+        errorDetails = 'Your session has expired. Please refresh the page or log in again.';
+      }
+      
       return NextResponse.json(
-        { error: 'Unauthorized', details: userError?.message || 'Invalid or expired token' },
+        { error: 'Unauthorized', details: errorDetails },
         { status: 401 }
       );
     }
@@ -157,17 +165,17 @@ export async function GET(
     // Fetch profiles separately for all unique user IDs
     const userIds = [...new Set(messages.map((msg: any) => msg.user_id))];
     
-    // Try to fetch profiles - RLS should allow this if users are in same course
+    // Fetch profiles - RLS should allow viewing all profiles (migration 045)
     const profileMap = new Map();
     
     if (userIds.length > 0) {
-      // First try batch fetch
+      // Batch fetch all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, username, email')
         .in('id', userIds);
 
-      if (profiles && !profilesError && profiles.length > 0) {
+      if (profiles && !profilesError) {
         profiles.forEach((profile: any) => {
           profileMap.set(profile.id, profile);
           // Log if username is missing
@@ -177,9 +185,8 @@ export async function GET(
         });
         console.log(`Successfully fetched ${profiles.length} profiles out of ${userIds.length} users`);
       } else {
-        // If batch fetch fails, try individual fetches (might work better with RLS)
-        console.warn('Batch profile fetch failed, trying individual fetches:', profilesError);
-        
+        console.error('Failed to fetch profiles:', profilesError);
+        // Try individual fetches as fallback
         for (const userId of userIds) {
           try {
             const { data: singleProfile, error: singleError } = await supabase
@@ -190,20 +197,13 @@ export async function GET(
             
             if (singleProfile && !singleError) {
               profileMap.set(userId, singleProfile);
-              // Log if username is missing
-              if (!singleProfile.username || singleProfile.username.trim() === '') {
-                console.warn(`Profile for user ${userId} exists but username is empty. Email: ${singleProfile.email}`);
-              }
             } else {
               console.warn(`Failed to fetch profile for user ${userId}:`, singleError);
-              console.warn(`This might be due to RLS policy. Check if migration 018_update_profiles_rls_for_chat.sql was run.`);
             }
           } catch (err: any) {
             console.warn(`Exception fetching profile for user ${userId}:`, err);
           }
         }
-        
-        console.log(`Fetched ${profileMap.size} profiles individually out of ${userIds.length} users`);
       }
     }
 
@@ -259,17 +259,9 @@ export async function GET(
       if (replyMessages) {
         for (const replyMsg of replyMessages) {
           const replyProfile = profileMap.get(replyMsg.user_id);
-          let replyUsername = 'User';
-          
-          if (replyProfile) {
-            const profileUsername = replyProfile.username?.trim();
-            const emailUsername = replyProfile.email?.split('@')[0];
-            if (profileUsername && profileUsername.length > 0) {
-              replyUsername = profileUsername;
-            } else if (emailUsername && emailUsername.length > 0) {
-              replyUsername = emailUsername;
-            }
-          }
+          const replyUsername = replyProfile
+            ? normalizeProfileUsername(replyProfile)
+            : 'User';
           
           replyPreviewsMap.set(replyMsg.id, {
             id: replyMsg.id,
@@ -282,35 +274,7 @@ export async function GET(
 
     const transformedMessages = (messages || []).map((msg: any) => {
       const profile = profileMap.get(msg.user_id);
-      let username = 'User';
-      
-      if (profile) {
-        // Prioritize profile.username (required), then email username, then fallback
-        const profileUsername = profile.username?.trim();
-        const emailUsername = profile.email?.split('@')[0];
-        
-        if (profileUsername && profileUsername.length > 0) {
-          username = profileUsername;
-        } else if (emailUsername && emailUsername.length > 0) {
-          username = emailUsername;
-        } else {
-          // If both are empty, use a generic name
-          username = 'User';
-        }
-      } else {
-        // If profile fetch failed, try one more time with a direct query
-        // This handles cases where batch fetch might have failed due to RLS
-        console.warn(`Profile not found in map for user ${msg.user_id}, attempting direct fetch`);
-        // Note: We can't do async operations in map, so we'll use a better fallback
-        // The profile should have been fetched above, so this is a last resort
-        // Use email pattern if available, otherwise generic User
-        username = 'User';
-      }
-      
-      // Ensure username is never empty
-      if (!username || username.trim() === '') {
-        username = 'User';
-      }
+      const username = profile ? normalizeProfileUsername(profile) : 'User';
       
       const messageAttachments = attachmentsMap.get(msg.id) || [];
       const replyPreview = msg.reply_to_id ? replyPreviewsMap.get(msg.reply_to_id) : undefined;
@@ -384,8 +348,15 @@ export async function POST(
     const { user, error: userError } = await verifyTokenAndGetUser(token);
     if (userError || !user) {
       console.error('Auth error:', userError);
+      
+      // Provide more helpful error message for session issues
+      let errorDetails = userError?.message || 'Invalid or expired token';
+      if (errorDetails.includes('session') || errorDetails.includes('Session')) {
+        errorDetails = 'Your session has expired. Please refresh the page or log in again.';
+      }
+      
       return NextResponse.json(
-        { error: 'Unauthorized', details: userError?.message || 'Invalid or expired token' },
+        { error: 'Unauthorized', details: errorDetails },
         { status: 401 }
       );
     }
@@ -548,32 +519,8 @@ export async function POST(
       // For now, we'll use a fallback
     }
 
-    // Transform message with better username resolution
-    let username = 'User';
-    if (profile) {
-      // Prioritize profile.username (required), then email username
-      const profileUsername = profile.username?.trim();
-      const emailUsername = profile.email?.split('@')[0];
-      
-      if (profileUsername && profileUsername.length > 0) {
-        username = profileUsername;
-      } else if (emailUsername && emailUsername.length > 0) {
-        username = emailUsername;
-      } else {
-        username = 'User';
-      }
-    } else if (user.email) {
-      // Fallback to email username if profile not found
-      username = user.email.split('@')[0];
-    } else {
-      // Last resort: use generic User (never use User-ID format)
-      username = 'User';
-    }
-    
-    // Ensure username is never empty
-    if (!username || username.trim() === '') {
-      username = 'User';
-    }
+    // Transform message with username from profiles table
+    const username = profile ? normalizeProfileUsername(profile) : 'User';
 
     // Fetch attachments for this message
     let messageAttachments: { id: string; fileUrl: string; fileName: string; fileType: string; fileSize: number; mimeType: string; }[] = [];
@@ -611,16 +558,9 @@ export async function POST(
           .eq('id', replyMessage.user_id)
           .single();
         
-        let replyUsername = 'User';
-        if (replyProfile) {
-          const profileUsername = replyProfile.username?.trim();
-          const emailUsername = replyProfile.email?.split('@')[0];
-          if (profileUsername && profileUsername.length > 0) {
-            replyUsername = profileUsername;
-          } else if (emailUsername && emailUsername.length > 0) {
-            replyUsername = emailUsername;
-          }
-        }
+        const replyUsername = replyProfile
+          ? normalizeProfileUsername(replyProfile)
+          : 'User';
         
         replyPreview = {
           id: replyMessage.id,
