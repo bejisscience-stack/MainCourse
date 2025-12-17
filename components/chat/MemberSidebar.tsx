@@ -209,7 +209,7 @@ export default function MemberSidebar({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm text-gray-300 truncate font-medium" title={request.user?.username || request.user?.email || ''}>
-                          {request.user?.username && request.user.username !== 'User' ? request.user.username : (request.user?.email ? request.user.email.split('@')[0] : 'User')}
+                          {request.user?.username || (request.user?.email ? request.user.email.split('@')[0] : 'User')}
                         </div>
                         <div className="text-xs text-gray-500">Wants to be friends</div>
                       </div>
@@ -266,9 +266,7 @@ export default function MemberSidebar({
                               <div className="flex items-center gap-2">
                                 <span className="text-xs text-gray-400 w-16">Username:</span>
                                 <span className="text-sm text-gray-200 font-medium">
-                                  {request.user?.username && request.user.username !== 'User' 
-                                    ? request.user.username 
-                                    : (request.user?.email ? request.user.email.split('@')[0] : 'Not available')}
+                                  {request.user?.username || (request.user?.email ? request.user.email.split('@')[0] : 'Not available')}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2">
@@ -345,7 +343,7 @@ export default function MemberSidebar({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm text-gray-300 truncate font-medium" title={request.user?.username || request.user?.email || ''}>
-                          {request.user?.username && request.user.username !== 'User' ? request.user.username : (request.user?.email ? request.user.email.split('@')[0] : 'User')}
+                          {request.user?.username || (request.user?.email ? request.user.email.split('@')[0] : 'User')}
                         </div>
                         <div className="text-xs text-gray-500">Request sent</div>
                       </div>
@@ -390,9 +388,7 @@ export default function MemberSidebar({
                               <div className="flex items-center gap-2">
                                 <span className="text-xs text-gray-400 w-16">Username:</span>
                                 <span className="text-sm text-gray-200 font-medium">
-                                  {request.user?.username && request.user.username !== 'User' 
-                                    ? request.user.username 
-                                    : (request.user?.email ? request.user.email.split('@')[0] : 'Not available')}
+                                  {request.user?.username || (request.user?.email ? request.user.email.split('@')[0] : 'Not available')}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2">

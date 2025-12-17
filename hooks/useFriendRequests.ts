@@ -57,11 +57,11 @@ export function useFriendRequests() {
         received: data.received?.length || 0,
       });
       
-      // Log detailed user data from API
+      // Log detailed user data from API with full object inspection
       if (data.sent && data.sent.length > 0) {
         console.log('=== SENT REQUESTS FROM API ===');
         data.sent.forEach((r: any, index: number) => {
-          console.log(`Sent request ${index + 1}:`, JSON.parse(JSON.stringify({
+          console.log(`Sent request ${index + 1}:`, {
             id: r.id,
             receiver_id: r.receiver_id,
             hasUser: !!r.user,
@@ -71,15 +71,15 @@ export function useFriendRequests() {
             usernameValue: r.user?.username,
             email: r.user?.email,
             emailType: typeof r.user?.email,
-          })));
-          console.log('Full sent request object:', JSON.parse(JSON.stringify(r)));
+          });
+          console.log('Full sent request object (stringified):', JSON.stringify(r, null, 2));
         });
       }
       
       if (data.received && data.received.length > 0) {
         console.log('=== RECEIVED REQUESTS FROM API ===');
         data.received.forEach((r: any, index: number) => {
-          console.log(`Received request ${index + 1}:`, JSON.parse(JSON.stringify({
+          console.log(`Received request ${index + 1}:`, {
             id: r.id,
             sender_id: r.sender_id,
             hasUser: !!r.user,
@@ -89,8 +89,8 @@ export function useFriendRequests() {
             usernameValue: r.user?.username,
             email: r.user?.email,
             emailType: typeof r.user?.email,
-          })));
-          console.log('Full received request object:', JSON.parse(JSON.stringify(r)));
+          });
+          console.log('Full received request object (stringified):', JSON.stringify(r, null, 2));
         });
       }
       
@@ -119,23 +119,36 @@ export function useFriendRequests() {
         };
       });
       
-      // Process received requests - API already normalizes username, just ensure user object exists
+      // Process received requests - API already provides username, preserve it
       const receivedWithUsernames = (data.received || []).map((req: any) => {
-        // User object should come from API with already normalized username
-        const user = req.user || {
-          id: req.sender_id,
-          username: 'User',
-          email: '',
-          avatarUrl: null,
-        };
-
-        // Ensure username is never empty
-        if (!user.username || user.username.trim() === '') {
-          user.username = normalizeProfileUsername({ username: user.username, email: user.email });
+        // User object should come from API with username already set
+        if (!req.user) {
+          console.error('❌ Received request missing user object:', req.id, req);
+          return {
+            ...req,
+            user: {
+              id: req.sender_id,
+              username: 'User',
+              email: '',
+              avatarUrl: null,
+            },
+          };
         }
 
-        if (!req.user) {
-          console.warn('Received request missing user object, using fallback:', req.id);
+        // Preserve the username from API - don't overwrite it unless it's truly empty
+        const user = { ...req.user };
+        
+        // Only normalize if username is completely missing or empty
+        if (!user.username || (typeof user.username === 'string' && user.username.trim() === '')) {
+          console.warn('⚠️ Username is empty for received request, normalizing:', req.id, {
+            originalUsername: user.username,
+            email: user.email,
+          });
+          user.username = normalizeProfileUsername({ username: user.username, email: user.email });
+        } else {
+          // Ensure username is trimmed
+          user.username = user.username.trim();
+          console.log('✅ Preserving username from API:', user.username, 'for request', req.id);
         }
 
         return {
@@ -290,10 +303,11 @@ export function useFriendRequests() {
   useEffect(() => {
     fetchRequests();
 
-    // Set up polling as fallback (every 10 seconds) - this will work even if real-time fails
+    // Set up polling as fallback (every 60 seconds) - only as backup if real-time fails
+    // Reduced frequency to avoid annoying automatic refreshes
     pollingIntervalRef.current = setInterval(() => {
       fetchRequests();
-    }, 10000);
+    }, 60000); // 60 seconds instead of 10
 
     // Subscribe to real-time changes in friend requests
     let channel: ReturnType<typeof supabase.channel> | null = null;

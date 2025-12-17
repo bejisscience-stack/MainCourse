@@ -20,6 +20,9 @@ const SUPABASE_ANON_KEY: string = supabaseAnonKey;
  */
 export function createServerSupabaseClient(accessToken: string) {
   return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    db: {
+      schema: 'public',
+    },
     global: {
       headers: {
         Authorization: `Bearer ${accessToken}`,
