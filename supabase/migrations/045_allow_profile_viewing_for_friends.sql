@@ -20,3 +20,4 @@ CREATE POLICY "Users can view all profiles for friends"
 
 COMMENT ON POLICY "Users can view all profiles for friends" ON public.profiles IS 
   'Allows authenticated users to view basic profile information (id, username, email) of all users for friend requests and chat functionality';
+

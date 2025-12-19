@@ -7,33 +7,19 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// TypeScript type narrowing - these are guaranteed to be strings after the check above
-const SUPABASE_URL: string = supabaseUrl;
-const SUPABASE_ANON_KEY: string = supabaseAnonKey;
-
 /**
  * Create a Supabase client for server-side use with a user's access token
- * The Authorization header sets the auth context for RLS policies
- * 
- * IMPORTANT: For RLS to work, PostgREST automatically extracts the user from the JWT
- * in the Authorization header and sets auth.uid() accordingly.
  */
 export function createServerSupabaseClient(accessToken: string) {
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    db: {
-      schema: 'public',
-    },
+  return createClient(supabaseUrl, supabaseAnonKey, {
     global: {
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        apikey: SUPABASE_ANON_KEY, // Required for PostgREST to process the request
       },
     },
     auth: {
       persistSession: false,
       autoRefreshToken: false,
-      detectSessionInUrl: false,
-      flowType: 'pkce',
     },
   });
 }
@@ -45,11 +31,11 @@ export function createServerSupabaseClient(accessToken: string) {
 export async function verifyTokenAndGetUser(accessToken: string) {
   try {
     // Call Supabase Auth API directly to verify the token
-    const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'apikey': SUPABASE_ANON_KEY,
+        'apikey': supabaseAnonKey,
       },
     });
 

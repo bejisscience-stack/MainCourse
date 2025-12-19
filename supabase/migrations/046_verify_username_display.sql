@@ -60,3 +60,4 @@ COMMENT ON POLICY "Users can view all profiles for friends" ON public.profiles I
 -- ORDER BY created_at DESC
 -- LIMIT 20;
 
+
