@@ -28,9 +28,12 @@ DROP TABLE IF EXISTS public.friend_requests CASCADE;
 -- Drop the friends-specific policy
 DROP POLICY IF EXISTS "Users can view all profiles for friends" ON public.profiles;
 
+-- Drop the existing policy if it exists (from migration 018)
+DROP POLICY IF EXISTS "Users can view profiles in same courses" ON public.profiles;
+
 -- Restore the original policy from migration 018 (allows viewing profiles of users in same courses)
 -- This policy was replaced by migration 045, so we restore it
-CREATE POLICY IF NOT EXISTS "Users can view profiles in same courses"
+CREATE POLICY "Users can view profiles in same courses"
   ON public.profiles FOR SELECT
   USING (
     -- Users can view profiles of other users enrolled in the same courses
