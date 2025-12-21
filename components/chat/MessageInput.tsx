@@ -710,7 +710,7 @@ export default function MessageInput({
       </form>
 
       {/* Keyboard shortcut hint */}
-      <div className="mt-1 text-xs text-gray-500 text-right">
+      <div className="mt-1 text-xs text-gray-500 text-right opacity-0">
         Press <kbd className="px-1 py-0.5 bg-gray-700 rounded text-gray-400">Enter</kbd> to send, <kbd className="px-1 py-0.5 bg-gray-700 rounded text-gray-400">Shift+Enter</kbd> for new line
       </div>
     </div>
