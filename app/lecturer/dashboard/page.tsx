@@ -35,6 +35,17 @@ export default function LecturerDashboard() {
   const [videoUploadProgress, setVideoUploadProgress] = useState(0);
   const [thumbnailUploadProgress, setThumbnailUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [showBundleModal, setShowBundleModal] = useState(false);
+  const [editingBundle, setEditingBundle] = useState<any | null>(null);
+  const [bundleFormData, setBundleFormData] = useState({
+    title: '',
+    description: '',
+    price: '',
+    original_price: '',
+  });
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+  const [bundles, setBundles] = useState<any[]>([]);
+  const [bundlesLoading, setBundlesLoading] = useState(false);
 
   // Redirect if not lecturer or not logged in
   useEffect(() => {
@@ -48,6 +59,191 @@ export default function LecturerDashboard() {
   }, [user, userRole, userLoading, router]);
 
   const loading = userLoading || coursesLoading;
+
+  // Fetch bundles
+  useEffect(() => {
+    if (user?.id) {
+      fetchBundles();
+    }
+  }, [user?.id]);
+
+  const fetchBundles = async () => {
+    if (!user?.id) return;
+    setBundlesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('course_bundles')
+        .select(`
+          *,
+          course_bundle_items (
+            course_id,
+            courses (
+              id,
+              title,
+              price
+            )
+          )
+        `)
+        .eq('lecturer_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setBundles(data || []);
+    } catch (err: any) {
+      console.error('Error fetching bundles:', err);
+      setError(err.message || 'Failed to load bundles');
+    } finally {
+      setBundlesLoading(false);
+    }
+  };
+
+  const handleOpenBundleModal = (bundle?: any) => {
+    if (bundle) {
+      setEditingBundle(bundle);
+      setBundleFormData({
+        title: bundle.title,
+        description: bundle.description || '',
+        price: bundle.price.toString(),
+        original_price: bundle.original_price?.toString() || '',
+      });
+      // Get course IDs from bundle items
+      const courseIds = bundle.course_bundle_items?.map((item: any) => item.course_id) || [];
+      setSelectedCourseIds(courseIds);
+    } else {
+      setEditingBundle(null);
+      setBundleFormData({
+        title: '',
+        description: '',
+        price: '',
+        original_price: '',
+      });
+      setSelectedCourseIds([]);
+    }
+    setShowBundleModal(true);
+  };
+
+  const handleCloseBundleModal = () => {
+    setShowBundleModal(false);
+    setEditingBundle(null);
+    setBundleFormData({
+      title: '',
+      description: '',
+      price: '',
+      original_price: '',
+    });
+    setSelectedCourseIds([]);
+    setError(null);
+  };
+
+  const handleBundleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (selectedCourseIds.length < 2) {
+      setError('Please select at least 2 courses for the bundle');
+      return;
+    }
+
+    if (!user?.id) {
+      setError('User not authenticated');
+      return;
+    }
+
+    try {
+      const bundleData = {
+        lecturer_id: user.id,
+        title: bundleFormData.title,
+        description: bundleFormData.description || null,
+        price: parseFloat(bundleFormData.price),
+        original_price: bundleFormData.original_price ? parseFloat(bundleFormData.original_price) : null,
+        is_active: true,
+      };
+
+      if (editingBundle) {
+        // Update bundle
+        const { data: updatedBundle, error: updateError } = await supabase
+          .from('course_bundles')
+          .update(bundleData)
+          .eq('id', editingBundle.id)
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+
+        // Delete existing bundle items
+        await supabase
+          .from('course_bundle_items')
+          .delete()
+          .eq('bundle_id', editingBundle.id);
+
+        // Insert new bundle items
+        const itemsToInsert = selectedCourseIds.map(courseId => ({
+          bundle_id: updatedBundle.id,
+          course_id: courseId,
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('course_bundle_items')
+          .insert(itemsToInsert);
+
+        if (itemsError) throw itemsError;
+      } else {
+        // Create new bundle
+        const { data: newBundle, error: insertError } = await supabase
+          .from('course_bundles')
+          .insert([bundleData])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        // Insert bundle items
+        const itemsToInsert = selectedCourseIds.map(courseId => ({
+          bundle_id: newBundle.id,
+          course_id: courseId,
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('course_bundle_items')
+          .insert(itemsToInsert);
+
+        if (itemsError) throw itemsError;
+      }
+
+      await fetchBundles();
+      handleCloseBundleModal();
+    } catch (err: any) {
+      setError(err.message || 'Failed to save bundle');
+      console.error('Error saving bundle:', err);
+    }
+  };
+
+  const handleDeleteBundle = async (bundleId: string) => {
+    if (!confirm('Are you sure you want to delete this bundle?')) return;
+
+    try {
+      const { error: deleteError } = await supabase
+        .from('course_bundles')
+        .delete()
+        .eq('id', bundleId);
+
+      if (deleteError) throw deleteError;
+      await fetchBundles();
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete bundle');
+      console.error('Error deleting bundle:', err);
+    }
+  };
+
+  const toggleCourseSelection = (courseId: string) => {
+    setSelectedCourseIds(prev => {
+      if (prev.includes(courseId)) {
+        return prev.filter(id => id !== courseId);
+      } else {
+        return [...prev, courseId];
+      }
+    });
+  };
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -457,12 +653,22 @@ export default function LecturerDashboard() {
                 </svg>
                 Chat
               </Link>
-              <button
-                onClick={() => handleOpenModal()}
-                className="bg-navy-900 text-white font-semibold px-6 py-3 rounded-lg hover:bg-navy-800 transition-colors"
-              >
-                + Create Course
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleOpenBundleModal()}
+                  className="bg-purple-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+                  disabled={courses.length < 2}
+                  title={courses.length < 2 ? 'You need at least 2 courses to create a bundle' : ''}
+                >
+                  + Create Bundle
+                </button>
+                <button
+                  onClick={() => handleOpenModal()}
+                  className="bg-navy-900 text-white font-semibold px-6 py-3 rounded-lg hover:bg-navy-800 transition-colors"
+                >
+                  + Create Course
+                </button>
+              </div>
             </div>
           </div>
 
@@ -490,7 +696,115 @@ export default function LecturerDashboard() {
             </div>
           )}
 
+          {/* Bundles Section */}
+          {courses.length >= 2 && (
+            <div className="mb-12">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-navy-900 mb-2">
+                    Course Bundles
+                  </h2>
+                  <p className="text-navy-600">
+                    Bundle multiple courses together at a single price
+                  </p>
+                </div>
+              </div>
+
+              {bundlesLoading ? (
+                <div className="text-center py-8">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-navy-900"></div>
+                  <p className="mt-4 text-navy-600">Loading bundles...</p>
+                </div>
+              ) : bundles.length === 0 ? (
+                <div className="text-center py-12 bg-purple-50 rounded-lg border border-purple-200">
+                  <p className="text-purple-700 text-lg mb-4">You haven't created any bundles yet.</p>
+                  <button
+                    onClick={() => handleOpenBundleModal()}
+                    className="bg-purple-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    Create Your First Bundle
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                  {bundles.map((bundle) => {
+                    const bundleCourses = bundle.course_bundle_items?.map((item: any) => item.courses) || [];
+                    const totalOriginalPrice = bundleCourses.reduce((sum: number, course: any) => sum + (course?.price || 0), 0);
+                    
+                    return (
+                      <div key={bundle.id} className="bg-white border border-purple-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">Bundle</span>
+                            {!bundle.is_active && (
+                              <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">Inactive</span>
+                            )}
+                          </div>
+                          <h3 className="text-lg font-bold text-navy-900 mb-2">{bundle.title}</h3>
+                          {bundle.description && (
+                            <p className="text-sm text-navy-600 line-clamp-2">{bundle.description}</p>
+                          )}
+                        </div>
+                        <div className="mb-4">
+                          <p className="text-xs text-navy-500 mb-1">Includes {bundleCourses.length} course(s):</p>
+                          <ul className="text-sm text-navy-700 space-y-1">
+                            {bundleCourses.slice(0, 3).map((course: any, idx: number) => (
+                              <li key={idx} className="flex items-center">
+                                <svg className="w-4 h-4 mr-1 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                {course?.title || 'Unknown Course'}
+                              </li>
+                            ))}
+                            {bundleCourses.length > 3 && (
+                              <li className="text-xs text-navy-500">+{bundleCourses.length - 3} more</li>
+                            )}
+                          </ul>
+                        </div>
+                        <div className="flex items-center justify-between mb-4 pt-4 border-t border-purple-100">
+                          <div>
+                            <p className="text-xs text-navy-500">Bundle Price</p>
+                            <p className="text-xl font-bold text-navy-900">
+                              ${bundle.price.toFixed(2)}
+                            </p>
+                            {bundle.original_price && totalOriginalPrice > bundle.price && (
+                              <p className="text-xs text-navy-400 line-through">
+                                ${totalOriginalPrice.toFixed(2)} total
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleOpenBundleModal(bundle)}
+                            className="flex-1 inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
+                          >
+                            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteBundle(bundle.id)}
+                            className="px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Courses List */}
+          <div className="mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-navy-900 mb-6">Individual Courses</h2>
+          </div>
           {courses.length === 0 ? (
             <div className="text-center py-12 bg-navy-50 rounded-lg">
               <p className="text-navy-600 text-lg mb-4">You haven't created any courses yet.</p>
@@ -897,6 +1211,161 @@ export default function LecturerDashboard() {
                           Delete Course
                         </button>
                       )}
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Bundle Modal */}
+          {showBundleModal && (
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  handleCloseBundleModal();
+                }
+              }}
+            >
+              <div 
+                className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto relative"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-navy-900">
+                      {editingBundle ? 'Edit Bundle' : 'Create Course Bundle'}
+                    </h2>
+                    <button
+                      onClick={handleCloseBundleModal}
+                      className="text-navy-600 hover:text-navy-900 focus:outline-none focus:ring-2 focus:ring-navy-500 rounded p-1 transition-colors"
+                      aria-label="Close modal"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                      <div className="flex items-start">
+                        <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div className="flex-1">
+                          <p className="font-semibold">Error</p>
+                          <p className="text-sm">{error}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleBundleSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-navy-700 mb-2">
+                        Bundle Title *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={bundleFormData.title}
+                        onChange={(e) => setBundleFormData({ ...bundleFormData, title: e.target.value })}
+                        className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                        placeholder="e.g., Complete Web Development Bundle"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-navy-700 mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        value={bundleFormData.description}
+                        onChange={(e) => setBundleFormData({ ...bundleFormData, description: e.target.value })}
+                        rows={3}
+                        className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                        placeholder="Describe what students will get in this bundle..."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-navy-700 mb-2">
+                          Bundle Price ($) *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          required
+                          value={bundleFormData.price}
+                          onChange={(e) => setBundleFormData({ ...bundleFormData, price: e.target.value })}
+                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-navy-700 mb-2">
+                          Original Price ($)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={bundleFormData.original_price}
+                          onChange={(e) => setBundleFormData({ ...bundleFormData, original_price: e.target.value })}
+                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-navy-700 mb-2">
+                        Select Courses (Select at least 2) *
+                      </label>
+                      <div className="border border-navy-200 rounded-lg p-4 max-h-64 overflow-y-auto">
+                        {courses.length === 0 ? (
+                          <p className="text-sm text-navy-500">No courses available. Create courses first.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {courses.map((course) => (
+                              <label
+                                key={course.id}
+                                className="flex items-center p-3 rounded-lg border border-navy-100 hover:bg-navy-50 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedCourseIds.includes(course.id)}
+                                  onChange={() => toggleCourseSelection(course.id)}
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-navy-300 rounded"
+                                />
+                                <div className="ml-3 flex-1">
+                                  <p className="text-sm font-medium text-navy-900">{course.title}</p>
+                                  <p className="text-xs text-navy-500">${course.price.toFixed(2)}</p>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-navy-500 mt-2">
+                        Selected: {selectedCourseIds.length} course(s)
+                      </p>
+                    </div>
+
+                    <div className="flex gap-4 pt-4">
+                      <button
+                        type="submit"
+                        className="flex-1 bg-purple-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        {editingBundle ? 'Update Bundle' : 'Create Bundle'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCloseBundleModal}
+                        className="flex-1 bg-navy-100 text-navy-900 font-semibold px-6 py-3 rounded-lg hover:bg-navy-200 transition-colors"
+                      >
+                        Cancel
+                      </button>
                     </div>
                   </form>
                 </div>

@@ -14,7 +14,7 @@ export default function CoursesCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
   const { user, role: userRole } = useUser();
-  const { courses, isLoading } = useCourses('All');
+  const { courses, isLoading, error: coursesError } = useCourses('All');
   const { enrolledCourseIds, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
 
   // Reset currentIndex when courses change
@@ -113,6 +113,32 @@ export default function CoursesCarousel() {
           </h2>
           <div className="flex items-center justify-center">
             <div className="text-navy-700">Loading courses...</div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (coursesError) {
+    return (
+      <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-navy-900 text-center mb-12">
+            Our Courses
+          </h2>
+          <div className="flex flex-col items-center justify-center">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg max-w-md text-center">
+              <p className="font-semibold mb-2">Error loading courses</p>
+              <p className="text-sm mb-4">
+                {coursesError.message || 'Failed to load courses. Please check your connection and try again.'}
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-navy-900 text-white px-4 py-2 rounded-lg font-semibold hover:bg-navy-800 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         </div>
       </section>

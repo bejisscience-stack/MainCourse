@@ -21,20 +21,32 @@ export interface Course {
 }
 
 async function fetchCourses(filter?: string): Promise<Course[]> {
-  let query = supabase
-    .from('courses')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(100);
+  try {
+    let query = supabase
+      .from('courses')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100);
 
-  if (filter && filter !== 'All') {
-    query = query.eq('course_type', filter);
+    if (filter && filter !== 'All') {
+      query = query.eq('course_type', filter);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('[useCourses] Error fetching courses:', error);
+      console.error('[useCourses] Error code:', error.code);
+      console.error('[useCourses] Error message:', error.message);
+      throw error;
+    }
+    
+    console.log('[useCourses] Fetched courses:', data?.length || 0);
+    return data || [];
+  } catch (err: any) {
+    console.error('[useCourses] Unexpected error:', err);
+    throw err;
   }
-
-  const { data, error } = await query;
-
-  if (error) throw error;
-  return data || [];
 }
 
 export function useCourses(filter: string = 'All') {
@@ -45,6 +57,20 @@ export function useCourses(filter: string = 'All') {
       revalidateOnFocus: false,
       dedupingInterval: 10000, // Dedupe requests within 10 seconds
       fallbackData: [],
+      errorRetryCount: 3, // Only retry 3 times on error
+      errorRetryInterval: 2000, // Wait 2 seconds between retries
+      shouldRetryOnError: (error) => {
+        // Don't retry on authentication errors or missing env vars
+        if (error?.message?.includes('Missing Supabase') || 
+            error?.code === 'PGRST301' || 
+            error?.code === 'PGRST116') {
+          return false;
+        }
+        return true;
+      },
+      onError: (error) => {
+        console.error('[useCourses] SWR error:', error);
+      },
     }
   );
 
