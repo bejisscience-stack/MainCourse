@@ -77,3 +77,4 @@ CREATE POLICY "Lecturers can delete criteria"
     )
   );
 
+

@@ -23,3 +23,4 @@ WHERE content = 'Video submission';
 -- SELECT COUNT(*) as deleted_count FROM public.messages WHERE content = 'Video submission';
 -- (This will return 0 after deletion)
 
+

@@ -473,6 +473,7 @@ export default function ChatArea({
         criteria_text: criterion.text,
         rpm: criterion.rpm,
         display_order: index,
+        platform: criterion.platform || null, // Platform-specific or null for all platforms
       }));
 
       const { error: criteriaError } = await supabase
@@ -662,10 +663,14 @@ export default function ChatArea({
               {/* Messages */}
               <div className="space-y-0.5">
                 {(() => {
-                  // Filter out "Video submission" messages
+                  // Filter out "Video submission" and "Submission" messages (submission messages without user content)
                   const filteredMessages = messages.filter((message) => {
-                    if ('content' in message && message.content === 'Video submission') {
-                      return false;
+                    if ('content' in message) {
+                      const content = message.content;
+                      // Filter out default submission messages that don't have user-provided content
+                      if (content === 'Video submission' || content === 'Submission') {
+                        return false;
+                      }
                     }
                     return true;
                   });

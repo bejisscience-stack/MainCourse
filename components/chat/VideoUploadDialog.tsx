@@ -12,6 +12,7 @@ interface VideoUploadDialogProps {
 export interface ProjectCriteria {
   text: string;
   rpm: number; // Rate Per Match
+  platform?: string; // Platform name (optional, for platform-specific criteria)
 }
 
 export interface ProjectSubmissionData {
@@ -52,6 +53,8 @@ export default function VideoUploadDialog({
   const [criteria, setCriteria] = useState<ProjectCriteria[]>([]);
   const [criteriaInput, setCriteriaInput] = useState('');
   const [criteriaRpmInputs, setCriteriaRpmInputs] = useState<Record<number, string>>({});
+  const [criteriaPlatformInputs, setCriteriaPlatformInputs] = useState<Record<number, string>>({});
+  const [activeCriteriaPlatform, setActiveCriteriaPlatform] = useState<string>(''); // For adding new criteria
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -74,6 +77,8 @@ export default function VideoUploadDialog({
       setCriteria([]);
       setCriteriaInput('');
       setCriteriaRpmInputs({});
+      setCriteriaPlatformInputs({});
+      setActiveCriteriaPlatform('');
       setStartDate('');
       setEndDate('');
       setErrors({});
@@ -141,20 +146,27 @@ export default function VideoUploadDialog({
       const newCriteria: ProjectCriteria = {
         text: criteriaInput.trim(),
         rpm: 0, // Default RPM, will be set by user
+        platform: activeCriteriaPlatform || undefined, // Platform-specific if selected
       };
       setCriteria(prev => [...prev, newCriteria]);
       setCriteriaInput('');
+      setActiveCriteriaPlatform('');
       setErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors.criteria;
         return newErrors;
       });
     }
-  }, [criteriaInput]);
+  }, [criteriaInput, activeCriteriaPlatform]);
 
   const handleRemoveCriteria = useCallback((index: number) => {
     setCriteria(prev => prev.filter((_, i) => i !== index));
     setCriteriaRpmInputs(prev => {
+      const newInputs = { ...prev };
+      delete newInputs[index];
+      return newInputs;
+    });
+    setCriteriaPlatformInputs(prev => {
       const newInputs = { ...prev };
       delete newInputs[index];
       return newInputs;
@@ -165,6 +177,11 @@ export default function VideoUploadDialog({
     setCriteriaRpmInputs(prev => ({ ...prev, [index]: value }));
     const rpm = parseFloat(value) || 0;
     setCriteria(prev => prev.map((c, i) => i === index ? { ...c, rpm } : c));
+  }, []);
+
+  const handleCriteriaPlatformChange = useCallback((index: number, platform: string) => {
+    setCriteriaPlatformInputs(prev => ({ ...prev, [index]: platform }));
+    setCriteria(prev => prev.map((c, i) => i === index ? { ...c, platform: platform || undefined } : c));
   }, []);
 
   const validateForm = useCallback((): boolean => {
@@ -621,20 +638,36 @@ export default function VideoUploadDialog({
           {/* Criteria Section */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-3">
-              Criteria <span className="text-gray-500">(Optional)</span>
+              Criteria <span className="text-gray-500">(Optional - Add criteria for each platform)</span>
             </label>
             
             {/* Criteria Input */}
-            <div className="mb-3">
-              <input
-                type="text"
-                value={criteriaInput}
-                onChange={(e) => setCriteriaInput(e.target.value)}
-                onKeyDown={handleAddCriteria}
-                placeholder="Type criteria and press Enter to add"
-                className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-              <p className="mt-1 text-xs text-gray-500">Press Enter to add a criteria</p>
+            <div className="mb-3 space-y-2">
+              <div className="flex gap-2">
+                <select
+                  value={activeCriteriaPlatform}
+                  onChange={(e) => setActiveCriteriaPlatform(e.target.value)}
+                  className="px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                >
+                  <option value="">All Platforms</option>
+                  {selectedPlatforms.map(platform => (
+                    <option key={platform} value={platform}>
+                      {SOCIAL_MEDIA_PLATFORMS.find(p => p.id === platform)?.label || platform}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={criteriaInput}
+                  onChange={(e) => setCriteriaInput(e.target.value)}
+                  onKeyDown={handleAddCriteria}
+                  placeholder="Type criteria and press Enter to add"
+                  className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                Select a platform (or "All Platforms") and press Enter to add a criteria
+              </p>
             </div>
 
             {/* Criteria List */}
@@ -647,8 +680,25 @@ export default function VideoUploadDialog({
                   >
                     <div className="flex-1">
                       <p className="text-white text-sm font-medium">{criterion.text}</p>
+                      {criterion.platform && (
+                        <p className="text-xs text-indigo-400 mt-1">
+                          Platform: {SOCIAL_MEDIA_PLATFORMS.find(p => p.id === criterion.platform)?.label || criterion.platform}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
+                      <select
+                        value={criteriaPlatformInputs[index] ?? criterion.platform ?? ''}
+                        onChange={(e) => handleCriteriaPlatformChange(index, e.target.value)}
+                        className="px-2 py-1 bg-gray-600 text-white rounded border border-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-xs"
+                      >
+                        <option value="">All Platforms</option>
+                        {selectedPlatforms.map(platform => (
+                          <option key={platform} value={platform}>
+                            {SOCIAL_MEDIA_PLATFORMS.find(p => p.id === platform)?.label || platform}
+                          </option>
+                        ))}
+                      </select>
                       <label className="text-xs text-gray-400">RPM:</label>
                       <input
                         type="number"
@@ -678,7 +728,7 @@ export default function VideoUploadDialog({
               <p className="mt-2 text-sm text-red-400">{errors.criteria}</p>
             )}
             <p className="mt-2 text-xs text-gray-500">
-              Add criteria that student videos should match. Set RPM (Rate Per Match) for each criteria.
+              Add criteria that student videos should match. You can add criteria for all platforms or specific platforms. Set RPM (Rate Per Match) for each criteria.
             </p>
           </div>
 

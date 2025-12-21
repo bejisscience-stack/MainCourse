@@ -17,3 +17,4 @@ CHECK (end_date IS NULL OR start_date IS NULL OR end_date >= start_date);
 CREATE INDEX IF NOT EXISTS projects_start_date_idx ON public.projects(start_date);
 CREATE INDEX IF NOT EXISTS projects_end_date_idx ON public.projects(end_date);
 
+

@@ -144,13 +144,9 @@ export default function VideoSubmissionDialog({
       // Use the first link as the primary video URL for backward compatibility
       const primaryVideoUrl = Object.values(videoLinks)[0] || null;
 
-      // Require a message from the user
-      const messageContent = message.trim();
-      if (!messageContent) {
-        setErrors({ submit: 'Please provide a message with your submission' });
-        setIsSubmitting(false);
-        return;
-      }
+      // Message is optional - use default if not provided
+      // The API requires non-empty content, so we use a default that will be filtered out in chat
+      const messageContent = message.trim() || 'Submission';
 
       console.log('Creating message:', { content: messageContent, replyTo: projectId });
 
@@ -386,7 +382,7 @@ export default function VideoSubmissionDialog({
           {/* Optional Message */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Message (Optional)
+              Message <span className="text-gray-500">(Optional)</span>
             </label>
             <textarea
               value={message}

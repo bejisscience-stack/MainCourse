@@ -42,3 +42,4 @@ CREATE POLICY "Users can view profiles in same courses"
 
 
 
+

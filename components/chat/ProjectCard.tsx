@@ -57,6 +57,7 @@ export default function ProjectCard({
   const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
   const [projectCriteria, setProjectCriteria] = useState<ProjectCriteria[]>([]);
   const [reviewingSubmissionId, setReviewingSubmissionId] = useState<string | null>(null);
+  const [reviewingSubmission, setReviewingSubmission] = useState<any | null>(null);
   const [projectDbId, setProjectDbId] = useState<string | null>(null);
   const [expandedSubmissionId, setExpandedSubmissionId] = useState<string | null>(null);
   const [expandedReviewSections, setExpandedReviewSections] = useState<Set<string>>(new Set());
@@ -85,6 +86,7 @@ export default function ProjectCard({
               id: c.id,
               text: c.criteria_text,
               rpm: parseFloat(c.rpm),
+              platform: c.platform || undefined, // Platform-specific or undefined for all platforms
             })));
           }
         }
@@ -98,8 +100,13 @@ export default function ProjectCard({
 
   const loadSubmissions = useCallback(async () => {
     // Always reload when called (don't check submissions.length to allow refresh)
-    if (!isExpanded) return;
+    console.log('🚀 loadSubmissions CALLED - isExpanded:', isExpanded, 'projectId:', project.id);
+    if (!isExpanded) {
+      console.log('⏸️ Skipping - card not expanded');
+      return;
+    }
     
+    console.log('✅ Starting to load submissions for project:', project.id);
     setIsLoadingSubmissions(true);
     try {
       // Fetch submissions from the database
@@ -135,7 +142,8 @@ export default function ProjectCard({
         .order('created_at', { ascending: false });
       
       // Load reviews separately to avoid RLS issues with joins
-      let reviewsMap = new Map();
+      // Now we support multiple reviews per submission (one per platform)
+      let reviewsMap = new Map<string, any[]>(); // Map of submission_id -> reviews array
       if (submissionRecords && submissionRecords.length > 0) {
         const submissionIds = submissionRecords.map((sub: any) => sub.id);
         const { data: directReviews, error: directReviewsError } = await supabase
@@ -150,10 +158,36 @@ export default function ProjectCard({
           reviewCount: directReviews?.length || 0,
         });
         
-        // Create a map of submission_id -> review for easy lookup
+        // Create a map of submission_id -> reviews array (multiple reviews per submission for different platforms)
         if (directReviews && !directReviewsError) {
+          console.log('📊 All reviews loaded from database:', {
+            totalReviews: directReviews.length,
+            reviews: directReviews.map((r: any) => ({
+              id: r.id,
+              submission_id: r.submission_id,
+              platform: r.platform,
+              platformType: typeof r.platform,
+              matchedCriteriaIds: r.matched_criteria_ids,
+              paymentAmount: r.payment_amount,
+            })),
+          });
+          
           directReviews.forEach((review: any) => {
-            reviewsMap.set(review.submission_id, review);
+            const submissionId = review.submission_id;
+            if (!reviewsMap.has(submissionId)) {
+              reviewsMap.set(submissionId, []);
+            }
+            reviewsMap.get(submissionId)!.push(review);
+          });
+          
+          // Log the final reviewsMap
+          console.log('🗺️ ReviewsMap after processing:', {
+            mapSize: reviewsMap.size,
+            entries: Array.from(reviewsMap.entries()).map(([subId, reviews]) => ({
+              submissionId: subId,
+              reviewCount: reviews.length,
+              platforms: reviews.map((r: any) => r.platform),
+            })),
           });
         } else if (directReviewsError) {
           console.error('Error loading reviews directly:', directReviewsError);
@@ -260,53 +294,124 @@ export default function ProjectCard({
           const messageAttachments = attachmentsMap.get(msg.id) || [];
 
           // Get review data from the map we created (loaded separately to avoid RLS join issues)
-          const review = reviewsMap.get(sub.id) || null;
+          // Now supports multiple reviews per submission (one per platform)
+          const reviews = reviewsMap.get(sub.id) || [];
           
-          // Debug: Log review transformation
-          if (sub.messages?.user_id === currentUserId || isLecturer) {
-            console.log(`🔄 Transforming review for submission ${sub.id}:`, {
-              hasRawReview: !!review,
-              rawReview: review,
-              reviewFromMap: reviewsMap.get(sub.id),
-              allReviewsInMap: Array.from(reviewsMap.keys()),
+          // Transform all reviews by platform
+          // Normalize platform keys to lowercase to ensure consistency
+          const reviewsByPlatform: Record<string, any> = {};
+          
+          // IMPORTANT: Process reviews and ensure we don't lose any
+          // If multiple reviews have the same platform (shouldn't happen), we'll keep the most recent one
+          reviews.forEach((review: any) => {
+            // Normalize platform to lowercase for consistency (youtube, instagram, etc.)
+            // Use the raw platform value, not null/undefined
+            const rawPlatform = review.platform;
+            const platform = rawPlatform ? rawPlatform.toLowerCase().trim() : 'all';
+            
+            // Debug: Log each review being processed
+            console.log('📝 Processing review:', {
+              reviewId: review.id,
+              submissionId: sub.id,
+              rawPlatform: rawPlatform,
+              rawPlatformType: typeof rawPlatform,
+              normalizedPlatform: platform,
+              matchedCriteriaIds: review.matched_criteria_ids,
+              paymentAmount: review.payment_amount,
             });
-          }
-
-          // Transform review data, ensuring matched_criteria_ids is an array
-          let reviewData = null;
-          if (review) {
+            
             // Handle matched_criteria_ids - it might be an array or null
             let matchedCriteriaIds: string[] = [];
             if (review.matched_criteria_ids) {
-              // If it's already an array, use it; otherwise convert
               matchedCriteriaIds = Array.isArray(review.matched_criteria_ids) 
                 ? review.matched_criteria_ids 
                 : [];
             }
 
-            reviewData = {
+            // If a review already exists for this platform, log a warning
+            // This should NOT happen if reviews are platform-specific, but log it if it does
+            if (reviewsByPlatform[platform]) {
+              console.error('❌ ERROR: Multiple reviews for same platform - keeping most recent!', {
+                submissionId: sub.id,
+                platform,
+                existingReviewId: reviewsByPlatform[platform].id,
+                existingPlatform: reviewsByPlatform[platform].platform,
+                existingCreatedAt: reviewsByPlatform[platform].createdAt,
+                newReviewId: review.id,
+                newPlatform: review.platform,
+                newCreatedAt: new Date(review.created_at).getTime(),
+                allReviewsForSubmission: reviews.map((r: any) => ({
+                  id: r.id,
+                  platform: r.platform,
+                  normalized: r.platform ? r.platform.toLowerCase().trim() : 'all',
+                  createdAt: r.created_at,
+                })),
+              });
+              
+              // Keep the most recent review if there's a conflict
+              const existingCreatedAt = reviewsByPlatform[platform].createdAt;
+              const newCreatedAt = new Date(review.created_at).getTime();
+              if (newCreatedAt <= existingCreatedAt) {
+                console.log('⏭️ Skipping older review, keeping existing one');
+                return; // Skip this review, keep the existing one
+              }
+              console.log('✅ Replacing with newer review');
+            }
+
+            reviewsByPlatform[platform] = {
               id: review.id,
               status: review.status,
               matchedCriteriaIds: matchedCriteriaIds,
               comment: review.comment || null,
               paymentAmount: parseFloat(review.payment_amount || '0'),
               createdAt: new Date(review.created_at).getTime(),
+              platform: platform,
             };
-            
-            // Debug: Log transformed review
-            if (sub.messages?.user_id === currentUserId || isLecturer) {
-              console.log(`✅ Transformed review data:`, reviewData);
-            }
-          } else {
-            // Debug: Log why review is null
-            if (sub.messages?.user_id === currentUserId || isLecturer) {
-              console.log(`❌ No review found for submission ${sub.id}. Raw data:`, {
-                submissionReviews: sub.submission_reviews,
-                submissionReviewsType: typeof sub.submission_reviews,
-                submissionReviewsIsArray: Array.isArray(sub.submission_reviews),
-              });
-            }
+          });
+          
+          // Debug: Log final reviewsByPlatform with detailed info
+          const platformKeys = Object.keys(reviewsByPlatform);
+          console.log('✅ Final reviewsByPlatform for submission', sub.id, ':', {
+            reviewsByPlatform,
+            platformKeys,
+            platformCount: platformKeys.length,
+            allPlatforms: platformKeys.join(', '),
+            reviewDetails: platformKeys.map(key => ({
+              platform: key,
+              reviewId: reviewsByPlatform[key].id,
+              rpm: reviewsByPlatform[key].paymentAmount,
+              criteriaCount: reviewsByPlatform[key].matchedCriteriaIds?.length || 0,
+            })),
+          });
+          
+          // If we expected multiple platforms but only got one, log a warning
+          if (reviews.length > 1 && platformKeys.length === 1) {
+            console.error('❌ ERROR: Multiple reviews loaded but only one platform in reviewsByPlatform!', {
+              submissionId: sub.id,
+              totalReviewsLoaded: reviews.length,
+              platformsInReviewsByPlatform: platformKeys.length,
+              allReviewPlatforms: reviews.map((r: any) => ({
+                id: r.id,
+                rawPlatform: r.platform,
+                normalizedPlatform: r.platform ? r.platform.toLowerCase() : 'all',
+              })),
+            });
           }
+
+          // For backward compatibility, use first review if only one exists
+          // Otherwise, we'll use reviewsByPlatform to show platform-specific data
+          const review = reviews.length > 0 ? reviewsByPlatform[Object.keys(reviewsByPlatform)[0]] || null : null;
+
+          // Debug: Log platform links for this submission
+          const platformLinksData = sub.platform_links || null;
+          console.log('🔗 Submission platform links:', {
+            submissionId: sub.id,
+            platformLinks: platformLinksData,
+            platformCount: platformLinksData ? Object.keys(platformLinksData).length : 0,
+            platforms: platformLinksData ? Object.keys(platformLinksData).join(', ') : 'none',
+            reviewsByPlatformCount: Object.keys(reviewsByPlatform).length,
+            reviewsByPlatformKeys: Object.keys(reviewsByPlatform).join(', '),
+          });
 
           return {
             id: msg.id,
@@ -322,9 +427,10 @@ export default function ProjectCard({
             submissionData: {
               videoUrl: sub.video_url,
               message: sub.message,
-              platformLinks: sub.platform_links || null, // Platform-specific links
+              platformLinks: platformLinksData, // Platform-specific links
             },
-            review: reviewData,
+            review: review,
+            reviewsByPlatform: reviewsByPlatform, // All reviews organized by platform
           };
         })
       );
@@ -348,10 +454,12 @@ export default function ProjectCard({
 
   // Load submissions when project card is expanded
   useEffect(() => {
+    console.log('📂 ProjectCard useEffect - isExpanded:', isExpanded, 'projectId:', project.id);
     if (isExpanded) {
+      console.log('📂 Loading submissions for project:', project.id);
       loadSubmissions();
     }
-  }, [isExpanded, loadSubmissions]);
+  }, [isExpanded, loadSubmissions, project.id]);
 
   const handleExpand = useCallback(() => {
     const newExpanded = !isExpanded;
@@ -505,12 +613,55 @@ export default function ProjectCard({
                   {submissions.map((submission: any) => {
                     const submissionData = submission.submissionData || {};
                     const review = submission.review;
+                    const reviewsByPlatform = submission.reviewsByPlatform || {};
                     const isOwnSubmission = submission.user.id === currentUserId;
                     const isExpanded = expandedSubmissionId === submission.submissionId;
                     const platformLinks = submissionData.platformLinks || {};
                     const hasPlatformLinks = Object.keys(platformLinks).length > 0;
                     
-                    // Calculate RPM from review if available
+                    // Debug: Log reviewsByPlatform to see what platforms we have
+                    console.log('🔍 RENDER TIME - Reviews by platform for submission:', submission.submissionId, {
+                      reviewsByPlatform,
+                      platformKeys: Object.keys(reviewsByPlatform),
+                      platformCount: Object.keys(reviewsByPlatform).length,
+                      allPlatforms: Object.keys(reviewsByPlatform).join(', '),
+                      reviewDetails: Object.keys(reviewsByPlatform).map(key => ({
+                        platform: key,
+                        reviewId: reviewsByPlatform[key]?.id,
+                        rpm: reviewsByPlatform[key]?.paymentAmount,
+                        criteriaCount: reviewsByPlatform[key]?.matchedCriteriaIds?.length || 0,
+                      })),
+                    });
+                    
+                    // Calculate RPM per platform - include ALL platforms that have reviews
+                    const rpmByPlatform: Record<string, number> = {};
+                    Object.keys(reviewsByPlatform).forEach(platform => {
+                      const platformReview = reviewsByPlatform[platform];
+                      // Always add an entry for each platform that has a review, even if RPM is 0
+                      rpmByPlatform[platform] = platformReview.paymentAmount > 0
+                        ? platformReview.paymentAmount
+                        : (platformReview.matchedCriteriaIds && platformReview.matchedCriteriaIds.length > 0
+                            ? platformReview.matchedCriteriaIds.reduce((total: number, criteriaId: string) => {
+                                const criterion = projectCriteria.find(c => c.id === criteriaId);
+                                const rpm = criterion?.rpm || 0;
+                                return total + rpm;
+                              }, 0)
+                            : 0);
+                    });
+                    
+                    // Debug: Log RPM by platform
+                    if (Object.keys(rpmByPlatform).length > 0) {
+                      console.log('💰 RPM by platform:', {
+                        rpmByPlatform,
+                        platformKeys: Object.keys(rpmByPlatform),
+                        totalRPM: Object.values(rpmByPlatform).reduce((sum, rpm) => sum + rpm, 0),
+                      });
+                    }
+                    
+                    // Calculate total RPM across all platforms
+                    const totalRPM = Object.values(rpmByPlatform).reduce((sum, rpm) => sum + rpm, 0);
+                    
+                    // Calculate RPM from review if available (for backward compatibility)
                     // Use payment_amount from review if available, otherwise calculate from criteria
                     const calculatedRPM = review 
                       ? (review.paymentAmount > 0 
@@ -575,11 +726,40 @@ export default function ProjectCard({
                                   <span className="text-gray-500 text-xs">
                                     {new Date(submission.timestamp).toLocaleString()}
                                   </span>
-                                  {/* Show RPM badge for students on their own submissions, or for lecturers on any reviewed submission */}
-                                  {((isOwnSubmission && review && calculatedRPM > 0) || (isLecturer && review && calculatedRPM > 0)) && (
-                                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-900/50 text-green-300 border border-green-700">
-                                      RPM: ${calculatedRPM.toFixed(2)}
-                                    </span>
+                                  {/* Show RPM badges - platform-wise if multiple platforms, total if single */}
+                                  {((isOwnSubmission && (totalRPM > 0 || calculatedRPM > 0)) || (isLecturer && (totalRPM > 0 || calculatedRPM > 0))) && (
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      {Object.keys(reviewsByPlatform).length > 1 ? (
+                                        <>
+                                          {Object.keys(reviewsByPlatform).map((platform) => {
+                                            const platformRPM = rpmByPlatform[platform] || 0;
+                                            const platformName = PLATFORM_NAMES[platform.toLowerCase()] || platform;
+                                            return (
+                                              <span key={platform} className={`px-2 py-0.5 rounded text-xs font-semibold border ${
+                                                platformRPM > 0 
+                                                  ? 'bg-green-900/50 text-green-300 border-green-700' 
+                                                  : 'bg-gray-700/50 text-gray-400 border-gray-600'
+                                              }`}>
+                                                {platformName}: ${platformRPM.toFixed(2)}
+                                              </span>
+                                            );
+                                          })}
+                                          {totalRPM > 0 && (
+                                            <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-900/50 text-green-300 border border-green-700">
+                                              Total: ${totalRPM.toFixed(2)}
+                                            </span>
+                                          )}
+                                        </>
+                                      ) : Object.keys(reviewsByPlatform).length === 1 ? (
+                                        <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-900/50 text-green-300 border border-green-700">
+                                          RPM: ${(totalRPM > 0 ? totalRPM : calculatedRPM).toFixed(2)}
+                                        </span>
+                                      ) : (
+                                        <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-900/50 text-green-300 border border-green-700">
+                                          RPM: ${(totalRPM > 0 ? totalRPM : calculatedRPM).toFixed(2)}
+                                        </span>
+                                      )}
+                                    </div>
                                   )}
                                   {/* Show review status badge for students */}
                                   {isOwnSubmission && review && calculatedRPM > 0 && (
@@ -621,7 +801,7 @@ export default function ProjectCard({
                                   </div>
                                   
                                   {/* Show RPM and Matched Criteria for students on their own submissions, or for lecturers on any reviewed submission */}
-                                  {((isOwnSubmission && review && calculatedRPM > 0) || (isLecturer && review && calculatedRPM > 0)) && (
+                                  {((isOwnSubmission && (Object.keys(reviewsByPlatform).length > 0 || totalRPM > 0 || calculatedRPM > 0)) || (isLecturer && (Object.keys(reviewsByPlatform).length > 0 || totalRPM > 0 || calculatedRPM > 0))) && (
                                     <div className="pt-2 border-t border-gray-600" data-review-details-section>
                                       {/* Collapsible Review Section Header */}
                                       <button
@@ -644,7 +824,8 @@ export default function ProjectCard({
                                             Review Details
                                           </span>
                                           <span className="text-xs text-gray-500">
-                                            (RPM: ${calculatedRPM.toFixed(2)})
+                                            (RPM: ${(totalRPM > 0 ? totalRPM : calculatedRPM).toFixed(2)})
+                                            {Object.keys(rpmByPlatform).length > 1 && ` - ${Object.keys(rpmByPlatform).length} platforms`}
                                           </span>
                                         </div>
                                         <svg
@@ -662,7 +843,89 @@ export default function ProjectCard({
                                       {/* Collapsible Review Content */}
                                       {expandedReviewSections.has(submission.submissionId) && (
                                         <div className="space-y-2 mt-2">
-                                          {/* RPM Display - Similar to review dialog */}
+                                          {/* Platform-wise RPM Breakdown - Always show if we have platform-specific reviews */}
+                                          {Object.keys(reviewsByPlatform).length > 0 ? (
+                                            <div className="space-y-3">
+                                              {Object.keys(reviewsByPlatform).map((platform, index) => {
+                                                const platformReview = reviewsByPlatform[platform];
+                                                const platformRPM = rpmByPlatform[platform] || 0;
+                                                const platformName = PLATFORM_NAMES[platform.toLowerCase()] || platform;
+                                                
+                                                // Debug: Log each platform being rendered
+                                                console.log(`🎨 RENDERING platform ${index + 1}/${Object.keys(reviewsByPlatform).length}:`, {
+                                                  platform,
+                                                  platformName,
+                                                  platformRPM,
+                                                  reviewId: platformReview?.id,
+                                                  hasCriteria: platformReview?.matchedCriteriaIds?.length > 0,
+                                                  hasComment: !!platformReview?.comment,
+                                                });
+                                                
+                                                // Show all platforms that have reviews, regardless of RPM or criteria
+                                                
+                                                return (
+                                                  <div key={platform} className="bg-gray-700/30 border border-gray-600 rounded-lg p-3">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                      <span className="text-xs font-semibold text-white">{platformName} Review</span>
+                                                      {platformRPM > 0 && (
+                                                        <span className="text-green-400 font-bold text-sm">${platformRPM.toFixed(2)} RPM</span>
+                                                      )}
+                                                      {platformRPM === 0 && (
+                                                        <span className="text-gray-400 text-xs">No RPM earned</span>
+                                                      )}
+                                                    </div>
+                                                    
+                                                    {/* Matched Criteria for this platform */}
+                                                    {platformReview.matchedCriteriaIds && platformReview.matchedCriteriaIds.length > 0 && (
+                                                      <div className="space-y-1.5 mt-2">
+                                                        {platformReview.matchedCriteriaIds.map((criteriaId: string) => {
+                                                          const criterion = projectCriteria.find(c => c.id === criteriaId);
+                                                          return criterion ? (
+                                                            <div
+                                                              key={criteriaId}
+                                                              className="flex items-center justify-between p-1.5 rounded border bg-indigo-600/10 border-indigo-500/30"
+                                                            >
+                                                              <div className="flex items-center space-x-2">
+                                                                <div className="w-3 h-3 bg-indigo-600 border border-indigo-500 rounded flex items-center justify-center flex-shrink-0">
+                                                                  <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                                                  </svg>
+                                                                </div>
+                                                                <span className="text-white text-xs font-medium">{criterion.text}</span>
+                                                              </div>
+                                                              <span className="text-indigo-400 text-xs font-semibold">
+                                                                ${criterion.rpm.toFixed(2)} RPM
+                                                              </span>
+                                                            </div>
+                                                          ) : null;
+                                                        })}
+                                                      </div>
+                                                    )}
+                                                    
+                                                    {/* Comment for this platform */}
+                                                    {platformReview.comment && (
+                                                      <div className="mt-2 pt-2 border-t border-gray-600">
+                                                        <p className="text-xs text-gray-400 mb-1">Comment:</p>
+                                                        <p className="text-gray-300 text-xs whitespace-pre-wrap">{platformReview.comment}</p>
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                );
+                                              })}
+                                              
+                                              {/* Total RPM Display */}
+                                              {totalRPM > 0 && Object.keys(rpmByPlatform).length > 1 && (
+                                                <div className="bg-green-900/20 border border-green-700 rounded-lg p-2">
+                                                  <p className="text-xs text-gray-300 mb-0.5">
+                                                    <span className="font-semibold">Total RPM (All Platforms):</span>{' '}
+                                                    <span className="text-green-400 font-bold">${totalRPM.toFixed(2)}</span>
+                                                  </p>
+                                                </div>
+                                              )}
+                                            </div>
+                                          ) : (
+                                            <>
+                                              {/* Fallback for legacy single review */}
                                           <div className="bg-green-900/20 border border-green-700 rounded-lg p-2">
                                             <p className="text-xs text-gray-300 mb-0.5">
                                               <span className="font-semibold">Saved RPM:</span>{' '}
@@ -675,8 +938,8 @@ export default function ProjectCard({
                                             </p>
                                           </div>
                                           
-                                          {/* Matched Criteria - Similar to review dialog with checkboxes */}
-                                          {review.matchedCriteriaIds && review.matchedCriteriaIds.length > 0 && (
+                                              {/* Matched Criteria */}
+                                              {review && review.matchedCriteriaIds && review.matchedCriteriaIds.length > 0 && (
                                             <div>
                                               <p className="text-xs text-gray-500 mb-1.5 font-semibold">Matched Criteria:</p>
                                               <div className="space-y-1.5">
@@ -703,6 +966,8 @@ export default function ProjectCard({
                                                 })}
                                               </div>
                                             </div>
+                                              )}
+                                            </>
                                           )}
                                         </div>
                                       )}
@@ -756,9 +1021,10 @@ export default function ProjectCard({
                                       {new Date(submission.timestamp).toLocaleString()}
                                     </span>
                                     {/* Show RPM badge for students on their own submissions, or for lecturers on any reviewed submission */}
-                                    {((isOwnSubmission && review && calculatedRPM > 0) || (isLecturer && review && calculatedRPM > 0)) && (
+                                    {((isOwnSubmission && (totalRPM > 0 || calculatedRPM > 0)) || (isLecturer && (totalRPM > 0 || calculatedRPM > 0))) && (
                                       <span className="px-3 py-1 rounded text-sm font-semibold bg-green-900/50 text-green-300 border border-green-700">
-                                        RPM: ${calculatedRPM.toFixed(2)}
+                                        RPM: ${(totalRPM > 0 ? totalRPM : calculatedRPM).toFixed(2)}
+                                        {Object.keys(rpmByPlatform).length > 1 && ` (${Object.keys(rpmByPlatform).length} platforms)`}
                                       </span>
                                     )}
                                   </div>
@@ -816,12 +1082,110 @@ export default function ProjectCard({
                                   )}
 
                                   {/* Review Section for Students - Show prominently after video links */}
-                                  {!isLecturer && isOwnSubmission && review ? (
+                                  {!isLecturer && isOwnSubmission && (Object.keys(reviewsByPlatform).length > 0 || review) ? (
                                     <div className="pt-4 border-t border-gray-700">
                                       <p className="text-sm text-white mb-3 font-bold">Your Review Results</p>
                                       <div className="space-y-3">
-                                        {/* Matched Criteria Breakdown */}
-                                        {review.matchedCriteriaIds && review.matchedCriteriaIds.length > 0 ? (
+                                        {/* Platform-wise RPM Breakdown - Show for all platforms */}
+                                        {Object.keys(reviewsByPlatform).length > 0 ? (
+                                          <div className="space-y-3">
+                                            {Object.keys(reviewsByPlatform).map((platform, index) => {
+                                              const platformReview = reviewsByPlatform[platform];
+                                              const platformRPM = rpmByPlatform[platform] || 0;
+                                              const platformName = PLATFORM_NAMES[platform.toLowerCase()] || platform;
+                                              
+                                              // Debug: Log each platform being rendered in expanded view
+                                              console.log(`🎨 EXPANDED VIEW - Rendering platform ${index + 1}/${Object.keys(reviewsByPlatform).length}:`, {
+                                                platform,
+                                                platformName,
+                                                platformRPM,
+                                                reviewId: platformReview?.id,
+                                                hasCriteria: platformReview?.matchedCriteriaIds?.length > 0,
+                                                hasComment: !!platformReview?.comment,
+                                              });
+                                              
+                                              // Show all platforms that have reviews, regardless of RPM or criteria
+                                              
+                                              return (
+                                                <div key={platform} className="bg-gray-700/30 border border-gray-600 rounded-lg p-4">
+                                                  <div className="flex items-center justify-between mb-3">
+                                                    <p className="text-sm font-semibold text-white">{platformName} Review</p>
+                                                    {platformRPM > 0 && (
+                                                      <span className="text-green-400 font-bold text-lg">
+                                                        ${platformRPM.toFixed(2)} RPM
+                                                      </span>
+                                                    )}
+                                                    {platformRPM === 0 && (
+                                                      <span className="text-gray-400 text-sm">No RPM earned</span>
+                                                    )}
+                                                  </div>
+                                                  
+                                                  {/* Matched Criteria for this platform */}
+                                                  {platformReview.matchedCriteriaIds && platformReview.matchedCriteriaIds.length > 0 && (
+                                                    <div className="mt-3">
+                                                      <p className="text-xs text-gray-400 mb-2 font-semibold">Matched Criteria & RPM Breakdown:</p>
+                                                      <div className="space-y-2">
+                                                        {platformReview.matchedCriteriaIds.map((criteriaId: string) => {
+                                                          const criterion = projectCriteria.find(c => c.id === criteriaId);
+                                                          return criterion ? (
+                                                            <div
+                                                              key={criteriaId}
+                                                              className="bg-indigo-600/10 border border-indigo-600/30 rounded-lg p-3 flex items-center justify-between"
+                                                            >
+                                                              <div className="flex items-center space-x-2">
+                                                                <div className="w-4 h-4 bg-indigo-600 border border-indigo-500 rounded flex items-center justify-center flex-shrink-0">
+                                                                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                                                  </svg>
+                                                                </div>
+                                                                <span className="text-sm text-indigo-300 font-medium">{criterion.text}</span>
+                                                              </div>
+                                                              <span className="text-indigo-400 font-bold">+${criterion.rpm.toFixed(2)} RPM</span>
+                                                            </div>
+                                                          ) : null;
+                                                        })}
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                  
+                                                  {/* Platform RPM Display */}
+                                                  {platformRPM > 0 && (
+                                                    <div className="mt-3 bg-green-900/20 border border-green-700 rounded-lg p-3">
+                                                      <p className="text-xs text-gray-400 mb-1">RPM Earned for {platformName}:</p>
+                                                      <p className="text-green-400 font-bold text-2xl">
+                                                        ${platformRPM.toFixed(2)}
+                                                      </p>
+                                                    </div>
+                                                  )}
+                                                  
+                                                  {/* Comment for this platform */}
+                                                  {platformReview.comment && (
+                                                    <div className="mt-3 pt-3 border-t border-gray-600">
+                                                      <p className="text-xs text-gray-400 mb-2 font-semibold">Lecturer Comment ({platformName}):</p>
+                                                      <div className="bg-gray-700/50 rounded-lg p-3">
+                                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{platformReview.comment}</p>
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              );
+                                            })}
+                                            
+                                            {/* Total RPM Display - Prominent (only if multiple platforms) */}
+                                            {totalRPM > 0 && Object.keys(rpmByPlatform).length > 1 && (
+                                              <div className="bg-green-900/20 border-2 border-green-700 rounded-lg p-4">
+                                                <p className="text-xs text-gray-400 mb-1">Total RPM Earned (All Platforms):</p>
+                                                <p className="text-green-400 font-bold text-3xl">
+                                                  ${totalRPM.toFixed(2)}
+                                                </p>
+                                                <p className="text-xs text-green-300 mt-1">This is your total earnings from all platforms</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <>
+                                            {/* Single platform or legacy review - show as before */}
+                                            {review && review.matchedCriteriaIds && review.matchedCriteriaIds.length > 0 ? (
                                           <div>
                                             <p className="text-xs text-gray-400 mb-2 font-semibold">Matched Criteria & RPM Breakdown:</p>
                                             <div className="space-y-2">
@@ -849,25 +1213,54 @@ export default function ProjectCard({
                                         ) : null}
                                         
                                         {/* Total RPM Display - Prominent */}
-                                        {(calculatedRPM > 0 || (review.paymentAmount && review.paymentAmount > 0)) ? (
+                                            {(totalRPM > 0 || calculatedRPM > 0 || (review && review.paymentAmount && review.paymentAmount > 0)) ? (
                                           <div className="bg-green-900/20 border-2 border-green-700 rounded-lg p-4">
-                                            <p className="text-xs text-gray-400 mb-1">Total RPM Earned:</p>
+                                                <p className="text-xs text-gray-400 mb-1">
+                                                  {Object.keys(rpmByPlatform).length > 1 
+                                                    ? 'Total RPM Earned (All Platforms):' 
+                                                    : 'Total RPM Earned:'}
+                                                </p>
                                             <p className="text-green-400 font-bold text-3xl">
-                                              ${(calculatedRPM > 0 ? calculatedRPM : review.paymentAmount || 0).toFixed(2)}
-                                            </p>
-                                            <p className="text-xs text-green-300 mt-1">This is your total earnings from this submission</p>
+                                                  ${(totalRPM > 0 ? totalRPM : (calculatedRPM > 0 ? calculatedRPM : (review?.paymentAmount || 0))).toFixed(2)}
+                                                </p>
+                                                <p className="text-xs text-green-300 mt-1">
+                                                  {Object.keys(rpmByPlatform).length > 1 
+                                                    ? 'This is your total earnings from all platforms' 
+                                                    : 'This is your total earnings from this submission'}
+                                                </p>
                                           </div>
                                         ) : null}
+                                          </>
+                                        )}
                                         
-                                        {/* Lecturer Comment */}
-                                        {review.comment ? (
+                                        {/* Lecturer Comments - Platform-specific if multiple platforms */}
+                                        {Object.keys(reviewsByPlatform).length > 1 ? (
+                                          <div className="space-y-3">
+                                            {Object.keys(reviewsByPlatform).map((platform) => {
+                                              const platformReview = reviewsByPlatform[platform];
+                                              const platformName = PLATFORM_NAMES[platform.toLowerCase()] || platform;
+                                              if (!platformReview.comment) return null;
+                                              
+                                              return (
+                                                <div key={platform}>
+                                                  <p className="text-xs text-gray-400 mb-2 font-semibold">Lecturer Comment ({platformName}):</p>
+                                                  <div className="bg-gray-700/50 rounded-lg p-3">
+                                                    <p className="text-gray-300 text-sm whitespace-pre-wrap">{platformReview.comment}</p>
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        ) : (
+                                          review && review.comment ? (
                                           <div>
                                             <p className="text-xs text-gray-400 mb-2 font-semibold">Lecturer Comment:</p>
                                             <div className="bg-gray-700/50 rounded-lg p-3">
                                               <p className="text-gray-300 text-sm whitespace-pre-wrap">{review.comment}</p>
                                             </div>
                                           </div>
-                                        ) : null}
+                                          ) : null
+                                        )}
                                         
                                         {/* Show message if no criteria matched and no RPM */}
                                         {(!review.matchedCriteriaIds || review.matchedCriteriaIds.length === 0) && 
@@ -1002,6 +1395,7 @@ export default function ProjectCard({
                                           e.stopPropagation();
                                           setExpandedSubmissionId(null);
                                           setReviewingSubmissionId(submission.submissionId);
+                                          setReviewingSubmission(submission);
                                         }}
                                         className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors font-medium"
                                       >
@@ -1037,11 +1431,12 @@ export default function ProjectCard({
       )}
 
       {/* Submission Review Dialog */}
-      {reviewingSubmissionId && projectDbId && (
+      {reviewingSubmissionId && projectDbId && reviewingSubmission && (
         <SubmissionReviewDialog
           isOpen={!!reviewingSubmissionId}
           onClose={() => {
             setReviewingSubmissionId(null);
+            setReviewingSubmission(null);
             setSubmissions([]); // Reset to reload
             if (isExpanded) {
               loadSubmissions();
@@ -1056,6 +1451,7 @@ export default function ProjectCard({
           submissionId={reviewingSubmissionId}
           projectId={projectDbId}
           criteria={projectCriteria}
+          submission={reviewingSubmission}
         />
       )}
     </>
