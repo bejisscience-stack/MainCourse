@@ -952,7 +952,7 @@ export default function ProjectCard({
                                       </div>
                                     </div>
                                   )}
-                                  {submission.content && submission.content !== 'Video submission' && (
+                                  {submission.content && submission.content !== 'Video submission' && submission.content !== 'Submission' && (
                                     <div>
                                       <p className="text-sm text-gray-400 mb-2 font-semibold">Content:</p>
                                       <div className="bg-gray-700/50 rounded-lg p-3">

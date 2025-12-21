@@ -646,29 +646,38 @@ export default function ChatArea({
 
               {/* Messages */}
               <div className="space-y-0.5">
-                {messages.map((message, index) => {
-                  const prevMessage = index > 0 ? messages[index - 1] : null;
-                  const showAvatar: boolean =
-                    index === 0 ||
-                    !!(prevMessage &&
-                      'user' in prevMessage &&
-                      prevMessage.user &&
-                      'user' in message &&
-                      message.user &&
-                      prevMessage.user.id !== message.user.id);
+                {(() => {
+                  // Filter out "Video submission" messages
+                  const filteredMessages = messages.filter((message) => {
+                    if ('content' in message && message.content === 'Video submission') {
+                      return false;
+                    }
+                    return true;
+                  });
+                  
+                  return filteredMessages.map((message, index) => {
+                    const prevMessage = index > 0 ? filteredMessages[index - 1] : null;
+                    const showAvatar: boolean =
+                      index === 0 ||
+                      !!(prevMessage &&
+                        'user' in prevMessage &&
+                        prevMessage.user &&
+                        'user' in message &&
+                        message.user &&
+                        prevMessage.user.id !== message.user.id);
 
-                  const isFailed = 'failed' in message && message.failed;
-                  const tempId = 'tempId' in message ? message.tempId : undefined;
-                  const messageWithRetry = isFailed
-                    ? {
-                        ...message,
-                        onRetry: () => handleRetry(tempId || ''),
-                      }
-                    : message;
+                    const isFailed = 'failed' in message && message.failed;
+                    const tempId = 'tempId' in message ? message.tempId : undefined;
+                    const messageWithRetry = isFailed
+                      ? {
+                          ...message,
+                          onRetry: () => handleRetry(tempId || ''),
+                        }
+                      : message;
 
-                  if (!message || !('id' in message) || !('user' in message)) {
-                    return null;
-                  }
+                    if (!message || !('id' in message) || !('user' in message)) {
+                      return null;
+                    }
 
                   return (
                     <Message
@@ -682,7 +691,8 @@ export default function ChatArea({
                       showAvatar={showAvatar}
                     />
                   );
-                })}
+                });
+                })()}
               </div>
               <div ref={messagesEndRef} className="h-1" />
             </>
@@ -731,21 +741,32 @@ export default function ChatArea({
         const isRestrictedChannel = isLecturesChannel || isProjectsChannel;
         const canSendMessages = !isRestrictedChannel || isLecturer;
 
-        // For projects channel, show plus button for everyone (lecturers and students)
+        // For projects channel, show plus button only for lecturers
         if (isProjectsChannel) {
-          return (
-            <div className="px-4 py-3 border-t border-gray-700 bg-gray-900">
-              <button
-                onClick={() => setShowVideoUploadDialog(true)}
-                className="w-12 h-12 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 text-white rounded-full transition-colors shadow-lg hover:shadow-xl hover:scale-105"
-                title="Submit Video Project"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </button>
-            </div>
-          );
+          if (isLecturer) {
+            return (
+              <div className="px-4 py-3 border-t border-gray-700 bg-gray-900">
+                <button
+                  onClick={() => setShowVideoUploadDialog(true)}
+                  className="w-12 h-12 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 text-white rounded-full transition-colors shadow-lg hover:shadow-xl hover:scale-105"
+                  title="Create Video Project"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+              </div>
+            );
+          } else {
+            // For non-lecturers, show a message indicating they can't create projects
+            return (
+              <div className="px-4 py-3 border-t border-gray-700 bg-gray-900">
+                <div className="text-center text-gray-400 text-sm">
+                  Only the course lecturer can create projects
+                </div>
+              </div>
+            );
+          }
         }
 
         return (

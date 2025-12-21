@@ -144,8 +144,13 @@ export default function VideoSubmissionDialog({
       // Use the first link as the primary video URL for backward compatibility
       const primaryVideoUrl = Object.values(videoLinks)[0] || null;
 
-      // Create a simple message content (for display purposes)
-      const messageContent = message.trim() || 'Video submission';
+      // Require a message from the user
+      const messageContent = message.trim();
+      if (!messageContent) {
+        setErrors({ submit: 'Please provide a message with your submission' });
+        setIsSubmitting(false);
+        return;
+      }
 
       console.log('Creating message:', { content: messageContent, replyTo: projectId });
 

@@ -547,7 +547,7 @@ export async function POST(
     if (!sanitizedContent && (!attachments || attachments.length === 0)) {
       sanitizedContent = 'Message'; // Fallback for empty messages
     } else if (!sanitizedContent && attachments && attachments.length > 0) {
-      sanitizedContent = 'Video submission'; // Default for attachment-only messages
+      sanitizedContent = 'Submission'; // Default for attachment-only messages (changed from 'Video submission')
     }
 
     // Verify enrollment before inserting (for debugging)
