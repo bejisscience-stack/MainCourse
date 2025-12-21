@@ -50,7 +50,13 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
 
   // Fetch messages from API with optimizations
   const fetchMessages = useCallback(async (before?: string, signal?: AbortSignal, retryCount = 0) => {
-    if (!channelId || isLoadingRef.current) return;
+    if (!channelId) return;
+    
+    // Prevent concurrent fetches for the same channel
+    if (isLoadingRef.current && !before) {
+      console.log('⏸️ Skipping fetch - already loading');
+      return;
+    }
 
     isLoadingRef.current = true;
     setIsLoading(true);
@@ -218,6 +224,7 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
     if (!enabled || !channelId) {
       setMessages([]);
       setError(null);
+      setIsLoading(false);
       messageIdsRef.current.clear();
       pendingMessagesRef.current.clear();
       return;
@@ -237,9 +244,15 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
     const abortController = new AbortController();
     fetchAbortRef.current = abortController;
 
-    fetchMessages(undefined, abortController.signal);
+    // Small delay to ensure UI updates before fetch (prevents flicker)
+    const timeoutId = setTimeout(() => {
+      if (!abortController.signal.aborted) {
+        fetchMessages(undefined, abortController.signal);
+      }
+    }, channelChanged ? 50 : 0);
 
     return () => {
+      clearTimeout(timeoutId);
       if (fetchAbortRef.current) {
         fetchAbortRef.current.abort();
       }

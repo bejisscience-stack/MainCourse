@@ -156,18 +156,31 @@ export default function ChatArea({
     const isNewMessage = messageCount > prevMessageCountRef.current;
     prevMessageCountRef.current = messageCount;
 
-    if (isNewMessage && !userScrolledUpRef.current && messageCount > 0) {
-      scrollToBottom('smooth');
+    // Only auto-scroll if:
+    // 1. It's a new message (not initial load)
+    // 2. User hasn't scrolled up
+    // 3. Not currently loading initial messages
+    if (isNewMessage && !userScrolledUpRef.current && messageCount > 0 && !isLoading) {
+      // Small delay to ensure message is rendered
+      const timeoutId = setTimeout(() => {
+        scrollToBottom('smooth');
+      }, 50);
+      return () => clearTimeout(timeoutId);
     }
-  }, [messages.length, scrollToBottom]);
+  }, [messages.length, scrollToBottom, isLoading]);
 
   // Scroll to bottom on initial load or channel change
   useEffect(() => {
-    if (messages.length > 0 && !isLoading) {
-      // Use instant scroll for initial load
-      scrollToBottom('instant');
+    if (channel?.id && messages.length > 0 && !isLoading) {
+      // Use instant scroll for initial load, but wait a bit for DOM to update
+      const timeoutId = setTimeout(() => {
+        if (messagesContainerRef.current && messagesEndRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      }, 150);
+      return () => clearTimeout(timeoutId);
     }
-  }, [channel?.id, isLoading]);
+  }, [channel?.id, isLoading, messages.length]);
 
   // Add scroll listener
   useEffect(() => {
@@ -558,7 +571,7 @@ export default function ChatArea({
         }}
       >
         <div className="min-h-full flex flex-col justify-end py-4">
-          {isLoading && messages.length === 0 ? (
+          {isLoading && messages.length === 0 && channel?.id ? (
             // Loading skeleton
             <div className="space-y-4 px-4">
               {[...Array(8)].map((_, i) => (
@@ -572,7 +585,7 @@ export default function ChatArea({
                 </div>
               ))}
             </div>
-          ) : error && messages.length === 0 ? (
+          ) : error && messages.length === 0 && channel?.id ? (
             // Error state
             <div className="flex items-center justify-center flex-1 px-4">
               <div className="text-center text-gray-400 max-w-md">
@@ -598,7 +611,7 @@ export default function ChatArea({
                 </button>
               </div>
             </div>
-          ) : messages.length === 0 ? (
+          ) : messages.length === 0 && !isLoading && channel?.id ? (
             // Empty state
             <div className="flex items-center justify-center flex-1 px-4 text-gray-400">
               <div className="text-center">
