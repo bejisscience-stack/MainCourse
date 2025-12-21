@@ -261,6 +261,45 @@ export default function ProjectCard({
         }
       }
 
+      // Batch load all profiles for all submissions at once (more efficient and better for RLS)
+      const userIds = (submissionRecords || [])
+        .map((sub: any) => sub.messages?.user_id)
+        .filter(Boolean) as string[];
+      
+      const uniqueUserIds = [...new Set(userIds)];
+      const profilesMap = new Map<string, { id: string; username: string | null; email: string | null }>();
+      
+      if (uniqueUserIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, username, email')
+          .in('id', uniqueUserIds);
+        
+        if (profilesError) {
+          console.error('❌ Error batch loading profiles:', {
+            error: profilesError.message,
+            code: profilesError.code,
+            details: profilesError.details,
+            hint: profilesError.hint,
+            userIds: uniqueUserIds,
+          });
+        } else if (profiles) {
+          profiles.forEach((profile: any) => {
+            profilesMap.set(profile.id, profile);
+          });
+        }
+        
+        console.log('👥 Batch loaded profiles:', {
+          requested: uniqueUserIds.length,
+          loaded: profiles?.length || 0,
+          profilesMap: Array.from(profilesMap.entries()).map(([id, p]) => ({
+            id,
+            username: p.username,
+            hasEmail: !!p.email,
+          })),
+        });
+      }
+
       // Transform submission records to message format
       const transformedSubmissions = await Promise.all(
         (submissionRecords || []).map(async (sub: any) => {
@@ -268,25 +307,38 @@ export default function ProjectCard({
 
           const msg = sub.messages;
           
-          // Get user profile
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, username, email')
-            .eq('id', msg.user_id)
-            .single();
+          // Get user profile from the batch-loaded map
+          const profile = profilesMap.get(msg.user_id);
 
           // Use normalizeProfileUsername to get username from profiles table
-          const username = profile ? normalizeProfileUsername(profile) : 'User';
+          // This function handles fallbacks: username -> email prefix -> 'User'
+          let username = profile ? normalizeProfileUsername(profile) : 'User';
           
-          // Debug log if username is missing
-          if (!profile || !profile.username || username === 'User') {
-            console.warn(`⚠️ Username issue in ProjectCard for submission ${sub.id}:`, {
+          // If we got a profile but username is still 'User', it means both username and email are missing
+          if (profile && username === 'User' && !profile.email) {
+            // Profile exists but has no username or email - this is a data issue
+            console.warn(`⚠️ Profile exists but has no username or email for user ${msg.user_id}`);
+          }
+          
+          // If no profile found in batch load, log it
+          if (!profile) {
+            console.warn(`⚠️ Profile not found in batch load for user ${msg.user_id} (submission ${sub.id})`);
+          }
+          
+          // Final check - if username is still 'User', log detailed info for debugging
+          if (username === 'User') {
+            console.warn(`⚠️ Username fallback to 'User' for submission ${sub.id}:`, {
               submissionId: sub.id,
               userId: msg.user_id,
               hasProfile: !!profile,
-              profileUsername: profile?.username,
+              profileData: profile ? {
+                id: profile.id,
+                username: profile.username,
+                email: profile.email ? '***' : null, // Don't log full email for privacy
+                hasEmail: !!profile.email,
+              } : null,
               normalizedUsername: username,
-              profileEmail: profile?.email,
+              wasInBatch: uniqueUserIds.includes(msg.user_id),
             });
           }
 
