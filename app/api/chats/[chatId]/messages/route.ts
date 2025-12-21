@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { createServerSupabaseClient, verifyTokenAndGetUser, createServiceRoleClient } from '@/lib/supabase-server';
 import { normalizeProfileUsername } from '@/lib/username';
 
 export const dynamic = 'force-dynamic';
@@ -165,12 +165,17 @@ export async function GET(
     // Fetch profiles separately for all unique user IDs
     const userIds = [...new Set(messages.map((msg: any) => msg.user_id))];
     
-    // Fetch profiles - RLS should allow viewing all profiles (migration 045)
+    // Fetch profiles - Use service role client to bypass RLS for profile fetching
+    // This is safe because we're only fetching public info (username, email) for users
+    // who have sent messages in channels the current user has access to
     const profileMap = new Map();
     
     if (userIds.length > 0) {
+      // Use service role client to bypass RLS for profile fetching
+      const serviceClient = createServiceRoleClient();
+      
       // Batch fetch all profiles
-      const { data: profiles, error: profilesError } = await supabase
+      const { data: profiles, error: profilesError } = await serviceClient
         .from('profiles')
         .select('id, username, email')
         .in('id', userIds);
@@ -186,10 +191,12 @@ export async function GET(
         console.log(`Successfully fetched ${profiles.length} profiles out of ${userIds.length} users`);
       } else {
         console.error('Failed to fetch profiles:', profilesError);
-        // Try individual fetches as fallback
+        // Try individual fetches as fallback (using service role client)
+        const serviceClient = createServiceRoleClient();
+        
         for (const userId of userIds) {
           try {
-            const { data: singleProfile, error: singleError } = await supabase
+            const { data: singleProfile, error: singleError } = await serviceClient
               .from('profiles')
               .select('id, username, email')
               .eq('id', userId)
@@ -218,6 +225,19 @@ export async function GET(
       const missingIds = userIds.filter(id => !profileMap.has(id));
       console.warn(`Warning: Failed to fetch profiles for ${missingIds.length} users:`, missingIds);
     }
+    
+    // Debug: Log profile data for debugging username issues
+    console.log('🔍 Profile fetch debug:', {
+      totalUserIds: userIds.length,
+      profilesFetched: profileMap.size,
+      profileDetails: Array.from(profileMap.entries()).map(([id, profile]: [string, any]) => ({
+        userId: id,
+        username: profile?.username,
+        email: profile?.email,
+        hasUsername: !!profile?.username,
+        usernameLength: profile?.username?.length || 0,
+      })),
+    });
 
     // Fetch attachments for all messages
     const messageIds = (messages || []).map((msg: any) => msg.id);
@@ -275,6 +295,18 @@ export async function GET(
     const transformedMessages = (messages || []).map((msg: any) => {
       const profile = profileMap.get(msg.user_id);
       const username = profile ? normalizeProfileUsername(profile) : 'User';
+      
+      // Debug log for username transformation
+      if (!profile || !profile.username || username === 'User') {
+        console.warn(`⚠️ Username issue for message ${msg.id}:`, {
+          messageId: msg.id,
+          userId: msg.user_id,
+          hasProfile: !!profile,
+          profileUsername: profile?.username,
+          normalizedUsername: username,
+          profileEmail: profile?.email,
+        });
+      }
       
       const messageAttachments = attachmentsMap.get(msg.id) || [];
       const replyPreview = msg.reply_to_id ? replyPreviewsMap.get(msg.reply_to_id) : undefined;
@@ -610,8 +642,11 @@ export async function POST(
     }
 
     // Fetch user profile separately with better error handling
+    // Use service role client to bypass RLS
+    const serviceClient = createServiceRoleClient();
+    
     let profile = null;
-    const { data: profileData, error: profileError } = await supabase
+    const { data: profileData, error: profileError } = await serviceClient
       .from('profiles')
       .select('id, username, email')
       .eq('id', user.id)
@@ -619,8 +654,17 @@ export async function POST(
 
     if (profileData && !profileError) {
       profile = profileData;
+      // Debug log if username is missing
+      if (!profile.username || profile.username.trim() === '') {
+        console.warn(`⚠️ Profile for user ${user.id} exists but username is empty. Email: ${profile.email}`);
+      }
     } else {
-      console.warn('Failed to fetch profile for message sender:', profileError);
+      console.error('❌ Failed to fetch profile for message sender:', {
+        userId: user.id,
+        error: profileError,
+        errorCode: profileError?.code,
+        errorMessage: profileError?.message,
+      });
       // Try to get user email from auth metadata if available
       // Note: We can't directly access auth.users, but we can use the user object
       // For now, we'll use a fallback
@@ -628,6 +672,18 @@ export async function POST(
 
     // Transform message with username from profiles table
     const username = profile ? normalizeProfileUsername(profile) : 'User';
+    
+    // Debug log for username transformation
+    if (!profile || !profile.username || username === 'User') {
+      console.warn(`⚠️ Username issue for new message from user ${user.id}:`, {
+        userId: user.id,
+        hasProfile: !!profile,
+        profileUsername: profile?.username,
+        normalizedUsername: username,
+        profileEmail: profile?.email,
+        userEmail: user.email,
+      });
+    }
 
     // Fetch attachments for this message
     let messageAttachments: { id: string; fileUrl: string; fileName: string; fileType: string; fileSize: number; mimeType: string; }[] = [];
@@ -659,7 +715,10 @@ export async function POST(
         .single();
       
       if (replyMessage) {
-        const { data: replyProfile } = await supabase
+        // Use service role client for reply profile fetch
+        const serviceClient = createServiceRoleClient();
+        
+        const { data: replyProfile } = await serviceClient
           .from('profiles')
           .select('id, username, email')
           .eq('id', replyMessage.user_id)

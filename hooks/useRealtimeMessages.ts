@@ -23,18 +23,36 @@ export async function prefetchProfiles(userIds: string[]) {
     return !cached || (now - cached.timestamp > CACHE_TTL);
   });
 
-  if (uncachedIds.length === 0) return;
+  if (uncachedIds.length === 0) {
+    console.log('📦 All profiles already cached for:', userIds);
+    return;
+  }
+
+  console.log('📥 Prefetching profiles for user IDs:', uncachedIds);
 
   try {
-    const { data: profiles } = await supabase
+    const { data: profiles, error } = await supabase
       .from('profiles')
       .select('id, username, email')
       .in('id', uncachedIds);
 
-    if (profiles) {
+    if (profiles && !error) {
+      console.log(`✅ Prefetched ${profiles.length} profiles out of ${uncachedIds.length} requested`);
+      
       profiles.forEach(profile => {
         // Always use profiles.username (required field in database)
         const username = normalizeProfileUsername(profile);
+        
+        // Debug log for missing usernames
+        if (!profile.username || profile.username.trim() === '' || username === 'User') {
+          console.warn(`⚠️ Prefetched profile with missing username:`, {
+            userId: profile.id,
+            profileUsername: profile.username,
+            normalizedUsername: username,
+            profileEmail: profile.email,
+          });
+        }
+        
         profileCache.set(profile.id, {
           username,
           email: profile.email,
@@ -42,9 +60,23 @@ export async function prefetchProfiles(userIds: string[]) {
           timestamp: now,
         });
       });
+      
+      // Log missing profiles
+      const fetchedIds = new Set(profiles.map(p => p.id));
+      const missingIds = uncachedIds.filter(id => !fetchedIds.has(id));
+      if (missingIds.length > 0) {
+        console.warn(`⚠️ Could not prefetch ${missingIds.length} profiles:`, missingIds);
+      }
+    } else {
+      console.error('❌ Failed to prefetch profiles:', {
+        error: error?.message,
+        errorCode: error?.code,
+        requestedCount: uncachedIds.length,
+        fetchedCount: profiles?.length || 0,
+      });
     }
   } catch (error) {
-    console.warn('Failed to prefetch profiles:', error);
+    console.error('❌ Exception prefetching profiles:', error);
   }
 }
 
@@ -73,6 +105,25 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
 
     if (profile && !error) {
       const username = normalizeProfileUsername(profile);
+      
+      // Debug log
+      if (!profile.username || profile.username.trim() === '' || username === 'User') {
+        console.warn(`⚠️ Profile fetch issue for user ${userId}:`, {
+          userId,
+          profileUsername: profile.username,
+          normalizedUsername: username,
+          profileEmail: profile.email,
+          hasError: !!error,
+          error: error?.message,
+        });
+      } else {
+        console.log(`✅ Fetched profile for user ${userId}:`, {
+          userId,
+          username,
+          profileEmail: profile.email,
+        });
+      }
+      
       profileCache.set(userId, {
         username,
         email: profile.email,
@@ -80,9 +131,16 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
         timestamp: Date.now(),
       });
       return username;
+    } else {
+      console.error(`❌ Failed to fetch profile for ${userId}:`, {
+        userId,
+        error: error?.message,
+        errorCode: error?.code,
+        hasProfile: !!profile,
+      });
     }
   } catch (err) {
-    console.warn(`Failed to fetch profile for ${userId}:`, err);
+    console.error(`❌ Exception fetching profile for ${userId}:`, err);
   }
 
   return 'User';

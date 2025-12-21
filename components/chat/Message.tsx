@@ -325,7 +325,7 @@ const Message = memo(function Message({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  (message.user?.username && message.user.username !== 'User' ? message.user.username.charAt(0) : 'U').toUpperCase()
+                  (message.user?.username ? message.user.username.charAt(0) : 'U').toUpperCase()
                 )}
             </div>
           ) : (
@@ -368,7 +368,7 @@ const Message = memo(function Message({
                   }}
                   title={message.user?.username || 'User'}
                 >
-                  {message.user?.username && message.user.username !== 'User' ? message.user.username : 'User'}
+                  {message.user?.username || 'User'}
                 </span>
                 
                 {/* User context menu */}

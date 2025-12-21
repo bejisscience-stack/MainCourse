@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { normalizeProfileUsername } from '@/lib/username';
 import VideoSubmissionDialog from './VideoSubmissionDialog';
 import SubmissionReviewDialog from './SubmissionReviewDialog';
 
@@ -240,7 +241,20 @@ export default function ProjectCard({
             .eq('id', msg.user_id)
             .single();
 
-          const username = profile?.username || 'User';
+          // Use normalizeProfileUsername to get username from profiles table
+          const username = profile ? normalizeProfileUsername(profile) : 'User';
+          
+          // Debug log if username is missing
+          if (!profile || !profile.username || username === 'User') {
+            console.warn(`⚠️ Username issue in ProjectCard for submission ${sub.id}:`, {
+              submissionId: sub.id,
+              userId: msg.user_id,
+              hasProfile: !!profile,
+              profileUsername: profile?.username,
+              normalizedUsername: username,
+              profileEmail: profile?.email,
+            });
+          }
 
           // Get attachments for this message
           const messageAttachments = attachmentsMap.get(msg.id) || [];

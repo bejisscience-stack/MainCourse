@@ -140,22 +140,54 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
 
       const { messages: fetchedMessages } = responseData;
 
+      // Debug: Log fetched messages to see what usernames we're getting
+      console.log('📨 Fetched messages from API:', {
+        count: fetchedMessages.length,
+        messages: fetchedMessages.map((m: Message) => ({
+          id: m.id,
+          userId: m.user.id,
+          username: m.user.username,
+          hasUsername: !!m.user.username && m.user.username !== 'User',
+        })),
+      });
+
       // Prefetch profiles for faster future lookups
       const userIds = Array.from(new Set(fetchedMessages.map((m: Message) => m.user.id))) as string[];
-      prefetchProfiles(userIds);
+      console.log('👥 Prefetching profiles for user IDs:', userIds);
+      
+      // Prefetch profiles and then update messages with correct usernames
+      await prefetchProfiles(userIds);
+      
+      // Update messages with usernames from cache if they were 'User'
+      const updatedMessages = fetchedMessages.map((m: Message) => {
+        if (!m.user.username || m.user.username === 'User') {
+          const cachedUsername = getCachedUsername(m.user.id);
+          if (cachedUsername && cachedUsername !== 'User') {
+            console.log(`🔄 Updating message ${m.id} username from 'User' to '${cachedUsername}'`);
+            return {
+              ...m,
+              user: {
+                ...m.user,
+                username: cachedUsername,
+              },
+            };
+          }
+        }
+        return m;
+      });
 
       // Update message IDs set
-      fetchedMessages.forEach((m: Message) => messageIdsRef.current.add(m.id));
+      updatedMessages.forEach((m: Message) => messageIdsRef.current.add(m.id));
 
       if (before) {
         setMessages((prev) => {
           const existingIds = new Set(prev.map((m) => m.id));
-          const newMessages = fetchedMessages.filter((m: Message) => !existingIds.has(m.id));
+          const newMessages = updatedMessages.filter((m: Message) => !existingIds.has(m.id));
           return [...newMessages, ...prev];
         });
       } else {
-        messageIdsRef.current = new Set(fetchedMessages.map((m: Message) => m.id));
-        setMessages(fetchedMessages);
+        messageIdsRef.current = new Set(updatedMessages.map((m: Message) => m.id));
+        setMessages(updatedMessages);
       }
 
       setHasMore(fetchedMessages.length === 50);
@@ -216,18 +248,46 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
 
   // Handle new real-time messages (optimized for instant updates)
   const handleNewMessage = useCallback((message: Message) => {
+    // Debug: Log realtime message updates
+    if (message.user.username && message.user.username !== 'User') {
+      console.log('✅ Realtime message with username:', {
+        messageId: message.id,
+        userId: message.user.id,
+        username: message.user.username,
+      });
+    } else if (message.user.username === 'User') {
+      console.warn('⚠️ Realtime message with placeholder username:', {
+        messageId: message.id,
+        userId: message.user.id,
+      });
+    }
+    
     setMessages((prev) => {
       // Check if message already exists
       const existingIdx = prev.findIndex((m) => m.id === message.id);
       if (existingIdx !== -1) {
         // Update existing message (e.g., when profile loads)
         const existing = prev[existingIdx];
-        // Only update if the new message has more data
+        // Always update if username changed from 'User' to actual username
+        const usernameImproved = 
+          (existing.user.username === 'User' || !existing.user.username) &&
+          message.user.username &&
+          message.user.username !== 'User';
+        
+        // Only update if the new message has more data OR username improved
         if (
+          usernameImproved ||
           message.user.username !== 'User' ||
           message.replyPreview ||
           message.attachments
         ) {
+          if (usernameImproved) {
+            console.log('🔄 Updating message with improved username:', {
+              messageId: message.id,
+              oldUsername: existing.user.username,
+              newUsername: message.user.username,
+            });
+          }
           return prev.map((m, idx) => (idx === existingIdx ? { ...existing, ...message } : m));
         }
         return prev;
@@ -277,6 +337,51 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
     onMessageUpdate: handleMessageUpdate,
     onMessageDelete: handleMessageDelete,
   });
+
+  // Periodically update messages with usernames from cache (in case profiles load after messages)
+  useEffect(() => {
+    if (!enabled || !channelId || messages.length === 0) return;
+
+    const updateUsernamesFromCache = () => {
+      setMessages((prev) => {
+        let updated = false;
+        const updatedMessages = prev.map((m) => {
+          if ((!m.user.username || m.user.username === 'User') && m.user.id) {
+            const cachedUsername = getCachedUsername(m.user.id);
+            if (cachedUsername && cachedUsername !== 'User') {
+              updated = true;
+              return {
+                ...m,
+                user: {
+                  ...m.user,
+                  username: cachedUsername,
+                },
+              };
+            }
+          }
+          return m;
+        });
+
+        if (updated) {
+          console.log('🔄 Updated messages with usernames from cache');
+        }
+
+        return updated ? updatedMessages : prev;
+      });
+    };
+
+    // Update immediately
+    updateUsernamesFromCache();
+
+    // Then update every 2 seconds for a short period (profiles should load quickly)
+    const interval = setInterval(updateUsernamesFromCache, 2000);
+    const timeout = setTimeout(() => clearInterval(interval), 10000); // Stop after 10 seconds
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [enabled, channelId, messages.length]);
 
   // Add optimistic message with instant display
   const addPendingMessage = useCallback((
