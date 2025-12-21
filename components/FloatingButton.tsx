@@ -1,8 +1,11 @@
 'use client';
 
 import { memo, useCallback } from 'react';
+import { useI18n } from '@/contexts/I18nContext';
 
 function FloatingButton() {
+  const { t } = useI18n();
+  
   const scrollToEnroll = useCallback(() => {
     const videoSection = document.querySelector('[data-video-section]');
     if (videoSection) {
@@ -14,9 +17,9 @@ function FloatingButton() {
     <button
       onClick={scrollToEnroll}
       className="fixed bottom-6 right-6 z-50 bg-navy-900 text-white font-bold text-base md:text-lg px-6 md:px-8 py-3 md:py-4 rounded-full shadow-2xl hover:bg-navy-800 transition-all transform hover:scale-110 active:scale-95 flex items-center space-x-2"
-      aria-label="Enroll Now"
+      aria-label={t('home.enrollNow')}
     >
-      <span>Enroll Now</span>
+      <span>{t('home.enrollNow')}</span>
       <svg
         className="w-5 h-5"
         fill="none"

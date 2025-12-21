@@ -12,6 +12,7 @@ import { useCourses } from '@/hooks/useCourses';
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { useEnrollmentRequestStatus } from '@/hooks/useEnrollmentRequests';
 import useSWR from 'swr';
+import { useI18n } from '@/contexts/I18nContext';
 
 type FilterType = 'All' | 'Editing' | 'Content Creation' | 'Website Creation';
 
@@ -26,6 +27,7 @@ async function fetchLecturerCourses(userId: string): Promise<Set<string>> {
 
 export default function CoursesPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [filter, setFilter] = useState<FilterType>('All');
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -135,18 +137,18 @@ export default function CoursesPage() {
     }
 
     if (userRole === 'lecturer') {
-      setError('Lecturers cannot enroll in courses. Please use your dashboard to manage your courses.');
+      setError(t('courses.lecturersCannotEnroll'));
       return;
     }
 
     if (lecturerCourseIds.has(courseId)) {
-      setError('You cannot enroll in your own course.');
+      setError(t('courses.cannotEnrollOwnCourse'));
       return;
     }
 
     // Prevent duplicate enrollment attempts
     if (enrolledCourseIds.has(courseId)) {
-      setError('You are already enrolled in this course');
+      setError(t('courses.alreadyEnrolled'));
       return;
     }
 
@@ -173,7 +175,7 @@ export default function CoursesPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to create enrollment request');
+        throw new Error(result.error || t('courses.errorRequestingEnrollment'));
       }
 
       // Success - revalidate enrollment requests
@@ -199,28 +201,33 @@ export default function CoursesPage() {
           {/* Header */}
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold text-navy-900 mb-4">
-              Our Courses
+              {t('courses.ourCourses')}
             </h1>
             <p className="text-lg text-navy-600 max-w-2xl mx-auto">
-              Discover our comprehensive collection of courses designed to help you master new skills
+              {t('courses.discoverCourses')}
             </p>
           </div>
 
           {/* Filter Buttons */}
           <div className="flex flex-wrap justify-center gap-3 mb-8">
-            {courseTypes.map((type) => (
-              <button
-                key={type}
-                onClick={() => setFilter(type)}
-                className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
-                  filter === type
-                    ? 'bg-navy-900 text-white'
-                    : 'bg-navy-50 text-navy-700 hover:bg-navy-100'
-                }`}
-              >
-                {type}
-              </button>
-            ))}
+            {courseTypes.map((type) => {
+              const filterKey = type === 'All' ? 'filterAll' : 
+                               type === 'Editing' ? 'filterEditing' :
+                               type === 'Content Creation' ? 'filterContentCreation' : 'filterWebsiteCreation';
+              return (
+                <button
+                  key={type}
+                  onClick={() => setFilter(type)}
+                  className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
+                    filter === type
+                      ? 'bg-navy-900 text-white'
+                      : 'bg-navy-50 text-navy-700 hover:bg-navy-100'
+                  }`}
+                >
+                  {t(`courses.${filterKey}`)}
+                </button>
+              );
+            })}
           </div>
 
           {/* Loading State with Skeleton */}
@@ -248,7 +255,7 @@ export default function CoursesPage() {
           {error && !isLoading && (
             <div className="text-center py-12">
               <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg inline-block max-w-md">
-                <p className="font-semibold">Error loading courses</p>
+                <p className="font-semibold">{t('home.errorLoadingCourses')}</p>
                 <p className="text-sm mt-1 mb-4">{error}</p>
                 <button
                   onClick={() => {
@@ -257,7 +264,7 @@ export default function CoursesPage() {
                   }}
                   className="bg-navy-900 text-white px-4 py-2 rounded-lg font-semibold hover:bg-navy-800 transition-colors"
                 >
-                  Try Again
+                  {t('common.tryAgain')}
                 </button>
               </div>
             </div>
@@ -266,7 +273,7 @@ export default function CoursesPage() {
           {/* Bundles Section */}
           {bundles.length > 0 && (
             <div className="mb-12">
-              <h2 className="text-2xl md:text-3xl font-bold text-navy-900 mb-6">Course Bundles</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-navy-900 mb-6">{t('courses.courseBundles')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
                 {bundles.map((bundle) => {
                   const bundleCourses = bundle.course_bundle_items?.map((item: any) => item.courses).filter(Boolean) || [];
@@ -277,7 +284,7 @@ export default function CoursesPage() {
                     <div key={bundle.id} className="bg-white border-2 border-purple-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
                       <div className="mb-4">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide bg-purple-50 px-2 py-1 rounded">Bundle</span>
+                          <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide bg-purple-50 px-2 py-1 rounded">{t('courses.bundle')}</span>
                         </div>
                         <h3 className="text-lg font-bold text-navy-900 mb-2">{bundle.title}</h3>
                         {bundle.description && (
@@ -285,27 +292,27 @@ export default function CoursesPage() {
                         )}
                       </div>
                       <div className="mb-4">
-                        <p className="text-xs text-navy-500 mb-2">Includes {bundleCourses.length} course(s):</p>
+                        <p className="text-xs text-navy-500 mb-2">{t('courses.includesCourses', { count: bundleCourses.length })}</p>
                         <div className="space-y-1 max-h-32 overflow-y-auto">
                           {bundleCourses.map((course: any, idx: number) => (
                             <div key={idx} className="flex items-center text-sm text-navy-700">
                               <svg className="w-4 h-4 mr-1 text-purple-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                               </svg>
-                              <span className="truncate">{course?.title || 'Unknown Course'}</span>
+                              <span className="truncate">{course?.title || t('courses.unknownCourse')}</span>
                             </div>
                           ))}
                         </div>
                       </div>
                       <div className="flex items-center justify-between mb-4 pt-4 border-t border-purple-100">
                         <div>
-                          <p className="text-xs text-navy-500">Bundle Price</p>
+                          <p className="text-xs text-navy-500">{t('courses.bundlePrice')}</p>
                           <p className="text-xl font-bold text-navy-900">
                             ${bundle.price.toFixed(2)}
                           </p>
                           {totalOriginalPrice > bundle.price && (
                             <p className="text-xs text-navy-400 line-through">
-                              ${totalOriginalPrice.toFixed(2)} total
+                              ${totalOriginalPrice.toFixed(2)} {t('courses.total')}
                             </p>
                           )}
                         </div>
@@ -318,7 +325,7 @@ export default function CoursesPage() {
                           <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
-                          View Courses
+                          {t('courses.viewCourses')}
                         </a>
                       ) : (
                         <a
@@ -328,7 +335,7 @@ export default function CoursesPage() {
                           <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                           </svg>
-                          Enroll in Bundle
+                          {t('courses.enrollInBundle')}
                         </a>
                       )}
                     </div>
@@ -341,11 +348,11 @@ export default function CoursesPage() {
           {/* Courses Grid */}
           {!isLoading && !error && (
             <>
-              <h2 className="text-2xl md:text-3xl font-bold text-navy-900 mb-6">Individual Courses</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-navy-900 mb-6">{t('courses.individualCourses')}</h2>
               {filteredCourses.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-navy-600 text-lg">
-                    No courses found{filter !== 'All' ? ` in ${filter}` : ''}.
+                    {filter !== 'All' ? t('courses.noCoursesInCategory', { category: filter === 'Editing' ? t('courses.filterEditing') : filter === 'Content Creation' ? t('courses.filterContentCreation') : t('courses.filterWebsiteCreation') }) : t('courses.noCoursesFound')}
                   </p>
                 </div>
               ) : (

@@ -8,6 +8,7 @@ import { useCourses } from '@/hooks/useCourses';
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { useUser } from '@/hooks/useUser';
 import { supabase } from '@/lib/supabase';
+import { useI18n } from '@/contexts/I18nContext';
 
 export default function CoursesCarousel() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function CoursesCarousel() {
   const { user, role: userRole } = useUser();
   const { courses, isLoading, error: coursesError } = useCourses('All');
   const { enrolledCourseIds, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
+  const { t } = useI18n();
 
   // Reset currentIndex when courses change
   useEffect(() => {
@@ -109,10 +111,10 @@ export default function CoursesCarousel() {
       <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-navy-900 text-center mb-12">
-            Our Courses
+            {t('home.ourCourses')}
           </h2>
           <div className="flex items-center justify-center">
-            <div className="text-navy-700">Loading courses...</div>
+            <div className="text-navy-700">{t('home.loadingCourses')}</div>
           </div>
         </div>
       </section>
@@ -124,19 +126,19 @@ export default function CoursesCarousel() {
       <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-navy-900 text-center mb-12">
-            Our Courses
+            {t('home.ourCourses')}
           </h2>
           <div className="flex flex-col items-center justify-center">
             <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg max-w-md text-center">
-              <p className="font-semibold mb-2">Error loading courses</p>
+              <p className="font-semibold mb-2">{t('home.errorLoadingCourses')}</p>
               <p className="text-sm mb-4">
-                {coursesError.message || 'Failed to load courses. Please check your connection and try again.'}
+                {coursesError.message || t('home.errorMessage')}
               </p>
               <button
                 onClick={() => window.location.reload()}
                 className="bg-navy-900 text-white px-4 py-2 rounded-lg font-semibold hover:bg-navy-800 transition-colors"
               >
-                Retry
+                {t('common.retry')}
               </button>
             </div>
           </div>
@@ -159,7 +161,7 @@ export default function CoursesCarousel() {
     <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
       <div className="max-w-7xl mx-auto">
         <h2 className="text-3xl md:text-4xl font-bold text-navy-900 text-center mb-12">
-          Our Courses
+          {t('home.ourCourses')}
         </h2>
         
         <div className="relative">

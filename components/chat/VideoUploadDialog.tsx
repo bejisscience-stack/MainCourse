@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface VideoUploadDialogProps {
   isOpen: boolean;
@@ -42,6 +43,7 @@ export default function VideoUploadDialog({
   onSubmit,
   channelId,
 }: VideoUploadDialogProps) {
+  const { t } = useI18n();
   const [videoLink, setVideoLink] = useState('');
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [budget, setBudget] = useState('');
@@ -331,8 +333,8 @@ export default function VideoUploadDialog({
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Header */}
           <div>
-            <h2 className="text-2xl font-bold text-white mb-2">Submit Video Project</h2>
-            <p className="text-gray-400 text-sm">Fill in the details below to submit your project</p>
+            <h2 className="text-2xl font-bold text-white mb-2">{t('projects.createVideoProject')}</h2>
+            <p className="text-gray-400 text-sm">{t('projects.fillDetails')}</p>
           </div>
 
           {/* Success Message */}
@@ -342,7 +344,7 @@ export default function VideoUploadDialog({
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span>Project submitted successfully!</span>
+                <span>{t('projects.projectSubmittedSuccess')}</span>
               </div>
             </div>
           )}

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { useI18n } from '@/contexts/I18nContext';
 
 function LoginForm() {
   const router = useRouter();
@@ -15,6 +16,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const isSubmittingRef = useRef(false);
   const navigationStartedRef = useRef(false);
+  const { t } = useI18n();
 
   useEffect(() => {
     // Reset refs on mount to handle remounting scenarios
@@ -136,7 +138,7 @@ function LoginForm() {
       }
       
       // Provide more specific error messages
-      let errorMessage = 'Failed to sign in. Please check your credentials.';
+      let errorMessage = t('auth.signInFailed');
       
       if (err.message) {
         errorMessage = err.message;
@@ -148,11 +150,11 @@ function LoginForm() {
       
       // Handle specific Supabase errors
       if (err.status === 400 || err.message?.includes('Invalid login credentials')) {
-        errorMessage = 'Invalid email or password. Please try again.';
+        errorMessage = t('auth.invalidCredentials');
       } else if (err.message?.includes('network') || err.message?.includes('fetch')) {
-        errorMessage = 'Network error. Please check your internet connection.';
+        errorMessage = t('auth.networkError');
       } else if (err.message?.includes('timeout')) {
-        errorMessage = 'Request timed out. Please try again.';
+        errorMessage = t('auth.requestTimeout');
       }
       
       setError(errorMessage);
@@ -172,10 +174,10 @@ function LoginForm() {
             <span className="text-navy-900 font-bold text-2xl">Course</span>
           </Link>
           <h2 className="text-center text-3xl font-bold text-navy-900">
-            Welcome back
+            {t('auth.welcomeBack')}
           </h2>
           <p className="mt-2 text-center text-sm text-navy-600">
-            Sign in to your account to continue
+            {t('auth.signInToContinue')}
           </p>
         </div>
 
@@ -187,7 +189,7 @@ function LoginForm() {
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
                 <div>
-                  <p className="font-semibold">Sign in failed</p>
+                  <p className="font-semibold">{t('auth.signInFailed')}</p>
                   <p className="mt-1">{error}</p>
                 </div>
               </div>
@@ -197,7 +199,7 @@ function LoginForm() {
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-navy-700 mb-2">
-                Email address
+                {t('auth.emailAddress')}
               </label>
               <input
                 id="email"
@@ -208,13 +210,13 @@ function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="appearance-none relative block w-full px-4 py-3 bg-white border border-navy-200 placeholder-gray-400 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-colors"
-                placeholder="Enter your email"
+                placeholder={t('auth.enterEmail')}
               />
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-navy-700 mb-2">
-                Password
+                {t('auth.password')}
               </label>
               <input
                 id="password"
@@ -225,7 +227,7 @@ function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="appearance-none relative block w-full px-4 py-3 bg-white border border-navy-200 placeholder-gray-400 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-colors"
-                placeholder="Enter your password"
+                placeholder={t('auth.enterPassword')}
               />
             </div>
           </div>
@@ -236,15 +238,15 @@ function LoginForm() {
               disabled={loading}
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-navy-900 hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'Signing in...' : 'Sign in'}
+              {loading ? t('auth.signingIn') : t('auth.signIn')}
             </button>
           </div>
 
           <div className="text-center">
             <p className="text-sm text-navy-600">
-              Don't have an account?{' '}
+              {t('auth.dontHaveAccount')}{' '}
               <Link href="/signup" className="font-semibold text-navy-900 hover:text-navy-700 transition-colors">
-                Sign up
+                {t('nav.signUp')}
               </Link>
             </p>
           </div>
@@ -254,13 +256,17 @@ function LoginForm() {
   );
 }
 
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-50 to-white">
+      <div className="text-navy-900">Loading...</div>
+    </div>
+  );
+}
+
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-50 to-white">
-        <div className="text-navy-900">Loading...</div>
-      </div>
-    }>
+    <Suspense fallback={<LoadingFallback />}>
       <LoginForm />
     </Suspense>
   );

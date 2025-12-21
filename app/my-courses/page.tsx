@@ -12,9 +12,11 @@ import { useEnrollments } from '@/hooks/useEnrollments';
 import useSWR from 'swr';
 import type { Course } from '@/hooks/useCourses';
 import type { Course as CourseCardCourse } from '@/components/CourseCard';
+import { useI18n } from '@/contexts/I18nContext';
 
 export default function MyCoursesPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { user, role: userRole, isLoading: userLoading } = useUser();
   const { enrolledCourseIds, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
   const [enrolling, setEnrolling] = useState<string | null>(null);
@@ -127,7 +129,7 @@ export default function MyCoursesPage() {
         <div className="relative z-10 pt-24 pb-16 flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-navy-900"></div>
-            <p className="mt-4 text-navy-600">Loading your courses...</p>
+            <p className="mt-4 text-navy-600">{t('myCourses.loadingCourses')}</p>
           </div>
         </div>
       </main>
@@ -141,8 +143,8 @@ export default function MyCoursesPage() {
       <div className="relative z-10 pt-24 pb-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-navy-900 mb-2">My Courses</h1>
-            <p className="text-navy-600">See what you're enrolled in and discover new courses.</p>
+            <h1 className="text-3xl md:text-4xl font-bold text-navy-900 mb-2">{t('myCourses.title')}</h1>
+            <p className="text-navy-600">{t('myCourses.subtitle')}</p>
           </div>
 
           {error && (
@@ -152,7 +154,7 @@ export default function MyCoursesPage() {
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
                 <div className="flex-1">
-                  <p className="font-semibold">Error loading courses</p>
+                  <p className="font-semibold">{t('myCourses.errorLoadingCourses')}</p>
                   <p className="mt-1 text-sm">{error}</p>
                 </div>
               </div>
@@ -162,12 +164,12 @@ export default function MyCoursesPage() {
           {/* Enrolled courses */}
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-navy-900">Enrolled</h2>
-              <span className="text-sm text-navy-600">{enrolledCourses.length} course(s)</span>
+              <h2 className="text-xl font-semibold text-navy-900">{t('myCourses.enrolled')}</h2>
+              <span className="text-sm text-navy-600">{t('myCourses.courseCount', { count: enrolledCourses.length })}</span>
             </div>
             {enrolledCourses.length === 0 ? (
               <div className="bg-navy-50 border border-navy-100 rounded-lg p-6 text-center text-navy-700">
-                You haven't enrolled in any courses yet.
+                {t('myCourses.noEnrolledCourses')}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -180,7 +182,7 @@ export default function MyCoursesPage() {
                         href={`/courses/${course.id}/chat`}
                         className="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-semibold text-white bg-navy-900 rounded-lg hover:bg-navy-800 transition-colors"
                       >
-                        View course
+                        {t('myCourses.viewCourse')}
                       </a>
                     }
                   />
@@ -192,12 +194,12 @@ export default function MyCoursesPage() {
           {/* Discover */}
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-navy-900">Discover new courses</h2>
-              <span className="text-sm text-navy-600">{discoverCourses.length} available</span>
+              <h2 className="text-xl font-semibold text-navy-900">{t('myCourses.discoverNew')}</h2>
+              <span className="text-sm text-navy-600">{discoverCourses.length} {t('myCourses.available')}</span>
             </div>
             {discoverCourses.length === 0 ? (
               <div className="bg-navy-50 border border-navy-100 rounded-lg p-6 text-center text-navy-700">
-                You're enrolled in all available courses. Check back later for more!
+                {t('myCourses.enrolledInAll')}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -6,6 +6,7 @@ import PaymentDialog from './PaymentDialog';
 import { useEnrollmentRequestStatus } from '@/hooks/useEnrollmentRequests';
 import { useRealtimeEnrollmentRequests } from '@/hooks/useRealtimeEnrollmentRequests';
 import { supabase } from '@/lib/supabase';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface CourseEnrollmentCardProps {
   course: Course;
@@ -27,6 +28,7 @@ export default function CourseEnrollmentCard({
   showEnrollButton = true,
   userId,
 }: CourseEnrollmentCardProps) {
+  const { t } = useI18n();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const { request, hasPendingRequest, isLoading: isRequestLoading, mutate } = useEnrollmentRequestStatus(
     userId,
@@ -91,7 +93,7 @@ export default function CourseEnrollmentCard({
               d="M5 13l4 4L19 7"
             />
           </svg>
-          Go To Course
+          {t('enrollment.goToCourse')}
         </a>
       );
     }
@@ -121,7 +123,7 @@ export default function CourseEnrollmentCard({
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             ></path>
           </svg>
-          Pending Approval
+          {t('enrollment.pendingApproval')}
         </button>
       );
     }
@@ -152,7 +154,7 @@ export default function CourseEnrollmentCard({
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             ></path>
           </svg>
-          Requesting...
+          {t('enrollment.requesting')}
         </button>
       );
     }
@@ -177,7 +179,7 @@ export default function CourseEnrollmentCard({
             d="M12 4v16m8-8H4"
           />
         </svg>
-        Request Enrollment
+        {t('enrollment.requestEnrollment')}
       </button>
     );
   }, [buttonState, showEnrollButton]);
@@ -188,7 +190,7 @@ export default function CourseEnrollmentCard({
 
   const handlePaymentSubmit = useCallback(async (courseId: string, screenshotUrls: string[]) => {
     if (!userId) {
-      alert('Please log in to request enrollment');
+      alert(t('enrollment.pleaseLogin'));
       return;
     }
 
@@ -239,7 +241,7 @@ export default function CourseEnrollmentCard({
       setShowPaymentDialog(false);
       
       // Show success message
-      alert('Enrollment request submitted successfully! You will be notified when it is approved.');
+      alert(t('enrollment.enrollmentRequestSubmitted'));
       
       // Refresh page to show updated state
       window.location.reload();

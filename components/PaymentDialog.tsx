@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Course } from './CourseCard';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface PaymentDialogProps {
   course: Course;
@@ -35,6 +36,7 @@ function generateCourseCode(courseId: string): string {
 }
 
 export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: PaymentDialogProps) {
+  const { t } = useI18n();
   const [uploadedImages, setUploadedImages] = useState<Array<{ file: File; preview: string; url?: string }>>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     
     if (imageFiles.length === 0) {
-      setUploadError('Please select image files only');
+      setUploadError(t('payment.imageFilesOnly'));
       return;
     }
 
@@ -67,7 +69,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
     const oversizedFiles = imageFiles.filter(file => file.size > maxSize);
     
     if (oversizedFiles.length > 0) {
-      setUploadError(`Some files exceed the 5MB limit. Please compress them and try again.`);
+      setUploadError(t('payment.fileSizeExceeded'));
       return;
     }
 
@@ -97,7 +99,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
 
   const handleUpload = useCallback(async () => {
     if (uploadedImages.length === 0) {
-      setUploadError('Please upload at least one transaction screenshot');
+      setUploadError(t('payment.pleaseUploadScreenshot'));
       return;
     }
 
@@ -154,12 +156,12 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
         // If we get here, enrollment request was successful, dialog will be closed by onEnroll
       } catch (enrollError: any) {
         // If enrollment request fails, show error but keep dialog open so user can retry
-        setUploadError(enrollError.message || 'Failed to submit enrollment request. Payment screenshots were uploaded successfully. Please try again.');
+        setUploadError(enrollError.message || t('payment.failedToSubmit'));
         throw enrollError; // Re-throw so calling code knows it failed
       }
     } catch (err: any) {
       console.error('Upload error:', err);
-      setUploadError(err.message || 'Failed to upload images. Please try again.');
+      setUploadError(err.message || t('payment.failedToUpload'));
     } finally {
       setIsUploading(false);
     }
@@ -207,7 +209,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 z-10 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 transition-colors"
-          aria-label="Close dialog"
+          aria-label={t('common.close')}
         >
           <svg
             className="w-5 h-5"
@@ -227,8 +229,8 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
         <div className="p-6 space-y-6">
           {/* Header */}
           <div>
-            <h2 className="text-2xl font-bold text-navy-900 mb-2">Payment Instructions</h2>
-            <p className="text-gray-600">Please follow the instructions below to submit your enrollment request</p>
+            <h2 className="text-2xl font-bold text-navy-900 mb-2">{t('payment.paymentInstructions')}</h2>
+            <p className="text-gray-600">{t('payment.followInstructions')}</p>
           </div>
 
           {/* Course Information */}
@@ -241,11 +243,11 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-navy-200">
               <div>
-                <p className="text-sm text-gray-600">Creator</p>
+                <p className="text-sm text-gray-600">{t('payment.creator')}</p>
                 <p className="font-semibold text-navy-900">{course.creator}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-600">Price</p>
+                <p className="text-sm text-gray-600">{t('payment.price')}</p>
                 <p className="text-xl font-bold text-navy-900">{formattedPrice}</p>
               </div>
             </div>
@@ -253,25 +255,25 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
 
           {/* Account Number */}
           <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-600 mb-1">Account Number</p>
+            <p className="text-sm text-gray-600 mb-1">{t('payment.accountNumber')}</p>
             <p className="text-lg font-mono font-semibold text-gray-900">GE00BG0000000013231</p>
           </div>
 
           {/* Unique Course Code */}
           <div className="bg-navy-50 rounded-lg p-4">
-            <p className="text-sm text-gray-600 mb-1">Unique Course Code</p>
+            <p className="text-sm text-gray-600 mb-1">{t('payment.uniqueCourseCode')}</p>
             <p className="text-2xl font-mono font-bold text-navy-900 tracking-wider">{courseCode}</p>
-            <p className="text-xs text-gray-500 mt-1">Please include this code in your transaction reference</p>
+            <p className="text-xs text-gray-500 mt-1">{t('payment.includeCodeInReference')}</p>
           </div>
 
           {/* Payment Instructions Images */}
           <div className="space-y-4">
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-3">Payment Instructions:</p>
+              <p className="text-sm font-medium text-gray-700 mb-3">{t('payment.paymentInstructionsTitle')}</p>
               <div className="space-y-4">
                 {/* First Instruction Image - Account Number Entry */}
                 <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-                  <p className="text-xs font-medium text-gray-700 mb-3">Step 1: Enter Account Number</p>
+                  <p className="text-xs font-medium text-gray-700 mb-3">{t('payment.step1')}</p>
                   <div className="relative w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -286,7 +288,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
 
                 {/* Second Instruction Image - Payment Details */}
                 <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-                  <p className="text-xs font-medium text-gray-700 mb-3">Step 2: Complete Payment Details</p>
+                  <p className="text-xs font-medium text-gray-700 mb-3">{t('payment.step2')}</p>
                   <div className="relative w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -306,7 +308,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Upload Transaction Screenshot(s)
+                {t('payment.uploadScreenshots')}
               </label>
               <input
                 type="file"
@@ -315,13 +317,13 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
                 onChange={handleFileSelect}
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-navy-900 file:text-white hover:file:bg-navy-800 cursor-pointer"
               />
-              <p className="text-xs text-gray-500 mt-1">You can upload multiple images. Maximum 5MB per image.</p>
+              <p className="text-xs text-gray-500 mt-1">{t('payment.uploadMultipleImages')}</p>
             </div>
 
             {/* Uploaded Images Preview */}
             {uploadedImages.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">Uploaded Images ({uploadedImages.length}):</p>
+                <p className="text-sm font-medium text-gray-700">{t('payment.uploadedImages', { count: uploadedImages.length })}</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {uploadedImages.map((imageData, index) => (
                     <div key={index} className="relative group">
@@ -333,7 +335,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
                       <button
                         onClick={() => handleRemoveImage(index)}
                         className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        aria-label="Remove image"
+                        aria-label={t('payment.removeImage')}
                       >
                         <svg
                           className="w-4 h-4"
@@ -383,8 +385,8 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
                 />
               </svg>
               <div>
-                <p className="text-sm font-medium text-yellow-800">Processing Time</p>
-                <p className="text-sm text-yellow-700 mt-1">Your enrollment request will be sent to admin for approval after payment verification. Processing typically takes 2 hours.</p>
+                <p className="text-sm font-medium text-yellow-800">{t('payment.processingTime')}</p>
+                <p className="text-sm text-yellow-700 mt-1">{t('payment.processingTimeDescription')}</p>
               </div>
             </div>
           </div>
@@ -395,7 +397,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
               onClick={handleClose}
               className="px-6 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleUpload}
@@ -424,10 +426,10 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  <span>Uploading...</span>
+                  <span>{t('payment.uploading')}</span>
                 </>
               ) : (
-                <span>Submit Payment & Request Enrollment</span>
+                <span>{t('payment.submitPayment')}</span>
               )}
             </button>
           </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, memo, useMemo } from 'react';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface VideoSectionProps {
   studentCount: number;
@@ -8,6 +9,7 @@ interface VideoSectionProps {
 
 function VideoSection({ studentCount }: VideoSectionProps) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const { t } = useI18n();
 
   const formatCount = useMemo(() => {
     return (num: number) => num.toLocaleString('en-US');
@@ -28,7 +30,7 @@ function VideoSection({ studentCount }: VideoSectionProps) {
             <button
               onClick={() => setIsPlaying(true)}
               className="absolute inset-0 flex items-center justify-center group"
-              aria-label="Play video"
+              aria-label={t('videoSection.enrollNow')}
             >
               <div className="w-20 h-20 md:w-24 md:h-24 bg-white/95 rounded-full flex items-center justify-center shadow-xl transform transition-transform group-hover:scale-110 group-active:scale-95">
                 <svg
@@ -44,7 +46,7 @@ function VideoSection({ studentCount }: VideoSectionProps) {
             {/* Video placeholder - replace with actual video when ready */}
             {isPlaying && (
               <div className="absolute inset-0 flex items-center justify-center bg-black">
-                <p className="text-white text-lg">Video Player Placeholder</p>
+                <p className="text-white text-lg">{t('videoSection.videoPlayerPlaceholder')}</p>
               </div>
             )}
           </div>
@@ -53,7 +55,7 @@ function VideoSection({ studentCount }: VideoSectionProps) {
         {/* Enroll Button and Student Count */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
           <button className="w-full sm:w-auto bg-navy-900 text-white font-bold text-lg md:text-xl px-8 md:px-12 py-4 md:py-5 rounded-xl hover:bg-navy-800 transition-all transform hover:scale-105 shadow-lg">
-            Enroll Now
+            {t('videoSection.enrollNow')}
           </button>
           
           <div className="flex items-center space-x-2 text-navy-700">
@@ -69,7 +71,7 @@ function VideoSection({ studentCount }: VideoSectionProps) {
               <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
             <span className="font-semibold text-base md:text-lg">
-              <span className="text-navy-900">{formattedCount}+</span> Students Enrolled
+              <span className="text-navy-900">{formattedCount}+</span> {t('videoSection.studentsEnrolled')}
             </span>
           </div>
         </div>

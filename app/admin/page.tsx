@@ -7,6 +7,7 @@ import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
 import { useUser } from '@/hooks/useUser';
 import { useAdminEnrollmentRequests } from '@/hooks/useAdminEnrollmentRequests';
+import { useAdminBundleEnrollmentRequests } from '@/hooks/useAdminBundleEnrollmentRequests';
 import { useCourses } from '@/hooks/useCourses';
 import { supabase } from '@/lib/supabase';
 import type { EnrollmentRequest } from '@/hooks/useEnrollmentRequests';
@@ -47,6 +48,24 @@ export default function AdminDashboard() {
     rejectRequest,
     mutate: mutateRequests,
   } = useAdminEnrollmentRequests(requestStatusFilter);
+
+  // Fetch all bundle requests for stats
+  const {
+    requests: allBundleRequests,
+    isLoading: allBundleRequestsLoading,
+    error: allBundleRequestsError,
+    mutate: mutateAllBundleRequests,
+  } = useAdminBundleEnrollmentRequests(undefined);
+
+  // Fetch bundle enrollment requests with filter
+  const {
+    requests: bundleRequests,
+    isLoading: bundleRequestsLoading,
+    error: bundleFetchError,
+    approveRequest: approveBundleRequest,
+    rejectRequest: rejectBundleRequest,
+    mutate: mutateBundleRequests,
+  } = useAdminBundleEnrollmentRequests(requestStatusFilter);
   
   // Debug logging
   useEffect(() => {
@@ -279,6 +298,11 @@ export default function AdminDashboard() {
   const pendingCount = allRequests.filter(r => r.status === 'pending').length;
   const approvedCount = allRequests.filter(r => r.status === 'approved').length;
   const rejectedCount = allRequests.filter(r => r.status === 'rejected').length;
+  
+  // Calculate bundle stats
+  const bundlePendingCount = allBundleRequests.filter(r => r.status === 'pending').length;
+  const totalPendingCount = pendingCount + bundlePendingCount;
+  
   const totalCourses = courses.length;
 
   // Show loading while checking admin status via direct DB query
@@ -344,9 +368,9 @@ export default function AdminDashboard() {
               }`}
             >
               Enrollment Requests
-              {pendingCount > 0 && (
+              {totalPendingCount > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
-                  {pendingCount}
+                  {totalPendingCount}
                 </span>
               )}
             </button>
@@ -383,7 +407,7 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">Pending Requests</p>
-                      <p className="text-3xl font-bold text-yellow-600 mt-2">{pendingCount}</p>
+                      <p className="text-3xl font-bold text-yellow-600 mt-2">{totalPendingCount}</p>
                     </div>
                     <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
                       <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -447,7 +471,7 @@ export default function AdminDashboard() {
                     }}
                     className="px-6 py-3 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors"
                   >
-                    Review Pending Requests ({pendingCount})
+                    Review Pending Requests ({totalPendingCount})
                   </button>
                   <button
                     onClick={() => setActiveTab('courses')}
@@ -487,10 +511,12 @@ export default function AdminDashboard() {
                     Test DB
                   </button>
                   <button
-                    onClick={() => {
-                      mutateRequests();
-                      mutateAllRequests();
-                    }}
+                      onClick={() => {
+                        mutateRequests();
+                        mutateAllRequests();
+                        mutateBundleRequests();
+                        mutateAllBundleRequests();
+                      }}
                     className="px-4 py-2 bg-navy-900 text-white rounded-lg font-semibold hover:bg-navy-800 transition-colors text-sm flex items-center gap-2"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -625,6 +651,144 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               )}
+
+              {/* Bundle Enrollment Requests Section */}
+              <div className="mt-12">
+                <h2 className="text-2xl font-bold text-navy-900 mb-6">Bundle Enrollment Requests</h2>
+                
+                {(bundleFetchError) ? (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg text-center">
+                    <p className="font-semibold">Error loading bundle requests</p>
+                    <p className="text-sm mt-1">{bundleFetchError?.message}</p>
+                  </div>
+                ) : (bundleRequestsLoading) ? (
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-navy-900 mb-4"></div>
+                    <p className="text-navy-700">Loading bundle enrollment requests...</p>
+                  </div>
+                ) : bundleRequests.length === 0 ? (
+                  <div className="bg-purple-50 border border-purple-100 rounded-lg p-8 text-center text-purple-700">
+                    <p className="text-lg font-medium">
+                      No {statusFilter === 'all' ? '' : statusFilter} bundle enrollment requests found
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg shadow-sm border border-purple-200 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-purple-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              User
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Bundle
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Price
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Requested
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {bundleRequests.map((request) => {
+                            const isProcessing = processingId === request.id;
+                            return (
+                              <tr
+                                key={request.id}
+                                className="hover:bg-gray-50 cursor-pointer"
+                                onClick={() => {
+                                  // Could add bundle request dialog here if needed
+                                }}
+                              >
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {request.profiles?.username || request.profiles?.email?.split('@')[0] || 'Unknown User'}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {request.profiles?.email || 'N/A'}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {request.bundles?.title || 'Unknown Bundle'}
+                                  </div>
+                                  <div className="text-xs text-purple-600">Bundle</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    ${request.bundles?.price?.toFixed(2) || '0.00'}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {getStatusBadge(request.status)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {formatDate(request.created_at)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                  {request.status === 'pending' ? (
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          setProcessingId(request.id);
+                                          try {
+                                            await approveBundleRequest(request.id);
+                                            setSuccessMessage('Bundle enrollment request approved successfully');
+                                            setTimeout(() => setSuccessMessage(null), 3000);
+                                          } catch (err: any) {
+                                            setError(err.message || 'Failed to approve bundle request');
+                                          } finally {
+                                            setProcessingId(null);
+                                          }
+                                        }}
+                                        disabled={isProcessing}
+                                        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                      >
+                                        {isProcessing ? 'Processing...' : 'Approve'}
+                                      </button>
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          setProcessingId(request.id);
+                                          try {
+                                            await rejectBundleRequest(request.id);
+                                            setSuccessMessage('Bundle enrollment request rejected successfully');
+                                            setTimeout(() => setSuccessMessage(null), 3000);
+                                          } catch (err: any) {
+                                            setError(err.message || 'Failed to reject bundle request');
+                                          } finally {
+                                            setProcessingId(null);
+                                          }
+                                        }}
+                                        disabled={isProcessing}
+                                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                                      >
+                                        {isProcessing ? 'Processing...' : 'Reject'}
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400">No actions</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

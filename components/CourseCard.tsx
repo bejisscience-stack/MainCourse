@@ -2,6 +2,7 @@
 
 import { useState, memo, useCallback, useMemo, useEffect } from 'react';
 import PaymentDialog from './PaymentDialog';
+import { useI18n } from '@/contexts/I18nContext';
 
 export interface Course {
   id: string;
@@ -36,6 +37,7 @@ function CourseCard({
   showEnrollButton = true,
   customAction
 }: CourseCardProps) {
+  const { t } = useI18n();
   const [isVideoExpanded, setIsVideoExpanded] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
@@ -148,7 +150,7 @@ function CourseCard({
                   <button
                     onClick={handleThumbnailClick}
                     className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/20 transition-colors z-10"
-                    aria-label="Play intro video"
+                    aria-label={t('courses.playIntroVideo')}
                   >
                     <div className="w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-sm">
                       <svg
@@ -198,7 +200,7 @@ function CourseCard({
         <div className="flex flex-wrap items-center gap-1.5">
           {course.is_bestseller && (
             <span className="bg-teal-100 text-teal-700 text-[10px] font-semibold px-2 py-0.5 rounded">
-              Bestseller
+              {t('courseCard.bestseller')}
             </span>
           )}
           {course.rating > 0 && (
@@ -214,7 +216,7 @@ function CourseCard({
           )}
           {course.review_count > 0 && (
             <span className="bg-white border border-gray-200 text-gray-600 text-[10px] font-medium px-2 py-0.5 rounded">
-              {course.review_count.toLocaleString()} {course.review_count === 1 ? 'rating' : 'ratings'}
+              {course.review_count.toLocaleString()} {course.review_count === 1 ? t('courseCard.rating') : t('courseCard.ratings')}
             </span>
           )}
         </div>
@@ -261,7 +263,7 @@ function CourseCard({
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                Go To Course
+                {t('courses.goToCourse')}
               </a>
             ) : (
               <button
@@ -291,7 +293,7 @@ function CourseCard({
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       ></path>
                     </svg>
-                    Enrolling...
+                    {t('courses.enrolling')}
                   </>
                 ) : (
                   <>
@@ -308,7 +310,7 @@ function CourseCard({
                         d="M12 4v16m8-8H4"
                       />
                     </svg>
-                    Enroll Now
+                    {t('courses.enrollNow')}
                   </>
                 )}
               </button>
@@ -332,7 +334,7 @@ function CourseCard({
             <button
               onClick={handleCloseVideo}
               className="absolute top-4 right-4 z-10 w-8 h-8 bg-black/70 hover:bg-black/90 rounded-full flex items-center justify-center text-white transition-colors"
-              aria-label="Close video"
+              aria-label={t('courses.closeVideo')}
             >
               <svg
                 className="w-5 h-5"

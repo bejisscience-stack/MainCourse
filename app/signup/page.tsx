@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signUp } from '@/lib/auth';
+import { useI18n } from '@/contexts/I18nContext';
 
 export default function SignUpPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -36,7 +38,7 @@ export default function SignUpPage() {
         }, 2000);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to create account. Please try again.');
+      setError(err.message || t('auth.failedToCreateAccount'));
     } finally {
       setLoading(false);
     }
@@ -53,17 +55,17 @@ export default function SignUpPage() {
             <span className="text-navy-900 font-bold text-2xl">Course</span>
           </Link>
           <h2 className="text-center text-3xl font-bold text-navy-900">
-            Create your account
+            {t('auth.createAccount')}
           </h2>
           <p className="mt-2 text-center text-sm text-navy-600">
-            Start your journey to financial freedom today
+            {t('auth.startJourney')}
           </p>
         </div>
 
         {success ? (
           <div className="text-center space-y-4">
             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-              Account created successfully! Redirecting...
+              {t('auth.accountCreated')}
             </div>
           </div>
         ) : (
@@ -77,7 +79,7 @@ export default function SignUpPage() {
             <div className="space-y-4">
               <div>
                 <label htmlFor="username" className="block text-sm font-medium text-navy-700 mb-2">
-                  Username <span className="text-red-500">*</span>
+                  {t('auth.usernameRequired')}
                 </label>
                 <input
                   id="username"
@@ -90,18 +92,18 @@ export default function SignUpPage() {
                   minLength={3}
                   maxLength={30}
                   pattern="[a-zA-Z0-9_]+"
-                  title="Username must be 3-30 characters and contain only letters, numbers, and underscores"
+                  title={t('auth.usernameValidation')}
                   className="appearance-none relative block w-full px-4 py-3 bg-white border border-navy-200 placeholder-gray-400 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-colors"
-                  placeholder="Choose a unique username (3-30 chars, letters, numbers, _)"
+                  placeholder={t('auth.usernamePlaceholder')}
                 />
                 <p className="mt-1 text-xs text-navy-600">
-                  Username must be unique and can only contain letters, numbers, and underscores
+                  {t('auth.usernameHint')}
                 </p>
               </div>
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-navy-700 mb-2">
-                  Email address
+                  {t('auth.emailAddress')}
                 </label>
                 <input
                   id="email"
@@ -112,13 +114,13 @@ export default function SignUpPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none relative block w-full px-4 py-3 bg-white border border-navy-200 placeholder-gray-400 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-colors"
-                  placeholder="Enter your email"
+                  placeholder={t('auth.enterEmail')}
                 />
               </div>
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-navy-700 mb-2">
-                  Password
+                  {t('auth.password')}
                 </label>
                 <input
                   id="password"
@@ -130,13 +132,13 @@ export default function SignUpPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   minLength={6}
                   className="appearance-none relative block w-full px-4 py-3 bg-white border border-navy-200 placeholder-gray-400 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-colors"
-                  placeholder="Create a password (min. 6 characters)"
+                  placeholder={t('auth.password')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-navy-700 mb-2">
-                  Register as
+                  {t('auth.registerAs')}
                 </label>
                 <div className="flex gap-4">
                   <label className="flex items-center space-x-2 cursor-pointer">
@@ -148,7 +150,7 @@ export default function SignUpPage() {
                       onChange={(e) => setRole(e.target.value as 'student' | 'lecturer')}
                       className="w-4 h-4 text-navy-900 focus:ring-navy-500"
                     />
-                    <span className="text-navy-700">Student</span>
+                    <span className="text-navy-700">{t('auth.student')}</span>
                   </label>
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input
@@ -159,12 +161,12 @@ export default function SignUpPage() {
                       onChange={(e) => setRole(e.target.value as 'student' | 'lecturer')}
                       className="w-4 h-4 text-navy-900 focus:ring-navy-500"
                     />
-                    <span className="text-navy-700">Lecturer</span>
+                    <span className="text-navy-700">{t('auth.lecturer')}</span>
                   </label>
                 </div>
                 {role === 'lecturer' && (
                   <p className="mt-2 text-sm text-navy-600">
-                    As a lecturer, you'll be able to create and manage your own courses.
+                    {t('auth.lecturerHint')}
                   </p>
                 )}
               </div>
@@ -176,15 +178,15 @@ export default function SignUpPage() {
                 disabled={loading}
                 className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-navy-900 hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {loading ? 'Creating account...' : 'Sign up'}
+                {loading ? t('auth.creatingAccount') : t('nav.signUp')}
               </button>
             </div>
 
             <div className="text-center">
               <p className="text-sm text-navy-600">
-                Already have an account?{' '}
+                {t('auth.alreadyHaveAccount')}{' '}
                 <Link href="/login" className="font-semibold text-navy-900 hover:text-navy-700 transition-colors">
-                  Sign in
+                  {t('auth.signIn')}
                 </Link>
               </p>
             </div>

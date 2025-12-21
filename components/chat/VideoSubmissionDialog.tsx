@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface VideoSubmissionDialogProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export default function VideoSubmissionDialog({
   channelId,
   platforms,
 }: VideoSubmissionDialogProps) {
+  const { t } = useI18n();
   // Store links for each platform
   const [platformLinks, setPlatformLinks] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
@@ -93,7 +95,7 @@ export default function VideoSubmissionDialog({
     });
 
     if (!hasAtLeastOneLink) {
-      newErrors.video = 'Please provide at least one video link for a platform';
+      newErrors.video = t('videoSubmission.pleaseProvideLink');
     }
 
     // Validate each link that is provided
@@ -216,7 +218,7 @@ export default function VideoSubmissionDialog({
       }
       
       if (!project) {
-        throw new Error('Project not found. Please make sure you are replying to a valid project.');
+        throw new Error(t('videoSubmission.projectNotFound'));
       }
 
       console.log('Creating submission record:', {
@@ -302,7 +304,7 @@ export default function VideoSubmissionDialog({
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center text-gray-300 transition-colors"
-          aria-label="Close dialog"
+          aria-label={t('videoSubmission.closeDialog')}
         >
           <svg
             className="w-5 h-5"
@@ -322,8 +324,8 @@ export default function VideoSubmissionDialog({
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Header */}
           <div>
-            <h2 className="text-2xl font-bold text-white mb-2">Submit Your Video</h2>
-            <p className="text-gray-400 text-sm">Submit video links for this project</p>
+            <h2 className="text-2xl font-bold text-white mb-2">{t('videoSubmission.submitYourVideo')}</h2>
+            <p className="text-gray-400 text-sm">{t('videoSubmission.submitVideoLinks')}</p>
           </div>
 
           {/* Success Message */}
@@ -333,7 +335,7 @@ export default function VideoSubmissionDialog({
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span>Video submitted successfully!</span>
+                <span>{t('videoSubmission.videoSubmittedSuccess')}</span>
               </div>
             </div>
           )}
@@ -349,16 +351,16 @@ export default function VideoSubmissionDialog({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-3">
-                Video Links by Platform
+                {t('videoSubmission.videoLinksByPlatform')}
               </label>
               <p className="text-xs text-gray-500 mb-4">
-                Provide video links for each platform. At least one platform link is required.
+                {t('videoSubmission.provideVideoLinks')}
               </p>
               <div className="space-y-3">
                 {platforms.map((platform) => (
                   <div key={platform}>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      {PLATFORM_NAMES[platform.toLowerCase()] || platform} Video Link
+                      {t('videoSubmission.videoLink', { platform: PLATFORM_NAMES[platform.toLowerCase()] || platform })}
                     </label>
                     <input
                       type="url"
@@ -382,12 +384,12 @@ export default function VideoSubmissionDialog({
           {/* Optional Message */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Message <span className="text-gray-500">(Optional)</span>
+              {t('videoSubmission.messageOptional')}
             </label>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Add any additional notes about your submission..."
+              placeholder={t('videoSubmission.addNotes')}
               rows={3}
               className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
             />
@@ -401,7 +403,7 @@ export default function VideoSubmissionDialog({
               disabled={isSubmitting}
               className="px-6 py-2 text-sm font-semibold text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -430,12 +432,12 @@ export default function VideoSubmissionDialog({
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  <span>Submitting...</span>
+                  <span>{t('videoSubmission.submitting')}</span>
                 </>
               ) : submitSuccess ? (
-                <span>Submitted!</span>
+                <span>{t('videoSubmission.submitted')}</span>
               ) : (
-                <span>Submit Video</span>
+                <span>{t('projects.submitVideo')}</span>
               )}
             </button>
           </div>

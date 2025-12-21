@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { normalizeProfileUsername } from '@/lib/username';
 import VideoSubmissionDialog from './VideoSubmissionDialog';
 import SubmissionReviewDialog from './SubmissionReviewDialog';
+import { useI18n } from '@/contexts/I18nContext';
 
 export interface ProjectCriteria {
   id: string;
@@ -51,6 +52,7 @@ export default function ProjectCard({
   channelId,
   onSubmission,
 }: ProjectCardProps) {
+  const { t } = useI18n();
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSubmissionDialog, setShowSubmissionDialog] = useState(false);
   const [submissions, setSubmissions] = useState<any[]>([]);
@@ -544,7 +546,7 @@ export default function ProjectCard({
               <div>
                 <h3 className="text-white font-semibold">{project.name}</h3>
                 <p className="text-gray-400 text-xs">
-                  by {project.submittedBy.username} • {new Date(project.timestamp).toLocaleDateString()}
+                  {t('projects.by')} {project.submittedBy.username} • {new Date(project.timestamp).toLocaleDateString()}
                 </p>
               </div>
             </div>
@@ -553,7 +555,7 @@ export default function ProjectCard({
           <button
             onClick={handleExpand}
             className="flex-shrink-0 text-gray-400 hover:text-white transition-colors"
-            title={isExpanded ? 'Collapse' : 'Expand'}
+            title={isExpanded ? t('projects.collapse') : t('projects.expand')}
           >
             <svg
               className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
@@ -572,17 +574,17 @@ export default function ProjectCard({
             {/* Project Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Budget</p>
+                <p className="text-xs text-gray-500 mb-1">{t('projects.budget')}</p>
                 <p className="text-white font-semibold">${project.budget.toFixed(2)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 mb-1">View Count Range</p>
+                <p className="text-xs text-gray-500 mb-1">{t('projects.viewCountRange')}</p>
                 <p className="text-white font-semibold">
-                  {project.minViews.toLocaleString()} - {project.maxViews.toLocaleString()} views
+                  {project.minViews.toLocaleString()} - {project.maxViews.toLocaleString()} {t('projects.views')}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 mb-1">Platforms</p>
+                <p className="text-xs text-gray-500 mb-1">{t('projects.platforms')}</p>
                 <div className="flex flex-wrap gap-2">
                   {project.platforms.map((platform) => (
                     <span
@@ -596,14 +598,14 @@ export default function ProjectCard({
               </div>
               {project.videoLink && (
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Reference Video</p>
+                  <p className="text-xs text-gray-500 mb-1">{t('projects.referenceVideo')}</p>
                   <a
                     href={project.videoLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-indigo-400 hover:text-indigo-300 text-sm underline"
                   >
-                    View Video
+                    {t('projects.viewVideo')}
                   </a>
                 </div>
               )}
@@ -611,14 +613,14 @@ export default function ProjectCard({
 
             {/* Full Description */}
             <div>
-              <p className="text-xs text-gray-500 mb-2">Description</p>
+              <p className="text-xs text-gray-500 mb-2">{t('projects.description')}</p>
               <p className="text-gray-300 text-sm whitespace-pre-wrap">{project.description}</p>
             </div>
 
             {/* Criteria Section */}
             {projectCriteria.length > 0 && (
               <div>
-                <p className="text-xs text-gray-500 mb-2">Criteria</p>
+                <p className="text-xs text-gray-500 mb-2">{t('projects.criteria')}</p>
                 <div className="space-y-2">
                   {projectCriteria.map((criterion) => (
                     <div
@@ -633,7 +635,7 @@ export default function ProjectCard({
                   ))}
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  RPM = Rate Per Match (payment amount if student video matches this criteria)
+                  {t('projects.rpmExplanation')}
                 </p>
               </div>
             )}
@@ -642,23 +644,23 @@ export default function ProjectCard({
             <div className="pt-4 border-t border-gray-700">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-white font-semibold text-sm">
-                  Submissions {submissions.length > 0 && `(${submissions.length})`}
+                  {t('projects.submissions')} {submissions.length > 0 && `(${submissions.length})`}
                 </h4>
                 {canSubmit && (
                   <button
                     onClick={() => setShowSubmissionDialog(true)}
                     className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors"
                   >
-                    Submit Video
+                    {t('projects.submitVideo')}
                   </button>
                 )}
               </div>
 
               {isLoadingSubmissions ? (
-                <div className="text-center py-4 text-gray-400 text-sm">Loading submissions...</div>
+                <div className="text-center py-4 text-gray-400 text-sm">{t('projects.loadingSubmissions')}</div>
               ) : submissions.length === 0 ? (
                 <div className="text-center py-4 text-gray-500 text-sm">
-                  {canSubmit ? 'No submissions yet. Be the first to submit!' : 'No submissions yet.'}
+                  {canSubmit ? t('projects.beFirstToSubmit') : t('projects.noSubmissionsYet')}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -816,7 +818,7 @@ export default function ProjectCard({
                                   {/* Show review status badge for students */}
                                   {isOwnSubmission && review && calculatedRPM > 0 && (
                                     <span className="px-2 py-0.5 rounded text-xs font-semibold bg-indigo-900/50 text-indigo-300 border border-indigo-700">
-                                      ✓ Reviewed
+                                      ✓ {t('projects.reviewed')}
                                     </span>
                                   )}
                                 </div>
@@ -827,7 +829,7 @@ export default function ProjectCard({
                                     setExpandedSubmissionId(isExpanded ? null : submission.submissionId);
                                   }}
                                   className="text-gray-400 hover:text-white transition-colors"
-                                  aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                                  aria-label={isExpanded ? t('projects.collapse') : t('projects.expand')}
                                 >
                                   <svg
                                     className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
@@ -923,7 +925,7 @@ export default function ProjectCard({
                                                         <span className="text-green-400 font-bold text-sm">${platformRPM.toFixed(2)} RPM</span>
                                                       )}
                                                       {platformRPM === 0 && (
-                                                        <span className="text-gray-400 text-xs">No RPM earned</span>
+                                                        <span className="text-gray-400 text-xs">{t('projects.noRpmEarned')}</span>
                                                       )}
                                                     </div>
                                                     
@@ -969,7 +971,7 @@ export default function ProjectCard({
                                               {totalRPM > 0 && Object.keys(rpmByPlatform).length > 1 && (
                                                 <div className="bg-green-900/20 border border-green-700 rounded-lg p-2">
                                                   <p className="text-xs text-gray-300 mb-0.5">
-                                                    <span className="font-semibold">Total RPM (All Platforms):</span>{' '}
+                                                    <span className="font-semibold">{t('projects.totalRpmAllPlatforms')}</span>{' '}
                                                     <span className="text-green-400 font-bold">${totalRPM.toFixed(2)}</span>
                                                   </p>
                                                 </div>
@@ -980,7 +982,7 @@ export default function ProjectCard({
                                               {/* Fallback for legacy single review */}
                                           <div className="bg-green-900/20 border border-green-700 rounded-lg p-2">
                                             <p className="text-xs text-gray-300 mb-0.5">
-                                              <span className="font-semibold">Saved RPM:</span>{' '}
+                                              <span className="font-semibold">{t('projects.savedRpm')}</span>{' '}
                                               <span className="text-green-400 font-bold">${calculatedRPM.toFixed(2)}</span>
                                             </p>
                                             <p className="text-xs text-gray-500 mt-0.5">
@@ -993,7 +995,7 @@ export default function ProjectCard({
                                               {/* Matched Criteria */}
                                               {review && review.matchedCriteriaIds && review.matchedCriteriaIds.length > 0 && (
                                             <div>
-                                              <p className="text-xs text-gray-500 mb-1.5 font-semibold">Matched Criteria:</p>
+                                              <p className="text-xs text-gray-500 mb-1.5 font-semibold">{t('projects.matchedCriteria')}</p>
                                               <div className="space-y-1.5">
                                                 {review.matchedCriteriaIds.map((criteriaId: string) => {
                                                   const criterion = projectCriteria.find(c => c.id === criteriaId);
@@ -1107,7 +1109,7 @@ export default function ProjectCard({
                                                 rel="noopener noreferrer"
                                                 className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs rounded-lg transition-colors whitespace-nowrap"
                                               >
-                                                Open
+                                                {t('projects.open')}
                                               </a>
                                             </div>
                                           </div>
@@ -1136,7 +1138,7 @@ export default function ProjectCard({
                                   {/* Review Section for Students - Show prominently after video links */}
                                   {!isLecturer && isOwnSubmission && (Object.keys(reviewsByPlatform).length > 0 || review) ? (
                                     <div className="pt-4 border-t border-gray-700">
-                                      <p className="text-sm text-white mb-3 font-bold">Your Review Results</p>
+                                      <p className="text-sm text-white mb-3 font-bold">{t('projects.matchedCriteriaBreakdown')}</p>
                                       <div className="space-y-3">
                                         {/* Platform-wise RPM Breakdown - Show for all platforms */}
                                         {Object.keys(reviewsByPlatform).length > 0 ? (
@@ -1175,7 +1177,7 @@ export default function ProjectCard({
                                                   {/* Matched Criteria for this platform */}
                                                   {platformReview.matchedCriteriaIds && platformReview.matchedCriteriaIds.length > 0 && (
                                                     <div className="mt-3">
-                                                      <p className="text-xs text-gray-400 mb-2 font-semibold">Matched Criteria & RPM Breakdown:</p>
+                                                      <p className="text-xs text-gray-400 mb-2 font-semibold">{t('projects.matchedCriteriaBreakdown')}</p>
                                                       <div className="space-y-2">
                                                         {platformReview.matchedCriteriaIds.map((criteriaId: string) => {
                                                           const criterion = projectCriteria.find(c => c.id === criteriaId);
@@ -1203,7 +1205,7 @@ export default function ProjectCard({
                                                   {/* Platform RPM Display */}
                                                   {platformRPM > 0 && (
                                                     <div className="mt-3 bg-green-900/20 border border-green-700 rounded-lg p-3">
-                                                      <p className="text-xs text-gray-400 mb-1">RPM Earned for {platformName}:</p>
+                                                      <p className="text-xs text-gray-400 mb-1">{t('projects.rpmEarnedFor', { platform: platformName })}</p>
                                                       <p className="text-green-400 font-bold text-2xl">
                                                         ${platformRPM.toFixed(2)}
                                                       </p>
@@ -1226,11 +1228,11 @@ export default function ProjectCard({
                                             {/* Total RPM Display - Prominent (only if multiple platforms) */}
                                             {totalRPM > 0 && Object.keys(rpmByPlatform).length > 1 && (
                                               <div className="bg-green-900/20 border-2 border-green-700 rounded-lg p-4">
-                                                <p className="text-xs text-gray-400 mb-1">Total RPM Earned (All Platforms):</p>
+                                                <p className="text-xs text-gray-400 mb-1">{t('projects.totalRpmEarned')}</p>
                                                 <p className="text-green-400 font-bold text-3xl">
                                                   ${totalRPM.toFixed(2)}
                                                 </p>
-                                                <p className="text-xs text-green-300 mt-1">This is your total earnings from all platforms</p>
+                                                <p className="text-xs text-green-300 mt-1">{t('projects.totalRpmDescription')}</p>
                                               </div>
                                             )}
                                           </div>
@@ -1269,16 +1271,16 @@ export default function ProjectCard({
                                           <div className="bg-green-900/20 border-2 border-green-700 rounded-lg p-4">
                                                 <p className="text-xs text-gray-400 mb-1">
                                                   {Object.keys(rpmByPlatform).length > 1 
-                                                    ? 'Total RPM Earned (All Platforms):' 
-                                                    : 'Total RPM Earned:'}
+                                                    ? t('projects.totalRpmEarned') 
+                                                    : t('projects.totalRpmEarned')}
                                                 </p>
                                             <p className="text-green-400 font-bold text-3xl">
                                                   ${(totalRPM > 0 ? totalRPM : (calculatedRPM > 0 ? calculatedRPM : (review?.paymentAmount || 0))).toFixed(2)}
                                                 </p>
                                                 <p className="text-xs text-green-300 mt-1">
                                                   {Object.keys(rpmByPlatform).length > 1 
-                                                    ? 'This is your total earnings from all platforms' 
-                                                    : 'This is your total earnings from this submission'}
+                                                    ? t('projects.totalRpmDescription') 
+                                                    : t('projects.totalRpmDescription')}
                                                 </p>
                                           </div>
                                         ) : null}
@@ -1306,7 +1308,7 @@ export default function ProjectCard({
                                         ) : (
                                           review && review.comment ? (
                                           <div>
-                                            <p className="text-xs text-gray-400 mb-2 font-semibold">Lecturer Comment:</p>
+                                            <p className="text-xs text-gray-400 mb-2 font-semibold">{t('projects.lecturerComment')}:</p>
                                             <div className="bg-gray-700/50 rounded-lg p-3">
                                               <p className="text-gray-300 text-sm whitespace-pre-wrap">{review.comment}</p>
                                             </div>
@@ -1319,7 +1321,7 @@ export default function ProjectCard({
                                          calculatedRPM === 0 && 
                                          (!review.paymentAmount || review.paymentAmount === 0) ? (
                                           <div className="bg-gray-700/30 border border-gray-600 rounded-lg p-3">
-                                            <p className="text-sm text-gray-400">Review submitted but no criteria matched</p>
+                                            <p className="text-sm text-gray-400">{t('projects.noCriteriaMatched')}</p>
                                           </div>
                                         ) : null}
                                       </div>
@@ -1338,13 +1340,13 @@ export default function ProjectCard({
                                   {/* Review Section for Lecturers - Show prominently after video links */}
                                   {isLecturer && review && calculatedRPM > 0 && (
                                     <div className="pt-4 border-t border-gray-700">
-                                      <p className="text-sm text-white mb-3 font-bold">Your Review</p>
+                                      <p className="text-sm text-white mb-3 font-bold">{t('projects.yourReview')}</p>
                                       <div className="space-y-3">
                                         {/* Total RPM Display - Prominent */}
                                         <div className="bg-green-900/20 border-2 border-green-700 rounded-lg p-4">
-                                          <p className="text-xs text-gray-400 mb-1">Total RPM (Student will see this amount):</p>
+                                          <p className="text-xs text-gray-400 mb-1">{t('projects.totalRpmStudent')}</p>
                                           <p className="text-green-400 font-bold text-3xl">${calculatedRPM.toFixed(2)}</p>
-                                          <p className="text-xs text-green-300 mt-1">Based on {review.matchedCriteriaIds?.length || 0} matched criteria</p>
+                                          <p className="text-xs text-green-300 mt-1">{t('projects.basedOnCriteria', { count: review.matchedCriteriaIds?.length || 0 })}</p>
                                         </div>
                                         
                                         {/* Matched Criteria Breakdown */}

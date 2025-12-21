@@ -12,6 +12,7 @@ import { useRealtimeTyping } from '@/hooks/useRealtimeTyping';
 import { useMuteStatus } from '@/hooks/useMuteStatus';
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import { supabase } from '@/lib/supabase';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface ChatAreaProps {
   channel: Channel | null;
@@ -30,6 +31,7 @@ export default function ChatArea({
   onReply,
   onReaction,
 }: ChatAreaProps) {
+  const { t } = useI18n();
   const [replyTo, setReplyTo] = useState<{
     id: string;
     username: string;
@@ -507,7 +509,7 @@ export default function ChatArea({
               d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
             />
           </svg>
-          <p className="text-lg font-medium">Select a channel to start chatting</p>
+          <p className="text-lg font-medium">{t('chat.selectChannel')}</p>
         </div>
       </div>
     );
@@ -535,7 +537,7 @@ export default function ChatArea({
           {!isConnected && (
             <span className="flex items-center gap-1 text-yellow-500 text-xs">
               <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
-              Connecting...
+              {t('chat.connecting')}
             </span>
           )}
         </div>
@@ -749,7 +751,7 @@ export default function ChatArea({
                 <button
                   onClick={() => setShowVideoUploadDialog(true)}
                   className="w-12 h-12 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 text-white rounded-full transition-colors shadow-lg hover:shadow-xl hover:scale-105"
-                  title="Create Video Project"
+                  title={t('projects.createVideoProject')}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -762,7 +764,7 @@ export default function ChatArea({
             return (
               <div className="px-4 py-3 border-t border-gray-700 bg-gray-900">
                 <div className="text-center text-gray-400 text-sm">
-                  Only the course lecturer can create projects
+                  {t('chat.onlyLecturerCanCreateProjects')}
                 </div>
               </div>
             );
@@ -777,7 +779,7 @@ export default function ChatArea({
             onCancelReply={() => setReplyTo(undefined)}
             placeholder={
               !canSendMessages
-                ? 'Only the course lecturer can send messages in this channel'
+                ? t('chat.onlyLecturerCanSendMessages')
                 : `Message #${channel.name}`
             }
             disabled={!canSendMessages}

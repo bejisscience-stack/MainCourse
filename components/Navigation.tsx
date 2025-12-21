@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signOut } from '@/lib/auth';
 import { useUser } from '@/hooks/useUser';
+import { useI18n } from '@/contexts/I18nContext';
+import LanguageSelector from './LanguageSelector';
 
 function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -13,6 +15,7 @@ function Navigation() {
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const router = useRouter();
   const { user, profile, role: userRole, isLoading: loading } = useUser();
+  const { t } = useI18n();
 
   // Close profile menu when clicking outside or navigating
   useEffect(() => {
@@ -41,7 +44,7 @@ function Navigation() {
       router.refresh();
     } catch (error) {
       console.error('Error signing out:', error);
-      setSignOutError('Failed to sign out. Please try again.');
+      setSignOutError(t('auth.failedToSignOut'));
     } finally {
       setSignOutLoading(false);
     }
@@ -64,36 +67,36 @@ function Navigation() {
             {userRole !== 'lecturer' && (
               <>
                 <Link href="#about" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
-                  About
+                  {t('nav.about')}
                 </Link>
                 <Link href="/courses" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
-                  Courses
+                  {t('nav.courses')}
                 </Link>
                 {user && (
                   <Link href="/my-courses" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
-                    My Courses
+                    {t('nav.myCourses')}
                   </Link>
                 )}
                 <Link href="#testimonials" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
-                  Testimonials
+                  {t('nav.testimonials')}
                 </Link>
                 <Link href="#contact" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
-                  Contact
+                  {t('nav.contact')}
                 </Link>
               </>
             )}
             {userRole === 'lecturer' && (
               <Link href="/lecturer/dashboard" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
-                Dashboard
+                {t('nav.dashboard')}
               </Link>
             )}
             {userRole === 'admin' && (
               <>
                 <Link href="/admin" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
-                  Admin Dashboard
+                  {t('nav.adminDashboard')}
                 </Link>
                 <Link href="/courses" className="text-navy-700 hover:text-navy-900 font-medium transition-colors">
-                  All Courses
+                  {t('nav.allCourses')}
                 </Link>
               </>
             )}
@@ -101,15 +104,16 @@ function Navigation() {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
+            <LanguageSelector />
             {loading ? (
-              <div className="text-navy-600 text-sm">Loading...</div>
+              <div className="text-navy-600 text-sm">{t('common.loading')}</div>
             ) : user ? (
               <div className="relative">
                 {/* Profile Icon Button */}
                 <button
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                   className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2 rounded-full p-1.5 hover:bg-navy-50 transition-colors"
-                  aria-label="User menu"
+                  aria-label={t('nav.userMenu')}
                 >
                   <div className="w-10 h-10 bg-navy-900 rounded-full flex items-center justify-center text-white font-semibold">
                     {(profile?.username || user.email || 'U').charAt(0).toUpperCase()}
@@ -134,19 +138,19 @@ function Navigation() {
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-navy-100 py-2 z-50">
                       <div className="px-4 py-3 border-b border-navy-100">
                         <p className="text-sm font-semibold text-navy-900">
-                          {profile?.username || 'User'}
+                          {profile?.username || t('nav.user')}
                         </p>
                         <p className="text-xs text-navy-600 truncate">
                           {user.email}
                         </p>
                         {userRole === 'lecturer' && (
                           <span className="inline-block mt-2 px-2 py-0.5 text-xs font-medium bg-navy-100 text-navy-900 rounded">
-                            Lecturer
+                            {t('nav.lecturer')}
                           </span>
                         )}
                         {userRole === 'admin' && (
                           <span className="inline-block mt-2 px-2 py-0.5 text-xs font-medium bg-red-100 text-red-900 rounded">
-                            Admin
+                            {t('nav.admin')}
                           </span>
                         )}
                       </div>
@@ -161,7 +165,7 @@ function Navigation() {
                               <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                               </svg>
-                              Dashboard
+                              {t('nav.dashboard')}
                             </Link>
                             <Link
                               href="/lecturer/chat"
@@ -171,7 +175,7 @@ function Navigation() {
                               <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                               </svg>
-                              Chat
+                              {t('nav.chat')}
                             </Link>
                           </>
                         ) : userRole === 'admin' ? (
@@ -184,7 +188,7 @@ function Navigation() {
                               <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                               </svg>
-                              Admin Dashboard
+                              {t('nav.adminDashboard')}
                             </Link>
                             <Link
                               href="/courses"
@@ -194,7 +198,7 @@ function Navigation() {
                               <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                               </svg>
-                              All Courses
+                              {t('nav.allCourses')}
                             </Link>
                           </>
                         ) : (
@@ -207,7 +211,7 @@ function Navigation() {
                               <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                               </svg>
-                              My Courses
+                              {t('nav.myCourses')}
                             </Link>
                           </>
                         )}
@@ -222,7 +226,7 @@ function Navigation() {
                           <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                           </svg>
-                          {signOutLoading ? 'Signing out...' : 'Sign Out'}
+                          {signOutLoading ? t('nav.signingOut') : t('nav.signOut')}
                         </button>
                         {signOutError && (
                           <div className="px-4 py-2 text-xs text-red-600">{signOutError}</div>
@@ -238,13 +242,13 @@ function Navigation() {
                   href="/login"
                   className="text-navy-900 font-semibold hover:text-navy-700 transition-colors px-4 py-2"
                 >
-                  Log In
+                  {t('nav.logIn')}
                 </Link>
                 <Link
                   href="/signup"
                   className="bg-navy-900 text-white font-semibold px-6 py-2 rounded-lg hover:bg-navy-800 transition-colors"
                 >
-                  Sign Up
+                  {t('nav.signUp')}
                 </Link>
               </>
             )}
@@ -254,7 +258,7 @@ function Navigation() {
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden text-navy-900 focus:outline-none"
-            aria-label="Toggle menu"
+            aria-label={t('nav.toggleMenu')}
           >
             <svg
               className="w-6 h-6"
@@ -285,14 +289,14 @@ function Navigation() {
                     className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    About
+                    {t('nav.about')}
                   </Link>
                   <Link
                     href="/courses"
                     className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Courses
+                    {t('nav.courses')}
                   </Link>
                   {user && (
                     <Link
@@ -300,7 +304,7 @@ function Navigation() {
                       className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      My Courses
+                      {t('nav.myCourses')}
                     </Link>
                   )}
                   <Link
@@ -308,14 +312,14 @@ function Navigation() {
                     className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Testimonials
+                    {t('nav.testimonials')}
                   </Link>
                   <Link
                     href="#contact"
                     className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Contact
+                    {t('nav.contact')}
                   </Link>
                 </>
               )}
@@ -325,12 +329,15 @@ function Navigation() {
                   className="text-navy-700 hover:text-navy-900 font-medium transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Dashboard
+                  {t('nav.dashboard')}
                 </Link>
               )}
               <div className="pt-4 border-t border-navy-100">
+                <div className="mb-4">
+                  <LanguageSelector />
+                </div>
                 {loading ? (
-                  <div className="text-navy-600 text-sm text-center py-2">Loading...</div>
+                  <div className="text-navy-600 text-sm text-center py-2">{t('common.loading')}</div>
                 ) : user ? (
                   <div className="space-y-2">
                     {/* Mobile Profile Section */}
@@ -340,19 +347,19 @@ function Navigation() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-navy-900 truncate">
-                          {profile?.username || 'User'}
+                          {profile?.username || t('nav.user')}
                         </p>
                         <p className="text-xs text-navy-600 truncate">
                           {user.email}
                         </p>
                         {userRole === 'lecturer' && (
                           <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium bg-navy-200 text-navy-900 rounded">
-                            Lecturer
+                            {t('nav.lecturer')}
                           </span>
                         )}
                         {userRole === 'admin' && (
                           <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium bg-red-200 text-red-900 rounded">
-                            Admin
+                            {t('nav.admin')}
                           </span>
                         )}
                       </div>
@@ -367,7 +374,7 @@ function Navigation() {
                           <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
-                          Dashboard
+                          {t('nav.dashboard')}
                         </Link>
                         <Link
                           href="/lecturer/chat"
@@ -377,7 +384,7 @@ function Navigation() {
                           <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                           </svg>
-                          Chat
+                          {t('nav.chat')}
                         </Link>
                       </>
                     ) : userRole === 'admin' ? (
@@ -390,7 +397,7 @@ function Navigation() {
                           <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                           </svg>
-                          Admin Dashboard
+                          {t('nav.adminDashboard')}
                         </Link>
                         <Link
                           href="/courses"
@@ -400,7 +407,7 @@ function Navigation() {
                           <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                           </svg>
-                          All Courses
+                          {t('nav.allCourses')}
                         </Link>
                       </>
                     ) : (
@@ -412,7 +419,7 @@ function Navigation() {
                         <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                         </svg>
-                        My Courses
+                        {t('nav.myCourses')}
                       </Link>
                     )}
                     <button
@@ -426,7 +433,7 @@ function Navigation() {
                       <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                       </svg>
-                      {signOutLoading ? 'Signing out...' : 'Sign Out'}
+                      {signOutLoading ? t('nav.signingOut') : t('nav.signOut')}
                     </button>
                     {signOutError && (
                       <div className="px-4 text-xs text-red-600">{signOutError}</div>
@@ -439,14 +446,14 @@ function Navigation() {
                       className="text-navy-900 font-semibold text-center py-2 block"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      Log In
+                      {t('nav.logIn')}
                     </Link>
                     <Link
                       href="/signup"
                       className="bg-navy-900 text-white font-semibold text-center py-2 rounded-lg hover:bg-navy-800 transition-colors block"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      Sign Up
+                      {t('nav.signUp')}
                     </Link>
                   </>
                 )}
