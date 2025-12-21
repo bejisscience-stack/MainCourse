@@ -3,7 +3,18 @@
 import { useState, memo, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useUserMuteStatus } from '@/hooks/useMuteStatus';
+import ProjectCard from './ProjectCard';
 import type { Message as MessageType, MessageAttachment } from '@/types/message';
+
+interface ProjectData {
+  name: string;
+  description: string;
+  videoLink?: string;
+  budget: number;
+  minViews: number;
+  maxViews: number;
+  platforms: string[];
+}
 
 interface MessageProps {
   message: MessageType & { 
@@ -227,8 +238,70 @@ const Message = memo(function Message({
     }, 150);
   }, []);
 
+  const [projectData, setProjectData] = useState<any>(null);
+  const [isLoadingProject, setIsLoadingProject] = useState(false);
+
+  // Check if this is a project message by querying the database
+  useEffect(() => {
+    const checkProject = async () => {
+      if (!channelId || !message.id) return;
+      
+      setIsLoadingProject(true);
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('message_id', message.id)
+          .single();
+
+        if (!error && data) {
+          setProjectData(data);
+        }
+      } catch (error) {
+        console.error('Error checking project:', error);
+      } finally {
+        setIsLoadingProject(false);
+      }
+    };
+
+    checkProject();
+  }, [message.id, channelId, supabase]);
+
   const isPending = message.pending;
   const isFailed = message.failed;
+
+  // If it's a project message, render ProjectCard instead
+  if (projectData && !isLoadingProject) {
+    return (
+      <div
+        ref={messageRef}
+        data-message-id={message.id}
+        className="px-4 py-2"
+      >
+        <ProjectCard
+          project={{
+            id: message.id,
+            name: projectData.name,
+            description: projectData.description,
+            videoLink: projectData.video_link,
+            budget: parseFloat(projectData.budget),
+            minViews: projectData.min_views,
+            maxViews: projectData.max_views,
+            platforms: projectData.platforms,
+            criteria: [], // Will be loaded by ProjectCard component
+            submittedBy: {
+              id: message.user.id,
+              username: message.user.username,
+            },
+            timestamp: message.timestamp,
+          }}
+          currentUserId={currentUserId}
+          isLecturer={isLecturer}
+          channelId={channelId || ''}
+        />
+      </div>
+    );
+  }
 
   return (
     <div

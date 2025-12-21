@@ -10,3 +10,5 @@ CREATE INDEX IF NOT EXISTS courses_created_at_idx ON public.courses(created_at D
 
 
 
+
+

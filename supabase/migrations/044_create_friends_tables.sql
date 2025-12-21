@@ -162,3 +162,5 @@ CREATE POLICY "Users can delete own friendships"
 COMMENT ON TABLE public.friend_requests IS 'Stores friend requests between users';
 COMMENT ON TABLE public.friendships IS 'Stores accepted friendships between users (bidirectional)';
 
+
+

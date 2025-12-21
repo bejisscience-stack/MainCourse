@@ -399,14 +399,23 @@ export async function POST(
     const lecturerId = course.lecturer_id;
 
     // Check enrollment or lecturer status
-    const { data: enrollment } = await supabase
+    const { data: enrollment, error: enrollmentError } = await supabase
       .from('enrollments')
       .select('id')
       .eq('user_id', user.id)
       .eq('course_id', courseId)
-      .single();
+      .maybeSingle();
 
     const isLecturer = lecturerId === user.id;
+    
+    console.log('User access check:', {
+      userId: user.id,
+      courseId,
+      lecturerId,
+      isLecturer,
+      enrollmentExists: !!enrollment,
+      enrollmentError: enrollmentError?.message,
+    });
     const isEnrolled = !!enrollment;
 
     if (!isEnrolled && !isLecturer) {
@@ -423,11 +432,62 @@ export async function POST(
     const isRestrictedChannel = isLecturesChannel || isProjectsChannel;
 
     // Only lecturers can send messages in Lectures and Projects channels
+    // EXCEPT: Students can reply to project messages (submissions)
     if (isRestrictedChannel && !isLecturer) {
-      return NextResponse.json(
-        { error: 'Forbidden: Only the course lecturer can send messages in this channel' },
-        { status: 403 }
-      );
+      // Allow replies to project messages (submissions)
+      if (isProjectsChannel && replyTo) {
+        try {
+          // Check if the message being replied to is a project by checking the projects table
+          const { data: project, error: projectCheckError } = await supabase
+            .from('projects')
+            .select('id')
+            .eq('message_id', replyTo)
+            .maybeSingle();
+          
+          // Log for debugging
+          console.log('Project check for submission:', {
+            replyTo,
+            projectFound: !!project,
+            error: projectCheckError,
+            channelId: chatId,
+            userId: user.id,
+          });
+          
+          // If there's a real error (not just "not found"), log it
+          if (projectCheckError && projectCheckError.code !== 'PGRST116') {
+            console.error('Error checking project:', projectCheckError);
+            // Don't block on query errors - allow if project exists
+          }
+          
+          if (project && project.id) {
+            // Allow submission - this is a reply to a project
+            console.log('Allowing submission - project found:', project.id);
+          } else {
+            console.warn('Blocking submission - project not found for message_id:', replyTo);
+            return NextResponse.json(
+              { 
+                error: 'Forbidden: You can only reply to project submissions. Only the course lecturer can send messages in this channel.',
+                details: `No project found for message ID: ${replyTo}`
+              },
+              { status: 403 }
+            );
+          }
+        } catch (checkError: any) {
+          console.error('Exception checking project:', checkError);
+          return NextResponse.json(
+            { 
+              error: 'Error validating submission',
+              details: checkError.message || 'Failed to verify project'
+            },
+            { status: 500 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: 'Forbidden: Only the course lecturer can send messages in this channel' },
+          { status: 403 }
+        );
+      }
     }
 
     // Check if user is muted by this lecturer (lecturer-wise mute)
@@ -445,10 +505,57 @@ export async function POST(
       );
     }
 
-    // Sanitize content (basic XSS prevention) - allow empty content for attachment-only messages
-    const sanitizedContent = hasContent 
+    // Sanitize content (basic XSS prevention) - ensure at least one character for database constraint
+    // If no content and no attachments, use a default message
+    let sanitizedContent = hasContent 
       ? content.trim().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
       : '';
+    
+    // Database constraint requires content length > 0, so use default if empty
+    if (!sanitizedContent && (!attachments || attachments.length === 0)) {
+      sanitizedContent = 'Message'; // Fallback for empty messages
+    } else if (!sanitizedContent && attachments && attachments.length > 0) {
+      sanitizedContent = 'Video submission'; // Default for attachment-only messages
+    }
+
+    // Verify enrollment before inserting (for debugging)
+    if (!isLecturer) {
+      const { data: enrollmentCheck } = await supabase
+        .from('enrollments')
+        .select('id')
+        .eq('course_id', courseId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      console.log('Enrollment check before insert:', {
+        courseId,
+        userId: user.id,
+        isEnrolled: !!enrollmentCheck,
+        enrollmentId: enrollmentCheck?.id,
+      });
+
+      if (!enrollmentCheck) {
+        return NextResponse.json(
+          { 
+            error: 'Not enrolled in course',
+            details: 'You must be enrolled in this course to send messages'
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    console.log('Inserting message:', {
+      channel_id: chatId,
+      course_id: courseId,
+      user_id: user.id,
+      content_length: sanitizedContent.length,
+      reply_to_id: replyTo,
+      has_attachments: attachments && attachments.length > 0,
+      isLecturer,
+      isRestrictedChannel,
+      isProjectsChannel,
+    });
 
     // Insert message
     const { data: message, error: insertError } = await supabase

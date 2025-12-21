@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Message from './Message';
 import MessageInput from './MessageInput';
 import LecturesChannel from './LecturesChannel';
+import VideoUploadDialog, { type ProjectSubmissionData } from './VideoUploadDialog';
 import type { Channel } from '@/types/server';
 import type { Message as MessageType, MessageAttachment } from '@/types/message';
 import { useChatMessages } from '@/hooks/useChatMessages';
@@ -35,6 +36,7 @@ export default function ChatArea({
     content: string;
   } | undefined>(undefined);
   const [isSending, setIsSending] = useState(false);
+  const [showVideoUploadDialog, setShowVideoUploadDialog] = useState(false);
   const pendingSendsRef = useRef(0);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const userScrolledUpRef = useRef(false);
@@ -348,6 +350,130 @@ export default function ChatArea({
     scrollToBottom('smooth');
   }, [scrollToBottom]);
 
+  // Handle project submission
+  const handleProjectSubmit = useCallback(async (data: ProjectSubmissionData) => {
+    if (!channel || !channel.courseId) {
+      throw new Error('Channel not found');
+    }
+
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session?.user) {
+      throw new Error('Not authenticated. Please log in again.');
+    }
+
+    // Upload video file if provided
+    let videoUrl = data.videoLink;
+    let attachments: any[] = [];
+    
+    if (data.videoFile) {
+      if (!channel.courseId) {
+        throw new Error('Channel course ID not found');
+      }
+      
+      const fileExt = data.videoFile.name.split('.').pop()?.toLowerCase() || 'mp4';
+      const fileName = `project-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      // Storage path structure: {course_id}/{channel_id}/{user_id}/{filename}
+      const filePath = `${channel.courseId}/${channel.id}/${session.user.id}/${fileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('chat-media')
+        .upload(filePath, data.videoFile, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(`Failed to upload video: ${uploadError.message}`);
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('chat-media')
+        .getPublicUrl(filePath);
+
+      if (urlData?.publicUrl) {
+        videoUrl = urlData.publicUrl;
+        attachments = [{
+          fileUrl: urlData.publicUrl,
+          fileName: data.videoFile.name,
+          fileType: 'video',
+          fileSize: data.videoFile.size,
+          mimeType: data.videoFile.type,
+        }];
+      }
+    }
+
+    // Create a simple message content (for display purposes)
+    const messageContent = `🎬 Project: ${data.name}`;
+
+    // First, create the message
+    const response = await fetch(`/api/chats/${channel.id}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        content: messageContent,
+        replyTo: null,
+        attachments: attachments.length > 0 ? attachments : undefined,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to create message');
+    }
+
+    const { message: createdMessage } = await response.json();
+
+    // Then, create the project record in the database
+    const { data: projectRecord, error: projectError } = await supabase
+      .from('projects')
+      .insert({
+        message_id: createdMessage.id,
+        channel_id: channel.id,
+        course_id: channel.courseId,
+        user_id: session.user.id,
+        name: data.name,
+        description: data.description,
+        video_link: videoUrl || null,
+        budget: data.budget,
+        min_views: data.minViews,
+        max_views: data.maxViews,
+        platforms: data.platforms,
+      })
+      .select('id')
+      .single();
+
+    if (projectError) {
+      console.error('Error creating project:', projectError);
+      throw new Error(`Failed to save project: ${projectError.message}`);
+    }
+
+    // Insert criteria if any
+    if (data.criteria && data.criteria.length > 0 && projectRecord) {
+      const criteriaRecords = data.criteria.map((criterion, index) => ({
+        project_id: projectRecord.id,
+        criteria_text: criterion.text,
+        rpm: criterion.rpm,
+        display_order: index,
+      }));
+
+      const { error: criteriaError } = await supabase
+        .from('project_criteria')
+        .insert(criteriaRecords);
+
+      if (criteriaError) {
+        console.error('Error creating criteria:', criteriaError);
+        // Don't fail the whole operation, just log the error
+      }
+    }
+
+    // Refresh messages to show the new project
+    refetch();
+  }, [channel, supabase, refetch]);
+
   if (!channel) {
     return (
       <div className="flex-1 bg-gray-900 flex items-center justify-center">
@@ -595,7 +721,7 @@ export default function ChatArea({
         </div>
       )}
 
-      {/* Message input */}
+      {/* Message input or Project submission button */}
       {(() => {
         // Check if this is a restricted channel (Lectures or Projects)
         const channelName = channel.name?.toLowerCase() || '';
@@ -604,6 +730,23 @@ export default function ChatArea({
         const isProjectsChannel = channelName === 'projects';
         const isRestrictedChannel = isLecturesChannel || isProjectsChannel;
         const canSendMessages = !isRestrictedChannel || isLecturer;
+
+        // For projects channel, show plus button for everyone (lecturers and students)
+        if (isProjectsChannel) {
+          return (
+            <div className="px-4 py-3 border-t border-gray-700 bg-gray-900">
+              <button
+                onClick={() => setShowVideoUploadDialog(true)}
+                className="w-12 h-12 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 text-white rounded-full transition-colors shadow-lg hover:shadow-xl hover:scale-105"
+                title="Submit Video Project"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
+          );
+        }
 
         return (
           <MessageInput
@@ -623,6 +766,14 @@ export default function ChatArea({
           />
         );
       })()}
+
+      {/* Video Upload Dialog */}
+      <VideoUploadDialog
+        isOpen={showVideoUploadDialog}
+        onClose={() => setShowVideoUploadDialog(false)}
+        onSubmit={handleProjectSubmit}
+        channelId={channel?.id}
+      />
     </div>
   );
 }

@@ -37,15 +37,24 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 if (typeof window !== 'undefined') {
   // Supabase automatically restores sessions with persistSession: true
   // We verify it silently here and handle any errors gracefully
-  supabase.auth.getSession().catch(() => {
+  supabase.auth.getSession().catch((error) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'supabase.ts:40',message:'Session get error (silent catch)',data:{error:error?.message||'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C1'})}).catch(()=>{});
+    // #endregion
     // Silent fail - session will be null if not available
   });
 
   // Listen for storage events to sync session across tabs
-  window.addEventListener('storage', (e) => {
+  const storageHandler = (e: StorageEvent) => {
     if (e.key === 'supabase.auth.token') {
-      supabase.auth.getSession().catch(() => {});
+      supabase.auth.getSession().catch((error) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'supabase.ts:47',message:'Storage event session error (silent catch)',data:{error:error?.message||'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C1'})}).catch(()=>{});
+        // #endregion
+      });
     }
-  });
+  };
+  window.addEventListener('storage', storageHandler);
+  // Note: This listener is never removed - potential memory leak (Hypothesis A3)
 }
 

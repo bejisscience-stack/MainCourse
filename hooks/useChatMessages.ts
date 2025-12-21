@@ -60,9 +60,16 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
       // Get session and refresh if needed
       let { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useChatMessages.ts:61',message:'Session check before fetch',data:{hasSession:!!session,hasError:!!sessionError,channelId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B2'})}).catch(()=>{});
+      // #endregion
+      
       // If no session or session error, try to refresh
       if (sessionError || !session) {
         console.warn('Session error, attempting refresh:', sessionError);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useChatMessages.ts:65',message:'Attempting session refresh',data:{channelId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B2'})}).catch(()=>{});
+        // #endregion
         const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
         if (refreshError || !refreshedSession) {
           throw new Error('Not authenticated. Please log in again.');
