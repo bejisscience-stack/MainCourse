@@ -40,9 +40,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const t = (key: string, params?: Record<string, string | number>): string => {
     if (!mounted) {
-      // Return English translation during SSR
+      // Return Georgian translation during SSR (default language)
       const keys = key.split('.');
-      let value: any = translations.en;
+      let value: any = translations.ge;
       for (const k of keys) {
         value = value?.[k];
       }
@@ -58,15 +58,24 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
     
     if (typeof value !== 'string') {
-      // Fallback to English if translation missing
-      let fallback: any = translations.en;
+      // Fallback to Georgian if translation missing (default language)
+      let fallback: any = translations.ge;
       for (const k of keys) {
         fallback = fallback?.[k];
       }
       if (typeof fallback === 'string') {
         value = fallback;
       } else {
-        return key; // Return key if no translation found
+        // Final fallback to English if Georgian translation is missing
+        let englishFallback: any = translations.en;
+        for (const k of keys) {
+          englishFallback = englishFallback?.[k];
+        }
+        if (typeof englishFallback === 'string') {
+          value = englishFallback;
+        } else {
+          return key; // Return key if no translation found
+        }
       }
     }
     

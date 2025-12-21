@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useI18n } from '@/contexts/I18nContext';
 import type { Channel } from '@/types/server';
 
 interface ChannelManagementProps {
@@ -20,6 +21,7 @@ export default function ChannelManagement({
   onChannelDelete,
   onClose,
 }: ChannelManagementProps) {
+  const { t } = useI18n();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [formData, setFormData] = useState({
@@ -81,11 +83,11 @@ export default function ChannelManagement({
 
     // Prevent deletion of required channels
     if (isRequiredChannel(channel)) {
-      setError('Cannot delete required channels (Lectures and Projects)');
+      setError(t('channels.cannotDeleteRequiredChannels'));
       return;
     }
 
-    if (!confirm('Are you sure you want to delete this channel? This action cannot be undone.')) {
+    if (!confirm(t('channels.confirmDeleteChannel'))) {
       return;
     }
 
@@ -99,7 +101,7 @@ export default function ChannelManagement({
   return (
     <>
       <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-        <h3 className="text-white font-semibold">Manage Channels</h3>
+        <h3 className="text-white font-semibold">{t('channels.manageChannels')}</h3>
         <div className="flex gap-2">
           <button
             onClick={() => {
@@ -109,13 +111,13 @@ export default function ChannelManagement({
             }}
             className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 transition-colors"
           >
-            + Add Channel
+            {t('channels.addChannel')}
           </button>
           <button
             onClick={onClose}
             className="px-3 py-1.5 bg-gray-700 text-gray-300 text-sm rounded hover:bg-gray-600 transition-colors"
           >
-            Close
+            {t('common.close')}
           </button>
         </div>
       </div>
@@ -152,7 +154,7 @@ export default function ChannelManagement({
             </div>
             <div className="flex items-center gap-2">
               {isRequiredChannel(channel) && (
-                <span className="text-xs text-indigo-400 font-medium">Required</span>
+                <span className="text-xs text-indigo-400 font-medium">{t('channels.required')}</span>
               )}
               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 {!isRequiredChannel(channel) && (
@@ -194,7 +196,7 @@ export default function ChannelManagement({
 
         {channels.length === 0 && (
           <div className="text-center text-gray-400 py-8">
-            <p>No channels yet. Create your first channel!</p>
+            <p>{t('channels.noChannelsYet')}</p>
           </div>
         )}
       </div>
@@ -205,13 +207,13 @@ export default function ChannelManagement({
           <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
             <div className="p-4 border-b border-gray-700">
               <h3 className="text-white font-semibold">
-                {editingChannel ? 'Edit Channel' : 'Create Channel'}
+                {editingChannel ? t('channels.editChannel') : t('channels.createChannel')}
               </h3>
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Channel Name *
+                  {t('channels.channelName')}
                 </label>
                 <input
                   type="text"
@@ -225,7 +227,7 @@ export default function ChannelManagement({
 
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Channel Type *
+                  {t('channels.channelType')}
                 </label>
                 <select
                   value={formData.type}
@@ -234,28 +236,28 @@ export default function ChannelManagement({
                   }
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="text">Text Channel</option>
-                  <option value="voice">Voice Channel</option>
-                  <option value="lectures">Lectures Channel</option>
+                  <option value="text">{t('channels.textChannel')}</option>
+                  <option value="voice">{t('channels.voiceChannel')}</option>
+                  <option value="lectures">{t('channels.lecturesChannel')}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Description
+                  {t('channels.description')}
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="What is this channel for?"
+                  placeholder={t('channels.descriptionPlaceholder')}
                 />
               </div>
 
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Category Name
+                  {t('channels.categoryName')}
                 </label>
                 <input
                   type="text"
@@ -272,7 +274,7 @@ export default function ChannelManagement({
                   disabled={loading}
                   className="flex-1 bg-indigo-600 text-white font-semibold px-4 py-2 rounded hover:bg-indigo-700 transition-colors disabled:opacity-50"
                 >
-                  {loading ? 'Saving...' : editingChannel ? 'Update' : 'Create'}
+                  {loading ? t('channels.saving') : editingChannel ? t('channels.update') : t('channels.create')}
                 </button>
                 <button
                   type="button"
@@ -283,7 +285,7 @@ export default function ChannelManagement({
                   }}
                   className="flex-1 bg-gray-700 text-gray-300 font-semibold px-4 py-2 rounded hover:bg-gray-600 transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               </div>
             </form>

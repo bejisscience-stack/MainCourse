@@ -334,7 +334,7 @@ export default function VideoUploadDialog({
           {/* Header */}
           <div>
             <h2 className="text-2xl font-bold text-white mb-2">{t('projects.createVideoProject')}</h2>
-            <p className="text-gray-400 text-sm">{t('projects.fillDetails')}</p>
+            <p className="text-gray-400 text-sm">{t('projects.fillDetailsBelow')}</p>
           </div>
 
           {/* Success Message */}
@@ -363,7 +363,7 @@ export default function VideoUploadDialog({
             {/* Video Link */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Video Link
+                {t('projects.videoLink')}
               </label>
               <input
                 type="url"
@@ -387,7 +387,7 @@ export default function VideoUploadDialog({
             {/* Video File Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Upload Video
+                {t('projects.uploadVideo')}
               </label>
               <input
                 ref={fileInputRef}
@@ -405,7 +405,7 @@ export default function VideoUploadDialog({
                 <p className="mt-1 text-sm text-red-400">{errors.videoFile}</p>
               )}
               <p className="mt-1 text-xs text-gray-500">
-                Provide either a video link or upload a video file (at least one is required)
+                {t('projects.provideVideoLinkOrFile')}
               </p>
             </div>
           </div>
@@ -413,7 +413,7 @@ export default function VideoUploadDialog({
           {/* Budget */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Budget <span className="text-gray-500">(USD)</span>
+              {t('projects.budgetUSD')}
             </label>
             <input
               type="number"
@@ -438,13 +438,13 @@ export default function VideoUploadDialog({
 
           {/* View Count Range */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">View Count Range</h3>
+            <h3 className="text-lg font-semibold text-white">{t('projects.viewCountRange')}</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Minimum Views */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Minimum Views <span className="text-red-400">*</span>
+                  {t('projects.minimumViews')}
                 </label>
                 <input
                   type="number"
@@ -465,13 +465,13 @@ export default function VideoUploadDialog({
                 {errors.minViews && (
                   <p className="mt-1 text-sm text-red-400">{errors.minViews}</p>
                 )}
-                <p className="mt-1 text-xs text-gray-500">Minimum: 5,000 views</p>
+                <p className="mt-1 text-xs text-gray-500">{t('projects.minimumViewsHelper')}</p>
               </div>
 
               {/* Maximum Views */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Maximum Views <span className="text-red-400">*</span>
+                  {t('projects.maximumViews')}
                 </label>
                 <input
                   type="number"
@@ -491,19 +491,19 @@ export default function VideoUploadDialog({
                 {errors.maxViews && (
                   <p className="mt-1 text-sm text-red-400">{errors.maxViews}</p>
                 )}
-                <p className="mt-1 text-xs text-gray-500">Must be greater than minimum views</p>
+                <p className="mt-1 text-xs text-gray-500">{t('projects.mustBeGreaterThanMinimum')}</p>
               </div>
             </div>
           </div>
 
           {/* Project Details */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">Project Details</h3>
+            <h3 className="text-lg font-semibold text-white">{t('projects.projectDetails')}</h3>
             
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Project Name <span className="text-red-400">*</span>
+                {t('projects.projectName')}
               </label>
               <input
                 type="text"
@@ -516,7 +516,7 @@ export default function VideoUploadDialog({
                     return newErrors;
                   });
                 }}
-                placeholder="Enter project name"
+                placeholder={t('projects.enterProjectName')}
                 className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
               {errors.name && (
@@ -527,7 +527,7 @@ export default function VideoUploadDialog({
             {/* Description */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Description <span className="text-red-400">*</span>
+                {t('projects.description')} <span className="text-red-400">*</span>
               </label>
               <textarea
                 value={description}
@@ -539,7 +539,7 @@ export default function VideoUploadDialog({
                     return newErrors;
                   });
                 }}
-                placeholder="Enter project description"
+                placeholder={t('projects.enterProjectDescription')}
                 rows={4}
                 className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
               />
@@ -551,13 +551,13 @@ export default function VideoUploadDialog({
 
           {/* Project Dates */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">Project Duration</h3>
+            <h3 className="text-lg font-semibold text-white">{t('projects.projectDuration')}</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Start Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Start Date <span className="text-red-400">*</span>
+                  {t('projects.startDate')}
                 </label>
                 <input
                   type="date"
@@ -582,7 +582,7 @@ export default function VideoUploadDialog({
               {/* End Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  End Date <span className="text-red-400">*</span>
+                  {t('projects.endDate')}
                 </label>
                 <input
                   type="date"
@@ -601,7 +601,7 @@ export default function VideoUploadDialog({
                 {errors.endDate && (
                   <p className="mt-1 text-sm text-red-400">{errors.endDate}</p>
                 )}
-                <p className="mt-1 text-xs text-gray-500">Must be after or equal to start date</p>
+                <p className="mt-1 text-xs text-gray-500">{t('projects.mustBeAfterOrEqualStartDate')}</p>
               </div>
             </div>
           </div>
@@ -609,7 +609,7 @@ export default function VideoUploadDialog({
           {/* Social Media Platforms */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-3">
-              Social Media Platforms <span className="text-red-400">*</span>
+              {t('projects.socialMediaPlatforms')}
             </label>
             <div className="grid grid-cols-2 gap-3">
               {SOCIAL_MEDIA_PLATFORMS.map((platform) => (
@@ -634,13 +634,13 @@ export default function VideoUploadDialog({
             {errors.platforms && (
               <p className="mt-2 text-sm text-red-400">{errors.platforms}</p>
             )}
-            <p className="mt-2 text-xs text-gray-500">Select at least one platform</p>
+            <p className="mt-2 text-xs text-gray-500">{t('projects.selectAtLeastOnePlatform')}</p>
           </div>
 
           {/* Criteria Section */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-3">
-              Criteria <span className="text-gray-500">(Optional - Add criteria for each platform)</span>
+              {t('projects.criteriaOptional')}
             </label>
             
             {/* Criteria Input */}
@@ -651,7 +651,7 @@ export default function VideoUploadDialog({
                   onChange={(e) => setActiveCriteriaPlatform(e.target.value)}
                   className="px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                 >
-                  <option value="">All Platforms</option>
+                  <option value="">{t('projects.allPlatforms')}</option>
                   {selectedPlatforms.map(platform => (
                     <option key={platform} value={platform}>
                       {SOCIAL_MEDIA_PLATFORMS.find(p => p.id === platform)?.label || platform}
@@ -663,12 +663,12 @@ export default function VideoUploadDialog({
                   value={criteriaInput}
                   onChange={(e) => setCriteriaInput(e.target.value)}
                   onKeyDown={handleAddCriteria}
-                  placeholder="Type criteria and press Enter to add"
+                  placeholder={t('projects.typeCriteriaAndPressEnter')}
                   className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
               <p className="text-xs text-gray-500">
-                Select a platform (or "All Platforms") and press Enter to add a criteria
+                {t('projects.selectPlatformAndPressEnter')}
               </p>
             </div>
 
@@ -694,7 +694,7 @@ export default function VideoUploadDialog({
                         onChange={(e) => handleCriteriaPlatformChange(index, e.target.value)}
                         className="px-2 py-1 bg-gray-600 text-white rounded border border-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-xs"
                       >
-                        <option value="">All Platforms</option>
+                        <option value="">{t('projects.allPlatforms')}</option>
                         {selectedPlatforms.map(platform => (
                           <option key={platform} value={platform}>
                             {SOCIAL_MEDIA_PLATFORMS.find(p => p.id === platform)?.label || platform}
@@ -730,7 +730,7 @@ export default function VideoUploadDialog({
               <p className="mt-2 text-sm text-red-400">{errors.criteria}</p>
             )}
             <p className="mt-2 text-xs text-gray-500">
-              Add criteria that student videos should match. You can add criteria for all platforms or specific platforms. Set RPM (Rate Per Match) for each criteria.
+              {t('projects.addCriteriaDescription')}
             </p>
           </div>
 
@@ -742,7 +742,7 @@ export default function VideoUploadDialog({
               disabled={isSubmitting}
               className="px-6 py-2 text-sm font-semibold text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -771,12 +771,12 @@ export default function VideoUploadDialog({
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  <span>Submitting...</span>
+                  <span>{t('projects.submitting')}</span>
                 </>
               ) : submitSuccess ? (
-                <span>Submitted!</span>
+                <span>{t('projects.submitted')}</span>
               ) : (
-                <span>Submit Project</span>
+                <span>{t('projects.submitProject')}</span>
               )}
             </button>
           </div>

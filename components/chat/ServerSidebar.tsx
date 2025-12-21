@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useI18n } from '@/contexts/I18nContext';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useEnrollments } from '@/hooks/useEnrollments';
@@ -33,6 +34,7 @@ export default function ServerSidebar({
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [courseForPayment, setCourseForPayment] = useState<Course | null>(null);
   const router = useRouter();
+  const { t } = useI18n();
   const { user } = useUser();
   const { mutate: mutateEnrollments } = useEnrollments(user?.id || null);
 
@@ -223,7 +225,7 @@ export default function ServerSidebar({
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
-                    <span>Click to enroll</span>
+                    <span>{t('enrollment.requestEnrollment')}</span>
                   </div>
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-gray-900"></div>
                 </div>
@@ -249,7 +251,7 @@ export default function ServerSidebar({
         {isLecturer && onAddCourse && (
           <button
             className="w-12 h-12 rounded-full bg-gray-700 hover:bg-green-600 transition-all duration-200 flex items-center justify-center text-green-500 hover:text-white text-2xl font-light"
-            title="Create Course"
+            title={t('lecturerDashboard.createCourse')}
             onClick={onAddCourse}
           >
             +

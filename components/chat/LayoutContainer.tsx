@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useI18n } from '@/contexts/I18nContext';
 import ServerSidebar from './ServerSidebar';
 import ChannelSidebar from './ChannelSidebar';
 import ChatArea from './ChatArea';
@@ -49,6 +50,7 @@ export default function LayoutContainer({
   const [membersCollapsed, setMembersCollapsed] = useState(false);
   const [userName, setUserName] = useState<string>('');
   const { user } = useUser();
+  const { t } = useI18n();
 
   const activeServer = activeServerId && activeServerId !== 'home' 
     ? servers.find((s) => s.id === activeServerId) || null
@@ -256,7 +258,7 @@ export default function LayoutContainer({
               <div className="text-white text-sm font-medium truncate">{userName || 'User'}</div>
               <div className="text-green-400 text-xs flex items-center gap-1">
                 <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                Online
+                {t('chat.online')}
               </div>
             </div>
             <div className="flex gap-0.5">

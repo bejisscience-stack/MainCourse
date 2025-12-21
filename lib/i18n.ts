@@ -5,7 +5,7 @@ export const languages: { code: Language; name: string; flag: string }[] = [
   { code: 'ge', name: 'ქართული', flag: '🇬🇪' },
 ];
 
-export const defaultLanguage: Language = 'en';
+export const defaultLanguage: Language = 'ge';
 
 export function getStoredLanguage(): Language {
   if (typeof window === 'undefined') return defaultLanguage;

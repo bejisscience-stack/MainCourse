@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useVideos } from '@/hooks/useVideos';
+import { useI18n } from '@/contexts/I18nContext';
 import type { Channel, Video, VideoProgress } from '@/types/server';
 
 interface LecturesChannelProps {
@@ -895,6 +896,7 @@ function VideoUploadModal({
   courseId: string;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -1032,10 +1034,10 @@ function VideoUploadModal({
 
   const getStageText = () => {
     switch (uploadStage) {
-      case 'video': return `Uploading video... ${uploadProgress}%`;
-      case 'thumbnail': return `Uploading thumbnail... ${uploadProgress}%`;
-      case 'saving': return 'Saving video record...';
-      default: return 'Upload Video';
+      case 'video': return t('lectures.uploadingVideo', { percent: uploadProgress });
+      case 'thumbnail': return t('lectures.uploadingThumbnail', { percent: uploadProgress });
+      case 'saving': return t('lectures.savingVideoRecord');
+      default: return t('lectures.uploadVideo');
     }
   };
 
@@ -1044,8 +1046,8 @@ function VideoUploadModal({
       <div className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xl border border-gray-700">
         <div className="p-5 border-b border-gray-700 flex items-center justify-between">
           <div>
-            <h3 className="text-white font-bold text-lg">Upload Video Lecture</h3>
-            <p className="text-gray-500 text-sm mt-0.5">Add a new video to your course</p>
+            <h3 className="text-white font-bold text-lg">{t('lectures.uploadVideoLecture')}</h3>
+            <p className="text-gray-500 text-sm mt-0.5">{t('lectures.addNewVideoToCourse')}</p>
         </div>
           <button onClick={onClose} disabled={isUploading} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors disabled:opacity-50">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1064,32 +1066,32 @@ function VideoUploadModal({
           )}
 
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-2">Video Title *</label>
+            <label className="block text-gray-300 text-sm font-medium mb-2">{t('lectures.videoTitle')}</label>
             <input
               type="text"
               required
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-gray-500"
-              placeholder="e.g., Introduction to the Course"
+              placeholder={t('lectures.videoTitlePlaceholder')}
               disabled={isUploading}
             />
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-2">Description</label>
+            <label className="block text-gray-300 text-sm font-medium mb-2">{t('lectures.description')}</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={2}
               className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-gray-500 resize-none"
-              placeholder="What will students learn in this video?"
+              placeholder={t('lectures.descriptionPlaceholder')}
               disabled={isUploading}
             />
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-2">Video File *</label>
+            <label className="block text-gray-300 text-sm font-medium mb-2">{t('lectures.videoFile')}</label>
             <div className="relative">
             <input
               type="file"
@@ -1112,7 +1114,7 @@ function VideoUploadModal({
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-2">Thumbnail (optional)</label>
+            <label className="block text-gray-300 text-sm font-medium mb-2">{t('lectures.thumbnailOptional')}</label>
             <input
               type="file"
               accept="image/*"
@@ -1161,7 +1163,7 @@ function VideoUploadModal({
               disabled={isUploading}
               className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold px-6 py-3 rounded-xl hover:from-indigo-500 hover:to-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
             >
-              {isUploading ? getStageText() : 'Upload Video'}
+              {isUploading ? getStageText() : t('lectures.uploadVideo')}
             </button>
             <button
               type="button"
@@ -1169,7 +1171,7 @@ function VideoUploadModal({
               disabled={isUploading}
               className="px-6 py-3 bg-gray-700 text-gray-300 font-semibold rounded-xl hover:bg-gray-600 transition-colors disabled:opacity-50"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </form>
