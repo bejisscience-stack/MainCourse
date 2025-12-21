@@ -455,6 +455,8 @@ export default function ChatArea({
         min_views: data.minViews,
         max_views: data.maxViews,
         platforms: data.platforms,
+        start_date: data.startDate,
+        end_date: data.endDate,
       })
       .select('id')
       .single();

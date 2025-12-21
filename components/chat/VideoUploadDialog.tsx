@@ -24,6 +24,8 @@ export interface ProjectSubmissionData {
   description: string;
   platforms: string[];
   criteria: ProjectCriteria[];
+  startDate: string;
+  endDate: string;
 }
 
 const SOCIAL_MEDIA_PLATFORMS = [
@@ -50,6 +52,8 @@ export default function VideoUploadDialog({
   const [criteria, setCriteria] = useState<ProjectCriteria[]>([]);
   const [criteriaInput, setCriteriaInput] = useState('');
   const [criteriaRpmInputs, setCriteriaRpmInputs] = useState<Record<number, string>>({});
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -70,6 +74,8 @@ export default function VideoUploadDialog({
       setCriteria([]);
       setCriteriaInput('');
       setCriteriaRpmInputs({});
+      setStartDate('');
+      setEndDate('');
       setErrors({});
       setSubmitSuccess(false);
       if (fileInputRef.current) {
@@ -212,9 +218,25 @@ export default function VideoUploadDialog({
       }
     }
 
+    // Start date validation: required
+    if (!startDate.trim()) {
+      newErrors.startDate = 'Start date is required';
+    }
+
+    // End date validation: required and must be after start date
+    if (!endDate.trim()) {
+      newErrors.endDate = 'End date is required';
+    } else if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (end < start) {
+        newErrors.endDate = 'End date must be after or equal to start date';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [videoLink, videoFile, budget, minViews, maxViews, name, description, selectedPlatforms, criteria]);
+  }, [videoLink, videoFile, budget, minViews, maxViews, name, description, selectedPlatforms, criteria, startDate, endDate]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -237,6 +259,8 @@ export default function VideoUploadDialog({
         description: description.trim(),
         platforms: selectedPlatforms,
         criteria: criteria,
+        startDate: startDate.trim(),
+        endDate: endDate.trim(),
       };
 
       await onSubmit(submissionData);
@@ -253,7 +277,7 @@ export default function VideoUploadDialog({
     } finally {
       setIsSubmitting(false);
     }
-  }, [videoLink, videoFile, budget, minViews, maxViews, name, description, selectedPlatforms, validateForm, onSubmit, onClose]);
+  }, [videoLink, videoFile, budget, minViews, maxViews, name, description, selectedPlatforms, criteria, startDate, endDate, validateForm, onSubmit, onClose]);
 
   if (!isOpen) return null;
 
@@ -503,6 +527,63 @@ export default function VideoUploadDialog({
               {errors.description && (
                 <p className="mt-1 text-sm text-red-400">{errors.description}</p>
               )}
+            </div>
+          </div>
+
+          {/* Project Dates */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white">Project Duration</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Start Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Start Date <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    setErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.startDate;
+                      delete newErrors.endDate; // Clear end date error when start changes
+                      return newErrors;
+                    });
+                  }}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+                {errors.startDate && (
+                  <p className="mt-1 text-sm text-red-400">{errors.startDate}</p>
+                )}
+              </div>
+
+              {/* End Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  End Date <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    setErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.endDate;
+                      return newErrors;
+                    });
+                  }}
+                  min={startDate || new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+                {errors.endDate && (
+                  <p className="mt-1 text-sm text-red-400">{errors.endDate}</p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">Must be after or equal to start date</p>
+              </div>
             </div>
           </div>
 
