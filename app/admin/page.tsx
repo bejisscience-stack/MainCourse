@@ -27,27 +27,27 @@ export default function AdminDashboard() {
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<EnrollmentRequest | null>(null);
 
-  // Fetch all requests for stats, and filtered requests for the table
+  // Use a single hook instance - it fetches all and filters client-side
+  // This ensures cache consistency and immediate UI updates
   const {
     requests: allRequests,
     isLoading: allRequestsLoading,
     error: allRequestsError,
     mutate: mutateAllRequests,
-    approveRequest: approveAllRequests,
-    rejectRequest: rejectAllRequests,
-  } = useAdminEnrollmentRequests(undefined); // Always fetch all for stats
-
-  // Ensure we pass the correct status filter - 'all' means fetch all, otherwise use the filter
-  const requestStatusFilter = statusFilter === 'all' ? undefined : statusFilter;
-  
-  const {
-    requests,
-    isLoading: requestsLoading,
-    error: fetchError,
     approveRequest,
     rejectRequest,
-    mutate: mutateRequests,
-  } = useAdminEnrollmentRequests(requestStatusFilter);
+  } = useAdminEnrollmentRequests(undefined); // Fetch all for stats
+
+  // Filter client-side based on current status filter
+  const requestStatusFilter = statusFilter === 'all' ? undefined : statusFilter;
+  const requests = requestStatusFilter 
+    ? allRequests.filter(r => r.status === requestStatusFilter)
+    : allRequests;
+  
+  // Use the same loading/error state
+  const requestsLoading = allRequestsLoading;
+  const fetchError = allRequestsError;
+  const mutateRequests = mutateAllRequests;
 
   // Fetch all bundle requests for stats
   const {
@@ -81,19 +81,18 @@ export default function AdminDashboard() {
 
   const { courses, isLoading: coursesLoading } = useCourses('All');
 
-  // Update both requests lists when approve/reject happens
+  // Update requests when approve/reject happens
   const handleApproveWithRefresh = async (requestId: string) => {
-    // Approve using the filtered hook (which will update its own list)
     await approveRequest(requestId);
-    // Also refresh all requests for stats
+    // Force immediate refresh - single cache key means this updates everything
     await mutateAllRequests();
   };
 
   const handleRejectWithRefresh = async (requestId: string) => {
-    // Reject using the filtered hook (which will update its own list)
     await rejectRequest(requestId);
-    // Also refresh all requests for stats
+    // Force immediate refresh - single cache key means this updates everything
     await mutateAllRequests();
+    await mutateRequests();
   };
 
   // Direct database check on mount - bypass hook cache

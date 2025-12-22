@@ -9,7 +9,7 @@ interface PaymentDialogProps {
   course: Course;
   isOpen: boolean;
   onClose: () => void;
-  onEnroll: (courseId: string, screenshotUrls: string[]) => Promise<void> | void;
+  onEnroll: (courseId: string, screenshotUrls: string[], referralCode?: string) => Promise<void> | void;
 }
 
 // Generate a unique 5-digit code from course ID (uppercase letters and numbers)
@@ -40,6 +40,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
   const [uploadedImages, setUploadedImages] = useState<Array<{ file: File; preview: string; url?: string }>>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [referralCode, setReferralCode] = useState<string>('');
   const dialogRef = useRef<HTMLDivElement>(null);
 
   const courseCode = useMemo(() => generateCourseCode(course.id), [course.id]);
@@ -150,10 +151,10 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
       }
 
       // Payment screenshots have been uploaded successfully
-      // Proceed with enrollment request, passing screenshot URLs
+      // Proceed with enrollment request, passing screenshot URLs and referral code
       // Note: onEnroll will handle success/error and close dialog appropriately
       try {
-        await onEnroll(course.id, uploadedUrls);
+        await onEnroll(course.id, uploadedUrls, referralCode.trim() || undefined);
         // If we get here, enrollment request was successful, dialog will be closed by onEnroll
       } catch (enrollError: any) {
         // If enrollment request fails, show error but keep dialog open so user can retry
@@ -173,6 +174,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
     uploadedImages.forEach(img => URL.revokeObjectURL(img.preview));
     setUploadedImages([]);
     setUploadError(null);
+    setReferralCode('');
     onClose();
   }, [uploadedImages, onClose]);
 
@@ -272,6 +274,22 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
             <p className="text-sm text-gray-600 mb-1">{t('payment.uniqueCourseCode')}</p>
             <p className="text-2xl font-mono font-bold text-navy-900 tracking-wider">{courseCode}</p>
             <p className="text-xs text-gray-500 mt-1">{t('payment.includeCodeInReference')}</p>
+          </div>
+
+          {/* Referral Code (Optional) */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('payment.referralCode')} <span className="text-gray-500 font-normal">({t('common.optional')})</span>
+            </label>
+            <input
+              type="text"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.toUpperCase().trim())}
+              placeholder={t('payment.referralCodePlaceholder') || 'Enter referral code (optional)'}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+              maxLength={20}
+            />
+            <p className="text-xs text-gray-500 mt-1">{t('payment.referralCodeDescription')}</p>
           </div>
 
           {/* Payment Instructions Images */}

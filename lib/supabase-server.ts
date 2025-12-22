@@ -24,6 +24,14 @@ export function createServiceRoleClient() {
       persistSession: false,
       autoRefreshToken: false,
     },
+    db: {
+      schema: 'public',
+    },
+    global: {
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    },
   });
 }
 

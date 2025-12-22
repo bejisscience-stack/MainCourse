@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { courseId, paymentScreenshots } = body;
+    const { courseId, paymentScreenshots, referralCode } = body;
 
     if (!courseId) {
       return NextResponse.json(
@@ -96,6 +96,14 @@ export async function POST(request: NextRequest) {
     if (paymentScreenshots && !Array.isArray(paymentScreenshots)) {
       return NextResponse.json(
         { error: 'paymentScreenshots must be an array' },
+        { status: 400 }
+      );
+    }
+
+    // Validate referralCode if provided (should be a string, max 20 chars)
+    if (referralCode && (typeof referralCode !== 'string' || referralCode.length > 20)) {
+      return NextResponse.json(
+        { error: 'referralCode must be a string with max 20 characters' },
         { status: 400 }
       );
     }
@@ -192,6 +200,7 @@ export async function POST(request: NextRequest) {
         course_id: courseId,
         status: 'pending',
         payment_screenshots: formattedScreenshots.length > 0 ? formattedScreenshots : [],
+        referral_code: referralCode ? referralCode.trim().toUpperCase() : null,
       })
       .select()
       .single();
@@ -246,6 +255,46 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to create enrollment request - no data returned' },
         { status: 500 }
       );
+    }
+
+    // Process referral - first try provided referral code, then check signup referral code
+    if (enrollmentRequest.id) {
+      try {
+        let referralProcessed = false;
+        
+        // First, try to process provided referral code (from payment dialog)
+        if (referralCode) {
+          const { error: referralError, data: referralData } = await supabase.rpc('process_referral', {
+            p_referral_code: referralCode.trim().toUpperCase(),
+            p_referred_user_id: user.id,
+            p_enrollment_request_id: enrollmentRequest.id,
+            p_course_id: courseId,
+          });
+
+          if (!referralError && referralData) {
+            referralProcessed = true;
+          } else if (referralError) {
+            console.error('Error processing provided referral code:', referralError);
+          }
+        }
+        
+        // If no referral code was provided or it failed, try signup referral code
+        if (!referralProcessed) {
+          const { error: signupRefError, data: signupRefData } = await supabase.rpc('process_signup_referral_on_enrollment', {
+            p_user_id: user.id,
+            p_enrollment_request_id: enrollmentRequest.id,
+            p_course_id: courseId,
+          });
+
+          if (signupRefError) {
+            console.error('Error processing signup referral:', signupRefError);
+            // Continue - referral is optional, enrollment request should still succeed
+          }
+        }
+      } catch (referralErr: any) {
+        console.error('Exception processing referral:', referralErr);
+        // Continue - referral is optional
+      }
     }
 
     return NextResponse.json({ request: enrollmentRequest }, { status: 201 });

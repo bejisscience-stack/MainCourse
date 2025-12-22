@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { bundleId, paymentScreenshots } = body;
+    const { bundleId, paymentScreenshots, referralCode } = body;
 
     if (!bundleId) {
       return NextResponse.json(
@@ -38,6 +38,14 @@ export async function POST(request: NextRequest) {
     if (paymentScreenshots && !Array.isArray(paymentScreenshots)) {
       return NextResponse.json(
         { error: 'paymentScreenshots must be an array' },
+        { status: 400 }
+      );
+    }
+
+    // Validate referralCode if provided
+    if (referralCode && (typeof referralCode !== 'string' || referralCode.length > 20)) {
+      return NextResponse.json(
+        { error: 'referralCode must be a string with max 20 characters' },
         { status: 400 }
       );
     }

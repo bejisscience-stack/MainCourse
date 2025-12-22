@@ -15,7 +15,8 @@
     "next": "Next",
     "previous": "Previous",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "optional": "Optional"
   },
   "nav": {
     "about": "About",
@@ -35,7 +36,8 @@
     "lecturer": "Lecturer",
     "admin": "Admin",
     "userMenu": "User menu",
-    "toggleMenu": "Toggle menu"
+    "toggleMenu": "Toggle menu",
+    "settings": "Settings"
   },
   "home": {
     "title": "Make Money",
@@ -77,7 +79,8 @@
     "creatingAccount": "Creating account...",
     "accountCreated": "Account created successfully! Redirecting...",
     "failedToCreateAccount": "Failed to create account. Please try again.",
-    "failedToSignOut": "Failed to sign out. Please try again."
+    "failedToSignOut": "Failed to sign out. Please try again.",
+    "referralLinkDetected": "You've been referred by someone! Referral code: {{code}}"
   },
   "courses": {
     "ourCourses": "Our Courses",
@@ -156,6 +159,9 @@
     "step2": "Step 2: Complete Payment Details",
     "uploadScreenshots": "Upload Transaction Screenshot(s)",
     "uploadMultipleImages": "You can upload multiple images. Maximum 5MB per image.",
+    "referralCode": "Referral Code",
+    "referralCodePlaceholder": "Enter referral code (optional)",
+    "referralCodeDescription": "If someone referred you, enter their referral code here",
     "uploadedImages": "Uploaded Images ({{count}}):",
     "removeImage": "Remove image",
     "processingTime": "Processing Time",
@@ -167,6 +173,34 @@
     "fileSizeExceeded": "Some files exceed the 5MB limit. Please compress them and try again.",
     "failedToUpload": "Failed to upload images. Please try again.",
     "failedToSubmit": "Failed to submit enrollment request. Payment screenshots were uploaded successfully. Please try again."
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your account settings and preferences",
+    "referralCode": "Your Referral Code",
+    "referralCodeDescription": "Share this code with others. When they use it during enrollment, you'll be credited as their referrer.",
+    "referralCodeNotAvailable": "Referral code is being generated. Please refresh the page in a moment.",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "updatePassword": "Update Password",
+    "updatePasswordDescription": "Change your account password. Make sure to use a strong password.",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm New Password",
+    "passwordMinLength": "Password must be at least 6 characters long",
+    "allFieldsRequired": "All fields are required",
+    "passwordTooShort": "Password must be at least 6 characters long",
+    "passwordsDoNotMatch": "New password and confirmation do not match",
+    "newPasswordMustBeDifferent": "New password must be different from current password",
+    "currentPasswordIncorrect": "Current password is incorrect",
+    "passwordUpdatedSuccessfully": "Password updated successfully!",
+    "failedToUpdatePassword": "Failed to update password. Please try again.",
+    "updating": "Updating...",
+    "referralLinks": "Referral Links",
+    "referralLinksDescription": "Share these links with your friends. When they sign up and purchase a course, you'll be credited as their referrer.",
+    "generalReferralLink": "General Referral Link",
+    "courseSpecificLinks": "Course-Specific Referral Links",
+    "showingFirst10Courses": "Showing first 10 courses. Share these links to recommend specific courses to your friends."
   },
   "courseCard": {
     "bestseller": "Bestseller",

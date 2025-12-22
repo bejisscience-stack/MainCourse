@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signUp } from '@/lib/auth';
 import { useI18n } from '@/contexts/I18nContext';
 
-export default function SignUpPage() {
+function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,6 +17,20 @@ export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [referralCode, setReferralCode] = useState<string>('');
+  const [courseId, setCourseId] = useState<string | null>(null);
+
+  // Get referral code and course ID from URL
+  useEffect(() => {
+    const ref = searchParams.get('ref');
+    const course = searchParams.get('course');
+    if (ref) {
+      setReferralCode(ref.toUpperCase().trim());
+    }
+    if (course) {
+      setCourseId(course);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,16 +38,27 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      const { user } = await signUp({ email, password, username, role });
+      const { user } = await signUp({ 
+        email, 
+        password, 
+        username, 
+        role,
+        signupReferralCode: referralCode || undefined
+      });
       
       if (user) {
         setSuccess(true);
-        // Redirect based on role
+        // Redirect based on role and course
         setTimeout(() => {
           if (role === 'lecturer') {
             router.push('/lecturer');
           } else {
-            router.push('/my-courses');
+            // If course ID is provided, redirect to that course page
+            if (courseId) {
+              router.push(`/courses?course=${courseId}`);
+            } else {
+              router.push('/my-courses');
+            }
           }
           router.refresh();
         }, 2000);
@@ -60,6 +86,11 @@ export default function SignUpPage() {
           <p className="mt-2 text-center text-sm text-navy-600">
             {t('auth.startJourney')}
           </p>
+          {referralCode && (
+            <div className="mt-4 bg-purple-50 border border-purple-200 text-purple-700 px-4 py-3 rounded-lg text-sm text-center">
+              {t('auth.referralLinkDetected')?.replace('{{code}}', referralCode) || `You've been referred by someone! Referral code: ${referralCode}`}
+            </div>
+          )}
         </div>
 
         {success ? (
@@ -194,5 +225,19 @@ export default function SignUpPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-50 to-white">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-navy-900"></div>
+        </div>
+      </div>
+    }>
+      <SignUpForm />
+    </Suspense>
   );
 }

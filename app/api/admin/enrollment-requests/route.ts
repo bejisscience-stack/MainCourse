@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,45 +62,52 @@ export async function GET(request: NextRequest) {
 
     console.log('[Admin API] Fetching requests, filter:', filterStatus || 'all');
 
-    // Try RPC function first (bypasses RLS)
+    // Fetch enrollment requests using service role to bypass RLS entirely
     let requests: any[] = [];
     let requestsError: any = null;
 
     try {
-      const { data: rpcData, error: rpcError } = await supabase
-        .rpc('get_enrollment_requests_admin', { 
-          filter_status: filterStatus
-        });
+      // Create a fresh service role client for each request to avoid any connection pooling/caching issues
+      const serviceSupabase = createServiceRoleClient();
+
+      // Query with explicit cache control and include all fields
+      // Force a fresh query by ordering by updated_at (most recent first)
+      // This ensures we get the latest status changes
+      // Use a direct query without any intermediate variables to avoid caching
+      const queryBuilder = serviceSupabase
+        .from('enrollment_requests')
+        .select('id, user_id, course_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots, referral_code')
+        .order('updated_at', { ascending: false }); // Order by updated_at to get most recently changed first
+
+      const finalQuery = filterStatus 
+        ? queryBuilder.eq('status', filterStatus)
+        : queryBuilder;
+
+      // Execute query immediately
+      const result = await finalQuery;
+      requests = result.data || [];
+      requestsError = result.error;
       
-      if (rpcError) {
-        console.error('[Admin API] RPC error:', rpcError);
-        
-        // If function doesn't exist, fallback to direct query
-        if (rpcError.code === '42883' || rpcError.message?.includes('does not exist')) {
-          console.log('[Admin API] RPC function not found, using direct query fallback');
-          
-          let query = supabase
-            .from('enrollment_requests')
-            .select('id, user_id, course_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots')
-            .order('created_at', { ascending: false });
-
-          if (filterStatus) {
-            query = query.eq('status', filterStatus);
-          }
-
-          const result = await query;
-          requests = result.data || [];
-          requestsError = result.error;
-        } else {
-          requestsError = rpcError;
-        }
-      } else {
-        requests = rpcData || [];
-        console.log('[Admin API] RPC succeeded, found', requests.length, 'requests');
+      // Log raw data from database to verify we're getting fresh data
+      if (requests.length > 0) {
+        console.log('[Admin API] Raw DB data (first 3):', requests.slice(0, 3).map(r => ({
+          id: r.id.substring(0, 8) + '...',
+          status: r.status,
+          updated_at: r.updated_at,
+          reviewed_at: r.reviewed_at
+        })));
       }
-    } catch (rpcErr: any) {
-      console.error('[Admin API] Exception calling RPC:', rpcErr);
-      requestsError = rpcErr;
+
+      if (requestsError) {
+        console.error('[Admin API] Service role query error:', requestsError);
+      } else {
+        console.log('[Admin API] Service role query succeeded, found', requests.length, 'requests');
+        // Log the actual statuses returned to debug stale data issues
+        console.log('[Admin API] Request statuses from DB:', requests.map(r => ({ id: r.id, status: r.status, updated_at: r.updated_at })));
+      }
+    } catch (err: any) {
+      console.error('[Admin API] Service role query failed:', err);
+      requestsError = err;
     }
 
     // If we have an error and no requests, return error
@@ -128,19 +135,21 @@ export async function GET(request: NextRequest) {
     const userIds = [...new Set(requests.map(r => r.user_id).filter(Boolean))];
     const courseIds = [...new Set(requests.map(r => r.course_id).filter(Boolean))];
 
-    // Fetch profiles and courses
+    // Fetch profiles and courses using service role to avoid RLS
     let profiles: any[] = [];
     let courses: any[] = [];
     
     try {
       if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
+        const { data: profilesData, error: profilesError } = await createServiceRoleClient()
           .from('profiles')
           .select('id, username, email')
           .in('id', userIds);
 
         if (!profilesError && profilesData) {
           profiles = profilesData;
+        } else if (profilesError) {
+          console.error('[Admin API] Service role profiles error:', profilesError);
         }
       }
     } catch (err) {
@@ -149,13 +158,15 @@ export async function GET(request: NextRequest) {
 
     try {
       if (courseIds.length > 0) {
-        const { data: coursesData, error: coursesError } = await supabase
+        const { data: coursesData, error: coursesError } = await createServiceRoleClient()
           .from('courses')
           .select('id, title, thumbnail_url')
           .in('id', courseIds);
 
         if (!coursesError && coursesData) {
           courses = coursesData;
+        } else if (coursesError) {
+          console.error('[Admin API] Service role courses error:', coursesError);
         }
       }
     } catch (err) {
@@ -174,9 +185,17 @@ export async function GET(request: NextRequest) {
     }));
 
     console.log('[Admin API] Returning', requestsWithRelations.length, 'requests with relations');
+    console.log('[Admin API] Final statuses being returned:', requestsWithRelations.map(r => ({ id: r.id, status: r.status, updated_at: r.updated_at })));
 
+    // Return with no-cache headers to prevent stale data
     return NextResponse.json({ 
       requests: requestsWithRelations
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
     });
   } catch (error: any) {
     console.error('[Admin API] Unhandled exception:', error);

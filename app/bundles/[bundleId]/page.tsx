@@ -83,7 +83,7 @@ export default function BundleEnrollmentPage() {
     }
   };
 
-  const handlePaymentSubmit = useCallback(async (bundleId: string, screenshotUrls: string[]) => {
+  const handlePaymentSubmit = useCallback(async (bundleId: string, screenshotUrls: string[], referralCode?: string) => {
     if (!user?.id) {
       alert(t('bundles.pleaseLogIn'));
       return;
@@ -105,7 +105,8 @@ export default function BundleEnrollmentPage() {
         },
         body: JSON.stringify({ 
           bundleId,
-          paymentScreenshots: screenshotUrls 
+          paymentScreenshots: screenshotUrls,
+          referralCode: referralCode || undefined
         }),
       });
 
@@ -295,7 +296,7 @@ export default function BundleEnrollmentPage() {
         course={bundleAsCourse}
         isOpen={showPaymentDialog}
         onClose={() => setShowPaymentDialog(false)}
-        onEnroll={(courseId, screenshots) => handlePaymentSubmit(courseId, screenshots)}
+        onEnroll={(courseId, screenshots, referralCode) => handlePaymentSubmit(courseId, screenshots, referralCode)}
       />
     </main>
   );

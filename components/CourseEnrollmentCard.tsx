@@ -188,7 +188,7 @@ export default function CourseEnrollmentCard({
     setShowPaymentDialog(false);
   }, []);
 
-  const handlePaymentSubmit = useCallback(async (courseId: string, screenshotUrls: string[]) => {
+  const handlePaymentSubmit = useCallback(async (courseId: string, screenshotUrls: string[], referralCode?: string) => {
     if (!userId) {
       alert(t('enrollment.pleaseLogin'));
       return;
@@ -212,7 +212,8 @@ export default function CourseEnrollmentCard({
         },
         body: JSON.stringify({ 
           courseId,
-          paymentScreenshots: screenshotUrls 
+          paymentScreenshots: screenshotUrls,
+          referralCode: referralCode || undefined
         }),
       });
 
