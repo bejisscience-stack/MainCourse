@@ -367,3 +367,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 COMMENT ON FUNCTION public.reject_bundle_enrollment_request IS 'Rejects a bundle enrollment request and removes the bundle enrollment if it exists';
 
 
+

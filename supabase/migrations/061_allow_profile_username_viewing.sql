@@ -19,3 +19,4 @@ COMMENT ON POLICY "Users can view profile usernames" ON public.profiles IS
   'Allows authenticated users to view basic profile information (id, username, email) of all users for display purposes in submissions, chat, and other course-related features.';
 
 
+
