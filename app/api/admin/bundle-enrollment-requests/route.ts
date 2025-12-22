@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,19 +62,53 @@ export async function GET(request: NextRequest) {
 
     console.log('[Admin API] Fetching bundle requests, filter:', filterStatus || 'all');
 
-    // Fetch bundle enrollment requests
-    let query = supabase
-      .from('bundle_enrollment_requests')
-      .select('id, user_id, bundle_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots')
-      .order('created_at', { ascending: false });
+    // Fetch bundle enrollment requests using service role to bypass RLS entirely
+    let requests: any[] = [];
+    let requestsError: any = null;
 
-    if (filterStatus) {
-      query = query.eq('status', filterStatus);
+    try {
+      // Create a fresh service role client for each request to avoid any connection pooling/caching issues
+      const serviceSupabase = createServiceRoleClient();
+
+      // Query with explicit cache control and include all fields
+      // Force a fresh query by ordering by updated_at (most recent first)
+      // This ensures we get the latest status changes
+      const queryBuilder = serviceSupabase
+        .from('bundle_enrollment_requests')
+        .select('id, user_id, bundle_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots')
+        .order('updated_at', { ascending: false }); // Order by updated_at to get most recently changed first
+
+      const finalQuery = filterStatus 
+        ? queryBuilder.eq('status', filterStatus)
+        : queryBuilder;
+
+      // Execute query immediately
+      const result = await finalQuery;
+      requests = result.data || [];
+      requestsError = result.error;
+      
+      // Log raw data from database to verify we're getting fresh data
+      if (requests.length > 0) {
+        console.log('[Admin API] Raw bundle DB data (first 3):', requests.slice(0, 3).map(r => ({
+          id: r.id.substring(0, 8) + '...',
+          status: r.status,
+          updated_at: r.updated_at,
+          reviewed_at: r.reviewed_at
+        })));
+      }
+
+      if (requestsError) {
+        console.error('[Admin API] Service role bundle query error:', requestsError);
+      } else {
+        console.log('[Admin API] Service role bundle query succeeded, found', requests.length, 'requests');
+      }
+    } catch (err: any) {
+      console.error('[Admin API] Service role bundle query failed:', err);
+      requestsError = err;
     }
 
-    const { data: requests, error: requestsError } = await query;
-
-    if (requestsError) {
+    // If we have an error and no requests, return error
+    if (requestsError && requests.length === 0) {
       console.error('[Admin API] Failed to fetch bundle requests:', requestsError);
       return NextResponse.json(
         { 
@@ -87,7 +121,7 @@ export async function GET(request: NextRequest) {
     }
 
     // If no requests, return empty array
-    if (!requests || requests.length === 0) {
+    if (requests.length === 0) {
       console.log('[Admin API] No bundle requests found');
       return NextResponse.json({ requests: [] });
     }
@@ -104,7 +138,9 @@ export async function GET(request: NextRequest) {
     
     try {
       if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
+        // Use service role client for profiles too to ensure consistency
+        const serviceSupabase = createServiceRoleClient();
+        const { data: profilesData, error: profilesError } = await serviceSupabase
           .from('profiles')
           .select('id, username, email')
           .in('id', userIds);
@@ -119,7 +155,9 @@ export async function GET(request: NextRequest) {
 
     try {
       if (bundleIds.length > 0) {
-        const { data: bundlesData, error: bundlesError } = await supabase
+        // Use service role client for bundles too to ensure consistency
+        const serviceSupabase = createServiceRoleClient();
+        const { data: bundlesData, error: bundlesError } = await serviceSupabase
           .from('course_bundles')
           .select('id, title, price')
           .in('id', bundleIds);
@@ -136,17 +174,39 @@ export async function GET(request: NextRequest) {
     const profilesMap = new Map(profiles.map(p => [p.id, p]));
     const bundlesMap = new Map(bundles.map(b => [b.id, b]));
 
-    // Combine the data
-    const requestsWithRelations = requests.map(request => ({
-      ...request,
-      profiles: profilesMap.get(request.user_id) || null,
-      bundles: bundlesMap.get(request.bundle_id) || null,
-    }));
+    // Combine the data and parse payment_screenshots if it's a JSON string
+    const requestsWithRelations = requests.map(request => {
+      // Parse payment_screenshots if it's a string (JSON)
+      let paymentScreenshots = request.payment_screenshots;
+      if (typeof paymentScreenshots === 'string') {
+        try {
+          paymentScreenshots = JSON.parse(paymentScreenshots);
+        } catch (e) {
+          console.warn('[Admin API] Failed to parse payment_screenshots for request', request.id, e);
+          paymentScreenshots = [];
+        }
+      }
+      
+      return {
+        ...request,
+        payment_screenshots: paymentScreenshots,
+        profiles: profilesMap.get(request.user_id) || null,
+        bundles: bundlesMap.get(request.bundle_id) || null,
+      };
+    });
 
     console.log('[Admin API] Returning', requestsWithRelations.length, 'bundle requests with relations');
+    console.log('[Admin API] Final bundle statuses being returned:', requestsWithRelations.map(r => ({ id: r.id, status: r.status, updated_at: r.updated_at })));
 
+    // Return with no-cache headers to prevent stale data
     return NextResponse.json({ 
       requests: requestsWithRelations
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
     });
   } catch (error: any) {
     console.error('[Admin API] Unhandled exception:', error);

@@ -11,6 +11,7 @@ import { useAdminBundleEnrollmentRequests } from '@/hooks/useAdminBundleEnrollme
 import { useCourses } from '@/hooks/useCourses';
 import { supabase } from '@/lib/supabase';
 import type { EnrollmentRequest } from '@/hooks/useEnrollmentRequests';
+import type { BundleEnrollmentRequest } from '@/hooks/useAdminBundleEnrollmentRequests';
 import type { Course } from '@/components/CourseCard';
 
 type TabType = 'overview' | 'enrollment-requests' | 'courses';
@@ -26,6 +27,7 @@ export default function AdminDashboard() {
   const [isAdminVerified, setIsAdminVerified] = useState<boolean | null>(null); // Direct DB verification
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<EnrollmentRequest | null>(null);
+  const [selectedBundleRequest, setSelectedBundleRequest] = useState<BundleEnrollmentRequest | null>(null);
 
   // Use a single hook instance - it fetches all and filters client-side
   // This ensures cache consistency and immediate UI updates
@@ -49,23 +51,25 @@ export default function AdminDashboard() {
   const fetchError = allRequestsError;
   const mutateRequests = mutateAllRequests;
 
-  // Fetch all bundle requests for stats
+  // Use a single hook instance for bundle requests - it fetches all and filters client-side
   const {
     requests: allBundleRequests,
     isLoading: allBundleRequestsLoading,
     error: allBundleRequestsError,
     mutate: mutateAllBundleRequests,
-  } = useAdminBundleEnrollmentRequests(undefined);
-
-  // Fetch bundle enrollment requests with filter
-  const {
-    requests: bundleRequests,
-    isLoading: bundleRequestsLoading,
-    error: bundleFetchError,
     approveRequest: approveBundleRequest,
     rejectRequest: rejectBundleRequest,
-    mutate: mutateBundleRequests,
-  } = useAdminBundleEnrollmentRequests(requestStatusFilter);
+  } = useAdminBundleEnrollmentRequests(undefined); // Fetch all for stats
+
+  // Filter client-side based on current status filter
+  const bundleRequests = requestStatusFilter 
+    ? allBundleRequests.filter(r => r.status === requestStatusFilter)
+    : allBundleRequests;
+  
+  // Use the same loading/error state
+  const bundleRequestsLoading = allBundleRequestsLoading;
+  const bundleFetchError = allBundleRequestsError;
+  const mutateBundleRequests = mutateAllBundleRequests;
   
   // Debug logging
   useEffect(() => {
@@ -255,6 +259,16 @@ export default function AdminDashboard() {
 
   const closeRequestDialog = () => {
     setSelectedRequest(null);
+  };
+
+  const handleBundleRowClick = (request: BundleEnrollmentRequest) => {
+    console.log('[Admin] Opening bundle request modal:', request.id);
+    console.log('[Admin] Payment screenshots:', request.payment_screenshots);
+    setSelectedBundleRequest(request);
+  };
+
+  const closeBundleRequestDialog = () => {
+    setSelectedBundleRequest(null);
   };
 
   const handleApproveFromDialog = async (requestId: string) => {
@@ -703,10 +717,8 @@ export default function AdminDashboard() {
                             return (
                               <tr
                                 key={request.id}
-                                className="hover:bg-gray-50 cursor-pointer"
-                                onClick={() => {
-                                  // Could add bundle request dialog here if needed
-                                }}
+                                className="hover:bg-gray-50 cursor-pointer transition-colors"
+                                onClick={() => handleBundleRowClick(request)}
                               >
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="text-sm font-medium text-gray-900">
@@ -742,6 +754,8 @@ export default function AdminDashboard() {
                                           setProcessingId(request.id);
                                           try {
                                             await approveBundleRequest(request.id);
+                                            // Refresh all bundle requests after approval
+                                            mutateAllBundleRequests();
                                             setSuccessMessage('Bundle enrollment request approved successfully');
                                             setTimeout(() => setSuccessMessage(null), 3000);
                                           } catch (err: any) {
@@ -761,6 +775,8 @@ export default function AdminDashboard() {
                                           setProcessingId(request.id);
                                           try {
                                             await rejectBundleRequest(request.id);
+                                            // Refresh all bundle requests after rejection
+                                            mutateAllBundleRequests();
                                             setSuccessMessage('Bundle enrollment request rejected successfully');
                                             setTimeout(() => setSuccessMessage(null), 3000);
                                           } catch (err: any) {
@@ -1063,6 +1079,300 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-end pt-4 border-t border-gray-200">
                   <button
                     onClick={closeRequestDialog}
+                    className="px-6 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bundle Request Details Dialog */}
+      {selectedBundleRequest && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={(e) => {
+            // Close modal when clicking outside
+            if (e.target === e.currentTarget) {
+              closeBundleRequestDialog();
+            }
+          }}
+        >
+          <div
+            className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={closeBundleRequestDialog}
+              className="absolute top-4 right-4 z-10 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 transition-colors"
+              aria-label="Close dialog"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            <div className="p-6 space-y-6">
+              <h2 className="text-2xl font-bold text-navy-900">Bundle Enrollment Request Details</h2>
+
+              {/* User Information */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900">User Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Username</p>
+                    <p className="text-base font-medium text-gray-900">
+                      {selectedBundleRequest.profiles?.username || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Email</p>
+                    <p className="text-base font-medium text-gray-900">
+                      {selectedBundleRequest.profiles?.email || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">User ID</p>
+                    <p className="text-base font-mono text-sm text-gray-700">
+                      {selectedBundleRequest.user_id}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bundle Information */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900">Bundle Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Bundle Title</p>
+                    <p className="text-base font-medium text-gray-900">
+                      {selectedBundleRequest.bundles?.title || 'Unknown Bundle'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Bundle ID</p>
+                    <p className="text-base font-mono text-sm text-gray-700">
+                      {selectedBundleRequest.bundle_id}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Price</p>
+                    <p className="text-base font-medium text-gray-900">
+                      ${selectedBundleRequest.bundles?.price?.toFixed(2) || '0.00'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Request Information */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900">Request Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Status</p>
+                    <div className="mt-1">
+                      {getStatusBadge(selectedBundleRequest.status)}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Request ID</p>
+                    <p className="text-base font-mono text-sm text-gray-700">
+                      {selectedBundleRequest.id}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Created At</p>
+                    <p className="text-base text-gray-900">
+                      {formatDate(selectedBundleRequest.created_at)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Updated At</p>
+                    <p className="text-base text-gray-900">
+                      {formatDate(selectedBundleRequest.updated_at)}
+                    </p>
+                  </div>
+                  {selectedBundleRequest.reviewed_at && (
+                    <>
+                      <div>
+                        <p className="text-sm text-gray-600">Reviewed At</p>
+                        <p className="text-base text-gray-900">
+                          {formatDate(selectedBundleRequest.reviewed_at)}
+                        </p>
+                      </div>
+                      {selectedBundleRequest.reviewed_by && (
+                        <div>
+                          <p className="text-sm text-gray-600">Reviewed By</p>
+                          <p className="text-base font-mono text-sm text-gray-700">
+                            {selectedBundleRequest.reviewed_by}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Payment Screenshots */}
+              {(() => {
+                // Parse payment_screenshots if it's a string
+                let screenshots = selectedBundleRequest.payment_screenshots;
+                if (typeof screenshots === 'string') {
+                  try {
+                    screenshots = JSON.parse(screenshots);
+                  } catch (e) {
+                    console.warn('[Admin] Failed to parse payment_screenshots:', e);
+                    screenshots = [];
+                  }
+                }
+                
+                return screenshots && Array.isArray(screenshots) && screenshots.length > 0 ? (
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Payment Screenshots ({screenshots.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {screenshots.map((url: string, index: number) => (
+                      <div
+                        key={index}
+                        className="relative group bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
+                      >
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          <img
+                            src={url}
+                            alt={`Payment screenshot ${index + 1}`}
+                            className="w-full h-64 object-contain cursor-pointer bg-white"
+                            loading="lazy"
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 px-4 py-2 rounded-lg text-sm font-medium text-gray-900 shadow-lg">
+                              View Full Size
+                            </div>
+                          </div>
+                        </a>
+                        <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
+                          {index + 1}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                ) : null;
+              })()}
+
+              {/* No Screenshots Message */}
+              {(() => {
+                // Parse payment_screenshots if it's a string (JSON)
+                let screenshots: string[] = [];
+                if (selectedBundleRequest.payment_screenshots) {
+                  if (typeof selectedBundleRequest.payment_screenshots === 'string') {
+                    try {
+                      screenshots = JSON.parse(selectedBundleRequest.payment_screenshots);
+                    } catch (e) {
+                      screenshots = [];
+                    }
+                  } else if (Array.isArray(selectedBundleRequest.payment_screenshots)) {
+                    screenshots = selectedBundleRequest.payment_screenshots;
+                  }
+                }
+                
+                return screenshots.length === 0 ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <svg
+                      className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-medium text-yellow-800">No Payment Screenshots</p>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        This bundle enrollment request does not have any payment screenshots attached.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                ) : null;
+              })()}
+
+              {/* Action Buttons */}
+              {selectedBundleRequest.status === 'pending' && (
+                <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={async () => {
+                      setProcessingId(selectedBundleRequest.id);
+                      try {
+                        await rejectBundleRequest(selectedBundleRequest.id);
+                        mutateAllBundleRequests();
+                        closeBundleRequestDialog();
+                        setSuccessMessage('Bundle enrollment request rejected successfully');
+                        setTimeout(() => setSuccessMessage(null), 3000);
+                      } catch (err: any) {
+                        setError(err.message || 'Failed to reject bundle request');
+                      } finally {
+                        setProcessingId(null);
+                      }
+                    }}
+                    disabled={processingId === selectedBundleRequest.id}
+                    className="px-6 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {processingId === selectedBundleRequest.id ? 'Processing...' : 'Reject Request'}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setProcessingId(selectedBundleRequest.id);
+                      try {
+                        await approveBundleRequest(selectedBundleRequest.id);
+                        mutateAllBundleRequests();
+                        closeBundleRequestDialog();
+                        setSuccessMessage('Bundle enrollment request approved successfully');
+                        setTimeout(() => setSuccessMessage(null), 3000);
+                      } catch (err: any) {
+                        setError(err.message || 'Failed to approve bundle request');
+                      } finally {
+                        setProcessingId(null);
+                      }
+                    }}
+                    disabled={processingId === selectedBundleRequest.id}
+                    className="px-6 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {processingId === selectedBundleRequest.id ? 'Processing...' : 'Approve Request'}
+                  </button>
+                </div>
+              )}
+
+              {selectedBundleRequest.status !== 'pending' && (
+                <div className="flex items-center justify-end pt-4 border-t border-gray-200">
+                  <button
+                    onClick={closeBundleRequestDialog}
                     className="px-6 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                   >
                     Close

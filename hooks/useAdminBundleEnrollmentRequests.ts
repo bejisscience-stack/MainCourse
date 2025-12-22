@@ -31,18 +31,21 @@ async function fetchAdminBundleEnrollmentRequests(status?: string): Promise<Bund
     throw new Error('Not authenticated');
   }
 
-  const url = status
-    ? `/api/admin/bundle-enrollment-requests?status=${status}`
-    : '/api/admin/bundle-enrollment-requests';
+  // Always fetch all and filter client-side to avoid any server-side cache/filter drift
+  // Add timestamp to bust any caching
+  const timestamp = Date.now();
+  const url = `/api/admin/bundle-enrollment-requests?t=${timestamp}`;
 
   try {
-    console.log('[Admin Bundle Hook] Fetching bundle enrollment requests, status:', status || 'all');
+    console.log('[Admin Bundle Hook] Fetching bundle enrollment requests, status:', status || 'all', 'timestamp:', timestamp);
     
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`,
+        'Cache-Control': 'no-cache',
       },
-      cache: 'no-store',
+      cache: 'no-store', // Ensure we always get fresh data
+      next: { revalidate: 0 }, // Disable Next.js caching
     });
 
     const responseClone = response.clone();
@@ -67,8 +70,15 @@ async function fetchAdminBundleEnrollmentRequests(status?: string): Promise<Bund
     }
 
     const data = await response.json();
-    const requests = data.requests || [];
-    console.log('[Admin Bundle Hook] Successfully fetched', requests.length, 'bundle enrollment requests');
+    let requests: BundleEnrollmentRequest[] = data.requests || [];
+    
+    // Client-side filter to ensure we reflect latest status changes even if server-side filtering lags
+    if (status && status !== 'all') {
+      requests = requests.filter(r => r.status === status);
+    }
+    
+    console.log('[Admin Bundle Hook] Successfully fetched', requests.length, 'bundle enrollment requests (filtered from', data.requests?.length || 0, 'total)');
+    console.log('[Admin Bundle Hook] Request statuses:', requests.map(r => r.status));
     return requests;
   } catch (error: any) {
     console.error('[Admin Bundle Hook] Error fetching admin bundle enrollment requests:', error);
@@ -80,9 +90,11 @@ async function fetchAdminBundleEnrollmentRequests(status?: string): Promise<Bund
 }
 
 export function useAdminBundleEnrollmentRequests(status?: string) {
+  // Always use the same cache key to avoid cache fragmentation
+  // We fetch all requests and filter client-side
   const { data, error, isLoading, mutate } = useSWR<BundleEnrollmentRequest[]>(
-    ['admin-bundle-enrollment-requests', status],
-    () => fetchAdminBundleEnrollmentRequests(status),
+    'admin-bundle-enrollment-requests-all', // Single cache key for all requests
+    () => fetchAdminBundleEnrollmentRequests(undefined), // Always fetch all
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
@@ -98,8 +110,13 @@ export function useAdminBundleEnrollmentRequests(status?: string) {
     }
   );
 
+  // Filter client-side based on status
+  const filteredRequests = status && status !== 'all' 
+    ? (data || []).filter(r => r.status === status)
+    : (data || []);
+
+  // Helper to mutate - now just one cache key to invalidate
   const mutateAll = async () => {
-    await mutate();
     await mutate(undefined, { revalidate: true });
   };
 
@@ -131,11 +148,7 @@ export function useAdminBundleEnrollmentRequests(status?: string) {
       throw new Error(data.error || data.details || 'Failed to approve request');
     }
 
-    await mutate((currentData) => {
-      if (!currentData) return currentData;
-      return currentData.filter(req => req.id !== requestId);
-    }, false);
-
+    // After approval, revalidate the single cache key to get fresh data
     await mutateAll();
     
     return data;
@@ -169,18 +182,14 @@ export function useAdminBundleEnrollmentRequests(status?: string) {
       throw new Error(data.error || data.details || 'Failed to reject request');
     }
 
-    await mutate((currentData) => {
-      if (!currentData) return currentData;
-      return currentData.filter(req => req.id !== requestId);
-    }, false);
-
+    // After rejection, revalidate the single cache key to get fresh data
     await mutateAll();
     
     return data;
   };
 
   return {
-    requests: data || [],
+    requests: filteredRequests, // Return filtered requests
     isLoading,
     error,
     mutate,

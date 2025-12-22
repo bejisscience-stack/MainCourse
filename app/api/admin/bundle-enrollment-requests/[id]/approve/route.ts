@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,9 +63,14 @@ export async function POST(
 
     console.log('[Approve API] Attempting to approve bundle request:', id);
     
+    // Use service role client to ensure we bypass RLS and get immediate updates
+    const serviceSupabase = createServiceRoleClient();
+    
     // Use the database function to approve (ensures consistency and bypasses RLS)
-    const { error: approveError } = await supabase.rpc('approve_bundle_enrollment_request', {
+    // Pass admin user ID as parameter since we're using service role client
+    const { error: approveError } = await serviceSupabase.rpc('approve_bundle_enrollment_request', {
       request_id: id,
+      admin_user_id: user.id,
     });
 
     if (approveError) {
@@ -85,7 +90,18 @@ export async function POST(
       );
     }
     
-    console.log('[Approve API] Bundle approval successful');
+    // Verify the update was successful by querying the request directly
+    const { data: updatedRequest, error: verifyError } = await serviceSupabase
+      .from('bundle_enrollment_requests')
+      .select('id, status, updated_at')
+      .eq('id', id)
+      .single();
+    
+    if (verifyError) {
+      console.error('[Approve API] Error verifying bundle approval:', verifyError);
+    } else {
+      console.log('[Approve API] Bundle approval successful, verified status:', updatedRequest?.status, 'updated_at:', updatedRequest?.updated_at);
+    }
 
     // Return success - the frontend will refresh the list automatically
     return NextResponse.json({

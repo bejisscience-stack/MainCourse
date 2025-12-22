@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,13 +61,25 @@ export async function POST(
       );
     }
 
+    console.log('[Reject API] Attempting to reject bundle request:', id);
+    
+    // Use service role client to ensure we bypass RLS and get immediate updates
+    const serviceSupabase = createServiceRoleClient();
+    
     // Use the database function to reject (ensures consistency and bypasses RLS)
-    const { error: rejectError } = await supabase.rpc('reject_bundle_enrollment_request', {
+    // Pass admin user ID as parameter since we're using service role client
+    const { error: rejectError } = await serviceSupabase.rpc('reject_bundle_enrollment_request', {
       request_id: id,
+      admin_user_id: user.id,
     });
 
     if (rejectError) {
-      console.error('Error rejecting bundle enrollment request:', rejectError);
+      console.error('[Reject API] Error rejecting bundle enrollment request:', {
+        code: rejectError.code,
+        message: rejectError.message,
+        details: rejectError.details,
+        hint: rejectError.hint
+      });
       return NextResponse.json(
         { 
           error: 'Failed to reject bundle enrollment request', 
@@ -77,8 +89,19 @@ export async function POST(
         { status: 500 }
       );
     }
-
-    console.log('[Reject API] Bundle rejection successful');
+    
+    // Verify the update was successful by querying the request directly
+    const { data: updatedRequest, error: verifyError } = await serviceSupabase
+      .from('bundle_enrollment_requests')
+      .select('id, status, updated_at')
+      .eq('id', id)
+      .single();
+    
+    if (verifyError) {
+      console.error('[Reject API] Error verifying bundle rejection:', verifyError);
+    } else {
+      console.log('[Reject API] Bundle rejection successful, verified status:', updatedRequest?.status, 'updated_at:', updatedRequest?.updated_at);
+    }
 
     // Return success - the frontend will refresh the list
     return NextResponse.json({
