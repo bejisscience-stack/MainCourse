@@ -29,6 +29,7 @@ export default function CoursesPage() {
   const router = useRouter();
   const { t } = useI18n();
   const [filter, setFilter] = useState<FilterType>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -113,7 +114,7 @@ export default function CoursesPage() {
     // Admins can view all courses, so don't redirect them
   }, [userRole, userLoading, router]);
 
-  // Filter courses based on user role
+  // Filter courses based on user role, filter type, and search query
   const filteredCourses = useMemo(() => {
     let result = courses;
 
@@ -122,13 +123,24 @@ export default function CoursesPage() {
       result = result.filter((course) => course.course_type === filter);
     }
 
+    // Filter by search query (course name or lecturer/creator name)
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      result = result.filter((course) => {
+        const titleMatch = course.title?.toLowerCase().includes(query);
+        const creatorMatch = course.creator?.toLowerCase().includes(query);
+        const authorMatch = course.author?.toLowerCase().includes(query);
+        return titleMatch || creatorMatch || authorMatch;
+      });
+    }
+
     // Filter out lecturer's own courses
     if (userRole === 'lecturer' && lecturerCourseIds.size > 0) {
       result = result.filter((course) => !lecturerCourseIds.has(course.id));
     }
 
     return result;
-  }, [courses, filter, userRole, lecturerCourseIds]);
+  }, [courses, filter, searchQuery, userRole, lecturerCourseIds]);
 
   const handleEnroll = useCallback(async (courseId: string) => {
     if (!user) {
@@ -206,6 +218,35 @@ export default function CoursesPage() {
             <p className="text-lg text-navy-600 max-w-2xl mx-auto">
               {t('courses.discoverCourses')}
             </p>
+          </div>
+
+          {/* Search Bar */}
+          <div className="mb-8 max-w-2xl mx-auto">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('courses.searchPlaceholder') || 'Search by course name or lecturer name...'}
+                className="w-full pl-12 pr-4 py-3 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent text-black placeholder-gray-500"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-gray-700 transition-colors"
+                  aria-label="Clear search"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Filter Buttons */}
@@ -352,7 +393,13 @@ export default function CoursesPage() {
               {filteredCourses.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-navy-600 text-lg">
-                    {filter !== 'All' ? t('courses.noCoursesInCategory', { category: filter === 'Editing' ? t('courses.filterEditing') : filter === 'Content Creation' ? t('courses.filterContentCreation') : t('courses.filterWebsiteCreation') }) : t('courses.noCoursesFound')}
+                    {searchQuery ? (
+                      t('courses.noCoursesFoundForSearch', { query: searchQuery })
+                    ) : filter !== 'All' ? (
+                      t('courses.noCoursesInCategory', { category: filter === 'Editing' ? t('courses.filterEditing') : filter === 'Content Creation' ? t('courses.filterContentCreation') : t('courses.filterWebsiteCreation') })
+                    ) : (
+                      t('courses.noCoursesFound')
+                    )}
                   </p>
                 </div>
               ) : (

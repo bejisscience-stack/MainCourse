@@ -203,8 +203,21 @@ export default function ChannelManagement({
 
       {/* Create/Edit Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            // Close modal when clicking outside
+            if (e.target === e.currentTarget) {
+              setShowCreateModal(false);
+              setEditingChannel(null);
+              setFormData({ name: '', type: 'text', description: '', categoryName: 'COURSE CHANNELS' });
+            }
+          }}
+        >
+          <div 
+            className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-4 border-b border-gray-700">
               <h3 className="text-white font-semibold">
                 {editingChannel ? t('channels.editChannel') : t('channels.createChannel')}

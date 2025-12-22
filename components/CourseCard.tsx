@@ -324,7 +324,12 @@ function CourseCard({
       {isVideoExpanded && course.intro_video_url && (
         <div 
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-          onClick={handleCloseVideo}
+          onClick={(e) => {
+            // Close modal when clicking outside
+            if (e.target === e.currentTarget) {
+              handleCloseVideo();
+            }
+          }}
         >
           <div 
             className="relative w-full max-w-4xl bg-black rounded-lg overflow-hidden"

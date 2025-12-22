@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Course } from './CourseCard';
 import { useI18n } from '@/contexts/I18nContext';
@@ -40,6 +40,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
   const [uploadedImages, setUploadedImages] = useState<Array<{ file: File; preview: string; url?: string }>>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const courseCode = useMemo(() => generateCourseCode(course.id), [course.id]);
 
@@ -185,11 +186,19 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
       }
     };
 
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
+        handleClose();
+      }
+    };
+
     document.addEventListener('keydown', handleEscape);
+    document.addEventListener('mousedown', handleClickOutside);
     document.body.style.overflow = 'hidden';
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('mousedown', handleClickOutside);
       document.body.style.overflow = 'unset';
     };
   }, [isOpen, handleClose]);
@@ -199,11 +208,10 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
   return (
     <div 
       className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-      onClick={handleClose}
     >
       <div 
-        className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
+        className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[85vh] overflow-y-auto"
       >
         {/* Close button */}
         <button
@@ -226,7 +234,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
           </svg>
         </button>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-4">
           {/* Header */}
           <div>
             <h2 className="text-2xl font-bold text-navy-900 mb-2">{t('payment.paymentInstructions')}</h2>
@@ -280,7 +288,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
                       src="/payment-instructions/payment-step-1.png"
                       alt="Payment instruction step 1 - Enter account number GE00BG0000000013231"
                       className="w-full h-auto object-contain block"
-                      style={{ maxHeight: '600px' }}
+                      style={{ maxHeight: '400px' }}
                       loading="lazy"
                     />
                   </div>
@@ -295,7 +303,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
                       src="/payment-instructions/payment-step-2.png"
                       alt="Payment instruction step 2 - Complete payment with unique code in description field"
                       className="w-full h-auto object-contain block"
-                      style={{ maxHeight: '600px' }}
+                      style={{ maxHeight: '400px' }}
                       loading="lazy"
                     />
                   </div>

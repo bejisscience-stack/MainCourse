@@ -98,3 +98,4 @@ CREATE TRIGGER on_submission_review_updated
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
 
+

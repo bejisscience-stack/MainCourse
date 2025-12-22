@@ -109,7 +109,26 @@
     "bestseller": "Bestseller",
     "rating": "rating",
     "ratings": "ratings",
-    "unknownCourse": "Unknown Course"
+    "unknownCourse": "Unknown Course",
+    "searchPlaceholder": "Search by course name or lecturer name...",
+    "noCoursesFoundForSearch": "No courses found matching \"{{query}}\""
+  },
+  "bundles": {
+    "loadingBundle": "Loading bundle...",
+    "bundleNotFound": "Bundle not found",
+    "failedToLoadBundle": "Failed to load bundle",
+    "pleaseLogIn": "Please log in to request enrollment",
+    "enrollmentRequestSubmitted": "Bundle enrollment request submitted successfully! You will be notified when it is approved.",
+    "failedToCreateRequest": "Failed to create bundle enrollment request. Please try again.",
+    "backToCourses": "Back to Courses",
+    "courseBundle": "Course Bundle",
+    "bundleIncludes": "Bundle Includes:",
+    "bundleIncludesCount": "This bundle includes {{count}} courses",
+    "bundlePrice": "Bundle Price",
+    "ifPurchasedSeparately": "if purchased separately",
+    "saveAmount": "Save ${{amount}}!",
+    "viewMyCourses": "View My Courses",
+    "enrollInBundle": "Enroll in Bundle"
   },
   "myCourses": {
     "title": "My Courses",

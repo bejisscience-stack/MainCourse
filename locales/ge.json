@@ -109,7 +109,26 @@
     "bestseller": "ბესტსელერი",
     "rating": "რეიტინგი",
     "ratings": "რეიტინგი",
-    "unknownCourse": "უცნობი კურსი"
+    "unknownCourse": "უცნობი კურსი",
+    "searchPlaceholder": "ძიება კურსის სახელით ან ლექტორის სახელით...",
+    "noCoursesFoundForSearch": "ვერ მოიძებნა კურსები \"{{query}}\"-ის შესაბამისად"
+  },
+  "bundles": {
+    "loadingBundle": "პაკეტის ჩატვირთვა...",
+    "bundleNotFound": "პაკეტი ვერ მოიძებნა",
+    "failedToLoadBundle": "პაკეტის ჩატვირთვა ვერ მოხერხდა",
+    "pleaseLogIn": "გთხოვთ შეხვიდეთ სისტემაში რეგისტრაციის მოთხოვნისთვის",
+    "enrollmentRequestSubmitted": "პაკეტში რეგისტრაციის მოთხოვნა წარმატებით გაიგზავნა! თქვენ მოგეცემათ შეტყობინება დადასტურების შემდეგ.",
+    "failedToCreateRequest": "პაკეტში რეგისტრაციის მოთხოვნის შექმნა ვერ მოხერხდა. გთხოვთ სცადოთ ხელახლა.",
+    "backToCourses": "კურსებზე დაბრუნება",
+    "courseBundle": "კურსების პაკეტი",
+    "bundleIncludes": "პაკეტი შეიცავს:",
+    "bundleIncludesCount": "ეს პაკეტი შეიცავს {{count}} კურსს",
+    "bundlePrice": "პაკეტის ფასი",
+    "ifPurchasedSeparately": "ცალ-ცალკე შეძენის შემთხვევაში",
+    "saveAmount": "დაზოგეთ ${{amount}}!",
+    "viewMyCourses": "ჩემი კურსების ნახვა",
+    "enrollInBundle": "პაკეტში რეგისტრაცია"
   },
   "myCourses": {
     "title": "ჩემი კურსები",

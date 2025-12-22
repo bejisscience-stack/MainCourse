@@ -59,3 +59,4 @@ CREATE TRIGGER on_course_created_create_channels
 
 
 
+

@@ -303,7 +303,12 @@ export default function VideoUploadDialog({
   return (
     <div 
       className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+      onClick={(e) => {
+        // Close modal when clicking outside
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
     >
       <div 
         className="relative w-full max-w-2xl bg-gray-800 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto"

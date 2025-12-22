@@ -836,7 +836,12 @@ export default function AdminDashboard() {
       {selectedRequest && (
         <div
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-          onClick={closeRequestDialog}
+          onClick={(e) => {
+            // Close modal when clicking outside
+            if (e.target === e.currentTarget) {
+              closeRequestDialog();
+            }
+          }}
         >
           <div
             className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"

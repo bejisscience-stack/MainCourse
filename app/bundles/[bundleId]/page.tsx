@@ -7,12 +7,14 @@ import BackgroundShapes from '@/components/BackgroundShapes';
 import PaymentDialog from '@/components/PaymentDialog';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
+import { useI18n } from '@/contexts/I18nContext';
 
 export default function BundleEnrollmentPage() {
   const router = useRouter();
   const params = useParams();
   const bundleId = params.bundleId as string;
   const { user, isLoading: userLoading } = useUser();
+  const { t } = useI18n();
   const [bundle, setBundle] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,13 +54,13 @@ export default function BundleEnrollmentPage() {
 
       if (fetchError) throw fetchError;
       if (!data) {
-        setError('Bundle not found');
+        setError(t('bundles.bundleNotFound'));
         return;
       }
       setBundle(data);
     } catch (err: any) {
       console.error('Error fetching bundle:', err);
-      setError(err.message || 'Failed to load bundle');
+      setError(err.message || t('bundles.failedToLoadBundle'));
     } finally {
       setLoading(false);
     }
@@ -83,7 +85,7 @@ export default function BundleEnrollmentPage() {
 
   const handlePaymentSubmit = useCallback(async (bundleId: string, screenshotUrls: string[]) => {
     if (!user?.id) {
-      alert('Please log in to request enrollment');
+      alert(t('bundles.pleaseLogIn'));
       return;
     }
 
@@ -126,11 +128,11 @@ export default function BundleEnrollmentPage() {
       }
 
       setShowPaymentDialog(false);
-      alert('Bundle enrollment request submitted successfully! You will be notified when it is approved.');
+      alert(t('bundles.enrollmentRequestSubmitted'));
       router.push('/courses');
     } catch (err: any) {
       console.error('Error requesting bundle enrollment:', err);
-      const errorMessage = err.message || 'Failed to create bundle enrollment request. Please try again.';
+      const errorMessage = err.message || t('bundles.failedToCreateRequest');
       alert(errorMessage);
     }
   }, [user, router]);
@@ -143,7 +145,7 @@ export default function BundleEnrollmentPage() {
         <div className="relative z-10 pt-24 pb-16 flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-navy-900"></div>
-            <p className="mt-4 text-navy-600">Loading bundle...</p>
+            <p className="mt-4 text-navy-600">{t('bundles.loadingBundle')}</p>
           </div>
         </div>
       </main>
@@ -158,13 +160,13 @@ export default function BundleEnrollmentPage() {
         <div className="relative z-10 pt-24 pb-16">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg">
-              <p className="font-semibold">Error</p>
-              <p className="mt-1">{error || 'Bundle not found'}</p>
+              <p className="font-semibold">{t('common.error')}</p>
+              <p className="mt-1">{error || t('bundles.bundleNotFound')}</p>
               <button
                 onClick={() => router.push('/courses')}
                 className="mt-4 bg-navy-900 text-white px-4 py-2 rounded-lg hover:bg-navy-800 transition-colors"
               >
-                Back to Courses
+                {t('bundles.backToCourses')}
               </button>
             </div>
           </div>
@@ -180,7 +182,7 @@ export default function BundleEnrollmentPage() {
   const bundleAsCourse = {
     id: bundle.id,
     title: bundle.title,
-    description: bundle.description || `This bundle includes ${bundleCourses.length} courses`,
+    description: bundle.description || t('bundles.bundleIncludesCount', { count: bundleCourses.length }),
     course_type: 'Bundle' as any,
     price: bundle.price,
     original_price: bundle.original_price || (totalOriginalPrice > bundle.price ? totalOriginalPrice : undefined),
@@ -206,13 +208,13 @@ export default function BundleEnrollmentPage() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Courses
+            {t('bundles.backToCourses')}
           </button>
 
           <div className="bg-white border-2 border-purple-200 rounded-lg p-8 shadow-lg">
             <div className="mb-6">
               <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide bg-purple-50 px-3 py-1 rounded inline-block mb-3">
-                Course Bundle
+                {t('bundles.courseBundle')}
               </span>
               <h1 className="text-3xl md:text-4xl font-bold text-navy-900 mb-4">{bundle.title}</h1>
               {bundle.description && (
@@ -221,7 +223,7 @@ export default function BundleEnrollmentPage() {
             </div>
 
             <div className="mb-8">
-              <h2 className="text-xl font-semibold text-navy-900 mb-4">Bundle Includes:</h2>
+              <h2 className="text-xl font-semibold text-navy-900 mb-4">{t('bundles.bundleIncludes')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {bundleCourses.map((course: any, idx: number) => (
                   <div key={idx} className="border border-navy-200 rounded-lg p-4">
@@ -250,15 +252,15 @@ export default function BundleEnrollmentPage() {
             <div className="bg-purple-50 rounded-lg p-6 mb-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-navy-600 mb-1">Bundle Price</p>
+                  <p className="text-sm text-navy-600 mb-1">{t('bundles.bundlePrice')}</p>
                   <p className="text-3xl font-bold text-navy-900">${bundle.price.toFixed(2)}</p>
                   {totalOriginalPrice > bundle.price && (
                     <p className="text-sm text-navy-400 line-through mt-1">
-                      ${totalOriginalPrice.toFixed(2)} if purchased separately
+                      ${totalOriginalPrice.toFixed(2)} {t('bundles.ifPurchasedSeparately')}
                     </p>
                   )}
                   <p className="text-sm text-purple-700 mt-2 font-semibold">
-                    Save ${(totalOriginalPrice - bundle.price).toFixed(2)}!
+                    {t('bundles.saveAmount', { amount: (totalOriginalPrice - bundle.price).toFixed(2) })}
                   </p>
                 </div>
               </div>
@@ -272,7 +274,7 @@ export default function BundleEnrollmentPage() {
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                View My Courses
+                {t('bundles.viewMyCourses')}
               </a>
             ) : (
               <button
@@ -282,7 +284,7 @@ export default function BundleEnrollmentPage() {
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Enroll in Bundle
+                {t('bundles.enrollInBundle')}
               </button>
             )}
           </div>
@@ -298,4 +300,5 @@ export default function BundleEnrollmentPage() {
     </main>
   );
 }
+
 

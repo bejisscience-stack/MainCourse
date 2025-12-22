@@ -1037,7 +1037,12 @@ export default function ProjectCard({
                         {isExpanded && (
                           <div 
                             className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-                            onClick={() => setExpandedSubmissionId(null)}
+                            onClick={(e) => {
+                              // Close modal when clicking outside
+                              if (e.target === e.currentTarget) {
+                                setExpandedSubmissionId(null);
+                              }
+                            }}
                           >
                             <div 
                               className="relative w-full max-w-3xl bg-gray-800 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto"

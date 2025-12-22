@@ -14,3 +14,4 @@ CREATE INDEX IF NOT EXISTS project_criteria_platform_idx ON public.project_crite
 -- Update existing criteria to have NULL platform (applies to all platforms)
 -- This maintains backward compatibility
 
+

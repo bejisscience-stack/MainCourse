@@ -24,3 +24,4 @@ WHERE content = 'Video submission';
 -- (This will return 0 after deletion)
 
 
+
