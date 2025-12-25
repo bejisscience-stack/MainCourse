@@ -56,23 +56,6 @@ export default function FirstLoginCoursePopup({ courseId, referralCode }: FirstL
     setMounted(true);
   }, []);
 
-  // Close modal on ESC key press
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        handleClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [isOpen, handleClose]);
-
   const markFirstLoginComplete = useCallback(async () => {
     if (!user || isMarkingComplete) return;
 
@@ -93,6 +76,29 @@ export default function FirstLoginCoursePopup({ courseId, referralCode }: FirstL
       setIsMarkingComplete(false);
     }
   }, [user, isMarkingComplete, mutate]);
+
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
+    // Mark first login as completed when popup is closed
+    markFirstLoginComplete();
+  }, [markFirstLoginComplete]);
+
+  // Close modal on ESC key press
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, handleClose]);
 
   // Show popup if user hasn't completed first login yet
   useEffect(() => {
@@ -118,12 +124,6 @@ export default function FirstLoginCoursePopup({ courseId, referralCode }: FirstL
       }
     }
   }, [mounted, user, profile, course, courseLoading, courseError, referralCode, markFirstLoginComplete]);
-
-  const handleClose = useCallback(() => {
-    setIsOpen(false);
-    // Mark first login as completed when popup is closed
-    markFirstLoginComplete();
-  }, [markFirstLoginComplete]);
 
   const handleEnroll = useCallback(async (courseId: string, screenshotUrls: string[], referralCode?: string) => {
     // This will be handled by the EnrollmentWizard's onEnroll prop
