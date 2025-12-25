@@ -23,11 +23,12 @@ interface EnrollmentWizardProps {
   isOpen: boolean;
   onClose: () => void;
   onEnroll: (courseId: string, screenshotUrls: string[], referralCode?: string) => Promise<void> | void;
+  initialReferralCode?: string;
 }
 
 const TOTAL_STEPS = 5;
 
-export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll }: EnrollmentWizardProps) {
+export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, initialReferralCode }: EnrollmentWizardProps) {
   const { t } = useI18n();
   const { profile } = useUser();
   const [currentStep, setCurrentStep] = useState(1);
@@ -51,9 +52,11 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll }: 
     if (isOpen) {
       setCurrentStep(1);
       
-      // Auto-fill referral code if user was referred for this specific course
-      let initialReferralCode = '';
-      if (profile && course) {
+      // Auto-fill referral code from props first, then from profile if available
+      let referralCodeToUse = initialReferralCode || '';
+      
+      // If no referral code from props, check profile
+      if (!referralCodeToUse && profile && course) {
         const referredCourseId = profile.referred_for_course_id;
         const signupReferralCode = profile.signup_referral_code;
         
@@ -62,19 +65,19 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll }: 
         // 2. User was referred for this specific course
         // 3. Current course ID matches the referred course ID
         if (signupReferralCode && referredCourseId && referredCourseId === course.id) {
-          initialReferralCode = signupReferralCode;
+          referralCodeToUse = signupReferralCode;
         }
       }
       
       setWizardData({
         course,
-        referralCode: initialReferralCode,
+        referralCode: referralCodeToUse,
         uploadedImages: [],
         uploadedUrls: [],
       });
       setStepErrors({});
     }
-  }, [isOpen, course, profile]);
+  }, [isOpen, course, profile, initialReferralCode]);
 
   // Close modal on ESC key press and handle body scroll
   useEffect(() => {

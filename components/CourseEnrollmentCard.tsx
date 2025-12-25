@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, memo } from 'react';
+import { useMemo, useState, useCallback, memo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import CourseCard, { type Course } from './CourseCard';
 import EnrollmentWizard from './EnrollmentWizard';
@@ -17,6 +17,8 @@ interface CourseEnrollmentCardProps {
   onEnroll?: (courseId: string) => void;
   showEnrollButton?: boolean;
   userId: string | null;
+  initialReferralCode?: string | null;
+  autoOpen?: boolean;
 }
 
 /**
@@ -29,15 +31,60 @@ function CourseEnrollmentCard({
   onEnroll,
   showEnrollButton = true,
   userId,
+  initialReferralCode,
+  autoOpen = false,
 }: CourseEnrollmentCardProps) {
   const { t } = useI18n();
   const router = useRouter();
   const { user } = useUser();
   const [showEnrollmentWizard, setShowEnrollmentWizard] = useState(false);
+  const isOpeningRef = useRef(false);
   const { request, hasPendingRequest, isLoading: isRequestLoading, mutate } = useEnrollmentRequestStatus(
     userId,
     course.id
   );
+
+  // Handle button click to open enrollment wizard
+  const handleOpenEnrollmentWizard = useCallback((e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    // Prevent multiple rapid clicks
+    if (isOpeningRef.current || showEnrollmentWizard) {
+      return;
+    }
+    
+    // Check if user is authenticated before opening enrollment wizard
+    if (!user) {
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+    
+    // Set flag to prevent multiple clicks
+    isOpeningRef.current = true;
+    
+    // Immediately open the enrollment wizard
+    setShowEnrollmentWizard(true);
+    
+    // Reset flag after a short delay
+    setTimeout(() => {
+      isOpeningRef.current = false;
+    }, 300);
+  }, [user, router, showEnrollmentWizard]);
+
+  // Auto-open enrollment wizard if autoOpen is true and user is authenticated
+  // This must be after hasPendingRequest is defined
+  useEffect(() => {
+    if (autoOpen && user && !isEnrolled && !hasPendingRequest && !showEnrollmentWizard) {
+      // Use a small timeout to ensure state is ready
+      const timer = setTimeout(() => {
+        setShowEnrollmentWizard(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [autoOpen, user, isEnrolled, hasPendingRequest, showEnrollmentWizard]);
 
   // Subscribe to real-time updates for this user's enrollment requests
   useRealtimeEnrollmentRequests({
@@ -167,17 +214,11 @@ function CourseEnrollmentCard({
     // Default: Request Enrollment button
     return (
       <button
-        onClick={() => {
-          // Check if user is authenticated before opening enrollment wizard
-          if (!user) {
-            router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
-            return;
-          }
-          setShowEnrollmentWizard(true);
-        }}
+        onClick={handleOpenEnrollmentWizard}
         disabled={buttonState.disabled}
         className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-charcoal-950 dark:bg-emerald-500 rounded-full hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 will-change-transform"
         style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+        type="button"
       >
         <svg
           className="w-3.5 h-3.5 mr-1.5"
@@ -199,6 +240,13 @@ function CourseEnrollmentCard({
 
   const handleEnrollmentWizardClose = useCallback(() => {
     setShowEnrollmentWizard(false);
+    // Clear URL params when closing to prevent auto-reopening
+    if (typeof window !== 'undefined' && window.history) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('course');
+      url.searchParams.delete('ref');
+      window.history.replaceState({}, '', url.toString());
+    }
   }, []);
 
   const handleEnrollmentSubmit = useCallback(async (courseId: string, screenshotUrls: string[], referralCode?: string) => {
@@ -281,6 +329,7 @@ function CourseEnrollmentCard({
         isOpen={showEnrollmentWizard}
         onClose={handleEnrollmentWizardClose}
         onEnroll={handleEnrollmentSubmit}
+        initialReferralCode={initialReferralCode || undefined}
       />
     </>
   );

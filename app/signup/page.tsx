@@ -54,9 +54,10 @@ function SignUpForm() {
           if (role === 'lecturer') {
             router.push('/lecturer');
           } else {
-            // If course ID is provided, redirect to that course page
-            if (courseId) {
-              router.push(`/courses?course=${courseId}`);
+            // If user registered with referral code, redirect to home page to show course popup
+            // The popup will appear automatically based on their profile data
+            if (referralCode || courseId) {
+              router.push('/');
             } else {
               router.push('/my-courses');
             }

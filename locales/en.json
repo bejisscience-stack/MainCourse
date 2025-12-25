@@ -457,6 +457,14 @@
     "cannotDeleteRequiredChannels": "Cannot delete required channels (Lectures and Projects)",
     "confirmDeleteChannel": "Are you sure you want to delete this channel? This action cannot be undone."
   },
+  "firstLogin": {
+    "welcomeTitle": "Welcome! You've Been Invited",
+    "welcomeDescription": "You've been invited to enroll in this course. Complete your purchase to get started!",
+    "referralCodeApplied": "Referral Code Applied",
+    "referralCodeInfo": "Your referral code \"{{code}}\" will be automatically applied when you proceed to checkout.",
+    "buyLater": "I'll Buy Later",
+    "proceedToPurchase": "Proceed to Purchase"
+  },
   "meta": {
     "title": "Course - Make Money Today",
     "description": "Start your journey to financial freedom today"

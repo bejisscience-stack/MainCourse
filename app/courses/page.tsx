@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import CourseCard, { type Course } from '@/components/CourseCard';
 import CourseEnrollmentCard from '@/components/CourseEnrollmentCard';
@@ -12,6 +12,7 @@ import { useEnrollments } from '@/hooks/useEnrollments';
 import { useEnrollmentRequestStatus } from '@/hooks/useEnrollmentRequests';
 import useSWR from 'swr';
 import { useI18n } from '@/contexts/I18nContext';
+import FirstLoginCoursePopup from '@/components/FirstLoginCoursePopup';
 
 type FilterType = 'All' | 'Editing' | 'Content Creation' | 'Website Creation';
 
@@ -24,15 +25,30 @@ async function fetchLecturerCourses(userId: string): Promise<Set<string>> {
   return new Set(data?.map((c) => c.id) || []);
 }
 
-export default function CoursesPage() {
+function CoursesPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
   const [filter, setFilter] = useState<FilterType>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [urlReferralCode, setUrlReferralCode] = useState<string | null>(null);
 
-  const { user, role: userRole, isLoading: userLoading } = useUser();
+  const { user, profile, role: userRole, isLoading: userLoading } = useUser();
+
+  // Read URL params for course and referral code
+  useEffect(() => {
+    const courseParam = searchParams.get('course');
+    const refParam = searchParams.get('ref');
+    if (courseParam) {
+      setSelectedCourseId(courseParam);
+    }
+    if (refParam) {
+      setUrlReferralCode(refParam.toUpperCase().trim());
+    }
+  }, [searchParams]);
   const { courses, isLoading: coursesLoading, mutate: mutateCourses } = useCourses(filter);
   const { enrolledCourseIds, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
   const [bundles, setBundles] = useState<any[]>([]);
@@ -422,6 +438,7 @@ export default function CoursesPage() {
                     {filteredCourses.map((course) => {
                       const isOwnCourse = lecturerCourseIds.has(course.id);
                       const shouldShowEnroll = !isOwnCourse && userRole !== 'lecturer';
+                      const isSelectedCourse = selectedCourseId === course.id;
                       
                       return (
                         <CourseEnrollmentCard
@@ -432,6 +449,8 @@ export default function CoursesPage() {
                           onEnroll={undefined}
                           showEnrollButton={shouldShowEnroll}
                           userId={user?.id || null}
+                          initialReferralCode={isSelectedCourse ? urlReferralCode : null}
+                          autoOpen={isSelectedCourse && shouldShowEnroll && !enrolledCourseIds.has(course.id)}
                         />
                       );
                     })}
@@ -442,6 +461,33 @@ export default function CoursesPage() {
           )}
         </div>
       </div>
+      {/* First Login Course Popup */}
+      {!userLoading && 
+       user && 
+       profile && 
+       profile.referred_for_course_id && 
+       profile.signup_referral_code && 
+       !profile.first_login_completed &&
+       userRole !== 'lecturer' && (
+        <FirstLoginCoursePopup
+          courseId={profile.referred_for_course_id}
+          referralCode={profile.signup_referral_code}
+        />
+      )}
     </main>
+  );
+}
+
+export default function CoursesPage() {
+  return (
+    <Suspense fallback={
+      <main className="relative bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900 overflow-hidden">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+        </div>
+      </main>
+    }>
+      <CoursesPageContent />
+    </Suspense>
   );
 }

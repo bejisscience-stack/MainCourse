@@ -86,9 +86,9 @@ export function useUser() {
     'user-data',
     fetchUserData,
     {
-      revalidateOnFocus: true, // Revalidate when window gets focus to catch role changes
+      revalidateOnFocus: false, // Disable to prevent flickering - only revalidate on reconnect
       revalidateOnReconnect: true,
-      dedupingInterval: 2000, // Reduce deduping interval to catch role changes faster
+      dedupingInterval: 5000, // Increase deduping interval to reduce unnecessary re-renders
       fallbackData: { user: null, profile: null, role: null },
       errorRetryCount: 2, // Only retry 2 times on error
       errorRetryInterval: 1000, // Wait 1 second between retries
@@ -110,16 +110,26 @@ export function useUser() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Set up auth state change listener
+    let debounceTimer: NodeJS.Timeout | null = null;
+
+    // Set up auth state change listener with debouncing to prevent rapid re-renders
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(() => {
-      // Mutate the SWR cache when auth state changes
-      mutate();
+      // Debounce mutations to prevent flickering
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+      debounceTimer = setTimeout(() => {
+        mutate();
+      }, 100); // Small delay to batch rapid changes
     });
 
     // Cleanup subscription on unmount
     return () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
       subscription.unsubscribe();
     };
   }, [mutate]);

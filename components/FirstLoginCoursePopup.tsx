@@ -56,6 +56,27 @@ export default function FirstLoginCoursePopup({ courseId, referralCode }: FirstL
     setMounted(true);
   }, []);
 
+  // Prevent body scroll when popup is open
+  useEffect(() => {
+    if (isOpen) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflowY = 'hidden';
+      
+      return () => {
+        // Restore scroll position
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflowY = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
+
   const markFirstLoginComplete = useCallback(async () => {
     if (!user || isMarkingComplete) return;
 
@@ -147,16 +168,22 @@ export default function FirstLoginCoursePopup({ courseId, referralCode }: FirstL
     <div 
       className="fixed inset-0 bg-black/80 dark:bg-black/90 z-[9999] overflow-y-auto"
       onClick={handleClose}
+      style={{ overscrollBehavior: 'contain' }}
     >
       <div 
-        className="relative w-full min-h-full bg-white dark:bg-navy-800 flex flex-col"
+        className="relative w-full min-h-screen bg-white dark:bg-navy-800 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
         <button
-          onClick={handleClose}
-          className="fixed top-4 right-4 z-50 w-10 h-10 bg-gray-100 dark:bg-navy-700 hover:bg-gray-200 dark:hover:bg-navy-600 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 transition-colors shadow-lg"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleClose();
+          }}
+          className="fixed top-4 right-4 z-[10000] w-10 h-10 bg-gray-100 dark:bg-navy-700 hover:bg-gray-200 dark:hover:bg-navy-600 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label={t('common.close')}
+          disabled={isMarkingComplete}
         >
           <svg
             className="w-5 h-5"
@@ -275,18 +302,26 @@ export default function FirstLoginCoursePopup({ courseId, referralCode }: FirstL
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 pt-6">
             <button
-              onClick={handleClose}
-              className="px-8 py-3 text-base font-semibold text-charcoal-600 dark:text-gray-300 bg-charcoal-100 dark:bg-navy-700 rounded-full hover:bg-charcoal-200 dark:hover:bg-navy-600 transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleClose();
+              }}
+              className="px-8 py-3 text-base font-semibold text-charcoal-600 dark:text-gray-300 bg-charcoal-100 dark:bg-navy-700 rounded-full hover:bg-charcoal-200 dark:hover:bg-navy-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isMarkingComplete}
             >
               {t('firstLogin.buyLater') || 'I\'ll Buy Later'}
             </button>
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 handleClose();
-                // Navigate to courses page - the referral code will auto-fill when they enroll
-                router.push(`/courses?course=${course.id}`);
+                // Navigate to courses page with referral code in URL - it will auto-fill in enrollment wizard
+                router.push(`/courses?course=${course.id}&ref=${encodeURIComponent(referralCode)}`);
               }}
-              className="px-8 py-3 text-base font-semibold text-white bg-emerald-500 dark:bg-emerald-600 rounded-full hover:bg-emerald-600 dark:hover:bg-emerald-700 transition-all duration-200 hover:shadow-lg"
+              className="px-8 py-3 text-base font-semibold text-white bg-emerald-500 dark:bg-emerald-600 rounded-full hover:bg-emerald-600 dark:hover:bg-emerald-700 transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isMarkingComplete}
             >
               {t('firstLogin.proceedToPurchase') || 'Proceed to Purchase'}
             </button>

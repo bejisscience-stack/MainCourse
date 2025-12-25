@@ -13,11 +13,12 @@ import useSWR from 'swr';
 import type { Course } from '@/hooks/useCourses';
 import type { Course as CourseCardCourse } from '@/components/CourseCard';
 import { useI18n } from '@/contexts/I18nContext';
+import FirstLoginCoursePopup from '@/components/FirstLoginCoursePopup';
 
 export default function MyCoursesPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const { user, role: userRole, isLoading: userLoading } = useUser();
+  const { user, profile, role: userRole, isLoading: userLoading } = useUser();
   const { enrolledCourseIds, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -269,6 +270,19 @@ export default function MyCoursesPage() {
             setPaymentDialogCourse(null);
             await mutateEnrollments();
           }}
+        />
+      )}
+      {/* First Login Course Popup */}
+      {!userLoading && 
+       user && 
+       profile && 
+       profile.referred_for_course_id && 
+       profile.signup_referral_code && 
+       !profile.first_login_completed &&
+       userRole !== 'lecturer' && (
+        <FirstLoginCoursePopup
+          courseId={profile.referred_for_course_id}
+          referralCode={profile.signup_referral_code}
         />
       )}
     </main>
