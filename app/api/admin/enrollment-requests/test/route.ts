@@ -33,9 +33,9 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     // Test 2: Get counts
-    const { data: countData, error: countError } = await supabase
-      .rpc('get_enrollment_requests_count')
-      .catch(() => ({ data: null, error: { message: 'Count function not available' } }));
+    const countResult = await supabase.rpc('get_enrollment_requests_count');
+    const countData = countResult.data;
+    const countError = countResult.error || null;
 
     // Test 3: RPC function with pending filter
     const { data: rpcPendingData, error: rpcPendingError } = await supabase
