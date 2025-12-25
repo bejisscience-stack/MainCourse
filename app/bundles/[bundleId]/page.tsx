@@ -140,13 +140,22 @@ export default function BundleEnrollmentPage() {
 
   if (userLoading || loading) {
     return (
-      <main className="relative min-h-screen bg-white overflow-hidden">
+      <main className="relative min-h-screen bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900 overflow-hidden">
+        {/* Base gradient layer */}
+        <div className="fixed inset-0 bg-gradient-to-b from-[#fafafa] via-white to-[#fafafa] dark:from-navy-950 dark:via-navy-900 dark:to-navy-950 pointer-events-none"></div>
+        
+        {/* Subtle radial gradients for depth */}
+        <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-[800px] h-[800px] blur-3xl bg-gradient-radial from-emerald-500/3 via-emerald-500/1 to-transparent dark:from-emerald-400/4 dark:via-emerald-400/2 dark:to-transparent"></div>
+          <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] blur-3xl bg-gradient-radial from-charcoal-200/2 via-transparent to-transparent dark:from-navy-400/2 dark:via-transparent dark:to-transparent"></div>
+        </div>
+        
         <BackgroundShapes />
         <Navigation />
         <div className="relative z-10 pt-24 pb-16 flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-navy-900"></div>
-            <p className="mt-4 text-navy-600">{t('bundles.loadingBundle')}</p>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-charcoal-950 dark:border-emerald-500"></div>
+            <p className="mt-4 text-charcoal-600 dark:text-gray-400">{t('bundles.loadingBundle')}</p>
           </div>
         </div>
       </main>
@@ -155,17 +164,26 @@ export default function BundleEnrollmentPage() {
 
   if (error || !bundle) {
     return (
-      <main className="relative min-h-screen bg-white overflow-hidden">
+      <main className="relative min-h-screen bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900 overflow-hidden">
+        {/* Base gradient layer */}
+        <div className="fixed inset-0 bg-gradient-to-b from-[#fafafa] via-white to-[#fafafa] dark:from-navy-950 dark:via-navy-900 dark:to-navy-950 pointer-events-none"></div>
+        
+        {/* Subtle radial gradients for depth */}
+        <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-[800px] h-[800px] blur-3xl bg-gradient-radial from-emerald-500/3 via-emerald-500/1 to-transparent dark:from-emerald-400/4 dark:via-emerald-400/2 dark:to-transparent"></div>
+          <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] blur-3xl bg-gradient-radial from-charcoal-200/2 via-transparent to-transparent dark:from-navy-400/2 dark:via-transparent dark:to-transparent"></div>
+        </div>
+        
         <BackgroundShapes />
         <Navigation />
         <div className="relative z-10 pt-24 pb-16">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-6 py-4 rounded-lg">
               <p className="font-semibold">{t('common.error')}</p>
               <p className="mt-1">{error || t('bundles.bundleNotFound')}</p>
               <button
                 onClick={() => router.push('/courses')}
-                className="mt-4 bg-navy-900 text-white px-4 py-2 rounded-lg hover:bg-navy-800 transition-colors"
+                className="mt-4 bg-charcoal-950 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-colors"
               >
                 {t('bundles.backToCourses')}
               </button>
@@ -197,14 +215,23 @@ export default function BundleEnrollmentPage() {
   };
 
   return (
-    <main className="relative min-h-screen bg-white overflow-hidden">
+    <main className="relative min-h-screen bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900 overflow-hidden">
+      {/* Base gradient layer */}
+      <div className="fixed inset-0 bg-gradient-to-b from-[#fafafa] via-white to-[#fafafa] dark:from-navy-950 dark:via-navy-900 dark:to-navy-950 pointer-events-none"></div>
+      
+      {/* Subtle radial gradients for depth */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[800px] h-[800px] blur-3xl bg-gradient-radial from-emerald-500/3 via-emerald-500/1 to-transparent dark:from-emerald-400/4 dark:via-emerald-400/2 dark:to-transparent"></div>
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] blur-3xl bg-gradient-radial from-charcoal-200/2 via-transparent to-transparent dark:from-navy-400/2 dark:via-transparent dark:to-transparent"></div>
+      </div>
+      
       <BackgroundShapes />
       <Navigation />
       <div className="relative z-10 pt-24 pb-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <button
             onClick={() => router.push('/courses')}
-            className="mb-6 text-navy-600 hover:text-navy-900 flex items-center gap-2"
+            className="mb-6 text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white flex items-center gap-2 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -212,22 +239,22 @@ export default function BundleEnrollmentPage() {
             {t('bundles.backToCourses')}
           </button>
 
-          <div className="bg-white border-2 border-purple-200 rounded-lg p-8 shadow-lg">
+          <div className="bg-white dark:bg-navy-800 border-2 border-emerald-200 dark:border-emerald-700/50 rounded-lg p-8 shadow-lg">
             <div className="mb-6">
-              <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide bg-purple-50 px-3 py-1 rounded inline-block mb-3">
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide bg-emerald-50 dark:bg-emerald-500/20 px-3 py-1 rounded inline-block mb-3">
                 {t('bundles.courseBundle')}
               </span>
-              <h1 className="text-3xl md:text-4xl font-bold text-navy-900 mb-4">{bundle.title}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white mb-4">{bundle.title}</h1>
               {bundle.description && (
-                <p className="text-lg text-navy-600">{bundle.description}</p>
+                <p className="text-lg text-charcoal-600 dark:text-gray-400">{bundle.description}</p>
               )}
             </div>
 
             <div className="mb-8">
-              <h2 className="text-xl font-semibold text-navy-900 mb-4">{t('bundles.bundleIncludes')}</h2>
+              <h2 className="text-xl font-semibold text-charcoal-950 dark:text-white mb-4">{t('bundles.bundleIncludes')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {bundleCourses.map((course: any, idx: number) => (
-                  <div key={idx} className="border border-navy-200 rounded-lg p-4">
+                  <div key={idx} className="border border-charcoal-200 dark:border-navy-700 rounded-lg p-4 bg-white dark:bg-navy-700/50">
                     <div className="flex items-start gap-3">
                       {course.thumbnail_url && (
                         <img
@@ -237,12 +264,12 @@ export default function BundleEnrollmentPage() {
                         />
                       )}
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-purple-600 mb-1">{course.course_type}</p>
-                        <h3 className="font-bold text-navy-900 mb-1">{course.title}</h3>
+                        <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-1">{course.course_type}</p>
+                        <h3 className="font-bold text-charcoal-950 dark:text-white mb-1">{course.title}</h3>
                         {course.description && (
-                          <p className="text-sm text-navy-600 line-clamp-2">{course.description}</p>
+                          <p className="text-sm text-charcoal-600 dark:text-gray-400 line-clamp-2">{course.description}</p>
                         )}
-                        <p className="text-sm font-semibold text-navy-700 mt-2">${course.price.toFixed(2)}</p>
+                        <p className="text-sm font-semibold text-charcoal-700 dark:text-gray-300 mt-2">${course.price.toFixed(2)}</p>
                       </div>
                     </div>
                   </div>
@@ -250,17 +277,17 @@ export default function BundleEnrollmentPage() {
               </div>
             </div>
 
-            <div className="bg-purple-50 rounded-lg p-6 mb-6">
+            <div className="bg-emerald-50 dark:bg-emerald-500/20 rounded-lg p-6 mb-6 border border-emerald-200 dark:border-emerald-800/50">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-navy-600 mb-1">{t('bundles.bundlePrice')}</p>
-                  <p className="text-3xl font-bold text-navy-900">${bundle.price.toFixed(2)}</p>
+                  <p className="text-sm text-charcoal-600 dark:text-gray-400 mb-1">{t('bundles.bundlePrice')}</p>
+                  <p className="text-3xl font-bold text-charcoal-950 dark:text-white">${bundle.price.toFixed(2)}</p>
                   {totalOriginalPrice > bundle.price && (
-                    <p className="text-sm text-navy-400 line-through mt-1">
+                    <p className="text-sm text-charcoal-400 dark:text-gray-500 line-through mt-1">
                       ${totalOriginalPrice.toFixed(2)} {t('bundles.ifPurchasedSeparately')}
                     </p>
                   )}
-                  <p className="text-sm text-purple-700 mt-2 font-semibold">
+                  <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-2 font-semibold">
                     {t('bundles.saveAmount', { amount: (totalOriginalPrice - bundle.price).toFixed(2) })}
                   </p>
                 </div>
@@ -270,7 +297,7 @@ export default function BundleEnrollmentPage() {
             {isEnrolled ? (
               <a
                 href="/my-courses"
-                className="w-full inline-flex items-center justify-center px-6 py-3 text-lg font-semibold text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors"
+                className="w-full inline-flex items-center justify-center px-6 py-3 text-lg font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-colors"
               >
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -280,7 +307,7 @@ export default function BundleEnrollmentPage() {
             ) : (
               <button
                 onClick={() => setShowPaymentDialog(true)}
-                className="w-full inline-flex items-center justify-center px-6 py-3 text-lg font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
+                className="w-full inline-flex items-center justify-center px-6 py-3 text-lg font-semibold text-white bg-emerald-500 dark:bg-emerald-500 rounded-lg hover:bg-emerald-600 dark:hover:bg-emerald-600 transition-colors"
               >
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

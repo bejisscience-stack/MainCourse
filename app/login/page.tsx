@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { signIn } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { useI18n } from '@/contexts/I18nContext';
+import BackgroundShapes from '@/components/BackgroundShapes';
 
 function LoginForm() {
   const router = useRouter();
@@ -164,26 +165,37 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-50 to-white px-4 py-12">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-navy-100">
+    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900 px-4 py-12 overflow-hidden">
+      {/* Base gradient layer */}
+      <div className="fixed inset-0 bg-gradient-to-b from-[#fafafa] via-white to-[#fafafa] dark:from-navy-950 dark:via-navy-900 dark:to-navy-950 pointer-events-none"></div>
+      
+      {/* Subtle radial gradients for depth */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[800px] h-[800px] blur-3xl bg-gradient-radial from-emerald-500/3 via-emerald-500/1 to-transparent dark:from-emerald-400/4 dark:via-emerald-400/2 dark:to-transparent"></div>
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] blur-3xl bg-gradient-radial from-charcoal-200/2 via-transparent to-transparent dark:from-navy-400/2 dark:via-transparent dark:to-transparent"></div>
+      </div>
+      
+      <BackgroundShapes />
+      
+      <div className="relative z-10 max-w-md w-full space-y-8 bg-white dark:bg-navy-800 p-8 rounded-2xl shadow-xl border border-charcoal-100 dark:border-navy-700/50">
         <div>
           <Link href="/" className="flex items-center justify-center space-x-2 mb-6">
-            <div className="w-10 h-10 bg-navy-900 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-charcoal-950 dark:bg-emerald-500 rounded-lg flex items-center justify-center transition-all duration-200">
               <span className="text-white font-bold text-xl">C</span>
             </div>
-            <span className="text-navy-900 font-bold text-2xl">Course</span>
+            <span className="text-charcoal-950 dark:text-white font-bold text-2xl">Course</span>
           </Link>
-          <h2 className="text-center text-3xl font-bold text-navy-900">
+          <h2 className="text-center text-3xl font-bold text-charcoal-950 dark:text-white">
             {t('auth.welcomeBack')}
           </h2>
-          <p className="mt-2 text-center text-sm text-navy-600">
+          <p className="mt-2 text-center text-sm text-charcoal-600 dark:text-gray-400">
             {t('auth.signInToContinue')}
           </p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm animate-in fade-in">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm animate-in fade-in">
               <div className="flex items-start">
                 <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -198,7 +210,7 @@ function LoginForm() {
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-navy-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                 {t('auth.emailAddress')}
               </label>
               <input
@@ -209,13 +221,13 @@ function LoginForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="appearance-none relative block w-full px-4 py-3 bg-white border border-navy-200 placeholder-gray-400 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-colors"
+                className="appearance-none relative block w-full px-4 py-3 bg-white dark:bg-navy-700 border border-charcoal-200 dark:border-navy-600 placeholder-gray-400 dark:placeholder-gray-500 text-charcoal-950 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent transition-colors"
                 placeholder={t('auth.enterEmail')}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-navy-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                 {t('auth.password')}
               </label>
               <input
@@ -226,7 +238,7 @@ function LoginForm() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none relative block w-full px-4 py-3 bg-white border border-navy-200 placeholder-gray-400 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent transition-colors"
+                className="appearance-none relative block w-full px-4 py-3 bg-white dark:bg-navy-700 border border-charcoal-200 dark:border-navy-600 placeholder-gray-400 dark:placeholder-gray-500 text-charcoal-950 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent transition-colors"
                 placeholder={t('auth.enterPassword')}
               />
             </div>
@@ -236,16 +248,16 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-navy-900 hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-charcoal-950 dark:bg-emerald-500 hover:bg-charcoal-800 dark:hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? t('auth.signingIn') : t('auth.signIn')}
             </button>
           </div>
 
           <div className="text-center">
-            <p className="text-sm text-navy-600">
+            <p className="text-sm text-charcoal-600 dark:text-gray-400">
               {t('auth.dontHaveAccount')}{' '}
-              <Link href="/signup" className="font-semibold text-navy-900 hover:text-navy-700 transition-colors">
+              <Link href="/signup" className="font-semibold text-charcoal-950 dark:text-emerald-400 hover:text-charcoal-700 dark:hover:text-emerald-300 transition-colors">
                 {t('nav.signUp')}
               </Link>
             </p>
@@ -258,8 +270,8 @@ function LoginForm() {
 
 function LoadingFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-50 to-white">
-      <div className="text-navy-900">Loading...</div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900">
+      <div className="text-charcoal-950 dark:text-white">Loading...</div>
     </div>
   );
 }

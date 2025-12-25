@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabase';
 import type { Course } from './CourseCard';
 import { useI18n } from '@/contexts/I18nContext';
@@ -41,7 +42,12 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState<string>('');
+  const [mounted, setMounted] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const courseCode = useMemo(() => generateCourseCode(course.id), [course.id]);
 
@@ -188,37 +194,31 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
       }
     };
 
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
-        handleClose();
-      }
-    };
-
     document.addEventListener('keydown', handleEscape);
-    document.addEventListener('mousedown', handleClickOutside);
     document.body.style.overflow = 'hidden';
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      document.removeEventListener('mousedown', handleClickOutside);
       document.body.style.overflow = 'unset';
     };
   }, [isOpen, handleClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  const dialogContent = (
     <div 
-      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/80 dark:bg-black/90 z-[9999] overflow-y-auto"
+      onClick={handleClose}
     >
       <div 
         ref={dialogRef}
-        className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[85vh] overflow-y-auto"
+        className="relative w-full min-h-full bg-white dark:bg-navy-800 flex flex-col"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 z-10 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 transition-colors"
+          className="fixed top-4 right-4 z-50 w-10 h-10 bg-gray-100 dark:bg-navy-700 hover:bg-gray-200 dark:hover:bg-navy-600 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 transition-colors shadow-lg"
           aria-label={t('common.close')}
         >
           <svg
@@ -236,92 +236,92 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
           </svg>
         </button>
 
-        <div className="p-6 space-y-4">
+        <div className="w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 py-20">
           {/* Header */}
           <div>
-            <h2 className="text-2xl font-semibold text-charcoal-950 mb-2 tracking-tight">{t('payment.paymentInstructions')}</h2>
-            <p className="text-charcoal-600">{t('payment.followInstructions')}</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white mb-3 tracking-tight">{t('payment.paymentInstructions')}</h2>
+            <p className="text-base md:text-lg text-charcoal-600 dark:text-gray-400">{t('payment.followInstructions')}</p>
           </div>
 
           {/* Course Information */}
-          <div className="bg-charcoal-50/50 rounded-2xl p-5 space-y-3">
+          <div className="bg-charcoal-50/50 dark:bg-navy-700/50 rounded-2xl p-6 space-y-4">
             <div>
-              <h3 className="text-lg font-semibold text-charcoal-950">{course.title}</h3>
+              <h3 className="text-xl md:text-2xl font-semibold text-charcoal-950 dark:text-white">{course.title}</h3>
               {course.description && (
-                <p className="text-sm text-charcoal-600 mt-1">{course.description}</p>
+                <p className="text-base text-charcoal-600 dark:text-gray-400 mt-2">{course.description}</p>
               )}
             </div>
-            <div className="flex items-center justify-between pt-3 border-t border-charcoal-200/50">
+            <div className="flex items-center justify-between pt-4 border-t border-charcoal-200/50 dark:border-navy-600/50">
               <div>
-                <p className="text-sm text-charcoal-500">{t('payment.creator')}</p>
-                <p className="font-medium text-charcoal-950">{course.creator}</p>
+                <p className="text-sm md:text-base text-charcoal-500 dark:text-gray-400 mb-1">{t('payment.creator')}</p>
+                <p className="text-lg font-medium text-charcoal-950 dark:text-white">{course.creator}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-charcoal-500">{t('payment.price')}</p>
-                <p className="text-xl font-semibold text-charcoal-950">{formattedPrice}</p>
+                <p className="text-sm md:text-base text-charcoal-500 dark:text-gray-400 mb-1">{t('payment.price')}</p>
+                <p className="text-2xl md:text-3xl font-semibold text-charcoal-950 dark:text-white">{formattedPrice}</p>
               </div>
             </div>
           </div>
 
           {/* Account Number */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-600 mb-1">{t('payment.accountNumber')}</p>
-            <p className="text-lg font-mono font-semibold text-gray-900">GE00BG0000000013231</p>
+          <div className="bg-gray-50 dark:bg-navy-700/50 rounded-lg p-5 md:p-6">
+            <p className="text-base md:text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">{t('payment.accountNumber')}</p>
+            <p className="text-xl md:text-2xl font-mono font-semibold text-gray-900 dark:text-white break-all">GE00BG0000000013231</p>
           </div>
 
           {/* Unique Course Code */}
-          <div className="bg-charcoal-50/50 rounded-2xl p-5">
-            <p className="text-sm text-charcoal-600 mb-2">{t('payment.uniqueCourseCode')}</p>
-            <p className="text-2xl font-mono font-semibold text-charcoal-950 tracking-wider">{courseCode}</p>
-            <p className="text-xs text-charcoal-500 mt-2">{t('payment.includeCodeInReference')}</p>
+          <div className="bg-charcoal-50/50 dark:bg-navy-700/50 rounded-2xl p-6 md:p-7">
+            <p className="text-base md:text-lg font-medium text-charcoal-600 dark:text-gray-400 mb-3">{t('payment.uniqueCourseCode')}</p>
+            <p className="text-3xl md:text-4xl font-mono font-semibold text-charcoal-950 dark:text-white tracking-wider">{courseCode}</p>
+            <p className="text-sm text-charcoal-500 dark:text-gray-500 mt-3">{t('payment.includeCodeInReference')}</p>
           </div>
 
           {/* Referral Code (Optional) */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {t('payment.referralCode')} <span className="text-gray-500 font-normal">({t('common.optional')})</span>
+          <div className="bg-gray-50 dark:bg-navy-700/50 rounded-lg p-5 md:p-6">
+            <label className="block text-base md:text-lg font-medium text-gray-700 dark:text-gray-300 mb-3">
+              {t('payment.referralCode')} <span className="text-gray-500 dark:text-gray-400 font-normal">({t('common.optional')})</span>
             </label>
             <input
               type="text"
               value={referralCode}
               onChange={(e) => setReferralCode(e.target.value.toUpperCase().trim())}
               placeholder={t('payment.referralCodePlaceholder') || 'Enter referral code (optional)'}
-              className="w-full px-4 py-2 border border-charcoal-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-charcoal-200 focus:border-transparent text-charcoal-950 placeholder-charcoal-400"
+              className="w-full px-5 py-3 text-base bg-white dark:bg-navy-800 border border-charcoal-200 dark:border-navy-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500"
               maxLength={20}
             />
-            <p className="text-xs text-gray-500 mt-1">{t('payment.referralCodeDescription')}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{t('payment.referralCodeDescription')}</p>
           </div>
 
           {/* Payment Instructions Images */}
-          <div className="space-y-4">
+          <div className="space-y-4 md:space-y-6">
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-3">{t('payment.paymentInstructionsTitle')}</p>
-              <div className="space-y-4">
+              <p className="text-xl md:text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-4 md:mb-6">{t('payment.paymentInstructionsTitle')}</p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                 {/* First Instruction Image - Account Number Entry */}
-                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-                  <p className="text-xs font-medium text-gray-700 mb-3">{t('payment.step1')}</p>
-                  <div className="relative w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
+                <div className="bg-white dark:bg-navy-700/50 border border-gray-200 dark:border-navy-600 rounded-lg p-4 md:p-5 shadow-sm">
+                  <p className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">{t('payment.step1')}</p>
+                  <div className="relative w-full bg-gray-50 dark:bg-navy-800 rounded-lg overflow-hidden border border-gray-200 dark:border-navy-600">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src="/payment-instructions/payment-step-1.png"
                       alt="Payment instruction step 1 - Enter account number GE00BG0000000013231"
                       className="w-full h-auto object-contain block"
-                      style={{ maxHeight: '400px' }}
+                      style={{ maxHeight: '600px' }}
                       loading="lazy"
                     />
                   </div>
                 </div>
 
                 {/* Second Instruction Image - Payment Details */}
-                <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-                  <p className="text-xs font-medium text-gray-700 mb-3">{t('payment.step2')}</p>
-                  <div className="relative w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
+                <div className="bg-white dark:bg-navy-700/50 border border-gray-200 dark:border-navy-600 rounded-lg p-4 md:p-5 shadow-sm">
+                  <p className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">{t('payment.step2')}</p>
+                  <div className="relative w-full bg-gray-50 dark:bg-navy-800 rounded-lg overflow-hidden border border-gray-200 dark:border-navy-600">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src="/payment-instructions/payment-step-2.png"
                       alt="Payment instruction step 2 - Complete payment with unique code in description field"
                       className="w-full h-auto object-contain block"
-                      style={{ maxHeight: '400px' }}
+                      style={{ maxHeight: '600px' }}
                       loading="lazy"
                     />
                   </div>
@@ -331,9 +331,9 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
           </div>
 
           {/* File Upload Section */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-base md:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">
                 {t('payment.uploadScreenshots')}
               </label>
               <input
@@ -341,30 +341,30 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
                 accept="image/*"
                 multiple
                 onChange={handleFileSelect}
-                className="block w-full text-sm text-charcoal-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-charcoal-950 file:text-white hover:file:bg-charcoal-800 cursor-pointer"
+                className="block w-full text-base text-charcoal-500 dark:text-gray-400 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-base file:font-semibold file:bg-charcoal-950 dark:file:bg-emerald-500 file:text-white hover:file:bg-charcoal-800 dark:hover:file:bg-emerald-600 cursor-pointer"
               />
-              <p className="text-xs text-gray-500 mt-1">{t('payment.uploadMultipleImages')}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{t('payment.uploadMultipleImages')}</p>
             </div>
 
             {/* Uploaded Images Preview */}
             {uploadedImages.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">{t('payment.uploadedImages', { count: uploadedImages.length })}</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="space-y-4">
+                <p className="text-lg md:text-xl font-semibold text-gray-700 dark:text-gray-300">{t('payment.uploadedImages', { count: uploadedImages.length })}</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                   {uploadedImages.map((imageData, index) => (
                     <div key={index} className="relative group">
                       <img
                         src={imageData.preview}
                         alt={`Transaction screenshot ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                        className="w-full h-48 md:h-56 lg:h-64 object-cover rounded-lg border-2 border-gray-200 dark:border-navy-600"
                       />
                       <button
                         onClick={() => handleRemoveImage(index)}
-                        className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                         aria-label={t('payment.removeImage')}
                       >
                         <svg
-                          className="w-4 h-4"
+                          className="w-5 h-5"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -377,7 +377,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
                           />
                         </svg>
                       </button>
-                      <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                      <div className="absolute bottom-2 left-2 bg-black/70 text-white text-sm font-semibold px-3 py-1 rounded">
                         {index + 1}
                       </div>
                     </div>
@@ -388,17 +388,17 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
 
             {/* Error Message */}
             {uploadError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-5 py-4 rounded-lg text-base">
                 {uploadError}
               </div>
             )}
           </div>
 
           {/* Processing Time Notice */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex items-start space-x-3">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-5 md:p-6">
+            <div className="flex items-start space-x-4">
               <svg
-                className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0"
+                className="w-6 h-6 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -411,24 +411,24 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
                 />
               </svg>
               <div>
-                <p className="text-sm font-medium text-yellow-800">{t('payment.processingTime')}</p>
-                <p className="text-sm text-yellow-700 mt-1">{t('payment.processingTimeDescription')}</p>
+                <p className="text-base font-semibold text-yellow-800 dark:text-yellow-300">{t('payment.processingTime')}</p>
+                <p className="text-sm md:text-base text-yellow-700 dark:text-yellow-400 mt-2">{t('payment.processingTimeDescription')}</p>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-navy-700">
             <button
               onClick={handleClose}
-              className="px-6 py-2.5 text-sm font-medium text-charcoal-600 bg-charcoal-100 rounded-full hover:bg-charcoal-200 transition-colors"
+              className="px-8 py-3 text-base font-semibold text-charcoal-600 dark:text-gray-300 bg-charcoal-100 dark:bg-navy-700 rounded-full hover:bg-charcoal-200 dark:hover:bg-navy-600 transition-colors"
             >
               {t('common.cancel')}
             </button>
             <button
               onClick={handleUpload}
               disabled={isUploading || uploadedImages.length === 0}
-              className="px-6 py-2.5 text-sm font-medium text-white bg-charcoal-950 rounded-full hover:bg-charcoal-800 transition-all duration-200 hover:shadow-soft disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="px-8 py-3 text-base font-semibold text-white bg-charcoal-950 dark:bg-emerald-500 rounded-full hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {isUploading ? (
                 <>
@@ -463,5 +463,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
       </div>
     </div>
   );
+
+  return createPortal(dialogContent, document.body);
 }
 

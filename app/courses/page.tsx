@@ -205,17 +205,26 @@ export default function CoursesPage() {
   const isLoading = userLoading || coursesLoading;
 
   return (
-    <main className="relative min-h-screen bg-white overflow-hidden">
+    <main className="relative min-h-screen bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900 overflow-hidden">
+      {/* Base gradient layer */}
+      <div className="fixed inset-0 bg-gradient-to-b from-[#fafafa] via-white to-[#fafafa] dark:from-navy-950 dark:via-navy-900 dark:to-navy-950 pointer-events-none"></div>
+      
+      {/* Subtle radial gradients for depth */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[800px] h-[800px] blur-3xl bg-gradient-radial from-emerald-500/3 via-emerald-500/1 to-transparent dark:from-emerald-400/4 dark:via-emerald-400/2 dark:to-transparent"></div>
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] blur-3xl bg-gradient-radial from-charcoal-200/2 via-transparent to-transparent dark:from-navy-400/2 dark:via-transparent dark:to-transparent"></div>
+      </div>
+      
       <BackgroundShapes />
       <Navigation />
       <div className="relative z-10 pt-24 pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-navy-900 mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold text-charcoal-950 dark:text-white mb-4">
               {t('courses.ourCourses')}
             </h1>
-            <p className="text-lg text-navy-600 max-w-2xl mx-auto">
+            <p className="text-lg text-charcoal-600 dark:text-gray-400 max-w-2xl mx-auto">
               {t('courses.discoverCourses')}
             </p>
           </div>
@@ -224,7 +233,7 @@ export default function CoursesPage() {
           <div className="mb-8 max-w-2xl mx-auto">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
@@ -233,12 +242,12 @@ export default function CoursesPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('courses.searchPlaceholder') || 'Search by course name or lecturer name...'}
-                className="w-full pl-12 pr-4 py-3 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent text-black placeholder-gray-500"
+                className="w-full pl-12 pr-4 py-3 bg-white dark:bg-navy-800 border-2 border-gray-200 dark:border-navy-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent text-charcoal-950 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-gray-700 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                   aria-label="Clear search"
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -261,8 +270,8 @@ export default function CoursesPage() {
                   onClick={() => setFilter(type)}
                   className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
                     filter === type
-                      ? 'bg-navy-900 text-white'
-                      : 'bg-navy-50 text-navy-700 hover:bg-navy-100'
+                      ? 'bg-charcoal-950 dark:bg-emerald-500 text-white dark:text-white'
+                      : 'bg-charcoal-50 dark:bg-navy-800 text-charcoal-700 dark:text-gray-300 hover:bg-charcoal-100 dark:hover:bg-navy-700'
                   }`}
                 >
                   {t(`courses.${filterKey}`)}
@@ -275,17 +284,17 @@ export default function CoursesPage() {
           {isLoading && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="bg-white rounded-lg overflow-hidden shadow-md border border-gray-100 animate-pulse">
-                  <div className="w-full h-48 bg-gradient-to-br from-gray-200 to-gray-300"></div>
+                <div key={i} className="bg-white dark:bg-navy-800 rounded-lg overflow-hidden shadow-md border border-gray-100 dark:border-navy-700 animate-pulse">
+                  <div className="w-full h-48 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-navy-700 dark:to-navy-600"></div>
                   <div className="p-4 space-y-3">
-                    <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-6 bg-gray-200 dark:bg-navy-700 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-navy-700 rounded w-1/2"></div>
                     <div className="flex gap-2">
-                      <div className="h-5 bg-gray-200 rounded w-20"></div>
-                      <div className="h-5 bg-gray-200 rounded w-16"></div>
+                      <div className="h-5 bg-gray-200 dark:bg-navy-700 rounded w-20"></div>
+                      <div className="h-5 bg-gray-200 dark:bg-navy-700 rounded w-16"></div>
                     </div>
-                    <div className="h-6 bg-gray-200 rounded w-24"></div>
-                    <div className="h-10 bg-gray-200 rounded"></div>
+                    <div className="h-6 bg-gray-200 dark:bg-navy-700 rounded w-24"></div>
+                    <div className="h-10 bg-gray-200 dark:bg-navy-700 rounded"></div>
                   </div>
                 </div>
               ))}
@@ -295,7 +304,7 @@ export default function CoursesPage() {
           {/* Error State */}
           {error && !isLoading && (
             <div className="text-center py-12">
-              <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg inline-block max-w-md">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-6 py-4 rounded-lg inline-block max-w-md">
                 <p className="font-semibold">{t('home.errorLoadingCourses')}</p>
                 <p className="text-sm mt-1 mb-4">{error}</p>
                 <button
@@ -303,7 +312,7 @@ export default function CoursesPage() {
                     setError(null);
                     mutateCourses();
                   }}
-                  className="bg-navy-900 text-white px-4 py-2 rounded-lg font-semibold hover:bg-navy-800 transition-colors"
+                  className="bg-charcoal-950 dark:bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-colors"
                 >
                   {t('common.tryAgain')}
                 </button>
@@ -314,7 +323,7 @@ export default function CoursesPage() {
           {/* Bundles Section */}
           {bundles.length > 0 && (
             <div className="mb-12">
-              <h2 className="text-2xl md:text-3xl font-bold text-navy-900 mb-6">{t('courses.courseBundles')}</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-charcoal-950 dark:text-white mb-6">{t('courses.courseBundles')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
                 {bundles.map((bundle) => {
                   const bundleCourses = bundle.course_bundle_items?.map((item: any) => item.courses).filter(Boolean) || [];
@@ -322,22 +331,22 @@ export default function CoursesPage() {
                   const isEnrolled = enrolledBundleIds.has(bundle.id);
                   
                   return (
-                    <div key={bundle.id} className="bg-white border-2 border-purple-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div key={bundle.id} className="bg-white dark:bg-navy-800 border-2 border-emerald-200 dark:border-emerald-700/50 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
                       <div className="mb-4">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide bg-purple-50 px-2 py-1 rounded">{t('courses.bundle')}</span>
+                          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide bg-emerald-50 dark:bg-emerald-500/20 px-2 py-1 rounded">{t('courses.bundle')}</span>
                         </div>
-                        <h3 className="text-lg font-bold text-navy-900 mb-2">{bundle.title}</h3>
+                        <h3 className="text-lg font-bold text-charcoal-950 dark:text-white mb-2">{bundle.title}</h3>
                         {bundle.description && (
-                          <p className="text-sm text-navy-600 line-clamp-2">{bundle.description}</p>
+                          <p className="text-sm text-charcoal-600 dark:text-gray-400 line-clamp-2">{bundle.description}</p>
                         )}
                       </div>
                       <div className="mb-4">
-                        <p className="text-xs text-navy-500 mb-2">{t('courses.includesCourses', { count: bundleCourses.length })}</p>
+                        <p className="text-xs text-charcoal-500 dark:text-gray-500 mb-2">{t('courses.includesCourses', { count: bundleCourses.length })}</p>
                         <div className="space-y-1 max-h-32 overflow-y-auto">
                           {bundleCourses.map((course: any, idx: number) => (
-                            <div key={idx} className="flex items-center text-sm text-navy-700">
-                              <svg className="w-4 h-4 mr-1 text-purple-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <div key={idx} className="flex items-center text-sm text-charcoal-700 dark:text-gray-300">
+                              <svg className="w-4 h-4 mr-1 text-emerald-600 dark:text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                               </svg>
                               <span className="truncate">{course?.title || t('courses.unknownCourse')}</span>
@@ -345,14 +354,14 @@ export default function CoursesPage() {
                           ))}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between mb-4 pt-4 border-t border-purple-100">
+                      <div className="flex items-center justify-between mb-4 pt-4 border-t border-emerald-100 dark:border-emerald-800/50">
                         <div>
-                          <p className="text-xs text-navy-500">{t('courses.bundlePrice')}</p>
-                          <p className="text-xl font-bold text-navy-900">
+                          <p className="text-xs text-charcoal-500 dark:text-gray-500">{t('courses.bundlePrice')}</p>
+                          <p className="text-xl font-bold text-charcoal-950 dark:text-white">
                             ${bundle.price.toFixed(2)}
                           </p>
                           {totalOriginalPrice > bundle.price && (
-                            <p className="text-xs text-navy-400 line-through">
+                            <p className="text-xs text-charcoal-400 dark:text-gray-500 line-through">
                               ${totalOriginalPrice.toFixed(2)} {t('courses.total')}
                             </p>
                           )}
@@ -361,7 +370,7 @@ export default function CoursesPage() {
                       {isEnrolled ? (
                         <a
                           href={`/my-courses`}
-                          className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-green-500 rounded-full hover:bg-green-600 transition-colors"
+                          className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-emerald-500 rounded-full hover:bg-emerald-600 transition-colors"
                         >
                           <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -371,7 +380,7 @@ export default function CoursesPage() {
                       ) : (
                         <a
                           href={`/bundles/${bundle.id}`}
-                          className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-full hover:bg-purple-700 transition-colors"
+                          className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-emerald-500 dark:bg-emerald-500 rounded-full hover:bg-emerald-600 dark:hover:bg-emerald-600 transition-colors"
                         >
                           <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -389,10 +398,10 @@ export default function CoursesPage() {
           {/* Courses Grid */}
           {!isLoading && !error && (
             <>
-              <h2 className="text-2xl md:text-3xl font-bold text-navy-900 mb-6">{t('courses.individualCourses')}</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-charcoal-950 dark:text-white mb-6">{t('courses.individualCourses')}</h2>
               {filteredCourses.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-navy-600 text-lg">
+                  <p className="text-charcoal-600 dark:text-gray-400 text-lg">
                     {searchQuery ? (
                       t('courses.noCoursesFoundForSearch', { query: searchQuery })
                     ) : filter !== 'All' ? (
@@ -405,7 +414,7 @@ export default function CoursesPage() {
               ) : (
                 <>
                   {error && (
-                    <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm text-center">
+                    <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm text-center">
                       {error}
                     </div>
                   )}
