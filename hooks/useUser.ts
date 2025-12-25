@@ -34,9 +34,6 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
       .maybeSingle();
 
     if (error) {
-      console.error('[useUser] Profile fetch error:', error);
-      console.error('[useUser] Error code:', error.code);
-      console.error('[useUser] Error message:', error.message);
       // Don't throw for missing profiles (user might not have profile yet)
       // Only throw for actual database errors
       if (error.code !== 'PGRST116') { // PGRST116 = no rows returned
@@ -45,11 +42,9 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
       return null;
     }
 
-    console.log('[useUser] Fetched profile for user:', userId, 'Profile data:', data, 'Role:', data?.role);
     return data || null;
   } catch (err: any) {
-    console.error('[useUser] Unexpected error fetching profile:', err);
-    // Return null for missing profiles, but log the error
+    // Return null for missing profiles
     return null;
   }
 }
@@ -67,14 +62,6 @@ async function fetchUserData(): Promise<UserData> {
     // Always prioritize profile role over metadata (database is source of truth)
     const role = profile?.role || user.user_metadata?.role || null;
 
-    console.log('[useUser] ========== ROLE FETCH ==========');
-    console.log('[useUser] User ID:', user.id);
-    console.log('[useUser] Profile:', profile);
-    console.log('[useUser] Profile role:', profile?.role);
-    console.log('[useUser] Metadata role:', user.user_metadata?.role);
-    console.log('[useUser] Final role determined:', role);
-    console.log('[useUser] =================================');
-
     // Normalize role if needed (non-blocking) - but only if role is lecturer
     // Don't update if it's admin
     if (role === 'lecturer' && profile && profile.role !== 'lecturer') {
@@ -82,16 +69,13 @@ async function fetchUserData(): Promise<UserData> {
         .from('profiles')
         .update({ role: 'lecturer' })
         .eq('id', user.id)
-        .then(({ error }) => {
-          if (error) {
-            console.warn('Role update failed:', error);
-          }
+        .then(() => {
+          // Silently handle role update
         });
     }
 
     return { user, profile, role };
   } catch (err: any) {
-    console.error('[useUser] Error fetching user data:', err);
     // Return empty state on error so UI doesn't hang
     return { user: null, profile: null, role: null };
   }
@@ -116,8 +100,8 @@ export function useUser() {
         }
         return true;
       },
-      onError: (error) => {
-        console.error('[useUser] SWR error:', error);
+      onError: () => {
+        // Silently handle SWR errors
       },
     }
   );
@@ -129,8 +113,7 @@ export function useUser() {
     // Set up auth state change listener
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, session?.user?.id);
+    } = supabase.auth.onAuthStateChange(() => {
       // Mutate the SWR cache when auth state changes
       mutate();
     });

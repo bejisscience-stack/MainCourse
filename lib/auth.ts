@@ -38,7 +38,6 @@ export async function signUp({ email, password, username, role = 'student', sign
   };
 
   const redirectUrl = getRedirectUrl();
-  console.log('Signup redirect URL:', redirectUrl);
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -55,18 +54,9 @@ export async function signUp({ email, password, username, role = 'student', sign
   });
 
   if (error) {
-    console.error('Signup error:', error);
     // Surface DB-trigger validation errors as-is when possible
     throw new Error(error.message || 'Failed to create account. Please try again.');
   }
-
-  // Log signup response for debugging
-  console.log('Signup response:', {
-    user: data.user?.id,
-    email: data.user?.email,
-    emailConfirmed: data.user?.email_confirmed_at,
-    session: !!data.session,
-  });
 
   return data;
 }
@@ -85,7 +75,6 @@ export async function resendVerificationEmail(email: string) {
   });
 
   if (error) {
-    console.error('Resend verification email error:', error);
     throw error;
   }
 }

@@ -59,7 +59,6 @@ export default function BundleEnrollmentPage() {
       }
       setBundle(data);
     } catch (err: any) {
-      console.error('Error fetching bundle:', err);
       setError(err.message || t('bundles.failedToLoadBundle'));
     } finally {
       setLoading(false);
@@ -79,7 +78,7 @@ export default function BundleEnrollmentPage() {
       if (checkError) throw checkError;
       setIsEnrolled(!!data);
     } catch (err: any) {
-      console.error('Error checking enrollment:', err);
+      // Silently handle enrollment check errors
     }
   };
 
@@ -93,7 +92,6 @@ export default function BundleEnrollmentPage() {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !session?.access_token) {
-        console.error('Session error:', sessionError);
         throw new Error('Not authenticated. Please log in again.');
       }
 
@@ -114,17 +112,11 @@ export default function BundleEnrollmentPage() {
       try {
         result = await response.json();
       } catch (jsonError) {
-        console.error('Failed to parse response:', jsonError);
         throw new Error('Server returned an invalid response. Please try again.');
       }
 
       if (!response.ok) {
         const errorMessage = result?.error || result?.details || `Server error (${response.status})`;
-        console.error('API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: result,
-        });
         throw new Error(errorMessage);
       }
 
@@ -132,7 +124,6 @@ export default function BundleEnrollmentPage() {
       alert(t('bundles.enrollmentRequestSubmitted'));
       router.push('/courses');
     } catch (err: any) {
-      console.error('Error requesting bundle enrollment:', err);
       const errorMessage = err.message || t('bundles.failedToCreateRequest');
       alert(errorMessage);
     }

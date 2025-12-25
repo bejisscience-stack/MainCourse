@@ -23,7 +23,7 @@ async function fetchCourse(courseId: string): Promise<Course | null> {
     .single();
 
   if (error) {
-    console.error('Error fetching course:', error);
+    // Course not found or error fetching - return null
     return null;
   }
 
@@ -45,12 +45,9 @@ export default function FirstLoginCoursePopup({ courseId, referralCode }: FirstL
     {
       revalidateOnFocus: false,
       dedupingInterval: 60000, // Cache for 1 minute
-      onError: (err) => {
-        console.error('Error fetching course for first login popup:', err);
+      onError: () => {
         // If course doesn't exist, mark first login as complete to prevent showing popup again
-        if (user) {
-          markFirstLoginComplete();
-        }
+        // Note: markFirstLoginComplete will be called in useEffect when courseError is detected
       },
     }
   );
@@ -58,6 +55,44 @@ export default function FirstLoginCoursePopup({ courseId, referralCode }: FirstL
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Close modal on ESC key press
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, handleClose]);
+
+  const markFirstLoginComplete = useCallback(async () => {
+    if (!user || isMarkingComplete) return;
+
+    setIsMarkingComplete(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ first_login_completed: true })
+        .eq('id', user.id);
+
+      if (!error) {
+        // Refresh user data
+        mutate();
+      }
+    } catch (err) {
+      // Silently handle errors - user can dismiss popup manually
+    } finally {
+      setIsMarkingComplete(false);
+    }
+  }, [user, isMarkingComplete, mutate]);
 
   // Show popup if user hasn't completed first login yet
   useEffect(() => {
@@ -83,29 +118,6 @@ export default function FirstLoginCoursePopup({ courseId, referralCode }: FirstL
       }
     }
   }, [mounted, user, profile, course, courseLoading, courseError, referralCode, markFirstLoginComplete]);
-
-  const markFirstLoginComplete = useCallback(async () => {
-    if (!user || isMarkingComplete) return;
-
-    setIsMarkingComplete(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ first_login_completed: true })
-        .eq('id', user.id);
-
-      if (error) {
-        console.error('Error marking first login complete:', error);
-      } else {
-        // Refresh user data
-        mutate();
-      }
-    } catch (err) {
-      console.error('Error marking first login complete:', err);
-    } finally {
-      setIsMarkingComplete(false);
-    }
-  }, [user, isMarkingComplete, mutate]);
 
   const handleClose = useCallback(() => {
     setIsOpen(false);

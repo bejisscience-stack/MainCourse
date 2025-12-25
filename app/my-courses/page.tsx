@@ -73,7 +73,6 @@ export default function MyCoursesPage() {
 
         if (error) {
           // Fallback to JavaScript filtering if database filter fails
-          console.warn('Database filter failed, falling back to JS filter:', error);
           const { data: allCoursesFallback, error: fallbackError } = await supabase
             .from('courses')
             .select('*')
