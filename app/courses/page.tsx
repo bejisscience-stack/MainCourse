@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import CourseCard, { type Course } from '@/components/CourseCard';
 import CourseEnrollmentCard from '@/components/CourseEnrollmentCard';
-import BackgroundShapes from '@/components/BackgroundShapes';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useCourses } from '@/hooks/useCourses';
@@ -209,13 +208,6 @@ export default function CoursesPage() {
       {/* Base gradient layer */}
       <div className="fixed inset-0 bg-gradient-to-b from-[#fafafa] via-white to-[#fafafa] dark:from-navy-950 dark:via-navy-900 dark:to-navy-950 pointer-events-none"></div>
       
-      {/* Subtle radial gradients for depth */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[800px] h-[800px] blur-3xl bg-gradient-radial from-emerald-500/3 via-emerald-500/1 to-transparent dark:from-emerald-400/4 dark:via-emerald-400/2 dark:to-transparent"></div>
-        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] blur-3xl bg-gradient-radial from-charcoal-200/2 via-transparent to-transparent dark:from-navy-400/2 dark:via-transparent dark:to-transparent"></div>
-      </div>
-      
-      <BackgroundShapes />
       <Navigation />
       <div className="relative z-10 pt-24 pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

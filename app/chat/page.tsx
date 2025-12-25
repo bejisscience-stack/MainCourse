@@ -242,11 +242,11 @@ export default function StudentChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-navy-950/20 backdrop-blur-[0.5px]">
       <ChatNavigation />
       <div className="flex-1 overflow-hidden">
         {servers.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center bg-gray-900">
+          <div className="flex-1 flex items-center justify-center bg-navy-950/20 backdrop-blur-[0.5px]">
             <div className="text-center text-gray-400 max-w-md">
               <svg
                 className="w-16 h-16 mx-auto mb-4 opacity-50"

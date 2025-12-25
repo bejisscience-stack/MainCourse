@@ -68,7 +68,7 @@ export function BitcoinDrops() {
   if (isReducedMotion) return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-[1]" aria-hidden="true">
+    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
       {drops.map(drop => (
         <div
           key={drop.id}

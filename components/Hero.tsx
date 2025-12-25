@@ -19,8 +19,12 @@ function Hero() {
         <ScrollReveal delay={0} duration={600}>
           <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-charcoal-950 dark:text-white mb-6 leading-[1.1] tracking-tight">
             {t('home.title')}
-            <br />
-            <span className="text-charcoal-700 dark:text-gray-300 font-semibold">{t('home.titleSubtext')}</span>
+            {t('home.titleSubtext') && (
+              <>
+                <br />
+                <span className="text-charcoal-700 dark:text-gray-300 font-semibold">{t('home.titleSubtext')}</span>
+              </>
+            )}
           </h1>
         </ScrollReveal>
         

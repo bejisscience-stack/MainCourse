@@ -181,11 +181,11 @@ export default function CoursesCarousel() {
             <>
               <button
                 onClick={handlePrevious}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-8 z-20 w-12 h-12 md:w-14 md:h-14 bg-white dark:bg-navy-800 rounded-full shadow-soft-lg flex items-center justify-center hover:bg-charcoal-50/50 dark:hover:bg-navy-700/50 transition-all duration-200 transform hover:scale-110 active:scale-95 border border-charcoal-100/50 dark:border-navy-700/50"
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 md:-translate-x-10 z-30 w-14 h-14 md:w-16 md:h-16 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl dark:shadow-glow-dark flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-charcoal-100/50 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 group"
                 aria-label="Previous course"
               >
                 <svg
-                  className="w-5 h-5 md:w-6 md:h-6 text-charcoal-950 dark:text-white"
+                  className="w-6 h-6 md:w-7 md:h-7 text-charcoal-950 dark:text-white group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors duration-300"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -193,7 +193,7 @@ export default function CoursesCarousel() {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
@@ -201,11 +201,11 @@ export default function CoursesCarousel() {
 
               <button
                 onClick={handleNext}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-8 z-20 w-12 h-12 md:w-14 md:h-14 bg-white dark:bg-navy-800 rounded-full shadow-soft-lg flex items-center justify-center hover:bg-charcoal-50/50 dark:hover:bg-navy-700/50 transition-all duration-200 transform hover:scale-110 active:scale-95 border border-charcoal-100/50 dark:border-navy-700/50"
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 md:translate-x-10 z-30 w-14 h-14 md:w-16 md:h-16 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl dark:shadow-glow-dark flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-charcoal-100/50 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 group"
                 aria-label="Next course"
               >
                 <svg
-                  className="w-5 h-5 md:w-6 md:h-6 text-charcoal-950 dark:text-white"
+                  className="w-6 h-6 md:w-7 md:h-7 text-charcoal-950 dark:text-white group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors duration-300"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -213,7 +213,7 @@ export default function CoursesCarousel() {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                     d="M9 5l7 7-7 7"
                   />
                 </svg>
@@ -222,7 +222,7 @@ export default function CoursesCarousel() {
           )}
 
           {/* Courses Container */}
-          <div className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8 px-12 md:px-16">
+          <div className="flex items-center justify-center gap-6 md:gap-8 lg:gap-10 px-16 md:px-20 lg:px-24 overflow-hidden">
             {displayedCourses.map((course, index) => {
               // Middle course is always at index 1 if we have 3 courses
               // If we have fewer courses, center the first one
@@ -231,28 +231,26 @@ export default function CoursesCarousel() {
               const isEnrolling = enrollingCourseId === course.id;
 
               return (
-                <ScrollReveal
+                <div
                   key={`${course.id}-${safeCurrentIndex}-${index}`}
-                  delay={index * 100}
-                  duration={500}
+                  className={`transition-all duration-700 ease-out ${
+                    isMiddle
+                      ? 'flex-1 max-w-lg scale-100 z-10 opacity-100'
+                      : 'flex-1 max-w-md scale-80 opacity-50 z-0 pointer-events-none'
+                  }`}
+                  style={{
+                    transition: 'all 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}
                 >
-                  <div
-                    className={`transition-all duration-300 ${
-                      isMiddle
-                        ? 'flex-1 max-w-md scale-100 z-10'
-                        : 'flex-1 max-w-xs scale-90 opacity-75 z-0'
-                    }`}
-                  >
-                    <CourseEnrollmentCard
-                      course={course}
-                      isEnrolled={isEnrolled}
-                      isEnrolling={false}
-                      onEnroll={undefined}
-                      showEnrollButton={true}
-                      userId={user?.id || null}
-                    />
-                  </div>
-                </ScrollReveal>
+                  <CourseEnrollmentCard
+                    course={course}
+                    isEnrolled={isEnrolled}
+                    isEnrolling={false}
+                    onEnroll={undefined}
+                    showEnrollButton={true}
+                    userId={user?.id || null}
+                  />
+                </div>
               );
             })}
           </div>

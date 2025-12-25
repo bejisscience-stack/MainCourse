@@ -111,7 +111,7 @@ export function ScrollChart() {
 
   return (
     <div
-      className="fixed inset-0 pointer-events-none z-[1]"
+      className="fixed inset-0 pointer-events-none z-0"
       aria-hidden="true"
     >
       <svg

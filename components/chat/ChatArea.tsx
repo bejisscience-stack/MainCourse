@@ -494,7 +494,7 @@ export default function ChatArea({
 
   if (!channel) {
     return (
-      <div className="flex-1 bg-navy-950 flex items-center justify-center">
+      <div className="flex-1 bg-navy-950/20 backdrop-blur-[0.5px] flex items-center justify-center">
         <div className="text-center text-gray-400">
           <svg
             className="w-16 h-16 mx-auto mb-4 opacity-50"
@@ -528,9 +528,9 @@ export default function ChatArea({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-navy-950 relative">
+    <div className="flex-1 flex flex-col bg-navy-950/20 backdrop-blur-[0.5px] relative">
       {/* Channel header */}
-      <div className="h-12 px-4 border-b border-navy-700 flex items-center shadow-sm flex-shrink-0 bg-navy-950 z-10">
+      <div className="h-12 px-4 border-b border-navy-700/30 flex items-center shadow-sm flex-shrink-0 bg-navy-950/30 backdrop-blur-[1px] z-10">
         <div className="flex items-center gap-2">
           <span className="text-emerald-400 text-xl">#</span>
           <h2 className="text-white font-semibold text-sm">{channel.name}</h2>

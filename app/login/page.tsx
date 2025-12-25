@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { signIn } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { useI18n } from '@/contexts/I18nContext';
-import BackgroundShapes from '@/components/BackgroundShapes';
 
 function LoginForm() {
   const router = useRouter();
@@ -169,13 +168,6 @@ function LoginForm() {
       {/* Base gradient layer */}
       <div className="fixed inset-0 bg-gradient-to-b from-[#fafafa] via-white to-[#fafafa] dark:from-navy-950 dark:via-navy-900 dark:to-navy-950 pointer-events-none"></div>
       
-      {/* Subtle radial gradients for depth */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[800px] h-[800px] blur-3xl bg-gradient-radial from-emerald-500/3 via-emerald-500/1 to-transparent dark:from-emerald-400/4 dark:via-emerald-400/2 dark:to-transparent"></div>
-        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] blur-3xl bg-gradient-radial from-charcoal-200/2 via-transparent to-transparent dark:from-navy-400/2 dark:via-transparent dark:to-transparent"></div>
-      </div>
-      
-      <BackgroundShapes />
       
       <div className="relative z-10 max-w-md w-full space-y-8 bg-white dark:bg-navy-800 p-8 rounded-2xl shadow-xl border border-charcoal-100 dark:border-navy-700/50">
         <div>

@@ -319,9 +319,9 @@ export default function LecturerChatPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-screen bg-navy-950/20 backdrop-blur-[0.5px]">
         <ChatNavigation />
-        <div className="flex-1 flex items-center justify-center bg-gray-900">
+        <div className="flex-1 flex items-center justify-center bg-navy-950/20 backdrop-blur-[0.5px]">
           <div className="text-center text-gray-400">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mb-4"></div>
             <p>Loading chat...</p>
@@ -333,9 +333,9 @@ export default function LecturerChatPage() {
 
   if (!user) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-screen bg-navy-950/20 backdrop-blur-[0.5px]">
         <ChatNavigation />
-        <div className="flex-1 flex items-center justify-center bg-gray-900">
+        <div className="flex-1 flex items-center justify-center bg-navy-950/20 backdrop-blur-[0.5px]">
           <div className="text-center text-gray-400">
             <p>Please log in to access chat</p>
           </div>
@@ -346,9 +346,9 @@ export default function LecturerChatPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-screen bg-navy-950/20 backdrop-blur-[0.5px]">
         <ChatNavigation />
-        <div className="flex-1 flex items-center justify-center bg-gray-900">
+        <div className="flex-1 flex items-center justify-center bg-navy-950/20 backdrop-blur-[0.5px]">
           <div className="text-center text-gray-400 max-w-md">
             <div className="bg-red-900/50 border border-red-700 text-red-200 px-6 py-4 rounded-lg mb-4">
               <p className="font-semibold mb-2">Error loading chat</p>
@@ -370,7 +370,7 @@ export default function LecturerChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-navy-950/20 backdrop-blur-[0.5px]">
       <ChatNavigation />
       <CourseCreationModal
         isOpen={showCourseModal}
@@ -380,7 +380,7 @@ export default function LecturerChatPage() {
       />
       <div className="flex-1 overflow-hidden">
         {servers.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center bg-gray-900">
+          <div className="flex-1 flex items-center justify-center bg-navy-950/20 backdrop-blur-[0.5px]">
             <div className="text-center text-gray-400 max-w-md">
               <svg
                 className="w-16 h-16 mx-auto mb-4 opacity-50"

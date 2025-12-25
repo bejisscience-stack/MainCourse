@@ -68,9 +68,6 @@ function Navigation() {
           <div className="hidden md:flex items-center space-x-6">
             {userRole !== 'lecturer' && (
               <>
-                <Link href="#about" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
-                  {t('nav.about')}
-                </Link>
                 <Link href="/courses" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
                   {t('nav.courses')}
                 </Link>
@@ -79,12 +76,6 @@ function Navigation() {
                     {t('nav.myCourses')}
                   </Link>
                 )}
-                <Link href="#testimonials" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
-                  {t('nav.testimonials')}
-                </Link>
-                <Link href="#contact" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
-                  {t('nav.contact')}
-                </Link>
               </>
             )}
             {userRole === 'lecturer' && (
@@ -336,13 +327,6 @@ function Navigation() {
               {userRole !== 'lecturer' && (
                 <>
                   <Link
-                    href="#about"
-                    className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.about')}
-                  </Link>
-                  <Link
                     href="/courses"
                     className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
                     onClick={() => setIsMenuOpen(false)}
@@ -358,20 +342,6 @@ function Navigation() {
                       {t('nav.myCourses')}
                     </Link>
                   )}
-                  <Link
-                    href="#testimonials"
-                    className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.testimonials')}
-                  </Link>
-                  <Link
-                    href="#contact"
-                    className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {t('nav.contact')}
-                  </Link>
                 </>
               )}
               {userRole === 'lecturer' && (

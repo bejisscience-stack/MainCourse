@@ -111,7 +111,7 @@ export function SocialIconFlow() {
   if (isReducedMotion) return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-[1]" aria-hidden="true">
+    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
       {icons.map(icon => (
         <div
           key={icon.id}

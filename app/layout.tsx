@@ -3,6 +3,13 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/contexts/I18nContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { BackgroundProvider } from "@/contexts/BackgroundContext";
+import dynamic from "next/dynamic";
+
+const GlobalBackgroundManager = dynamic(() => import("@/components/GlobalBackgroundManager"), {
+  ssr: false,
+  loading: () => null,
+});
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -52,9 +59,12 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ThemeProvider>
-          <I18nProvider>
-            {children}
-          </I18nProvider>
+          <BackgroundProvider>
+            <I18nProvider>
+              <GlobalBackgroundManager />
+              {children}
+            </I18nProvider>
+          </BackgroundProvider>
         </ThemeProvider>
       </body>
     </html>
