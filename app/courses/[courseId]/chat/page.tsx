@@ -351,11 +351,11 @@ export default function CourseChatPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-screen bg-navy-950">
         <ChatNavigation />
-        <div className="flex-1 flex items-center justify-center bg-gray-900">
+        <div className="flex-1 flex items-center justify-center bg-navy-950">
           <div className="text-center text-gray-400">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mb-4"></div>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mb-4"></div>
             <p>Loading course chat...</p>
           </div>
         </div>
@@ -365,9 +365,9 @@ export default function CourseChatPage() {
 
   if (!user) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-screen bg-navy-950">
         <ChatNavigation />
-        <div className="flex-1 flex items-center justify-center bg-gray-900">
+        <div className="flex-1 flex items-center justify-center bg-navy-950">
           <div className="text-center text-gray-400">
             <p>Please log in to access chat</p>
           </div>
@@ -378,9 +378,9 @@ export default function CourseChatPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-screen bg-navy-950">
         <ChatNavigation />
-        <div className="flex-1 flex items-center justify-center bg-gray-900">
+        <div className="flex-1 flex items-center justify-center bg-navy-950">
           <div className="text-center text-gray-400 max-w-md">
             <div className="bg-red-900/50 border border-red-700 text-red-200 px-6 py-4 rounded-lg mb-4">
               <p className="font-semibold mb-2">Error loading course chat</p>
@@ -392,13 +392,13 @@ export default function CourseChatPage() {
                   setError(null);
                   loadCourseAndChannels();
                 }}
-                className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
               >
                 Try Again
               </button>
               <Link
                 href="/my-courses"
-                className="bg-gray-700 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                className="bg-navy-800 text-white px-6 py-2 rounded-lg hover:bg-navy-700 transition-colors"
               >
                 Back to My Courses
               </Link>
@@ -410,11 +410,11 @@ export default function CourseChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-navy-950">
       <ChatNavigation />
       <div className="flex-1 overflow-hidden">
         {servers.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center bg-gray-900">
+          <div className="flex-1 flex items-center justify-center bg-navy-950">
             <div className="text-center text-gray-400 max-w-md">
               <svg
                 className="w-16 h-16 mx-auto mb-4 opacity-50"

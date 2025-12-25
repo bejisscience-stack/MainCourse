@@ -494,7 +494,7 @@ export default function ChatArea({
 
   if (!channel) {
     return (
-      <div className="flex-1 bg-gray-900 flex items-center justify-center">
+      <div className="flex-1 bg-navy-950 flex items-center justify-center">
         <div className="text-center text-gray-400">
           <svg
             className="w-16 h-16 mx-auto mb-4 opacity-50"
@@ -528,11 +528,11 @@ export default function ChatArea({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-900 relative">
+    <div className="flex-1 flex flex-col bg-navy-950 relative">
       {/* Channel header */}
-      <div className="h-12 px-4 border-b border-gray-700 flex items-center shadow-sm flex-shrink-0 bg-gray-900 z-10">
+      <div className="h-12 px-4 border-b border-navy-700 flex items-center shadow-sm flex-shrink-0 bg-navy-950 z-10">
         <div className="flex items-center gap-2">
-          <span className="text-gray-400 text-xl">#</span>
+          <span className="text-emerald-400 text-xl">#</span>
           <h2 className="text-white font-semibold text-sm">{channel.name}</h2>
           {!isConnected && (
             <span className="flex items-center gap-1 text-yellow-500 text-xs">
@@ -561,11 +561,11 @@ export default function ChatArea({
             <div className="space-y-4 px-4">
               {[...Array(8)].map((_, i) => (
                 <div key={i} className="flex gap-4 animate-pulse">
-                  <div className="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0"></div>
+                  <div className="w-10 h-10 rounded-full bg-navy-800 flex-shrink-0"></div>
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-gray-700 rounded w-24"></div>
-                    <div className="h-4 bg-gray-700 rounded" style={{ width: `${60 + Math.random() * 30}%` }}></div>
-                    {i % 3 === 0 && <div className="h-4 bg-gray-700 rounded w-1/2"></div>}
+                    <div className="h-4 bg-navy-800 rounded w-24"></div>
+                    <div className="h-4 bg-navy-800 rounded" style={{ width: `${60 + Math.random() * 30}%` }}></div>
+                    {i % 3 === 0 && <div className="h-4 bg-navy-800 rounded w-1/2"></div>}
                   </div>
                 </div>
               ))}
@@ -590,7 +590,7 @@ export default function ChatArea({
                     }
                     refetch();
                   }}
-                  className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
                 >
                   Try Again
                 </button>
@@ -625,7 +625,7 @@ export default function ChatArea({
                   <button
                     onClick={loadMore}
                     disabled={isLoading}
-                    className="text-sm text-indigo-400 hover:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+                    className="text-sm text-emerald-400 hover:text-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-lg hover:bg-navy-800 transition-colors"
                   >
                     {isLoading ? (
                       <span className="flex items-center gap-2">
@@ -706,7 +706,7 @@ export default function ChatArea({
       {userScrolledUpRef.current && messages.length > 10 && (
         <button
           onClick={handleScrollToBottom}
-          className="absolute bottom-24 right-6 bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-full shadow-lg transition-all transform hover:scale-105 z-20"
+          className="absolute bottom-24 right-6 bg-navy-800 hover:bg-navy-700 text-white p-2 rounded-full shadow-lg transition-all transform hover:scale-105 z-20"
           title="Scroll to bottom"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -717,7 +717,7 @@ export default function ChatArea({
 
       {/* Typing indicator */}
       {typingUsers.length > 0 && (
-        <div className="px-4 py-2 text-sm text-gray-400 italic flex items-center gap-2 bg-gray-900 border-t border-gray-800">
+        <div className="px-4 py-2 text-sm text-gray-400 italic flex items-center gap-2 bg-navy-950 border-t border-navy-800">
           <div className="flex gap-1">
             <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
             <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
@@ -750,7 +750,7 @@ export default function ChatArea({
               <div className="px-4 py-3 border-t border-gray-700 bg-gray-900">
                 <button
                   onClick={() => setShowVideoUploadDialog(true)}
-                  className="w-12 h-12 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 text-white rounded-full transition-colors shadow-lg hover:shadow-xl hover:scale-105"
+                  className="w-12 h-12 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-full transition-colors shadow-lg hover:shadow-xl hover:scale-105"
                   title={t('projects.createVideoProject')}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

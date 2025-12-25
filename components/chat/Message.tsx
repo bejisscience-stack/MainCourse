@@ -66,10 +66,10 @@ const MediaAttachment = memo(function MediaAttachment({
 
   if (attachment.fileType === 'image' || attachment.fileType === 'gif') {
     return (
-      <div className="relative rounded-lg overflow-hidden border border-gray-700 bg-gray-800 max-w-md">
+      <div className="relative rounded-lg overflow-hidden border border-navy-700 bg-navy-800 max-w-md">
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-            <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center bg-navy-800">
+            <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
         {hasError ? (
@@ -98,7 +98,7 @@ const MediaAttachment = memo(function MediaAttachment({
 
   if (attachment.fileType === 'video') {
     return (
-      <div className="rounded-lg overflow-hidden border border-gray-700 max-w-md">
+      <div className="rounded-lg overflow-hidden border border-navy-700 max-w-md">
         <video
           src={attachment.fileUrl}
           controls
@@ -193,9 +193,9 @@ const Message = memo(function Message({
       const originalMessage = document.querySelector(`[data-message-id="${message.replyTo}"]`);
       if (originalMessage) {
         originalMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        originalMessage.classList.add('ring-2', 'ring-indigo-500', 'bg-indigo-900/20');
+        originalMessage.classList.add('ring-2', 'ring-emerald-500', 'bg-emerald-900/20');
         setTimeout(() => {
-          originalMessage.classList.remove('ring-2', 'ring-indigo-500', 'bg-indigo-900/20');
+          originalMessage.classList.remove('ring-2', 'ring-emerald-500', 'bg-emerald-900/20');
         }, 2000);
       }
     }
@@ -307,7 +307,7 @@ const Message = memo(function Message({
     <div
       ref={messageRef}
       data-message-id={message.id}
-      className={`group px-4 py-1.5 hover:bg-gray-800/50 transition-colors relative ${
+      className={`group px-4 py-1.5 hover:bg-navy-800/50 transition-colors relative ${
         isFailed ? 'bg-red-900/10' : ''
       }`}
       onMouseEnter={handleMouseEnter}
@@ -317,7 +317,7 @@ const Message = memo(function Message({
         {/* Avatar */}
         <div className="flex-shrink-0 w-10">
           {showAvatar ? (
-            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+            <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
               {message.user.avatarUrl ? (
                   <img
                     src={message.user.avatarUrl}
@@ -339,12 +339,12 @@ const Message = memo(function Message({
           {message.replyPreview && (
             <div
               onClick={scrollToOriginal}
-              className="mb-1.5 px-3 py-1.5 border-l-2 border-indigo-500 bg-gray-800/70 rounded text-xs cursor-pointer hover:bg-gray-700/70 transition-colors flex items-center gap-2 group/reply"
+              className="mb-1.5 px-3 py-1.5 border-l-2 border-emerald-500 bg-navy-800/70 rounded text-xs cursor-pointer hover:bg-navy-700/70 transition-colors flex items-center gap-2 group/reply"
             >
-              <svg className="w-3 h-3 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3 h-3 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
               </svg>
-              <span className="text-indigo-400 font-medium">{message.replyPreview.username}</span>
+              <span className="text-emerald-400 font-medium">{message.replyPreview.username}</span>
               <span className="text-gray-400 truncate">{message.replyPreview.content}</span>
               <span className="text-gray-500 opacity-0 group-hover/reply:opacity-100 transition-opacity text-xs ml-auto flex-shrink-0">
                 Click to jump
@@ -358,7 +358,7 @@ const Message = memo(function Message({
               <div className="relative" ref={userMenuRef}>
                 <span
                   className={`text-white font-semibold text-sm hover:underline cursor-pointer ${
-                    canMute ? 'hover:text-indigo-400' : ''
+                    canMute ? 'hover:text-emerald-400' : ''
                   }`}
                   onClick={(e) => {
                     e.preventDefault();
@@ -373,13 +373,13 @@ const Message = memo(function Message({
                 
                 {/* User context menu */}
                 {showUserMenu && canMute && (
-                  <div className="absolute left-0 top-6 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 min-w-[160px] py-1 animate-in fade-in duration-100">
+                  <div className="absolute left-0 top-6 bg-navy-800 border border-navy-700 rounded-lg shadow-xl z-50 min-w-[160px] py-1 animate-in fade-in duration-100">
                     {isMuted ? (
                       <button
                         onClick={handleUnmute}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition-colors flex items-center gap-2"
+                        className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-navy-700 transition-colors flex items-center gap-2"
                       >
-                        <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                         </svg>
                         Unmute user
@@ -387,7 +387,7 @@ const Message = memo(function Message({
                     ) : (
                       <button
                         onClick={handleMute}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 transition-colors flex items-center gap-2"
+                        className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-navy-700 transition-colors flex items-center gap-2"
                       >
                         <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
@@ -455,7 +455,7 @@ const Message = memo(function Message({
               {message.onRetry && (
                 <button
                   onClick={message.onRetry}
-                  className="text-indigo-400 hover:text-indigo-300 underline font-medium"
+                  className="text-emerald-400 hover:text-emerald-300 underline font-medium"
                 >
                   Retry
                 </button>
@@ -474,8 +474,8 @@ const Message = memo(function Message({
                     onClick={() => onReaction?.(message.id, reaction.emoji)}
                     className={`px-2 py-0.5 rounded-full text-xs flex items-center gap-1 transition-all ${
                       hasReacted
-                        ? 'bg-indigo-600/30 border border-indigo-500/50 text-indigo-300'
-                        : 'bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-300'
+                        ? 'bg-emerald-500/30 border border-emerald-500/50 text-emerald-300'
+                        : 'bg-navy-800 hover:bg-navy-700 border border-navy-600 text-gray-300'
                     }`}
                   >
                     <span>{reaction.emoji}</span>
@@ -489,12 +489,12 @@ const Message = memo(function Message({
 
         {/* Hover action menu */}
         {showMenu && !isPending && !isFailed && (
-          <div className="absolute right-4 -top-3 flex items-center gap-0.5 bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-1 z-20">
+          <div className="absolute right-4 -top-3 flex items-center gap-0.5 bg-navy-800 border border-navy-700 rounded-lg shadow-lg p-1 z-20">
             {/* Reaction picker trigger */}
             <div className="relative">
               <button
                 onClick={() => setShowReactionPicker(!showReactionPicker)}
-                className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
+                className="p-1.5 hover:bg-navy-700 rounded text-gray-400 hover:text-emerald-400 transition-colors"
                 title="Add Reaction"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -504,7 +504,7 @@ const Message = memo(function Message({
               
               {/* Reaction picker dropdown */}
               {showReactionPicker && (
-                <div className="absolute right-0 top-8 bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-2 flex gap-1 z-30">
+                <div className="absolute right-0 top-8 bg-navy-800 border border-navy-700 rounded-lg shadow-xl p-2 flex gap-1 z-30">
                   {COMMON_REACTIONS.map((emoji) => (
                     <button
                       key={emoji}
@@ -513,7 +513,7 @@ const Message = memo(function Message({
                         setShowReactionPicker(false);
                         setShowMenu(false);
                       }}
-                      className="p-2 hover:bg-gray-700 rounded text-lg transition-colors hover:scale-110"
+                      className="p-2 hover:bg-navy-700 rounded text-lg transition-colors hover:scale-110"
                     >
                       {emoji}
                     </button>
@@ -528,7 +528,7 @@ const Message = memo(function Message({
                 onReply?.(message.id);
                 setShowMenu(false);
               }}
-              className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
+              className="p-1.5 hover:bg-navy-700 rounded text-gray-400 hover:text-emerald-400 transition-colors"
               title="Reply"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -540,8 +540,8 @@ const Message = memo(function Message({
             {canMute && (
               <button
                 onClick={isMuted ? handleUnmute : handleMute}
-                className={`p-1.5 hover:bg-gray-700 rounded transition-colors ${
-                  isMuted ? 'text-green-400 hover:text-green-300' : 'text-gray-400 hover:text-red-400'
+                className={`p-1.5 hover:bg-navy-700 rounded transition-colors ${
+                  isMuted ? 'text-emerald-400 hover:text-emerald-300' : 'text-gray-400 hover:text-red-400'
                 }`}
                 title={isMuted ? 'Unmute user' : 'Mute user'}
               >
@@ -560,7 +560,7 @@ const Message = memo(function Message({
 
             {/* More options */}
             <button
-              className="p-1.5 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition-colors"
+              className="p-1.5 hover:bg-navy-700 rounded text-gray-400 hover:text-emerald-400 transition-colors"
               title="More options"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

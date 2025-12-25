@@ -414,8 +414,8 @@ export default function MessageInput({
 
   return (
     <div
-      className={`px-4 py-3 bg-gray-800 border-t border-gray-700 transition-colors ${
-        isDragging ? 'bg-indigo-900/30 ring-2 ring-indigo-500 ring-inset' : ''
+      className={`px-4 py-3 bg-navy-900 border-t border-navy-700 transition-colors ${
+        isDragging ? 'bg-emerald-900/30 ring-2 ring-emerald-500 ring-inset' : ''
       }`}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -424,8 +424,8 @@ export default function MessageInput({
     >
       {/* Drag overlay */}
       {isDragging && (
-        <div className="absolute inset-0 bg-indigo-900/50 flex items-center justify-center z-10 pointer-events-none">
-          <div className="bg-gray-800 rounded-lg px-6 py-4 text-white shadow-xl">
+        <div className="absolute inset-0 bg-emerald-900/50 flex items-center justify-center z-10 pointer-events-none">
+          <div className="bg-navy-800 rounded-lg px-6 py-4 text-white shadow-xl">
             <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
@@ -459,9 +459,9 @@ export default function MessageInput({
 
       {/* Reply preview */}
       {replyTo && (
-        <div className="mb-2 px-4 py-2 bg-gray-700/70 border-l-4 border-indigo-500 rounded flex items-start justify-between">
+        <div className="mb-2 px-4 py-2 bg-navy-800/70 border-l-4 border-emerald-500 rounded flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <div className="text-xs text-indigo-400 font-medium mb-0.5 flex items-center gap-1">
+            <div className="text-xs text-emerald-400 font-medium mb-0.5 flex items-center gap-1">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
               </svg>
@@ -471,7 +471,7 @@ export default function MessageInput({
           </div>
           <button
             onClick={onCancelReply}
-            className="ml-2 text-gray-400 hover:text-white transition-colors p-1"
+            className="ml-2 text-gray-400 hover:text-emerald-400 transition-colors p-1"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -486,7 +486,7 @@ export default function MessageInput({
           {uploadingFiles.map((file) => (
             <div key={file.id} className="relative group">
               <div className={`relative rounded-lg overflow-hidden border ${
-                file.status === 'error' ? 'border-red-600' : 'border-gray-600'
+                file.status === 'error' ? 'border-red-600' : 'border-navy-600'
               }`}>
                 {file.preview ? (
                   <img
@@ -495,7 +495,7 @@ export default function MessageInput({
                     className="h-20 w-20 object-cover"
                   />
                 ) : (
-                  <div className="h-20 w-20 bg-gray-700 flex items-center justify-center">
+                  <div className="h-20 w-20 bg-navy-800 flex items-center justify-center">
                     <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -510,7 +510,7 @@ export default function MessageInput({
                       <div className="w-12 h-12 relative">
                         <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 48 48">
                           <circle
-                            className="text-gray-600"
+                            className="text-navy-600"
                             stroke="currentColor"
                             strokeWidth="4"
                             fill="transparent"
@@ -519,7 +519,7 @@ export default function MessageInput({
                             cy="24"
                           />
                           <circle
-                            className="text-indigo-500"
+                            className="text-emerald-500"
                             stroke="currentColor"
                             strokeWidth="4"
                             strokeLinecap="round"
@@ -569,7 +569,7 @@ export default function MessageInput({
           {attachments.map((att, index) => (
             <div key={att.id || index} className="relative group">
               {att.fileType === 'image' || att.fileType === 'gif' ? (
-                <div className="relative rounded-lg overflow-hidden border border-gray-600">
+                <div className="relative rounded-lg overflow-hidden border border-navy-600">
                   <img
                     src={att.fileUrl}
                     alt={att.fileName}
@@ -583,7 +583,7 @@ export default function MessageInput({
                   </button>
                 </div>
               ) : (
-                <div className="relative rounded-lg border border-gray-600 bg-gray-700 p-2">
+                <div className="relative rounded-lg border border-navy-600 bg-navy-800 p-2">
                   <div className="flex items-center gap-2">
                     <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -616,8 +616,8 @@ export default function MessageInput({
             });
           }
         }}
-        className={`flex items-end gap-2 bg-gray-700 rounded-lg px-3 py-2 transition-all ${
-          isFocused ? 'ring-2 ring-indigo-500' : ''
+        className={`flex items-end gap-2 bg-navy-800 rounded-lg px-3 py-2 transition-all ${
+          isFocused ? 'ring-2 ring-emerald-500' : ''
         } ${disabled || isMuted ? 'opacity-60' : ''}`}
       >
         {/* File upload button */}
@@ -642,7 +642,7 @@ export default function MessageInput({
           className={`p-2 rounded-lg transition-all flex-shrink-0 ${
             disabled || isMuted || isUploading
               ? 'text-gray-500 cursor-not-allowed'
-              : 'text-gray-300 hover:text-indigo-400 hover:bg-indigo-500/20 active:bg-indigo-500/30'
+              : 'text-gray-300 hover:text-emerald-400 hover:bg-emerald-500/20 active:bg-emerald-500/30'
           }`}
           title={isMuted ? 'Cannot upload while muted' : isUploading ? 'Upload in progress...' : 'Upload image or video'}
         >
@@ -676,7 +676,7 @@ export default function MessageInput({
         {/* Emoji button */}
         <button
           type="button"
-          className="text-gray-400 hover:text-gray-300 p-1.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="text-gray-400 hover:text-emerald-400 p-1.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Add emoji"
           disabled={disabled || isMuted}
         >
@@ -691,7 +691,7 @@ export default function MessageInput({
           disabled={!canSend}
           className={`p-1.5 rounded-lg transition-all ${
             canSend
-              ? 'text-white bg-indigo-600 hover:bg-indigo-500 cursor-pointer'
+              ? 'text-white bg-emerald-500 hover:bg-emerald-600 cursor-pointer'
               : 'text-gray-500 cursor-not-allowed'
           }`}
           title={isMuted ? 'You are muted' : isUploading ? 'Wait for upload to finish' : !canSend ? 'Type a message or attach a file' : 'Send message'}
@@ -711,7 +711,7 @@ export default function MessageInput({
 
       {/* Keyboard shortcut hint */}
       <div className="mt-1 text-xs text-gray-500 text-right opacity-0">
-        Press <kbd className="px-1 py-0.5 bg-gray-700 rounded text-gray-400">Enter</kbd> to send, <kbd className="px-1 py-0.5 bg-gray-700 rounded text-gray-400">Shift+Enter</kbd> for new line
+        Press <kbd className="px-1 py-0.5 bg-navy-800 rounded text-gray-400">Enter</kbd> to send, <kbd className="px-1 py-0.5 bg-navy-800 rounded text-gray-400">Shift+Enter</kbd> for new line
       </div>
     </div>
   );

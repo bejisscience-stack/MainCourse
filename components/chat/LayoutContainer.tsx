@@ -154,7 +154,7 @@ export default function LayoutContainer({
   };
 
   return (
-    <div className="flex h-full bg-gray-900 text-white overflow-hidden">
+    <div className="flex h-full bg-navy-950 text-white overflow-hidden">
       {/* Server sidebar */}
       <ServerSidebar
         servers={servers}
@@ -168,16 +168,16 @@ export default function LayoutContainer({
 
       {/* Combined Sidebar Container - Channels and Members stacked vertically */}
       {!isDMMode && activeServer && (
-        <div className="w-60 bg-gray-800 flex flex-col">
+        <div className="w-60 bg-navy-900 flex flex-col">
           {/* Channels Section */}
-          <div className={`flex flex-col border-b border-gray-700 transition-all ${channelsCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0'}`}>
+          <div className={`flex flex-col border-b border-navy-700 transition-all ${channelsCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0'}`}>
             {/* Channels Header with Collapse Button - shown when collapsed */}
             {channelsCollapsed ? (
-              <div className="h-12 px-4 border-b border-gray-700 flex items-center justify-between bg-gray-800 flex-shrink-0">
+              <div className="h-12 px-4 border-b border-navy-700 flex items-center justify-between bg-navy-900 flex-shrink-0">
                 <span className="text-gray-300 text-sm font-semibold">CHANNELS</span>
                 <button
                   onClick={() => setChannelsCollapsed(!channelsCollapsed)}
-                  className="text-gray-400 hover:text-gray-300 transition-colors p-1"
+                  className="text-gray-400 hover:text-emerald-400 transition-colors p-1"
                   title="Expand channels"
                 >
                   <svg
@@ -215,11 +215,11 @@ export default function LayoutContainer({
           <div className={`flex flex-col transition-all ${membersCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0'}`}>
             {/* Members Header with Collapse Button - shown when collapsed */}
             {membersCollapsed ? (
-              <div className="h-12 px-4 border-b border-gray-700 flex items-center justify-between bg-gray-800 flex-shrink-0">
+              <div className="h-12 px-4 border-b border-navy-700 flex items-center justify-between bg-navy-900 flex-shrink-0">
                 <span className="text-gray-300 text-sm font-semibold">MEMBERS</span>
                 <button
                   onClick={() => setMembersCollapsed(!membersCollapsed)}
-                  className="text-gray-400 hover:text-gray-300 transition-colors p-1"
+                  className="text-gray-400 hover:text-emerald-400 transition-colors p-1"
                   title="Expand members"
                 >
                   <svg
@@ -250,24 +250,24 @@ export default function LayoutContainer({
           </div>
 
           {/* User profile footer - at the very bottom */}
-          <div className="h-14 bg-gray-900 px-2 py-2 flex items-center gap-2 border-t border-gray-700 flex-shrink-0 mt-auto">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-semibold">
+          <div className="h-14 bg-navy-950 px-2 py-2 flex items-center gap-2 border-t border-navy-700 flex-shrink-0 mt-auto">
+            <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-semibold">
               {userName ? userName.charAt(0).toUpperCase() : 'U'}
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-white text-sm font-medium truncate">{userName || 'User'}</div>
-              <div className="text-green-400 text-xs flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+              <div className="text-emerald-400 text-xs flex items-center gap-1">
+                <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
                 {t('chat.online')}
               </div>
             </div>
             <div className="flex gap-0.5">
-              <button className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors">
+              <button className="text-gray-400 hover:text-emerald-400 p-1.5 rounded hover:bg-navy-700 transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                 </svg>
               </button>
-              <button className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-700 transition-colors">
+              <button className="text-gray-400 hover:text-emerald-400 p-1.5 rounded hover:bg-navy-700 transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

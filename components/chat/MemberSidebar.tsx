@@ -17,7 +17,7 @@ export default function MemberSidebar({
 }: MemberSidebarProps) {
   // Component is now empty - search bar and members list have been removed
   return (
-    <div className="w-full h-full bg-gray-800 flex flex-col overflow-hidden">
+    <div className="w-full h-full bg-navy-900 flex flex-col overflow-hidden">
       {/* Empty sidebar */}
     </div>
   );

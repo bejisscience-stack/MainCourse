@@ -159,12 +159,12 @@ export default function ServerSidebar({
 
   return (
     <>
-      <div className="w-16 bg-gray-900 flex flex-col items-center py-3 space-y-2 overflow-y-auto">
+      <div className="w-16 bg-navy-950 flex flex-col items-center py-3 space-y-2 overflow-y-auto">
         {/* Home/Direct Messages button */}
         {showDMButton && (
           <>
             <button
-              className={`w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-500 transition-all duration-200 flex items-center justify-center text-white font-bold text-lg ${
+              className={`w-12 h-12 rounded-full bg-emerald-500 hover:bg-emerald-600 transition-all duration-200 flex items-center justify-center text-white font-bold text-lg ${
                 activeServerId === 'home' ? 'rounded-2xl' : ''
               }`}
               onClick={() => onServerSelect('home')}
@@ -173,7 +173,7 @@ export default function ServerSidebar({
             >
               <span>DM</span>
             </button>
-            <div className="w-8 h-0.5 bg-gray-700"></div>
+            <div className="w-8 h-0.5 bg-navy-700"></div>
           </>
         )}
 
@@ -189,10 +189,10 @@ export default function ServerSidebar({
               <button
                 className={`w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center text-white font-semibold text-sm relative ${
                   isActive 
-                    ? 'rounded-2xl bg-indigo-600' 
+                    ? 'rounded-2xl bg-emerald-500' 
                     : isLocked
-                    ? 'bg-gray-700/50 hover:bg-gray-700'
-                    : 'bg-gray-700 hover:bg-indigo-600'
+                    ? 'bg-navy-700/50 hover:bg-navy-700'
+                    : 'bg-navy-800 hover:bg-emerald-500'
                 }`}
                 onClick={() => handleServerClick(server.id)}
                 onMouseEnter={() => setHoveredServerId(server.id)}
@@ -220,28 +220,28 @@ export default function ServerSidebar({
 
               {/* Lock icon overlay on hover for locked courses */}
               {isLocked && isHovered && (
-                <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded whitespace-nowrap z-50 pointer-events-none">
+                <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-navy-900 border border-navy-700 text-white text-sm rounded whitespace-nowrap z-50 pointer-events-none shadow-lg">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                     <span>{t('enrollment.requestEnrollment')}</span>
                   </div>
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-gray-900"></div>
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-navy-900"></div>
                 </div>
               )}
 
               {/* Tooltip for enrolled courses */}
               {!isLocked && isHovered && (
-                <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded whitespace-nowrap z-50 pointer-events-none">
+                <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-navy-900 border border-navy-700 text-white text-sm rounded whitespace-nowrap z-50 pointer-events-none shadow-lg">
                   {server.name}
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-gray-900"></div>
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-navy-900"></div>
                 </div>
               )}
 
               {/* Active indicator */}
               {isActive && (
-                <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r"></div>
+                <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-8 bg-emerald-500 rounded-r"></div>
               )}
             </div>
           );
@@ -250,7 +250,7 @@ export default function ServerSidebar({
         {/* Add Course button (lecturer only) */}
         {isLecturer && onAddCourse && (
           <button
-            className="w-12 h-12 rounded-full bg-gray-700 hover:bg-green-600 transition-all duration-200 flex items-center justify-center text-green-500 hover:text-white text-2xl font-light"
+            className="w-12 h-12 rounded-full bg-navy-800 hover:bg-emerald-500 transition-all duration-200 flex items-center justify-center text-emerald-400 hover:text-white text-2xl font-light"
             title={t('lecturerDashboard.createCourse')}
             onClick={onAddCourse}
           >

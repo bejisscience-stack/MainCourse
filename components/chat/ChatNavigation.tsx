@@ -37,7 +37,7 @@ function ChatLanguageSelector() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-navy-700 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"
         aria-label="Select language"
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -59,7 +59,7 @@ function ChatLanguageSelector() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-2 z-50">
+        <div className="absolute right-0 mt-2 w-48 bg-navy-800 border border-navy-700 rounded-lg shadow-xl py-2 z-50">
           {languages.map((lang) => (
             <button
               key={lang.code}
@@ -69,8 +69,8 @@ function ChatLanguageSelector() {
               }}
               className={`w-full flex items-center space-x-3 px-4 py-2 text-sm transition-colors ${
                 language === lang.code
-                  ? 'bg-gray-700 text-white font-semibold'
-                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  ? 'bg-emerald-500/20 text-emerald-300 font-semibold'
+                  : 'text-gray-300 hover:bg-navy-700 hover:text-white'
               }`}
             >
               <span className="text-lg" role="img" aria-label={lang.name}>
@@ -160,25 +160,25 @@ export default function ChatNavigation() {
   };
 
   return (
-    <div className="h-12 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 shadow-sm z-50">
+    <div className="h-12 bg-navy-950/90 backdrop-blur-xl border-b border-navy-800/30 flex items-center justify-between px-4 shadow-sm z-50">
       {/* Left side - Logo and navigation */}
       <div className="flex items-center gap-4">
         <Link
           href="/"
-          className="flex items-center gap-2 text-white hover:text-gray-300 transition-colors"
+          className="flex items-center gap-2 text-white hover:text-emerald-400 transition-colors"
           title={t('chat.home')}
         >
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
+          <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-white font-bold">
             C
           </div>
           <span className="font-semibold hidden sm:inline">Course</span>
         </Link>
 
-        <div className="h-6 w-px bg-gray-700"></div>
+        <div className="h-6 w-px bg-navy-700"></div>
 
         <Link
           href="/lecturer/dashboard"
-          className="text-gray-300 hover:text-white transition-colors text-sm font-medium flex items-center gap-1.5"
+          className="text-gray-400 hover:text-emerald-400 transition-colors text-sm font-medium flex items-center gap-1.5"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -193,7 +193,7 @@ export default function ChatNavigation() {
 
         <Link
           href="/courses"
-          className="text-gray-300 hover:text-white transition-colors text-sm font-medium flex items-center gap-1.5"
+          className="text-gray-400 hover:text-emerald-400 transition-colors text-sm font-medium flex items-center gap-1.5"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -215,14 +215,17 @@ export default function ChatNavigation() {
         <div className="relative">
         <button
           onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-          className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-700 transition-colors"
+          className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-navy-700 transition-colors"
         >
-          <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-semibold">
+          <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-semibold">
             {userName.charAt(0).toUpperCase()}
           </div>
           <div className="hidden md:block text-left">
             <div className="text-white text-sm font-medium">{userName}</div>
-            <div className="text-gray-400 text-xs">{t('chat.online')}</div>
+            <div className="text-emerald-400 text-xs flex items-center gap-1">
+              <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
+              {t('chat.online')}
+            </div>
           </div>
           <svg
             className={`w-4 h-4 text-gray-400 transition-transform ${
@@ -243,15 +246,15 @@ export default function ChatNavigation() {
 
         {/* Profile dropdown menu */}
         {profileMenuOpen && (
-          <div className="absolute right-0 top-full mt-2 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 z-50">
-            <div className="px-4 py-3 border-b border-gray-700">
+          <div className="absolute right-0 top-full mt-2 w-56 bg-navy-800 border border-navy-700 rounded-lg shadow-xl py-1 z-50">
+            <div className="px-4 py-3 border-b border-navy-700">
               <div className="text-white text-sm font-semibold">{userName}</div>
               <div className="text-gray-400 text-xs truncate">{user?.email}</div>
             </div>
 
             <Link
               href="/lecturer/dashboard"
-              className="flex items-center gap-3 px-4 py-2 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+              className="flex items-center gap-3 px-4 py-2 text-gray-300 hover:bg-navy-700 hover:text-emerald-400 transition-colors"
               onClick={() => setProfileMenuOpen(false)}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -267,7 +270,7 @@ export default function ChatNavigation() {
 
             <Link
               href="/my-courses"
-              className="flex items-center gap-3 px-4 py-2 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+              className="flex items-center gap-3 px-4 py-2 text-gray-300 hover:bg-navy-700 hover:text-emerald-400 transition-colors"
               onClick={() => setProfileMenuOpen(false)}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -281,11 +284,11 @@ export default function ChatNavigation() {
               <span>{t('chat.myCourses')}</span>
             </Link>
 
-            <div className="border-t border-gray-700 my-1"></div>
+            <div className="border-t border-navy-700 my-1"></div>
 
             <button
               onClick={handleSignOut}
-              className="w-full flex items-center gap-3 px-4 py-2 text-red-400 hover:bg-gray-700 hover:text-red-300 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-2 text-red-400 hover:bg-navy-700 hover:text-red-300 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path

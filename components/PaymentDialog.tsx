@@ -47,6 +47,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
 
   useEffect(() => {
     setMounted(true);
+    return () => setMounted(false);
   }, []);
 
   const courseCode = useMemo(() => generateCourseCode(course.id), [course.id]);
@@ -203,7 +204,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
     };
   }, [isOpen, handleClose]);
 
-  if (!isOpen || !mounted) return null;
+  if (!isOpen) return null;
 
   const dialogContent = (
     <div 
@@ -463,6 +464,11 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
       </div>
     </div>
   );
+
+  // Only use portal on client side
+  if (!mounted || typeof document === 'undefined') {
+    return null;
+  }
 
   return createPortal(dialogContent, document.body);
 }
