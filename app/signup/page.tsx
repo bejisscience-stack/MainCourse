@@ -43,7 +43,8 @@ function SignUpForm() {
         password, 
         username, 
         role,
-        signupReferralCode: referralCode || undefined
+        signupReferralCode: referralCode || undefined,
+        signupCourseId: courseId || undefined
       });
       
       if (user) {

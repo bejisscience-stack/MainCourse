@@ -7,6 +7,9 @@ interface Profile {
   id: string;
   role: string | null;
   username: string | null;
+  signup_referral_code?: string | null;
+  referred_for_course_id?: string | null;
+  first_login_completed?: boolean | null;
 }
 
 interface UserData {
@@ -26,7 +29,7 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, role, username')
+      .select('id, role, username, signup_referral_code, referred_for_course_id, first_login_completed')
       .eq('id', userId)
       .maybeSingle();
 

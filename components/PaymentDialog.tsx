@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabase';
 import type { Course } from './CourseCard';
 import { useI18n } from '@/contexts/I18nContext';
+import { useUser } from '@/hooks/useUser';
 
 interface PaymentDialogProps {
   course: Course;
@@ -38,6 +39,7 @@ function generateCourseCode(courseId: string): string {
 
 export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: PaymentDialogProps) {
   const { t } = useI18n();
+  const { profile } = useUser();
   const [uploadedImages, setUploadedImages] = useState<Array<{ file: File; preview: string; url?: string }>>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -49,6 +51,28 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  // Auto-fill referral code if user was referred for this specific course
+  useEffect(() => {
+    if (isOpen && profile && course) {
+      const referredCourseId = profile.referred_for_course_id;
+      const signupReferralCode = profile.signup_referral_code;
+      
+      // Only auto-fill if:
+      // 1. User has a referral code from signup
+      // 2. User was referred for this specific course
+      // 3. Current course ID matches the referred course ID
+      if (signupReferralCode && referredCourseId && referredCourseId === course.id) {
+        setReferralCode(signupReferralCode);
+      } else {
+        // Clear referral code if course doesn't match
+        setReferralCode('');
+      }
+    } else if (!isOpen) {
+      // Reset when dialog closes
+      setReferralCode('');
+    }
+  }, [isOpen, profile, course]);
 
   const courseCode = useMemo(() => generateCourseCode(course.id), [course.id]);
 

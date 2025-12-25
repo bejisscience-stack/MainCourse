@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { Course } from './CourseCard';
 import { useI18n } from '@/contexts/I18nContext';
+import { useUser } from '@/hooks/useUser';
 import EnrollmentStepOverview from './enrollment/EnrollmentStepOverview';
 import EnrollmentStepPayment from './enrollment/EnrollmentStepPayment';
 import EnrollmentStepReferral from './enrollment/EnrollmentStepReferral';
@@ -28,6 +29,7 @@ const TOTAL_STEPS = 5;
 
 export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll }: EnrollmentWizardProps) {
   const { t } = useI18n();
+  const { profile } = useUser();
   const [currentStep, setCurrentStep] = useState(1);
   const [mounted, setMounted] = useState(false);
   const [wizardData, setWizardData] = useState<EnrollmentWizardData>({
@@ -44,19 +46,35 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll }: 
     return () => setMounted(false);
   }, []);
 
-  // Reset wizard when opened/closed
+  // Reset wizard when opened/closed and auto-fill referral code
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(1);
+      
+      // Auto-fill referral code if user was referred for this specific course
+      let initialReferralCode = '';
+      if (profile && course) {
+        const referredCourseId = profile.referred_for_course_id;
+        const signupReferralCode = profile.signup_referral_code;
+        
+        // Only auto-fill if:
+        // 1. User has a referral code from signup
+        // 2. User was referred for this specific course
+        // 3. Current course ID matches the referred course ID
+        if (signupReferralCode && referredCourseId && referredCourseId === course.id) {
+          initialReferralCode = signupReferralCode;
+        }
+      }
+      
       setWizardData({
         course,
-        referralCode: '',
+        referralCode: initialReferralCode,
         uploadedImages: [],
         uploadedUrls: [],
       });
       setStepErrors({});
     }
-  }, [isOpen, course]);
+  }, [isOpen, course, profile]);
 
   // Close modal on ESC key press and handle body scroll
   useEffect(() => {
