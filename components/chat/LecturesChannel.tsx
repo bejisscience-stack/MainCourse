@@ -83,7 +83,7 @@ export default function LecturesChannel({
             onClick={() => setShowUploadModal(true)}
               className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold rounded-xl hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg shadow-indigo-500/25 flex items-center gap-2 group"
             >
-              <svg className="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 transition-transform group-hover:scale-110 will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             {t('lectures.uploadFirstVideo')}
@@ -277,7 +277,7 @@ function VideoCard({
         {/* Play overlay */}
         {unlocked && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+            <div className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}>
               <svg className="w-6 h-6 text-gray-900 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
                           </svg>

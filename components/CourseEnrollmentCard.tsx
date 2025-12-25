@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import CourseCard, { type Course } from './CourseCard';
 import PaymentDialog from './PaymentDialog';
@@ -22,7 +22,7 @@ interface CourseEnrollmentCardProps {
 /**
  * Wrapper around CourseCard that adds enrollment request status checking
  */
-export default function CourseEnrollmentCard({
+function CourseEnrollmentCard({
   course,
   isEnrolled = false,
   isEnrolling = false,
@@ -82,7 +82,8 @@ export default function CourseEnrollmentCard({
       return (
         <a
           href={`/courses/${course.id}/chat`}
-          className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-emerald-500 rounded-full hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5"
+          className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-emerald-500 rounded-full hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5 will-change-transform"
+          style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
         >
           <svg
             className="w-3.5 h-3.5 mr-1.5"
@@ -175,7 +176,8 @@ export default function CourseEnrollmentCard({
           setShowPaymentDialog(true);
         }}
         disabled={buttonState.disabled}
-        className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-charcoal-950 dark:bg-emerald-500 rounded-full hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+        className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-charcoal-950 dark:bg-emerald-500 rounded-full hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 will-change-transform"
+        style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
       >
         <svg
           className="w-3.5 h-3.5 mr-1.5"
@@ -283,4 +285,6 @@ export default function CourseEnrollmentCard({
     </>
   );
 }
+
+export default memo(CourseEnrollmentCard);
 

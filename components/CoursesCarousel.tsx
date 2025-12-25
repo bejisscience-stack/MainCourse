@@ -181,7 +181,8 @@ export default function CoursesCarousel() {
             <>
               <button
                 onClick={handlePrevious}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 md:-translate-x-10 z-30 w-14 h-14 md:w-16 md:h-16 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl dark:shadow-glow-dark flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-charcoal-100/50 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 group"
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 md:-translate-x-10 z-30 w-14 h-14 md:w-16 md:h-16 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl dark:shadow-glow-dark flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-charcoal-100/50 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 group will-change-transform"
+                style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
                 aria-label="Previous course"
               >
                 <svg
@@ -201,7 +202,8 @@ export default function CoursesCarousel() {
 
               <button
                 onClick={handleNext}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 md:translate-x-10 z-30 w-14 h-14 md:w-16 md:h-16 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl dark:shadow-glow-dark flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-charcoal-100/50 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 group"
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 md:translate-x-10 z-30 w-14 h-14 md:w-16 md:h-16 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl dark:shadow-glow-dark flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-charcoal-100/50 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 group will-change-transform"
+                style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
                 aria-label="Next course"
               >
                 <svg

@@ -113,7 +113,7 @@ function CourseCard({
 
   return (
     <>
-      <div className="bg-white dark:bg-navy-800 rounded-3xl overflow-hidden shadow-soft hover:shadow-soft-lg dark:hover:shadow-glow-dark transition-all duration-200 border border-charcoal-100/50 dark:border-navy-700/50 hover:scale-[1.01] hover:-translate-y-0.5">
+      <div className="bg-white dark:bg-navy-800 rounded-3xl overflow-hidden shadow-soft hover:shadow-soft-lg dark:hover:shadow-glow-dark transition-all duration-200 border border-charcoal-100/50 dark:border-navy-700/50 hover:scale-[1.01] hover:-translate-y-0.5 will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}>
         {/* Thumbnail Section */}
         <div className="relative w-full h-28 bg-gradient-to-br from-emerald-50 via-white to-charcoal-50/30 dark:from-emerald-500/10 dark:via-navy-800 dark:to-navy-700/30 overflow-hidden cursor-pointer group">
           {course.thumbnail_url ? (
@@ -257,7 +257,8 @@ function CourseCard({
             ) : isEnrolled ? (
               <a
                 href={`/courses/${course.id}/chat`}
-                className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-emerald-500 rounded-full hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5"
+                className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-emerald-500 rounded-full hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5 will-change-transform"
+                style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
               >
                 <svg
                   className="w-3.5 h-3.5 mr-1.5"
@@ -278,7 +279,8 @@ function CourseCard({
               <button
                 onClick={handleEnrollClick}
                 disabled={isEnrolling || !onEnroll}
-                className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-charcoal-950 dark:bg-emerald-500 rounded-full hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-charcoal-950 dark:bg-emerald-500 rounded-full hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 will-change-transform"
+                style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
               >
                 {isEnrolling ? (
                   <>

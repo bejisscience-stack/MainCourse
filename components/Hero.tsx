@@ -2,11 +2,13 @@
 
 import { memo } from 'react';
 import { useI18n } from '@/contexts/I18nContext';
+import { useUser } from '@/hooks/useUser';
 import Link from 'next/link';
 import { ScrollReveal } from './ScrollReveal';
 
 function Hero() {
   const { t } = useI18n();
+  const { user, isLoading: userLoading } = useUser();
   
   return (
     <section className="pt-32 md:pt-48 pb-20 md:pb-32 px-4 sm:px-6 lg:px-8 relative">
@@ -34,17 +36,20 @@ function Hero() {
           </p>
         </ScrollReveal>
         
-        <ScrollReveal delay={200} duration={600}>
-          <div className="flex items-center justify-center gap-4">
-            <Link
-              href="/courses"
-              className="group px-8 py-4 bg-charcoal-950 dark:bg-emerald-500 text-white rounded-full font-medium text-base hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-300 hover:shadow-soft-xl dark:hover:shadow-glow-dark hover:-translate-y-0.5 active:translate-y-0"
-            >
-              {t('home.enrollNow')}
-              <span className="inline-block ml-2 transition-transform duration-300 group-hover:translate-x-1">→</span>
-            </Link>
-          </div>
-        </ScrollReveal>
+        {!userLoading && !user && (
+          <ScrollReveal delay={200} duration={600}>
+            <div className="flex items-center justify-center gap-4">
+              <Link
+                href="/courses"
+                className="group px-8 py-4 bg-charcoal-950 dark:bg-emerald-500 text-white rounded-full font-medium text-base hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-300 hover:shadow-soft-xl dark:hover:shadow-glow-dark hover:-translate-y-0.5 active:translate-y-0 will-change-transform"
+                style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+              >
+                {t('home.enrollNow')}
+                <span className="inline-block ml-2 transition-transform duration-300 group-hover:translate-x-1">→</span>
+              </Link>
+            </div>
+          </ScrollReveal>
+        )}
       </div>
     </section>
   );

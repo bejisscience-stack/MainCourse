@@ -16,7 +16,8 @@ function FloatingButton() {
   return (
     <button
       onClick={scrollToEnroll}
-      className="fixed bottom-6 right-6 z-50 bg-charcoal-950 text-white font-medium text-sm md:text-base px-5 md:px-7 py-3 md:py-3.5 rounded-full shadow-soft-xl hover:bg-charcoal-800 transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center space-x-2 hover:shadow-soft-2xl"
+      className="fixed bottom-6 right-6 z-50 bg-charcoal-950 text-white font-medium text-sm md:text-base px-5 md:px-7 py-3 md:py-3.5 rounded-full shadow-soft-xl hover:bg-charcoal-800 transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center space-x-2 hover:shadow-soft-2xl will-change-transform"
+      style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
       aria-label={t('home.enrollNow')}
     >
       <span>{t('home.enrollNow')}</span>

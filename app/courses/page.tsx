@@ -36,7 +36,6 @@ export default function CoursesPage() {
   const { courses, isLoading: coursesLoading, mutate: mutateCourses } = useCourses(filter);
   const { enrolledCourseIds, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
   const [bundles, setBundles] = useState<any[]>([]);
-  const [bundlesLoading, setBundlesLoading] = useState(false);
   const [enrolledBundleIds, setEnrolledBundleIds] = useState<Set<string>>(new Set());
 
   // Fetch lecturer courses if user is lecturer
@@ -49,21 +48,10 @@ export default function CoursesPage() {
     }
   );
 
-  // Fetch bundles
-  useEffect(() => {
-    fetchBundles();
-  }, []);
-
-  // Fetch enrolled bundles
-  useEffect(() => {
-    if (user?.id) {
-      fetchEnrolledBundles();
-    }
-  }, [user?.id]);
-
-  const fetchBundles = async () => {
-    setBundlesLoading(true);
-    try {
+  // Fetch bundles using SWR for caching and deduplication
+  const { data: bundlesData = [], isLoading: bundlesLoading } = useSWR(
+    'course-bundles',
+    async () => {
       const { data, error } = await supabase
         .from('course_bundles')
         .select(`
@@ -82,28 +70,41 @@ export default function CoursesPage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setBundles(data || []);
-    } catch (err: any) {
-      console.error('Error fetching bundles:', err);
-    } finally {
-      setBundlesLoading(false);
+      return data || [];
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30000, // Cache for 30 seconds
     }
-  };
+  );
 
-  const fetchEnrolledBundles = async () => {
-    if (!user?.id) return;
-    try {
+  // Fetch enrolled bundles using SWR
+  const { data: enrolledBundlesData = [] } = useSWR<{ bundle_id: string }[]>(
+    user?.id ? ['bundle-enrollments', user.id] : null,
+    async () => {
+      if (!user?.id) return [];
       const { data, error } = await supabase
         .from('bundle_enrollments')
         .select('bundle_id')
         .eq('user_id', user.id);
 
       if (error) throw error;
-      setEnrolledBundleIds(new Set(data?.map(b => b.bundle_id) || []));
-    } catch (err: any) {
-      console.error('Error fetching enrolled bundles:', err);
+      return data || [];
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 10000,
     }
-  };
+  );
+
+  // Update state from SWR data
+  useEffect(() => {
+    setBundles(bundlesData);
+  }, [bundlesData]);
+
+  useEffect(() => {
+    setEnrolledBundleIds(new Set(enrolledBundlesData.map(b => b.bundle_id)));
+  }, [enrolledBundlesData]);
 
   // Redirect lecturers immediately (but not admins)
   useEffect(() => {

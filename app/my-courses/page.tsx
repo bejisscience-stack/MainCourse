@@ -58,24 +58,42 @@ export default function MyCoursesPage() {
     }
   );
 
-  // Fetch discover courses (not enrolled) - use stable key with user ID
+  // Fetch discover courses (not enrolled) - optimized to filter in database
   const { data: discoverCourses = [], isLoading: discoverLoading, mutate: mutateDiscoverCourses } = useSWR<Course[]>(
     user ? ['discover-courses', user.id, enrolledIdsArray.join(',')] : null,
     async () => {
-      // Fetch all courses first
+      // Optimized: Filter in database instead of JavaScript when possible
+      if (enrolledIdsArray.length > 0) {
+        // Use database filter to exclude enrolled courses
+        const { data: allCourses, error } = await supabase
+          .from('courses')
+          .select('*')
+          .not('id', 'in', `(${enrolledIdsArray.map(id => `"${id}"`).join(',')})`)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          // Fallback to JavaScript filtering if database filter fails
+          console.warn('Database filter failed, falling back to JS filter:', error);
+          const { data: allCoursesFallback, error: fallbackError } = await supabase
+            .from('courses')
+            .select('*')
+            .order('created_at', { ascending: false });
+          
+          if (fallbackError) throw fallbackError;
+          const enrolledSet = new Set(enrolledIdsArray);
+          return (allCoursesFallback || []).filter(course => !enrolledSet.has(course.id));
+        }
+        
+        return allCourses || [];
+      }
+      
+      // No enrolled courses, fetch all
       const { data: allCourses, error } = await supabase
         .from('courses')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      // Filter out enrolled courses in JavaScript (more reliable than Supabase .not() syntax)
-      if (enrolledIdsArray.length > 0) {
-        const enrolledSet = new Set(enrolledIdsArray);
-        return (allCourses || []).filter(course => !enrolledSet.has(course.id));
-      }
-      
       return allCourses || [];
     },
     {

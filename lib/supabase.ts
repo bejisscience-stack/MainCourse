@@ -49,6 +49,7 @@ if (typeof window !== 'undefined') {
   });
 
   // Listen for storage events to sync session across tabs
+  // Store handler reference for potential cleanup (though it persists for app lifetime)
   const storageHandler = (e: StorageEvent) => {
     if (e.key === 'supabase.auth.token') {
       supabase.auth.getSession().catch((error) => {
@@ -58,7 +59,8 @@ if (typeof window !== 'undefined') {
       });
     }
   };
-  window.addEventListener('storage', storageHandler);
-  // Note: This listener is never removed - potential memory leak (Hypothesis A3)
+  window.addEventListener('storage', storageHandler, { passive: true });
+  // Note: This is module-level initialization, so listener persists for app lifetime
+  // This is intentional for cross-tab session sync. If cleanup is needed, use a singleton pattern.
 }
 

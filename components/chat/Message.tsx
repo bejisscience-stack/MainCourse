@@ -513,7 +513,8 @@ const Message = memo(function Message({
                         setShowReactionPicker(false);
                         setShowMenu(false);
                       }}
-                      className="p-2 hover:bg-navy-700 rounded text-lg transition-colors hover:scale-110"
+                      className="p-2 hover:bg-navy-700 rounded text-lg transition-colors hover:scale-110 will-change-transform"
+                      style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
                     >
                       {emoji}
                     </button>

@@ -26,3 +26,4 @@ COMMENT ON POLICY "Users can view all profiles for friends" ON public.profiles I
 
 
 
+

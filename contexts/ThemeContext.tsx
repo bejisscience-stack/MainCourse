@@ -12,39 +12,19 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
-  const [mounted, setMounted] = useState(false);
-
   useEffect(() => {
-    setMounted(true);
-    // Check for saved theme preference or default to light
-    const savedTheme = localStorage.getItem('theme') as Theme | null;
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-    setTheme(initialTheme);
-    applyTheme(initialTheme);
-  }, []);
-
-  const applyTheme = (newTheme: Theme) => {
+    // Always set dark mode
     if (typeof document !== 'undefined') {
       const root = document.documentElement;
-      root.classList.remove('light', 'dark');
-      root.classList.add(newTheme);
-      localStorage.setItem('theme', newTheme);
+      root.classList.remove('light');
+      root.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     }
-  };
+  }, []);
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    applyTheme(newTheme);
-  };
-
-  // Always provide the context, even before mount
-  // This prevents the "useTheme must be used within a ThemeProvider" error
+  // Always provide dark theme context
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: 'dark', toggleTheme: () => {} }}>
       {children}
     </ThemeContext.Provider>
   );

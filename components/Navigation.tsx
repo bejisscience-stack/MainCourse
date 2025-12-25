@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { signOut } from '@/lib/auth';
 import { useUser } from '@/hooks/useUser';
 import { useI18n } from '@/contexts/I18nContext';
-import { useTheme } from '@/contexts/ThemeContext';
 import LanguageSelector from './LanguageSelector';
 
 function Navigation() {
@@ -17,7 +16,6 @@ function Navigation() {
   const router = useRouter();
   const { user, profile, role: userRole, isLoading: loading } = useUser();
   const { t } = useI18n();
-  const { theme, toggleTheme } = useTheme();
 
   // Close profile menu when clicking outside or navigating
   useEffect(() => {
@@ -58,7 +56,7 @@ function Navigation() {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2.5 group">
-            <div className="w-8 h-8 md:w-9 md:h-9 bg-charcoal-950 dark:bg-emerald-500 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105">
+            <div className="w-8 h-8 md:w-9 md:h-9 bg-charcoal-950 dark:bg-emerald-500 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}>
               <span className="text-white font-semibold text-base md:text-lg">C</span>
             </div>
             <span className="text-charcoal-950 dark:text-white font-semibold text-lg md:text-xl tracking-tight">Course</span>
@@ -95,25 +93,9 @@ function Navigation() {
             )}
           </div>
 
-          {/* Auth Buttons & Theme Toggle */}
+          {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-3">
             <LanguageSelector />
-            {/* Dark Mode Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl text-charcoal-600 dark:text-gray-400 hover:bg-charcoal-100/50 dark:hover:bg-navy-800/50 transition-all duration-200"
-              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {theme === 'dark' ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              )}
-            </button>
             {loading ? (
               <div className="text-charcoal-500 dark:text-gray-500 text-sm">{t('common.loading')}</div>
             ) : user ? (
@@ -354,23 +336,8 @@ function Navigation() {
                 </Link>
               )}
               <div className="pt-4 border-t border-charcoal-100/50 dark:border-navy-800/50">
-                <div className="mb-4 flex items-center justify-between">
+                <div className="mb-4 flex items-center justify-center">
                   <LanguageSelector />
-                  <button
-                    onClick={toggleTheme}
-                    className="p-2 rounded-xl text-charcoal-600 dark:text-gray-400 hover:bg-charcoal-100/50 dark:hover:bg-navy-800/50 transition-all duration-200"
-                    aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                  >
-                    {theme === 'dark' ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                      </svg>
-                    )}
-                  </button>
                 </div>
                 {loading ? (
                   <div className="text-charcoal-500 dark:text-gray-500 text-sm text-center py-2">{t('common.loading')}</div>

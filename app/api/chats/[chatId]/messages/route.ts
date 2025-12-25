@@ -46,14 +46,18 @@ export async function GET(
     // Create Supabase client for database operations
     const supabase = createServerSupabaseClient(token);
 
-    // Get channel and verify access
-    const { data: channel, error: channelError } = await supabase
+    // Get channel with course info in a single query (optimized: reduces round trips)
+    const { data: channelData, error: channelError } = await supabase
       .from('channels')
-      .select('id, course_id')
+      .select(`
+        id,
+        course_id,
+        courses!inner(lecturer_id)
+      `)
       .eq('id', chatId)
       .single();
 
-    if (channelError || !channel) {
+    if (channelError || !channelData) {
       console.error('Channel error:', channelError);
       return NextResponse.json(
         { error: 'Channel not found', details: channelError?.message },
@@ -61,26 +65,17 @@ export async function GET(
       );
     }
 
-    const courseId = channel.course_id;
+    const courseId = channelData.course_id;
+    const lecturerId = (channelData.courses as any)?.lecturer_id;
     
-    // Fetch course separately to get lecturer_id
-    const { data: course, error: courseError } = await supabase
-      .from('courses')
-      .select('lecturer_id')
-      .eq('id', courseId)
-      .single();
-    
-    if (courseError || !course) {
-      console.error('Course error:', courseError);
+    if (!lecturerId) {
       return NextResponse.json(
-        { error: 'Course not found', details: courseError?.message || 'The course associated with this channel does not exist' },
+        { error: 'Course not found', details: 'The course associated with this channel does not exist' },
         { status: 404 }
       );
     }
-    
-    const lecturerId = course.lecturer_id;
 
-    // Check enrollment or lecturer status
+    // Check enrollment or lecturer status (can run in parallel with message fetch, but we need it for access check)
     const { data: enrollment, error: enrollmentError } = await supabase
       .from('enrollments')
       .select('id')
@@ -190,27 +185,11 @@ export async function GET(
         });
         console.log(`Successfully fetched ${profiles.length} profiles out of ${userIds.length} users`);
       } else {
+        // Log error but don't fall back to N+1 queries
+        // This prevents performance degradation - if batch fetch fails, return partial data
         console.error('Failed to fetch profiles:', profilesError);
-        // Try individual fetches as fallback (using service role client)
-        const serviceClient = createServiceRoleClient();
-        
-        for (const userId of userIds) {
-          try {
-            const { data: singleProfile, error: singleError } = await serviceClient
-              .from('profiles')
-              .select('id, username, email')
-              .eq('id', userId)
-              .single();
-            
-            if (singleProfile && !singleError) {
-              profileMap.set(userId, singleProfile);
-            } else {
-              console.warn(`Failed to fetch profile for user ${userId}:`, singleError);
-            }
-          } catch (err: any) {
-            console.warn(`Exception fetching profile for user ${userId}:`, err);
-          }
-        }
+        // Profile map will remain empty, messages will use 'User' fallback
+        // This is better than making 50+ sequential queries
       }
     }
 
@@ -239,56 +218,60 @@ export async function GET(
       })),
     });
 
-    // Fetch attachments for all messages
+    // Fetch attachments and reply previews in parallel (optimized: independent queries)
     const messageIds = (messages || []).map((msg: any) => msg.id);
-    const attachmentsMap = new Map();
+    const replyToIds = (messages || []).filter((msg: any) => msg.reply_to_id).map((msg: any) => msg.reply_to_id);
     
-    if (messageIds.length > 0) {
-      const { data: attachments } = await supabase
-        .from('message_attachments')
-        .select('*')
-        .in('message_id', messageIds);
+    const [attachmentsResult, replyMessagesResult] = await Promise.all([
+      // Fetch attachments
+      messageIds.length > 0
+        ? supabase
+            .from('message_attachments')
+            .select('*')
+            .in('message_id', messageIds)
+        : Promise.resolve({ data: null, error: null }),
       
-      if (attachments) {
-        attachments.forEach((att: any) => {
-          if (!attachmentsMap.has(att.message_id)) {
-            attachmentsMap.set(att.message_id, []);
-          }
-          attachmentsMap.get(att.message_id).push({
-            id: att.id,
-            fileUrl: att.file_url,
-            fileName: att.file_name,
-            fileType: att.file_type,
-            fileSize: att.file_size,
-            mimeType: att.mime_type,
-          });
+      // Fetch reply previews
+      replyToIds.length > 0
+        ? supabase
+            .from('messages')
+            .select('id, content, user_id')
+            .in('id', replyToIds)
+        : Promise.resolve({ data: null, error: null }),
+    ]);
+
+    // Process attachments
+    const attachmentsMap = new Map();
+    if (attachmentsResult.data) {
+      attachmentsResult.data.forEach((att: any) => {
+        if (!attachmentsMap.has(att.message_id)) {
+          attachmentsMap.set(att.message_id, []);
+        }
+        attachmentsMap.get(att.message_id).push({
+          id: att.id,
+          fileUrl: att.file_url,
+          fileName: att.file_name,
+          fileType: att.file_type,
+          fileSize: att.file_size,
+          mimeType: att.mime_type,
         });
-      }
+      });
     }
 
-    // Fetch reply previews for messages that have replies
-    const replyToIds = (messages || []).filter((msg: any) => msg.reply_to_id).map((msg: any) => msg.reply_to_id);
+    // Process reply previews
     const replyPreviewsMap = new Map();
-    
-    if (replyToIds.length > 0) {
-      const { data: replyMessages } = await supabase
-        .from('messages')
-        .select('id, content, user_id')
-        .in('id', replyToIds);
-      
-      if (replyMessages) {
-        for (const replyMsg of replyMessages) {
-          const replyProfile = profileMap.get(replyMsg.user_id);
-          const replyUsername = replyProfile
-            ? normalizeProfileUsername(replyProfile)
-            : 'User';
-          
-          replyPreviewsMap.set(replyMsg.id, {
-            id: replyMsg.id,
-            username: replyUsername,
-            content: replyMsg.content.substring(0, 50) + (replyMsg.content.length > 50 ? '...' : ''),
-          });
-        }
+    if (replyMessagesResult.data) {
+      for (const replyMsg of replyMessagesResult.data) {
+        const replyProfile = profileMap.get(replyMsg.user_id);
+        const replyUsername = replyProfile
+          ? normalizeProfileUsername(replyProfile)
+          : 'User';
+        
+        replyPreviewsMap.set(replyMsg.id, {
+          id: replyMsg.id,
+          username: replyUsername,
+          content: replyMsg.content.substring(0, 50) + (replyMsg.content.length > 50 ? '...' : ''),
+        });
       }
     }
 

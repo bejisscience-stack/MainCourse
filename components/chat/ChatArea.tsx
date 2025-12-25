@@ -706,7 +706,8 @@ export default function ChatArea({
       {userScrolledUpRef.current && messages.length > 10 && (
         <button
           onClick={handleScrollToBottom}
-          className="absolute bottom-24 right-6 bg-navy-800 hover:bg-navy-700 text-white p-2 rounded-full shadow-lg transition-all transform hover:scale-105 z-20"
+          className="absolute bottom-24 right-6 bg-navy-800 hover:bg-navy-700 text-white p-2 rounded-full shadow-lg transition-all transform hover:scale-105 z-20 will-change-transform"
+          style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
           title="Scroll to bottom"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -750,7 +751,8 @@ export default function ChatArea({
               <div className="px-4 py-3 border-t border-gray-700 bg-gray-900">
                 <button
                   onClick={() => setShowVideoUploadDialog(true)}
-                  className="w-12 h-12 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-full transition-colors shadow-lg hover:shadow-xl hover:scale-105"
+                  className="w-12 h-12 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-full transition-colors shadow-lg hover:shadow-xl hover:scale-105 will-change-transform"
+                  style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
                   title={t('projects.createVideoProject')}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

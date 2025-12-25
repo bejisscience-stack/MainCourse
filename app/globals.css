@@ -46,6 +46,18 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Smooth transitions for all transform-based hover effects - prevents flickering */
+[class*="hover:scale"],
+[class*="hover:-translate"],
+[class*="hover:translate"],
+[class*="group-hover:scale"] {
+  transform-origin: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  perspective: 1000px;
+  -webkit-perspective: 1000px;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(

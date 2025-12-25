@@ -1,19 +1,21 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useI18n } from '@/contexts/I18nContext';
-import { useCourses } from '@/hooks/useCourses';
+import { useEnrollments } from '@/hooks/useEnrollments';
+import useSWR from 'swr';
+import type { Course } from '@/hooks/useCourses';
 
 export default function SettingsPage() {
   const router = useRouter();
   const { t } = useI18n();
   const { user, isLoading: userLoading } = useUser();
-  const { courses } = useCourses('All');
+  const { enrolledCourseIds, isLoading: enrollmentsLoading } = useEnrollments(user?.id || null);
   const [referralCode, setReferralCode] = useState<string>('');
   const [loadingReferralCode, setLoadingReferralCode] = useState(true);
   
@@ -73,6 +75,27 @@ export default function SettingsPage() {
     setCopiedLink(link);
     setTimeout(() => setCopiedLink(null), 2000);
   }, []);
+
+  // Fetch enrolled courses only
+  const enrolledIdsArray = useMemo(() => Array.from(enrolledCourseIds).sort(), [enrolledCourseIds]);
+  
+  const { data: enrolledCourses = [], isLoading: coursesLoading } = useSWR<Course[]>(
+    user && enrolledIdsArray.length > 0 ? ['enrolled-courses-for-referral', user.id, enrolledIdsArray.join(',')] : null,
+    async () => {
+      if (enrolledIdsArray.length === 0) return [];
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*')
+        .in('id', enrolledIdsArray)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 10000,
+    }
+  );
 
   const getReferralLink = useCallback((courseId?: string) => {
     if (typeof window === 'undefined' || !referralCode) return '';
@@ -149,13 +172,13 @@ export default function SettingsPage() {
 
   if (userLoading) {
     return (
-      <main className="relative min-h-screen bg-white overflow-hidden">
+      <main className="relative min-h-screen bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900 overflow-hidden">
         <BackgroundShapes />
         <Navigation />
         <div className="relative z-10 pt-24 pb-16 flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-navy-900"></div>
-            <p className="mt-4 text-navy-600">{t('common.loading')}</p>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+            <p className="mt-4 text-charcoal-600 dark:text-gray-400">{t('common.loading')}</p>
           </div>
         </div>
       </main>
@@ -167,34 +190,34 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="relative min-h-screen bg-white overflow-hidden">
+    <main className="relative min-h-screen bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900 overflow-hidden">
       <BackgroundShapes />
       <Navigation />
-      <div className="relative z-10 pt-24 pb-16">
+      <div className="relative z-10 pt-24 pb-16 md:pb-32">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-navy-900 mb-2">{t('settings.title')}</h1>
-            <p className="text-navy-600">{t('settings.subtitle')}</p>
+            <h1 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white mb-2">{t('settings.title')}</h1>
+            <p className="text-lg text-charcoal-600 dark:text-gray-400">{t('settings.subtitle')}</p>
           </div>
 
           <div className="space-y-6">
             {/* Referral Code Section */}
-            <div className="bg-white border-2 border-navy-200 rounded-lg p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-navy-900 mb-4">{t('settings.referralCode')}</h2>
-              <p className="text-sm text-navy-600 mb-4">{t('settings.referralCodeDescription')}</p>
+            <div className="bg-white dark:bg-navy-800 border border-charcoal-100/50 dark:border-navy-700/50 rounded-3xl p-6 shadow-soft">
+              <h2 className="text-xl font-semibold text-charcoal-950 dark:text-white mb-4">{t('settings.referralCode')}</h2>
+              <p className="text-sm text-charcoal-600 dark:text-gray-400 mb-4">{t('settings.referralCodeDescription')}</p>
               
               {loadingReferralCode ? (
                 <div className="flex items-center justify-center py-4">
-                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-navy-900"></div>
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
                 </div>
               ) : referralCode ? (
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-navy-50 border-2 border-navy-200 rounded-lg px-4 py-3">
-                    <p className="text-2xl font-mono font-bold text-navy-900 tracking-wider">{referralCode}</p>
+                  <div className="flex-1 bg-charcoal-50 dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 rounded-xl px-4 py-3">
+                    <p className="text-2xl font-mono font-bold text-charcoal-950 dark:text-white tracking-wider">{referralCode}</p>
                   </div>
                   <button
                     onClick={handleCopyReferralCode}
-                    className="px-6 py-3 bg-navy-900 text-white font-semibold rounded-lg hover:bg-navy-800 transition-colors flex items-center gap-2"
+                    className="px-6 py-3 bg-charcoal-950 dark:bg-emerald-500 text-white font-semibold rounded-xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark flex items-center gap-2"
                   >
                     {copied ? (
                       <>
@@ -214,30 +237,30 @@ export default function SettingsPage() {
                   </button>
                 </div>
               ) : (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-sm text-yellow-800">{t('settings.referralCodeNotAvailable')}</p>
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-300">{t('settings.referralCodeNotAvailable')}</p>
                 </div>
               )}
             </div>
 
             {/* Referral Links Section */}
             {referralCode && (
-              <div className="bg-white border-2 border-navy-200 rounded-lg p-6 shadow-sm">
-                <h2 className="text-xl font-semibold text-navy-900 mb-4">{t('settings.referralLinks')}</h2>
-                <p className="text-sm text-navy-600 mb-6">{t('settings.referralLinksDescription')}</p>
+              <div className="bg-white dark:bg-navy-800 border border-charcoal-100/50 dark:border-navy-700/50 rounded-3xl p-6 shadow-soft">
+                <h2 className="text-xl font-semibold text-charcoal-950 dark:text-white mb-4">{t('settings.referralLinks')}</h2>
+                <p className="text-sm text-charcoal-600 dark:text-gray-400 mb-6">{t('settings.referralLinksDescription')}</p>
                 
                 {/* General Referral Link */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-navy-700 mb-2">
+                  <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                     {t('settings.generalReferralLink')}
                   </label>
                   <div className="flex items-center gap-3">
-                    <div className="flex-1 bg-navy-50 border-2 border-navy-200 rounded-lg px-4 py-3">
-                      <p className="text-sm font-mono text-navy-900 break-all">{getReferralLink()}</p>
+                    <div className="flex-1 bg-charcoal-50 dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 rounded-xl px-4 py-3">
+                      <p className="text-sm font-mono text-charcoal-950 dark:text-white break-all">{getReferralLink()}</p>
                     </div>
                     <button
                       onClick={() => handleCopyReferralLink(getReferralLink())}
-                      className="px-4 py-3 bg-navy-900 text-white font-semibold rounded-lg hover:bg-navy-800 transition-colors flex items-center gap-2 whitespace-nowrap"
+                      className="px-4 py-3 bg-charcoal-950 dark:bg-emerald-500 text-white font-semibold rounded-xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark flex items-center gap-2 whitespace-nowrap"
                     >
                       {copiedLink === getReferralLink() ? (
                         <>
@@ -258,27 +281,31 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Course-Specific Referral Links */}
-                {courses.length > 0 && (
+                {/* Course-Specific Referral Links - Only enrolled courses */}
+                {coursesLoading || enrollmentsLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
+                  </div>
+                ) : enrolledCourses.length > 0 ? (
                   <div>
-                    <label className="block text-sm font-medium text-navy-700 mb-3">
+                    <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-3">
                       {t('settings.courseSpecificLinks')}
                     </label>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {courses.slice(0, 10).map((course) => {
+                      {enrolledCourses.map((course) => {
                         const courseLink = getReferralLink(course.id);
                         return (
-                          <div key={course.id} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                          <div key={course.id} className="bg-charcoal-50 dark:bg-navy-700/30 border border-charcoal-200 dark:border-navy-600 rounded-xl p-4">
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-navy-900 mb-1">{course.title}</p>
-                                <div className="bg-white border border-gray-300 rounded px-3 py-2 mt-2">
-                                  <p className="text-xs font-mono text-gray-700 break-all">{courseLink}</p>
+                                <p className="text-sm font-semibold text-charcoal-950 dark:text-white mb-2">{course.title}</p>
+                                <div className="bg-white dark:bg-navy-800 border border-charcoal-200 dark:border-navy-600 rounded-lg px-3 py-2 mt-2">
+                                  <p className="text-xs font-mono text-charcoal-700 dark:text-gray-300 break-all">{courseLink}</p>
                                 </div>
                               </div>
                               <button
                                 onClick={() => handleCopyReferralLink(courseLink)}
-                                className="px-3 py-2 bg-navy-900 text-white text-sm font-semibold rounded-lg hover:bg-navy-800 transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                                className="px-3 py-2 bg-charcoal-950 dark:bg-emerald-500 text-white text-sm font-semibold rounded-lg hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark flex items-center gap-1.5 whitespace-nowrap"
                                 title={t('settings.copy')}
                               >
                                 {copiedLink === courseLink ? (
@@ -296,30 +323,33 @@ export default function SettingsPage() {
                         );
                       })}
                     </div>
-                    {courses.length > 10 && (
-                      <p className="text-xs text-navy-500 mt-2">{t('settings.showingFirst10Courses')}</p>
-                    )}
+                  </div>
+                ) : (
+                  <div className="bg-charcoal-50 dark:bg-navy-700/30 border border-charcoal-200 dark:border-navy-600 rounded-xl p-4">
+                    <p className="text-sm text-charcoal-600 dark:text-gray-400 text-center">
+                      {t('settings.noEnrolledCourses') || 'You need to enroll in courses to generate course-specific referral links.'}
+                    </p>
                   </div>
                 )}
               </div>
             )}
 
             {/* Password Update Section */}
-            <div className="bg-white border-2 border-navy-200 rounded-lg p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-navy-900 mb-4">{t('settings.updatePassword')}</h2>
-              <p className="text-sm text-navy-600 mb-6">{t('settings.updatePasswordDescription')}</p>
+            <div className="bg-white dark:bg-navy-800 border border-charcoal-100/50 dark:border-navy-700/50 rounded-3xl p-6 shadow-soft">
+              <h2 className="text-xl font-semibold text-charcoal-950 dark:text-white mb-4">{t('settings.updatePassword')}</h2>
+              <p className="text-sm text-charcoal-600 dark:text-gray-400 mb-6">{t('settings.updatePasswordDescription')}</p>
 
               <form onSubmit={handlePasswordUpdate} className="space-y-4">
                 {/* Current Password */}
                 <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-2">
+                  <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                     {t('settings.currentPassword')}
                   </label>
                   <input
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent text-navy-900"
+                    className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500"
                     required
                     disabled={isUpdatingPassword}
                   />
@@ -327,31 +357,31 @@ export default function SettingsPage() {
 
                 {/* New Password */}
                 <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-2">
+                  <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                     {t('settings.newPassword')}
                   </label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent text-navy-900"
+                    className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500"
                     required
                     minLength={6}
                     disabled={isUpdatingPassword}
                   />
-                  <p className="text-xs text-navy-500 mt-1">{t('settings.passwordMinLength')}</p>
+                  <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">{t('settings.passwordMinLength')}</p>
                 </div>
 
                 {/* Confirm Password */}
                 <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-2">
+                  <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                     {t('settings.confirmPassword')}
                   </label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent text-navy-900"
+                    className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500"
                     required
                     minLength={6}
                     disabled={isUpdatingPassword}
@@ -360,14 +390,14 @@ export default function SettingsPage() {
 
                 {/* Error Message */}
                 {passwordError && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl text-sm">
                     {passwordError}
                   </div>
                 )}
 
                 {/* Success Message */}
                 {passwordSuccess && (
-                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded-xl text-sm">
                     {t('settings.passwordUpdatedSuccessfully')}
                   </div>
                 )}
@@ -376,7 +406,7 @@ export default function SettingsPage() {
                 <button
                   type="submit"
                   disabled={isUpdatingPassword}
-                  className="w-full md:w-auto px-6 py-3 bg-navy-900 text-white font-semibold rounded-lg hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full md:w-auto px-6 py-3 bg-charcoal-950 dark:bg-emerald-500 text-white font-semibold rounded-xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isUpdatingPassword ? (
                     <>

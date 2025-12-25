@@ -71,7 +71,7 @@ function VideoSection() {
                   style={{ zIndex: 10 }}
                   aria-label={t('videoSection.enrollNow')}
                 >
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-white/90 dark:bg-navy-800/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-soft-xl border border-charcoal-100/50 dark:border-navy-700/50 transform transition-all duration-300 group-hover:scale-110 group-hover:shadow-glow dark:group-hover:shadow-glow-dark group-active:scale-95">
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-white/90 dark:bg-navy-800/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-soft-xl border border-charcoal-100/50 dark:border-navy-700/50 transform transition-all duration-300 group-hover:scale-110 group-hover:shadow-glow dark:group-hover:shadow-glow-dark group-active:scale-95 will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}>
                     <svg
                       className="w-7 h-7 md:w-9 md:h-9 text-emerald-500 dark:text-emerald-400 ml-1"
                       fill="currentColor"

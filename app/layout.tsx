@@ -41,16 +41,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-      <html lang="ge" className={inter.variable} suppressHydrationWarning>
+      <html lang="ge" className={`${inter.variable} dark`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  const theme = localStorage.getItem('theme') || 
-                    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-                  document.documentElement.classList.add(theme);
+                  // Always set dark mode
+                  document.documentElement.classList.add('dark');
+                  localStorage.setItem('theme', 'dark');
                 } catch (e) {}
               })();
             `,
