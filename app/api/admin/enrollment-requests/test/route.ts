@@ -56,22 +56,22 @@ export async function GET(request: NextRequest) {
       },
       directQuery: {
         count: directData?.length || 0,
-        data: directData?.map(r => ({ id: r.id, course_id: r.course_id, status: r.status, created_at: r.created_at })),
+        data: directData?.map((r: { id: string; course_id: string; status: string; created_at: string }) => ({ id: r.id, course_id: r.course_id, status: r.status, created_at: r.created_at })),
         error: directError?.message
       },
       rpcPending: {
         count: rpcPendingData?.length || 0,
-        data: rpcPendingData?.map(r => ({ id: r.id, course_id: r.course_id, status: r.status })),
+        data: rpcPendingData?.map((r: { id: string; course_id: string; status: string }) => ({ id: r.id, course_id: r.course_id, status: r.status })),
         error: rpcPendingError?.message
       },
       rpcAll: {
         count: rpcAllData?.length || 0,
-        data: rpcAllData?.map(r => ({ id: r.id, course_id: r.course_id, status: r.status })),
+        data: rpcAllData?.map((r: { id: string; course_id: string; status: string }) => ({ id: r.id, course_id: r.course_id, status: r.status })),
         error: rpcAllError?.message
       },
       rpcEmpty: {
         count: rpcEmptyData?.length || 0,
-        data: rpcEmptyData?.map(r => ({ id: r.id, course_id: r.course_id, status: r.status })),
+        data: rpcEmptyData?.map((r: { id: string; course_id: string; status: string }) => ({ id: r.id, course_id: r.course_id, status: r.status })),
         error: rpcEmptyError?.message
       },
       userId: user.id
