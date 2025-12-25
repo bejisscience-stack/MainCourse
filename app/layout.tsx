@@ -5,6 +5,7 @@ import { I18nProvider } from "@/contexts/I18nContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { BackgroundProvider } from "@/contexts/BackgroundContext";
 import dynamic from "next/dynamic";
+import ScrollPrevention from "@/components/ScrollPrevention";
 
 const GlobalBackgroundManager = dynamic(() => import("@/components/GlobalBackgroundManager"), {
   ssr: false,
@@ -52,17 +53,21 @@ export default function RootLayout({
                   document.documentElement.classList.add('dark');
                   localStorage.setItem('theme', 'dark');
                 } catch (e) {}
+                
               })();
             `,
           }}
         />
       </head>
-      <body className={inter.className}>
+      <body className={`${inter.className} overflow-x-hidden`}>
         <ThemeProvider>
           <BackgroundProvider>
             <I18nProvider>
+              <ScrollPrevention />
               <GlobalBackgroundManager />
-              {children}
+              <div className="min-h-full w-full overflow-x-hidden">
+                {children}
+              </div>
             </I18nProvider>
           </BackgroundProvider>
         </ThemeProvider>

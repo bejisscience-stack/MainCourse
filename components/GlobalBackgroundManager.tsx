@@ -22,7 +22,7 @@ function GlobalBackgroundManager() {
 
   // Render all background animations simultaneously for a rich, layered effect
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" aria-hidden="true">
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden pointer-events-none z-0" aria-hidden="true" style={{ maxWidth: '100vw', maxHeight: '100vh' }}>
       {/* Base background shapes - always visible */}
       <BackgroundShapes />
       

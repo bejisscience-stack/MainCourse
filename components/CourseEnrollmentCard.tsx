@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import CourseCard, { type Course } from './CourseCard';
-import PaymentDialog from './PaymentDialog';
+import EnrollmentWizard from './EnrollmentWizard';
 import { useEnrollmentRequestStatus } from '@/hooks/useEnrollmentRequests';
 import { useRealtimeEnrollmentRequests } from '@/hooks/useRealtimeEnrollmentRequests';
 import { supabase } from '@/lib/supabase';
@@ -33,7 +33,7 @@ function CourseEnrollmentCard({
   const { t } = useI18n();
   const router = useRouter();
   const { user } = useUser();
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showEnrollmentWizard, setShowEnrollmentWizard] = useState(false);
   const { request, hasPendingRequest, isLoading: isRequestLoading, mutate } = useEnrollmentRequestStatus(
     userId,
     course.id
@@ -168,12 +168,12 @@ function CourseEnrollmentCard({
     return (
       <button
         onClick={() => {
-          // Check if user is authenticated before opening payment dialog
+          // Check if user is authenticated before opening enrollment wizard
           if (!user) {
             router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
             return;
           }
-          setShowPaymentDialog(true);
+          setShowEnrollmentWizard(true);
         }}
         disabled={buttonState.disabled}
         className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-charcoal-950 dark:bg-emerald-500 rounded-full hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 will-change-transform"
@@ -197,11 +197,11 @@ function CourseEnrollmentCard({
     );
   }, [buttonState, showEnrollButton]);
 
-  const handlePaymentDialogClose = useCallback(() => {
-    setShowPaymentDialog(false);
+  const handleEnrollmentWizardClose = useCallback(() => {
+    setShowEnrollmentWizard(false);
   }, []);
 
-  const handlePaymentSubmit = useCallback(async (courseId: string, screenshotUrls: string[], referralCode?: string) => {
+  const handleEnrollmentSubmit = useCallback(async (courseId: string, screenshotUrls: string[], referralCode?: string) => {
     if (!userId) {
       alert(t('enrollment.pleaseLogin'));
       return;
@@ -251,8 +251,8 @@ function CourseEnrollmentCard({
       // Success - refresh the request status
       await mutate();
       
-      // Close dialog first
-      setShowPaymentDialog(false);
+      // Close wizard first
+      setShowEnrollmentWizard(false);
       
       // Show success message
       alert(t('enrollment.enrollmentRequestSubmitted'));
@@ -276,11 +276,11 @@ function CourseEnrollmentCard({
         showEnrollButton={false}
         customAction={customAction}
       />
-      <PaymentDialog
+      <EnrollmentWizard
         course={course}
-        isOpen={showPaymentDialog}
-        onClose={handlePaymentDialogClose}
-        onEnroll={handlePaymentSubmit}
+        isOpen={showEnrollmentWizard}
+        onClose={handleEnrollmentWizardClose}
+        onEnroll={handleEnrollmentSubmit}
       />
     </>
   );

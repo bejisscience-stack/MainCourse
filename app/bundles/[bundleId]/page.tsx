@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
-import PaymentDialog from '@/components/PaymentDialog';
+import EnrollmentWizard from '@/components/EnrollmentWizard';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useI18n } from '@/contexts/I18nContext';
@@ -18,7 +18,7 @@ export default function BundleEnrollmentPage() {
   const [bundle, setBundle] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showEnrollmentWizard, setShowEnrollmentWizard] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
 
   useEffect(() => {
@@ -128,7 +128,7 @@ export default function BundleEnrollmentPage() {
         throw new Error(errorMessage);
       }
 
-      setShowPaymentDialog(false);
+      setShowEnrollmentWizard(false);
       alert(t('bundles.enrollmentRequestSubmitted'));
       router.push('/courses');
     } catch (err: any) {
@@ -307,12 +307,12 @@ export default function BundleEnrollmentPage() {
             ) : (
               <button
                 onClick={() => {
-                  // Check if user is authenticated before opening payment dialog
+                  // Check if user is authenticated before opening enrollment wizard
                   if (!user) {
                     router.push(`/login?redirect=${encodeURIComponent(`/bundles/${bundleId}`)}`);
                     return;
                   }
-                  setShowPaymentDialog(true);
+                  setShowEnrollmentWizard(true);
                 }}
                 className="w-full inline-flex items-center justify-center px-6 py-3 text-lg font-semibold text-white bg-emerald-500 dark:bg-emerald-500 rounded-lg hover:bg-emerald-600 dark:hover:bg-emerald-600 transition-colors"
               >
@@ -326,10 +326,10 @@ export default function BundleEnrollmentPage() {
         </div>
       </div>
 
-      <PaymentDialog
+      <EnrollmentWizard
         course={bundleAsCourse}
-        isOpen={showPaymentDialog}
-        onClose={() => setShowPaymentDialog(false)}
+        isOpen={showEnrollmentWizard}
+        onClose={() => setShowEnrollmentWizard(false)}
         onEnroll={(courseId, screenshots, referralCode) => handlePaymentSubmit(courseId, screenshots, referralCode)}
       />
     </main>
