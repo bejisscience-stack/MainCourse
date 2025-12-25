@@ -11,6 +11,7 @@ export interface ProjectCriteria {
   id: string;
   text: string;
   rpm: number;
+  platform?: string; // Platform name (optional, for platform-specific criteria)
 }
 
 export interface ProjectData {
