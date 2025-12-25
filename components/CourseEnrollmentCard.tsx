@@ -1,12 +1,14 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import CourseCard, { type Course } from './CourseCard';
 import PaymentDialog from './PaymentDialog';
 import { useEnrollmentRequestStatus } from '@/hooks/useEnrollmentRequests';
 import { useRealtimeEnrollmentRequests } from '@/hooks/useRealtimeEnrollmentRequests';
 import { supabase } from '@/lib/supabase';
 import { useI18n } from '@/contexts/I18nContext';
+import { useUser } from '@/hooks/useUser';
 
 interface CourseEnrollmentCardProps {
   course: Course;
@@ -29,6 +31,8 @@ export default function CourseEnrollmentCard({
   userId,
 }: CourseEnrollmentCardProps) {
   const { t } = useI18n();
+  const router = useRouter();
+  const { user } = useUser();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const { request, hasPendingRequest, isLoading: isRequestLoading, mutate } = useEnrollmentRequestStatus(
     userId,
@@ -162,7 +166,14 @@ export default function CourseEnrollmentCard({
     // Default: Request Enrollment button
     return (
       <button
-        onClick={() => setShowPaymentDialog(true)}
+        onClick={() => {
+          // Check if user is authenticated before opening payment dialog
+          if (!user) {
+            router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+            return;
+          }
+          setShowPaymentDialog(true);
+        }}
         disabled={buttonState.disabled}
         className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-charcoal-950 dark:bg-emerald-500 rounded-full hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
       >

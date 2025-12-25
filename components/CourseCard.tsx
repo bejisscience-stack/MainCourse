@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, memo, useCallback, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import PaymentDialog from './PaymentDialog';
 import { useI18n } from '@/contexts/I18nContext';
+import { useUser } from '@/hooks/useUser';
 
 export interface Course {
   id: string;
@@ -38,6 +40,8 @@ function CourseCard({
   customAction
 }: CourseCardProps) {
   const { t } = useI18n();
+  const router = useRouter();
+  const { user } = useUser();
   const [isVideoExpanded, setIsVideoExpanded] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
@@ -86,10 +90,15 @@ function CourseCard({
   }, [isVideoExpanded, handleCloseVideo]);
 
   const handleEnrollClick = useCallback(() => {
+    // Check if user is authenticated before opening payment dialog
+    if (!user) {
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
     if (onEnroll && !isEnrolled && !isEnrolling) {
       setShowPaymentDialog(true);
     }
-  }, [onEnroll, isEnrolled, isEnrolling]);
+  }, [user, onEnroll, isEnrolled, isEnrolling, router]);
 
   const handlePaymentDialogClose = useCallback(() => {
     setShowPaymentDialog(false);

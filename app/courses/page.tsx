@@ -378,15 +378,22 @@ export default function CoursesPage() {
                           {t('courses.viewCourses')}
                         </a>
                       ) : (
-                        <a
-                          href={`/bundles/${bundle.id}`}
+                        <button
+                          onClick={() => {
+                            // Check if user is authenticated before navigating to bundle enrollment
+                            if (!user) {
+                              router.push(`/login?redirect=${encodeURIComponent(`/bundles/${bundle.id}`)}`);
+                              return;
+                            }
+                            router.push(`/bundles/${bundle.id}`);
+                          }}
                           className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-emerald-500 dark:bg-emerald-500 rounded-full hover:bg-emerald-600 dark:hover:bg-emerald-600 transition-colors"
                         >
                           <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                           </svg>
                           {t('courses.enrollInBundle')}
-                        </a>
+                        </button>
                       )}
                     </div>
                   );
