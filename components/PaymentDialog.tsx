@@ -239,26 +239,26 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
         <div className="p-6 space-y-4">
           {/* Header */}
           <div>
-            <h2 className="text-2xl font-bold text-navy-900 mb-2">{t('payment.paymentInstructions')}</h2>
-            <p className="text-gray-600">{t('payment.followInstructions')}</p>
+            <h2 className="text-2xl font-semibold text-charcoal-950 mb-2 tracking-tight">{t('payment.paymentInstructions')}</h2>
+            <p className="text-charcoal-600">{t('payment.followInstructions')}</p>
           </div>
 
           {/* Course Information */}
-          <div className="bg-navy-50 rounded-lg p-4 space-y-3">
+          <div className="bg-charcoal-50/50 rounded-2xl p-5 space-y-3">
             <div>
-              <h3 className="text-lg font-semibold text-navy-900">{course.title}</h3>
+              <h3 className="text-lg font-semibold text-charcoal-950">{course.title}</h3>
               {course.description && (
-                <p className="text-sm text-gray-600 mt-1">{course.description}</p>
+                <p className="text-sm text-charcoal-600 mt-1">{course.description}</p>
               )}
             </div>
-            <div className="flex items-center justify-between pt-2 border-t border-navy-200">
+            <div className="flex items-center justify-between pt-3 border-t border-charcoal-200/50">
               <div>
-                <p className="text-sm text-gray-600">{t('payment.creator')}</p>
-                <p className="font-semibold text-navy-900">{course.creator}</p>
+                <p className="text-sm text-charcoal-500">{t('payment.creator')}</p>
+                <p className="font-medium text-charcoal-950">{course.creator}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-600">{t('payment.price')}</p>
-                <p className="text-xl font-bold text-navy-900">{formattedPrice}</p>
+                <p className="text-sm text-charcoal-500">{t('payment.price')}</p>
+                <p className="text-xl font-semibold text-charcoal-950">{formattedPrice}</p>
               </div>
             </div>
           </div>
@@ -270,10 +270,10 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
           </div>
 
           {/* Unique Course Code */}
-          <div className="bg-navy-50 rounded-lg p-4">
-            <p className="text-sm text-gray-600 mb-1">{t('payment.uniqueCourseCode')}</p>
-            <p className="text-2xl font-mono font-bold text-navy-900 tracking-wider">{courseCode}</p>
-            <p className="text-xs text-gray-500 mt-1">{t('payment.includeCodeInReference')}</p>
+          <div className="bg-charcoal-50/50 rounded-2xl p-5">
+            <p className="text-sm text-charcoal-600 mb-2">{t('payment.uniqueCourseCode')}</p>
+            <p className="text-2xl font-mono font-semibold text-charcoal-950 tracking-wider">{courseCode}</p>
+            <p className="text-xs text-charcoal-500 mt-2">{t('payment.includeCodeInReference')}</p>
           </div>
 
           {/* Referral Code (Optional) */}
@@ -286,7 +286,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
               value={referralCode}
               onChange={(e) => setReferralCode(e.target.value.toUpperCase().trim())}
               placeholder={t('payment.referralCodePlaceholder') || 'Enter referral code (optional)'}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+              className="w-full px-4 py-2 border border-charcoal-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-charcoal-200 focus:border-transparent text-charcoal-950 placeholder-charcoal-400"
               maxLength={20}
             />
             <p className="text-xs text-gray-500 mt-1">{t('payment.referralCodeDescription')}</p>
@@ -341,7 +341,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
                 accept="image/*"
                 multiple
                 onChange={handleFileSelect}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-navy-900 file:text-white hover:file:bg-navy-800 cursor-pointer"
+                className="block w-full text-sm text-charcoal-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-charcoal-950 file:text-white hover:file:bg-charcoal-800 cursor-pointer"
               />
               <p className="text-xs text-gray-500 mt-1">{t('payment.uploadMultipleImages')}</p>
             </div>
@@ -421,14 +421,14 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
           <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
             <button
               onClick={handleClose}
-              className="px-6 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-6 py-2.5 text-sm font-medium text-charcoal-600 bg-charcoal-100 rounded-full hover:bg-charcoal-200 transition-colors"
             >
               {t('common.cancel')}
             </button>
             <button
               onClick={handleUpload}
               disabled={isUploading || uploadedImages.length === 0}
-              className="px-6 py-2 text-sm font-semibold text-white bg-navy-900 rounded-lg hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="px-6 py-2.5 text-sm font-medium text-white bg-charcoal-950 rounded-full hover:bg-charcoal-800 transition-all duration-200 hover:shadow-soft disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {isUploading ? (
                 <>

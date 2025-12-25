@@ -31,7 +31,7 @@ export default function LanguageSelector() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-navy-50 transition-colors focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2"
+        className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-charcoal-50/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-charcoal-200 focus:ring-offset-2"
         aria-label="Select language"
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -39,11 +39,11 @@ export default function LanguageSelector() {
         <span className="text-xl" role="img" aria-label={currentLanguage.name}>
           {currentLanguage.flag}
         </span>
-        <span className="hidden sm:inline text-sm font-medium text-navy-700">
+        <span className="hidden sm:inline text-sm font-medium text-charcoal-600">
           {currentLanguage.code.toUpperCase()}
         </span>
         <svg
-          className={`w-4 h-4 text-navy-600 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-3.5 h-3.5 text-charcoal-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -53,7 +53,7 @@ export default function LanguageSelector() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-navy-100 py-2 z-50">
+        <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-soft-xl border border-charcoal-100/50 py-2 z-50">
           {languages.map((lang) => (
             <button
               key={lang.code}
@@ -63,8 +63,8 @@ export default function LanguageSelector() {
               }}
               className={`w-full flex items-center space-x-3 px-4 py-2 text-sm transition-colors ${
                 language === lang.code
-                  ? 'bg-navy-50 text-navy-900 font-semibold'
-                  : 'text-navy-700 hover:bg-navy-50'
+                  ? 'bg-charcoal-50/50 text-charcoal-950 font-medium'
+                  : 'text-charcoal-600 hover:bg-charcoal-50/50'
               }`}
             >
               <span className="text-xl" role="img" aria-label={lang.name}>
@@ -73,7 +73,7 @@ export default function LanguageSelector() {
               <span className="flex-1 text-left">{lang.name}</span>
               {language === lang.code && (
                 <svg
-                  className="w-4 h-4 text-navy-900"
+                  className="w-4 h-4 text-charcoal-950"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

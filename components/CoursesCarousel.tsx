@@ -9,6 +9,7 @@ import { useEnrollments } from '@/hooks/useEnrollments';
 import { useUser } from '@/hooks/useUser';
 import { supabase } from '@/lib/supabase';
 import { useI18n } from '@/contexts/I18nContext';
+import { ScrollReveal } from './ScrollReveal';
 
 export default function CoursesCarousel() {
   const router = useRouter();
@@ -110,12 +111,16 @@ export default function CoursesCarousel() {
     return (
       <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-navy-900 text-center mb-12">
-            {t('home.ourCourses')}
-          </h2>
-          <div className="flex items-center justify-center">
-            <div className="text-navy-700">{t('home.loadingCourses')}</div>
-          </div>
+          <ScrollReveal delay={0} duration={600}>
+            <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white text-center mb-12 tracking-tight">
+              {t('home.ourCourses')}
+            </h2>
+          </ScrollReveal>
+          <ScrollReveal delay={100} duration={600}>
+            <div className="flex items-center justify-center">
+              <div className="text-charcoal-500 dark:text-gray-400">{t('home.loadingCourses')}</div>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
     );
@@ -125,23 +130,27 @@ export default function CoursesCarousel() {
     return (
       <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-navy-900 text-center mb-12">
-            {t('home.ourCourses')}
-          </h2>
-          <div className="flex flex-col items-center justify-center">
-            <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg max-w-md text-center">
-              <p className="font-semibold mb-2">{t('home.errorLoadingCourses')}</p>
-              <p className="text-sm mb-4">
-                {coursesError.message || t('home.errorMessage')}
-              </p>
-              <button
-                onClick={() => window.location.reload()}
-                className="bg-navy-900 text-white px-4 py-2 rounded-lg font-semibold hover:bg-navy-800 transition-colors"
-              >
-                {t('common.retry')}
-              </button>
+          <ScrollReveal delay={0} duration={600}>
+            <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white text-center mb-12 tracking-tight">
+              {t('home.ourCourses')}
+            </h2>
+          </ScrollReveal>
+          <ScrollReveal delay={100} duration={600}>
+            <div className="flex flex-col items-center justify-center">
+              <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 text-red-700 dark:text-red-400 px-6 py-4 rounded-2xl max-w-md text-center shadow-soft">
+                <p className="font-medium mb-2">{t('home.errorLoadingCourses')}</p>
+                <p className="text-sm mb-4 text-red-600 dark:text-red-400">
+                  {coursesError.message || t('home.errorMessage')}
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-charcoal-950 dark:bg-emerald-500 text-white px-5 py-2 rounded-full font-medium hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft text-sm"
+                >
+                  {t('common.retry')}
+                </button>
+              </div>
             </div>
-          </div>
+          </ScrollReveal>
         </div>
       </section>
     );
@@ -160,9 +169,11 @@ export default function CoursesCarousel() {
   return (
     <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
       <div className="max-w-7xl mx-auto">
-        <h2 className="text-3xl md:text-4xl font-bold text-navy-900 text-center mb-12">
-          {t('home.ourCourses')}
-        </h2>
+        <ScrollReveal delay={0} duration={600}>
+          <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white text-center mb-12 tracking-tight">
+            {t('home.ourCourses')}
+          </h2>
+        </ScrollReveal>
         
         <div className="relative">
           {/* Navigation Arrows - Show when we have 3+ courses */}
@@ -170,11 +181,11 @@ export default function CoursesCarousel() {
             <>
               <button
                 onClick={handlePrevious}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-8 z-20 w-12 h-12 md:w-14 md:h-14 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-navy-50 transition-all transform hover:scale-110 active:scale-95 border border-gray-200"
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-8 z-20 w-12 h-12 md:w-14 md:h-14 bg-white dark:bg-navy-800 rounded-full shadow-soft-lg flex items-center justify-center hover:bg-charcoal-50/50 dark:hover:bg-navy-700/50 transition-all duration-200 transform hover:scale-110 active:scale-95 border border-charcoal-100/50 dark:border-navy-700/50"
                 aria-label="Previous course"
               >
                 <svg
-                  className="w-6 h-6 md:w-7 md:h-7 text-navy-900"
+                  className="w-5 h-5 md:w-6 md:h-6 text-charcoal-950 dark:text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -190,11 +201,11 @@ export default function CoursesCarousel() {
 
               <button
                 onClick={handleNext}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-8 z-20 w-12 h-12 md:w-14 md:h-14 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-navy-50 transition-all transform hover:scale-110 active:scale-95 border border-gray-200"
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-8 z-20 w-12 h-12 md:w-14 md:h-14 bg-white dark:bg-navy-800 rounded-full shadow-soft-lg flex items-center justify-center hover:bg-charcoal-50/50 dark:hover:bg-navy-700/50 transition-all duration-200 transform hover:scale-110 active:scale-95 border border-charcoal-100/50 dark:border-navy-700/50"
                 aria-label="Next course"
               >
                 <svg
-                  className="w-6 h-6 md:w-7 md:h-7 text-navy-900"
+                  className="w-5 h-5 md:w-6 md:h-6 text-charcoal-950 dark:text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -220,23 +231,28 @@ export default function CoursesCarousel() {
               const isEnrolling = enrollingCourseId === course.id;
 
               return (
-                <div
+                <ScrollReveal
                   key={`${course.id}-${safeCurrentIndex}-${index}`}
-                  className={`transition-all duration-300 ${
-                    isMiddle
-                      ? 'flex-1 max-w-md scale-100 z-10'
-                      : 'flex-1 max-w-xs scale-90 opacity-75 z-0'
-                  }`}
+                  delay={index * 100}
+                  duration={500}
                 >
-                  <CourseEnrollmentCard
-                    course={course}
-                    isEnrolled={isEnrolled}
-                    isEnrolling={false}
-                    onEnroll={undefined}
-                    showEnrollButton={true}
-                    userId={user?.id || null}
-                  />
-                </div>
+                  <div
+                    className={`transition-all duration-300 ${
+                      isMiddle
+                        ? 'flex-1 max-w-md scale-100 z-10'
+                        : 'flex-1 max-w-xs scale-90 opacity-75 z-0'
+                    }`}
+                  >
+                    <CourseEnrollmentCard
+                      course={course}
+                      isEnrolled={isEnrolled}
+                      isEnrolling={false}
+                      onEnroll={undefined}
+                      showEnrollButton={true}
+                      userId={user?.id || null}
+                    />
+                  </div>
+                </ScrollReveal>
               );
             })}
           </div>

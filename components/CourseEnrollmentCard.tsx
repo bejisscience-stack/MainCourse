@@ -78,7 +78,7 @@ export default function CourseEnrollmentCard({
       return (
         <a
           href={`/courses/${course.id}/chat`}
-          className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-green-500 rounded-full hover:bg-green-600 transition-colors"
+          className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-emerald-500 rounded-full hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5"
         >
           <svg
             className="w-3.5 h-3.5 mr-1.5"
@@ -102,7 +102,7 @@ export default function CourseEnrollmentCard({
       return (
         <button
           disabled
-          className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-200 rounded-full cursor-not-allowed"
+          className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-charcoal-500 dark:text-gray-400 bg-charcoal-100 dark:bg-navy-700 rounded-full cursor-not-allowed"
         >
           <svg
             className="w-3.5 h-3.5 mr-1.5 animate-spin"
@@ -132,7 +132,7 @@ export default function CourseEnrollmentCard({
       return (
         <button
           disabled
-          className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-navy-900 rounded-full opacity-50 cursor-not-allowed"
+          className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-charcoal-950 dark:bg-emerald-500 rounded-full opacity-50 cursor-not-allowed"
         >
           <svg
             className="animate-spin -ml-1 mr-2 h-3.5 w-3.5 text-white"
@@ -164,7 +164,7 @@ export default function CourseEnrollmentCard({
       <button
         onClick={() => setShowPaymentDialog(true)}
         disabled={buttonState.disabled}
-        className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-navy-900 rounded-full hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-charcoal-950 dark:bg-emerald-500 rounded-full hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
       >
         <svg
           className="w-3.5 h-3.5 mr-1.5"
