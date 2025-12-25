@@ -45,12 +45,14 @@ export default function CourseCreationModal({
   useEffect(() => {
     if (isOpen && user) {
       // Fetch profile to get username from profiles table
-      supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', user.id)
-        .single()
-        .then(({ data: profile }) => {
+      (async () => {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', user.id)
+            .single();
+          
           setFormData({
             title: '',
             description: '',
@@ -64,8 +66,7 @@ export default function CourseCreationModal({
             thumbnail_url: '',
             is_bestseller: false,
           });
-        })
-        .catch(() => {
+        } catch {
           // Fallback if profile fetch fails
           setFormData({
             title: '',
@@ -79,7 +80,8 @@ export default function CourseCreationModal({
             thumbnail_url: '',
             is_bestseller: false,
           });
-        });
+        }
+      })();
       setVideoFile(null);
       setThumbnailFile(null);
       setVideoUploadProgress(0);
