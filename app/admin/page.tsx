@@ -827,7 +827,7 @@ export default function AdminDashboard() {
                     >
                       <div className="p-6">
                         <h3 className="text-lg font-bold text-navy-900 mb-2">{course.title}</h3>
-                        <p className="text-sm text-gray-600 mb-4">{course.instructor}</p>
+                        <p className="text-sm text-gray-600 mb-4">{course.author}</p>
                         <div className="flex items-center justify-between">
                           <span className="text-xl font-bold text-navy-900">${course.price}</span>
                           <Link
