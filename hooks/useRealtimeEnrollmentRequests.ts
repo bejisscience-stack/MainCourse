@@ -36,6 +36,12 @@ export function useRealtimeEnrollmentRequests({
         async (payload) => {
           console.log('Enrollment request real-time update:', payload);
 
+          // Check if payload.new exists and has an id
+          if (!payload.new || typeof payload.new !== 'object' || !('id' in payload.new)) {
+            console.error('Invalid payload: missing new.id');
+            return;
+          }
+
           // Fetch the full request with related data
           const { data: request, error } = await supabase
             .from('enrollment_requests')
@@ -54,7 +60,7 @@ export function useRealtimeEnrollmentRequests({
                 thumbnail_url
               )
             `)
-            .eq('id', payload.new.id)
+            .eq('id', (payload.new as { id: string }).id)
             .single();
 
           if (error || !request) {
@@ -62,27 +68,34 @@ export function useRealtimeEnrollmentRequests({
             return;
           }
 
+          // Transform the data to match the expected type
+          // Supabase returns courses as an array, but we expect a single object
+          const transformedRequest: EnrollmentRequest = {
+            ...request,
+            courses: Array.isArray(request.courses) && request.courses.length > 0 ? request.courses[0] : null,
+          };
+
           // Call the appropriate callback based on status change
           if (payload.eventType === 'UPDATE') {
-            const oldStatus = payload.old?.status;
-            const newStatus = payload.new?.status;
+            const oldStatus = (payload.old as { status?: string } | null)?.status;
+            const newStatus = (payload.new as { status?: string })?.status;
 
             // Status changed
             if (oldStatus !== newStatus) {
               if (newStatus === 'approved' && onRequestApproved) {
-                onRequestApproved(request as EnrollmentRequest);
+                onRequestApproved(transformedRequest);
               } else if (newStatus === 'rejected' && onRequestRejected) {
-                onRequestRejected(request as EnrollmentRequest);
+                onRequestRejected(transformedRequest);
               }
             }
 
             // Always call onRequestUpdated for any update
             if (onRequestUpdated) {
-              onRequestUpdated(request as EnrollmentRequest);
+              onRequestUpdated(transformedRequest);
             }
           } else if (payload.eventType === 'INSERT' && onRequestUpdated) {
             // New request created
-            onRequestUpdated(request as EnrollmentRequest);
+            onRequestUpdated(transformedRequest);
           }
         }
       )
