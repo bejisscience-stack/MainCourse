@@ -36,10 +36,13 @@ export async function prefetchProfiles(userIds: string[]) {
       .select('id, username, email')
       .in('id', uncachedIds);
 
-    if (profiles && !error) {
-      console.log(`✅ Prefetched ${profiles.length} profiles out of ${uncachedIds.length} requested`);
+    // Store profiles in a variable to avoid type narrowing issues
+    const profilesArray = profiles || [];
+
+    if (profilesArray.length > 0 && !error) {
+      console.log(`✅ Prefetched ${profilesArray.length} profiles out of ${uncachedIds.length} requested`);
       
-      profiles.forEach(profile => {
+      profilesArray.forEach(profile => {
         // Always use profiles.username (required field in database)
         const username = normalizeProfileUsername(profile);
         
@@ -62,7 +65,7 @@ export async function prefetchProfiles(userIds: string[]) {
       });
       
       // Log missing profiles
-      const fetchedIds = new Set(profiles.map(p => p.id));
+      const fetchedIds = new Set(profilesArray.map(p => p.id));
       const missingIds = uncachedIds.filter(id => !fetchedIds.has(id));
       if (missingIds.length > 0) {
         console.warn(`⚠️ Could not prefetch ${missingIds.length} profiles:`, missingIds);
@@ -72,7 +75,7 @@ export async function prefetchProfiles(userIds: string[]) {
         error: error?.message,
         errorCode: error?.code,
         requestedCount: uncachedIds.length,
-        fetchedCount: Array.isArray(profiles) ? profiles.length : 0,
+        fetchedCount: profilesArray.length,
       });
     }
   } catch (error) {
