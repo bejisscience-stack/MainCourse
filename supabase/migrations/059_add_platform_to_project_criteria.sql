@@ -17,3 +17,5 @@ CREATE INDEX IF NOT EXISTS project_criteria_platform_idx ON public.project_crite
 
 
 
+
+

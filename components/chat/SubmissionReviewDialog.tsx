@@ -46,7 +46,7 @@ export default function SubmissionReviewDialog({
 
   // Get criteria for current platform (platform-specific + all-platform criteria)
   const getCriteriaForPlatform = useCallback((platform: string) => {
-    return criteria.filter(c => !c.platform || c.platform === platform);
+    return criteria.filter(c => c.platform === undefined || c.platform === platform);
   }, [criteria]);
 
   const loadExistingReviews = useCallback(async () => {
