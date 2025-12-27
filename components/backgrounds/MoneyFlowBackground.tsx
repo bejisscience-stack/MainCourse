@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, memo } from 'react';
 import { useBackground } from '@/contexts/BackgroundContext';
 
 interface MoneyParticle {
@@ -16,36 +16,46 @@ interface MoneyParticle {
 }
 
 const CURRENCY_SYMBOLS = ['$', '€', '¥', '£', '₹', '₽', '¢', '₩', '₪', '₦'];
+const MAX_PARTICLES = 6;
 
-export function MoneyFlowBackground() {
+function MoneyFlowBackgroundComponent() {
   const [particles, setParticles] = useState<MoneyParticle[]>([]);
   const { intensity, isReducedMotion } = useBackground();
   const particleIdRef = useRef(0);
+  const dimensionsRef = useRef({ width: 1920, height: 1080 });
 
-  const getIntensityMultiplier = () => {
+  // Cache dimensions once
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      dimensionsRef.current = { width: window.innerWidth, height: window.innerHeight };
+    }
+  }, []);
+
+  const intensityMultiplier = useMemo(() => {
     switch (intensity) {
       case 'low': return 0.3;
       case 'medium': return 0.6;
       case 'high': return 1.0;
       default: return 0.6;
     }
-  };
+  }, [intensity]);
 
   useEffect(() => {
     if (isReducedMotion) return;
 
-    const multiplier = getIntensityMultiplier();
-    const baseInterval = 1200;
-    const intervalTime = Math.max(600, baseInterval / multiplier);
+    // Slower interval for better performance
+    const intervalTime = Math.max(2000, 3000 / intensityMultiplier);
+    const { width, height } = dimensionsRef.current;
 
     const interval = setInterval(() => {
+      const id = particleIdRef.current++;
       const symbol = CURRENCY_SYMBOLS[Math.floor(Math.random() * CURRENCY_SYMBOLS.length)];
       const direction = Math.random() > 0.7 ? 'float' : 'up';
 
       const newParticle: MoneyParticle = {
-        id: particleIdRef.current++,
-        x: Math.random() * window.innerWidth,
-        y: direction === 'up' ? window.innerHeight + 50 : Math.random() * window.innerHeight,
+        id,
+        x: Math.random() * width,
+        y: direction === 'up' ? height + 50 : Math.random() * height,
         symbol,
         size: 14 + Math.random() * 10,
         rotation: Math.random() * 360,
@@ -54,20 +64,22 @@ export function MoneyFlowBackground() {
         direction,
       };
 
-      setParticles(prev => [...prev, newParticle]);
+      setParticles(prev => [...prev.slice(-MAX_PARTICLES + 1), newParticle]);
 
       setTimeout(() => {
-        setParticles(prev => prev.filter(p => p.id !== newParticle.id));
+        setParticles(prev => prev.filter(p => p.id !== id));
       }, newParticle.duration + newParticle.delay);
     }, intervalTime);
 
     return () => clearInterval(interval);
-  }, [intensity, isReducedMotion]);
+  }, [intensityMultiplier, isReducedMotion]);
 
   if (isReducedMotion) return null;
 
+  const { width, height } = dimensionsRef.current;
+
   return (
-    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true" style={{ contain: 'strict' }}>
       {/* Golden gradient overlay */}
       <div
         className="absolute inset-0 opacity-[0.008] dark:opacity-[0.012]"
@@ -92,6 +104,7 @@ export function MoneyFlowBackground() {
             animation: particle.direction === 'up'
               ? `moneyRiseUp ${particle.duration}ms ease-out ${particle.delay}ms forwards`
               : `moneyFloat ${particle.duration}ms ease-in-out ${particle.delay}ms forwards`,
+            willChange: 'transform, opacity',
           }}
         >
           {particle.symbol}
@@ -107,7 +120,7 @@ export function MoneyFlowBackground() {
         }}
       />
 
-      {/* Flowing stream lines */}
+      {/* Flowing stream lines - static SVG paths */}
       <svg className="absolute inset-0 w-full h-full opacity-[0.004] dark:opacity-[0.006]">
         <defs>
           <linearGradient id="moneyGradient" x1="0%" y1="100%" x2="0%" y2="0%">
@@ -116,23 +129,22 @@ export function MoneyFlowBackground() {
             <stop offset="100%" stopColor="#10b981" stopOpacity="0"/>
           </linearGradient>
         </defs>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <g key={i}>
-            <path
-              d={`M${window.innerWidth * (0.2 + i * 0.15)} ${window.innerHeight} Q${window.innerWidth * (0.25 + i * 0.15)} ${window.innerHeight * 0.7} ${window.innerWidth * (0.2 + i * 0.15)} ${window.innerHeight * 0.4} T${window.innerWidth * (0.2 + i * 0.15)} 0`}
-              stroke="url(#moneyGradient)"
-              strokeWidth="1"
-              fill="none"
-              className="animate-pulse-subtle"
-              style={{ animationDelay: `${i * 0.5}s` }}
-            />
-          </g>
+        {[0, 1, 2].map((i) => (
+          <path
+            key={i}
+            d={`M${width * (0.2 + i * 0.25)} ${height} Q${width * (0.25 + i * 0.25)} ${height * 0.7} ${width * (0.2 + i * 0.25)} ${height * 0.4} T${width * (0.2 + i * 0.25)} 0`}
+            stroke="url(#moneyGradient)"
+            strokeWidth="1"
+            fill="none"
+            className="animate-pulse-subtle"
+            style={{ animationDelay: `${i * 0.5}s` }}
+          />
         ))}
       </svg>
 
       {/* Success indicators */}
       <div className="absolute inset-0">
-        {Array.from({ length: 3 }).map((_, i) => (
+        {[0, 1, 2].map((i) => (
           <div
             key={i}
             className="absolute w-2 h-2 bg-emerald-500 rounded-full opacity-[0.03] dark:opacity-[0.05]"
@@ -149,3 +161,5 @@ export function MoneyFlowBackground() {
     </div>
   );
 }
+
+export const MoneyFlowBackground = memo(MoneyFlowBackgroundComponent);

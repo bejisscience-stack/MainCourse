@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, memo } from 'react';
 import { useBackground } from '@/contexts/BackgroundContext';
 
 interface NetworkNode {
@@ -23,35 +23,46 @@ interface DataPacket {
   duration: number;
 }
 
-export function AINetworkBackground() {
+const MAX_PACKETS = 3;
+const MAX_NODES = 8;
+
+function AINetworkBackgroundComponent() {
   const [nodes, setNodes] = useState<NetworkNode[]>([]);
   const [packets, setPackets] = useState<DataPacket[]>([]);
   const { intensity, isReducedMotion } = useBackground();
   const nodeIdRef = useRef(0);
   const packetIdRef = useRef(0);
+  const dimensionsRef = useRef({ width: 1920, height: 1080 });
 
-  const getIntensityMultiplier = () => {
+  // Cache dimensions once
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      dimensionsRef.current = { width: window.innerWidth, height: window.innerHeight };
+    }
+  }, []);
+
+  const intensityMultiplier = useMemo(() => {
     switch (intensity) {
       case 'low': return 0.5;
       case 'medium': return 0.8;
       case 'high': return 1.2;
       default: return 0.8;
     }
-  };
+  }, [intensity]);
 
-  // Initialize neural network nodes
+  // Initialize neural network nodes - only once
   useEffect(() => {
     if (isReducedMotion) return;
 
-    const multiplier = getIntensityMultiplier();
-    const nodeCount = Math.floor(12 * multiplier);
+    const { width, height } = dimensionsRef.current;
+    const nodeCount = Math.min(Math.floor(MAX_NODES * intensityMultiplier), MAX_NODES);
     const newNodes: NetworkNode[] = [];
 
     for (let i = 0; i < nodeCount; i++) {
       newNodes.push({
         id: nodeIdRef.current++,
-        x: (Math.random() * 0.8 + 0.1) * window.innerWidth,
-        y: (Math.random() * 0.8 + 0.1) * window.innerHeight,
+        x: (Math.random() * 0.8 + 0.1) * width,
+        y: (Math.random() * 0.8 + 0.1) * height,
         size: 3 + Math.random() * 4,
         connections: [],
         pulseDelay: Math.random() * 3000,
@@ -68,21 +79,20 @@ export function AINetworkBackground() {
           );
           return distance < 200 && Math.random() > 0.6;
         })
-        .slice(0, 3); // Max 3 connections per node
+        .slice(0, 2); // Max 2 connections per node (reduced)
 
       node.connections = nearbyNodes.map(n => n.id);
     });
 
     setNodes(newNodes);
-  }, [intensity, isReducedMotion]);
+  }, [intensityMultiplier, isReducedMotion]);
 
-  // Generate data packets
+  // Generate data packets - slower interval
   useEffect(() => {
     if (isReducedMotion || nodes.length === 0) return;
 
-    const multiplier = getIntensityMultiplier();
-    const baseInterval = 2000;
-    const intervalTime = Math.max(1000, baseInterval / multiplier);
+    // Much slower interval for better performance
+    const intervalTime = Math.max(3000, 4000 / intensityMultiplier);
 
     const interval = setInterval(() => {
       const sourceNode = nodes[Math.floor(Math.random() * nodes.length)];
@@ -92,8 +102,9 @@ export function AINetworkBackground() {
       const targetNode = nodes.find(n => n.id === targetNodeId);
       if (!targetNode) return;
 
+      const id = packetIdRef.current++;
       const newPacket: DataPacket = {
-        id: packetIdRef.current++,
+        id,
         startX: sourceNode.x,
         startY: sourceNode.y,
         endX: targetNode.x,
@@ -103,20 +114,20 @@ export function AINetworkBackground() {
         duration: 2000 + Math.random() * 2000,
       };
 
-      setPackets(prev => [...prev, newPacket]);
+      setPackets(prev => [...prev.slice(-MAX_PACKETS + 1), newPacket]);
 
       setTimeout(() => {
-        setPackets(prev => prev.filter(p => p.id !== newPacket.id));
+        setPackets(prev => prev.filter(p => p.id !== id));
       }, newPacket.duration + newPacket.delay);
     }, intervalTime);
 
     return () => clearInterval(interval);
-  }, [nodes, intensity, isReducedMotion]);
+  }, [nodes, intensityMultiplier, isReducedMotion]);
 
   if (isReducedMotion) return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true" style={{ contain: 'strict' }}>
       {/* Neural network grid pattern */}
       <div
         className="absolute inset-0 opacity-[0.003] dark:opacity-[0.005]"
@@ -193,6 +204,7 @@ export function AINetworkBackground() {
               opacity: 0.06,
               animation: `dataPacket ${packet.duration}ms linear ${packet.delay}ms forwards`,
               boxShadow: '0 0 8px rgba(34, 197, 94, 0.5)',
+              willChange: 'transform, opacity',
             }}
           />
         );
@@ -207,14 +219,14 @@ export function AINetworkBackground() {
         }}
       />
 
-      {/* AI processing indicators */}
+      {/* AI processing indicators - reduced count */}
       <div className="absolute inset-0">
-        {Array.from({ length: 6 }).map((_, i) => (
+        {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
             className="absolute"
             style={{
-              left: `${15 + i * 15}%`,
+              left: `${15 + i * 20}%`,
               top: `${20 + (i % 2) * 60}%`,
               width: '1px',
               height: '40px',
@@ -229,3 +241,5 @@ export function AINetworkBackground() {
     </div>
   );
 }
+
+export const AINetworkBackground = memo(AINetworkBackgroundComponent);

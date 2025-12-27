@@ -8,19 +8,22 @@ import BackgroundShapes from '@/components/BackgroundShapes';
 import { useUser } from '@/hooks/useUser';
 import { useAdminEnrollmentRequests } from '@/hooks/useAdminEnrollmentRequests';
 import { useAdminBundleEnrollmentRequests } from '@/hooks/useAdminBundleEnrollmentRequests';
+import { useAdminWithdrawalRequests } from '@/hooks/useAdminWithdrawalRequests';
 import { useCourses } from '@/hooks/useCourses';
 import { supabase } from '@/lib/supabase';
 import type { EnrollmentRequest } from '@/hooks/useEnrollmentRequests';
 import type { BundleEnrollmentRequest } from '@/hooks/useAdminBundleEnrollmentRequests';
+import type { WithdrawalRequest } from '@/types/balance';
 import type { Course } from '@/components/CourseCard';
 
-type TabType = 'overview' | 'enrollment-requests' | 'courses';
+type TabType = 'overview' | 'enrollment-requests' | 'withdrawals' | 'courses';
 
 export default function AdminDashboard() {
   const router = useRouter();
   const { user, role: userRole, isLoading: userLoading, mutate: mutateUser } = useUser();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [statusFilter, setStatusFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
+  const [withdrawalStatusFilter, setWithdrawalStatusFilter] = useState<'pending' | 'completed' | 'rejected' | 'all'>('pending');
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -28,6 +31,8 @@ export default function AdminDashboard() {
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<EnrollmentRequest | null>(null);
   const [selectedBundleRequest, setSelectedBundleRequest] = useState<BundleEnrollmentRequest | null>(null);
+  const [selectedWithdrawalRequest, setSelectedWithdrawalRequest] = useState<WithdrawalRequest | null>(null);
+  const [adminNotes, setAdminNotes] = useState('');
 
   // Use a single hook instance - it fetches all and filters client-side
   // This ensures cache consistency and immediate UI updates
@@ -70,6 +75,21 @@ export default function AdminDashboard() {
   const bundleRequestsLoading = allBundleRequestsLoading;
   const bundleFetchError = allBundleRequestsError;
   const mutateBundleRequests = mutateAllBundleRequests;
+
+  // Use withdrawal requests hook
+  const {
+    requests: allWithdrawalRequests,
+    isLoading: withdrawalRequestsLoading,
+    error: withdrawalRequestsError,
+    mutate: mutateWithdrawalRequests,
+    approveRequest: approveWithdrawalRequest,
+    rejectRequest: rejectWithdrawalRequest,
+  } = useAdminWithdrawalRequests(undefined);
+
+  // Filter withdrawal requests client-side
+  const withdrawalRequests = withdrawalStatusFilter && withdrawalStatusFilter !== 'all'
+    ? allWithdrawalRequests.filter(r => r.status === withdrawalStatusFilter)
+    : allWithdrawalRequests;
   
   // Debug logging
   useEffect(() => {
@@ -316,6 +336,13 @@ export default function AdminDashboard() {
   const bundlePendingCount = allBundleRequests.filter(r => r.status === 'pending').length;
   const totalPendingCount = pendingCount + bundlePendingCount;
   
+  // Calculate withdrawal stats
+  const pendingWithdrawalsCount = allWithdrawalRequests.filter(r => r.status === 'pending').length;
+  const completedWithdrawalsCount = allWithdrawalRequests.filter(r => r.status === 'completed').length;
+  const totalPendingWithdrawalAmount = allWithdrawalRequests
+    .filter(r => r.status === 'pending')
+    .reduce((sum, r) => sum + r.amount, 0);
+  
   const totalCourses = courses.length;
 
   // Show loading while checking admin status via direct DB query
@@ -384,6 +411,21 @@ export default function AdminDashboard() {
               {totalPendingCount > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
                   {totalPendingCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('withdrawals')}
+              className={`px-6 py-3 font-semibold transition-colors border-b-2 relative ${
+                activeTab === 'withdrawals'
+                  ? 'text-navy-900 border-navy-900'
+                  : 'text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300'
+              }`}
+            >
+              Withdrawals
+              {pendingWithdrawalsCount > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-emerald-500 text-white text-xs rounded-full">
+                  {pendingWithdrawalsCount}
                 </span>
               )}
             </button>
@@ -471,6 +513,23 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Pending Withdrawals</p>
+                      <p className="text-3xl font-bold text-emerald-600 mt-2">{pendingWithdrawalsCount}</p>
+                      {totalPendingWithdrawalAmount > 0 && (
+                        <p className="text-sm text-gray-500 mt-1">₾{totalPendingWithdrawalAmount.toFixed(2)} total</p>
+                      )}
+                    </div>
+                    <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Quick Actions */}
@@ -485,6 +544,15 @@ export default function AdminDashboard() {
                     className="px-6 py-3 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors"
                   >
                     Review Pending Requests ({totalPendingCount})
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('withdrawals');
+                      setWithdrawalStatusFilter('pending');
+                    }}
+                    className="px-6 py-3 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-600 transition-colors"
+                  >
+                    Review Withdrawals ({pendingWithdrawalsCount})
                   </button>
                   <button
                     onClick={() => setActiveTab('courses')}
@@ -807,6 +875,184 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {activeTab === 'withdrawals' && (
+            <div>
+              {/* Status Filter Buttons */}
+              <div className="flex flex-wrap gap-3 mb-6">
+                {(['all', 'pending', 'completed', 'rejected'] as const).map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setWithdrawalStatusFilter(filter)}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-colors capitalize ${
+                      withdrawalStatusFilter === filter
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                    }`}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
+
+              {/* Refresh Button */}
+              <div className="mb-4 flex justify-between items-center">
+                <div className="text-sm text-gray-600">
+                  Showing {withdrawalRequests.length} withdrawal request{withdrawalRequests.length !== 1 ? 's' : ''}
+                  {withdrawalStatusFilter !== 'all' && ` (${withdrawalStatusFilter})`}
+                </div>
+                <button
+                  onClick={() => mutateWithdrawalRequests()}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors text-sm flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+
+              {/* Withdrawal Requests Table */}
+              {withdrawalRequestsError ? (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg text-center">
+                  <p className="font-semibold">Error loading withdrawal requests</p>
+                  <p className="text-sm mt-1">{withdrawalRequestsError?.message}</p>
+                </div>
+              ) : withdrawalRequestsLoading ? (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mb-4"></div>
+                  <p className="text-gray-700">Loading withdrawal requests...</p>
+                </div>
+              ) : withdrawalRequests.length === 0 ? (
+                <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-8 text-center text-emerald-700">
+                  <p className="text-lg font-medium">
+                    No {withdrawalStatusFilter === 'all' ? '' : withdrawalStatusFilter} withdrawal requests found
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-emerald-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            User
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Amount
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Bank Account
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Current Balance
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Requested
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {withdrawalRequests.map((request) => {
+                          const isProcessing = processingId === request.id;
+                          return (
+                            <tr
+                              key={request.id}
+                              className="hover:bg-gray-50 cursor-pointer transition-colors"
+                              onClick={() => setSelectedWithdrawalRequest(request)}
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {request.profiles?.username || request.profiles?.email?.split('@')[0] || 'Unknown User'}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {request.profiles?.email || 'N/A'}
+                                </div>
+                                <div className="text-xs text-gray-400 capitalize">
+                                  {request.user_type}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-lg font-bold text-emerald-600">
+                                  ₾{request.amount.toFixed(2)}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-mono text-gray-700">
+                                  {request.bank_account_number}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  ₾{request.profiles?.balance?.toFixed(2) || '0.00'}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {getStatusBadge(request.status)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {formatDate(request.created_at)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
+                                {request.status === 'pending' ? (
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      onClick={async () => {
+                                        setProcessingId(request.id);
+                                        try {
+                                          await approveWithdrawalRequest(request.id);
+                                          setSuccessMessage('Withdrawal approved successfully');
+                                          setTimeout(() => setSuccessMessage(null), 3000);
+                                        } catch (err: any) {
+                                          setError(err.message || 'Failed to approve withdrawal');
+                                        } finally {
+                                          setProcessingId(null);
+                                        }
+                                      }}
+                                      disabled={isProcessing}
+                                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {isProcessing ? 'Processing...' : 'Approve'}
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        setProcessingId(request.id);
+                                        try {
+                                          await rejectWithdrawalRequest(request.id);
+                                          setSuccessMessage('Withdrawal rejected');
+                                          setTimeout(() => setSuccessMessage(null), 3000);
+                                        } catch (err: any) {
+                                          setError(err.message || 'Failed to reject withdrawal');
+                                        } finally {
+                                          setProcessingId(null);
+                                        }
+                                      }}
+                                      disabled={isProcessing}
+                                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {isProcessing ? 'Processing...' : 'Reject'}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400">No actions</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'courses' && (
             <div>
               {coursesLoading ? (
@@ -1079,6 +1325,195 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-end pt-4 border-t border-gray-200">
                   <button
                     onClick={closeRequestDialog}
+                    className="px-6 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Withdrawal Request Details Dialog */}
+      {selectedWithdrawalRequest && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedWithdrawalRequest(null);
+              setAdminNotes('');
+            }
+          }}
+        >
+          <div
+            className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setSelectedWithdrawalRequest(null);
+                setAdminNotes('');
+              }}
+              className="absolute top-4 right-4 z-10 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 transition-colors"
+              aria-label="Close dialog"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="p-6 space-y-6">
+              <h2 className="text-2xl font-bold text-navy-900">Withdrawal Request Details</h2>
+
+              {/* User Information */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900">User Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Username</p>
+                    <p className="text-base font-medium text-gray-900">
+                      {selectedWithdrawalRequest.profiles?.username || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Email</p>
+                    <p className="text-base font-medium text-gray-900">
+                      {selectedWithdrawalRequest.profiles?.email || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">User Type</p>
+                    <p className="text-base font-medium text-gray-900 capitalize">
+                      {selectedWithdrawalRequest.user_type}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Current Balance</p>
+                    <p className="text-base font-bold text-emerald-600">
+                      ₾{selectedWithdrawalRequest.profiles?.balance?.toFixed(2) || '0.00'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Withdrawal Details */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 space-y-3">
+                <h3 className="text-lg font-semibold text-emerald-900">Withdrawal Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-emerald-600">Amount</p>
+                    <p className="text-2xl font-bold text-emerald-700">
+                      ₾{selectedWithdrawalRequest.amount.toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-emerald-600">Bank Account</p>
+                    <p className="text-base font-mono font-medium text-emerald-800">
+                      {selectedWithdrawalRequest.bank_account_number}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-emerald-600">Status</p>
+                    <div className="mt-1">
+                      {getStatusBadge(selectedWithdrawalRequest.status)}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-emerald-600">Requested At</p>
+                    <p className="text-base text-emerald-800">
+                      {formatDate(selectedWithdrawalRequest.created_at)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Admin Notes (for completed/rejected) */}
+              {selectedWithdrawalRequest.admin_notes && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-yellow-900 mb-2">Admin Notes</h3>
+                  <p className="text-sm text-yellow-800">{selectedWithdrawalRequest.admin_notes}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              {selectedWithdrawalRequest.status === 'pending' && (
+                <div className="space-y-4 pt-4 border-t border-gray-200">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Admin Notes (Optional)
+                    </label>
+                    <textarea
+                      value={adminNotes}
+                      onChange={(e) => setAdminNotes(e.target.value)}
+                      placeholder="Add notes about this withdrawal request..."
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div className="flex items-center justify-end space-x-3">
+                    <button
+                      onClick={() => {
+                        setSelectedWithdrawalRequest(null);
+                        setAdminNotes('');
+                      }}
+                      className="px-6 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setProcessingId(selectedWithdrawalRequest.id);
+                        try {
+                          await rejectWithdrawalRequest(selectedWithdrawalRequest.id, adminNotes || undefined);
+                          setSelectedWithdrawalRequest(null);
+                          setAdminNotes('');
+                          setSuccessMessage('Withdrawal rejected');
+                          setTimeout(() => setSuccessMessage(null), 3000);
+                        } catch (err: any) {
+                          setError(err.message || 'Failed to reject withdrawal');
+                        } finally {
+                          setProcessingId(null);
+                        }
+                      }}
+                      disabled={processingId === selectedWithdrawalRequest.id}
+                      className="px-6 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {processingId === selectedWithdrawalRequest.id ? 'Processing...' : 'Reject'}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setProcessingId(selectedWithdrawalRequest.id);
+                        try {
+                          await approveWithdrawalRequest(selectedWithdrawalRequest.id, adminNotes || undefined);
+                          setSelectedWithdrawalRequest(null);
+                          setAdminNotes('');
+                          setSuccessMessage('Withdrawal approved successfully');
+                          setTimeout(() => setSuccessMessage(null), 3000);
+                        } catch (err: any) {
+                          setError(err.message || 'Failed to approve withdrawal');
+                        } finally {
+                          setProcessingId(null);
+                        }
+                      }}
+                      disabled={processingId === selectedWithdrawalRequest.id}
+                      className="px-6 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {processingId === selectedWithdrawalRequest.id ? 'Processing...' : 'Approve'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {selectedWithdrawalRequest.status !== 'pending' && (
+                <div className="flex items-center justify-end pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => {
+                      setSelectedWithdrawalRequest(null);
+                      setAdminNotes('');
+                    }}
                     className="px-6 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                   >
                     Close

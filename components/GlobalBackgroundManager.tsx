@@ -1,56 +1,56 @@
 'use client';
 
-import { memo } from 'react';
-import { useBackground } from '@/contexts/BackgroundContext';
+import { memo, lazy, Suspense } from 'react';
+import { useBackground, BackgroundTheme } from '@/contexts/BackgroundContext';
 import BackgroundShapes from '@/components/BackgroundShapes';
-import { StockMarketBackground } from '@/components/backgrounds/StockMarketBackground';
-import { CryptoRainBackground } from '@/components/backgrounds/CryptoRainBackground';
-import { MoneyFlowBackground } from '@/components/backgrounds/MoneyFlowBackground';
-import { SocialMediaBackground } from '@/components/backgrounds/SocialMediaBackground';
-import { AINetworkBackground } from '@/components/backgrounds/AINetworkBackground';
-import { GlobalCommerceBackground } from '@/components/backgrounds/GlobalCommerceBackground';
-import { AnalyticsBackground } from '@/components/backgrounds/AnalyticsBackground';
-import SimpleBackgroundAnimation from '@/components/SimpleBackgroundAnimation';
+
+// Lazy load background components - only load what's needed
+const StockMarketBackground = lazy(() => import('@/components/backgrounds/StockMarketBackground').then(m => ({ default: m.StockMarketBackground })));
+const CryptoRainBackground = lazy(() => import('@/components/backgrounds/CryptoRainBackground').then(m => ({ default: m.CryptoRainBackground })));
+const MoneyFlowBackground = lazy(() => import('@/components/backgrounds/MoneyFlowBackground').then(m => ({ default: m.MoneyFlowBackground })));
+const SocialMediaBackground = lazy(() => import('@/components/backgrounds/SocialMediaBackground').then(m => ({ default: m.SocialMediaBackground })));
+const AINetworkBackground = lazy(() => import('@/components/backgrounds/AINetworkBackground').then(m => ({ default: m.AINetworkBackground })));
+const GlobalCommerceBackground = lazy(() => import('@/components/backgrounds/GlobalCommerceBackground').then(m => ({ default: m.GlobalCommerceBackground })));
+const AnalyticsBackground = lazy(() => import('@/components/backgrounds/AnalyticsBackground').then(m => ({ default: m.AnalyticsBackground })));
+
+// Map theme to component
+const BACKGROUND_COMPONENTS: Record<BackgroundTheme, React.LazyExoticComponent<React.ComponentType> | null> = {
+  none: null,
+  subtle: null,
+  stockMarket: StockMarketBackground,
+  cryptoRain: CryptoRainBackground,
+  moneyFlow: MoneyFlowBackground,
+  socialMedia: SocialMediaBackground,
+  aiNetwork: AINetworkBackground,
+  globalCommerce: GlobalCommerceBackground,
+  analytics: AnalyticsBackground,
+};
 
 function GlobalBackgroundManager() {
-  const { isReducedMotion } = useBackground();
+  const { theme, isReducedMotion } = useBackground();
 
   // Don't render anything if user prefers reduced motion
   if (isReducedMotion) {
     return null;
   }
 
-  // Render all background animations simultaneously for a rich, layered effect
+  // Get the background component for the selected theme
+  const BackgroundComponent = BACKGROUND_COMPONENTS[theme];
+
+  // Render only the selected background for optimal performance
   return (
-    <div className="fixed inset-0 w-screen h-screen overflow-hidden pointer-events-none z-0" aria-hidden="true" style={{ maxWidth: '100vw', maxHeight: '100vh' }}>
-      {/* Base background shapes - always visible */}
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden pointer-events-none z-0" aria-hidden="true" style={{ maxWidth: '100vw', maxHeight: '100vh', contain: 'strict' }}>
+      {/* Base background shapes - lightweight, always visible */}
       <BackgroundShapes />
       
-      {/* Simple background animation - always visible */}
-      <SimpleBackgroundAnimation />
-      
-      {/* All theme-specific backgrounds rendered simultaneously with visible opacity for layering */}
-      <div className="absolute inset-0 opacity-60">
-        <StockMarketBackground />
-      </div>
-      <div className="absolute inset-0 opacity-50">
-        <CryptoRainBackground />
-      </div>
-      <div className="absolute inset-0 opacity-45">
-        <MoneyFlowBackground />
-      </div>
-      <div className="absolute inset-0 opacity-50">
-        <SocialMediaBackground />
-      </div>
-      <div className="absolute inset-0 opacity-45">
-        <AINetworkBackground />
-      </div>
-      <div className="absolute inset-0 opacity-50">
-        <GlobalCommerceBackground />
-      </div>
-      <div className="absolute inset-0 opacity-45">
-        <AnalyticsBackground />
-      </div>
+      {/* Only render the selected theme's background */}
+      {BackgroundComponent && (
+        <Suspense fallback={null}>
+          <div className="absolute inset-0 opacity-60">
+            <BackgroundComponent />
+          </div>
+        </Suspense>
+      )}
     </div>
   );
 }

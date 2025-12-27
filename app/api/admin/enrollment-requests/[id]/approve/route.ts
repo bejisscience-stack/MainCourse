@@ -63,12 +63,10 @@ export async function POST(
 
     console.log('[Approve API] Attempting to approve request:', id);
     
-    // Use service role client to ensure we bypass RLS and get immediate updates
-    const serviceSupabase = createServiceRoleClient();
-    
-    // Use the database function to approve (ensures consistency and bypasses RLS)
+    // Use the authenticated user's client (not service role) so that auth.uid() works in the database function
+    // The approve_enrollment_request function uses auth.uid() to verify admin status via check_is_admin
     // Note: approve_enrollment_request returns void, so data will be null on success
-    const { error: approveError } = await serviceSupabase.rpc('approve_enrollment_request', {
+    const { error: approveError } = await supabase.rpc('approve_enrollment_request', {
       request_id: id,
     });
 
@@ -90,6 +88,8 @@ export async function POST(
     }
     
     // Verify the update was successful by querying the request directly
+    // Use service role client for verification to bypass any RLS issues
+    const serviceSupabase = createServiceRoleClient();
     const { data: updatedRequest, error: verifyError } = await serviceSupabase
       .from('enrollment_requests')
       .select('id, status, updated_at')

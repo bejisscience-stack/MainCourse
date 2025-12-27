@@ -31,6 +31,7 @@ export default function LecturerDashboard() {
     intro_video_url: '',
     thumbnail_url: '',
     is_bestseller: false,
+    referral_commission_percentage: '0',
   });
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -269,7 +270,7 @@ export default function LecturerDashboard() {
   }, [showModal]);
 
 
-  const handleOpenModal = (course?: Course) => {
+  const handleOpenModal = async (course?: Course) => {
     setVideoFile(null);
     setThumbnailFile(null);
     setVideoUploadProgress(0);
@@ -277,19 +278,53 @@ export default function LecturerDashboard() {
     setIsUploading(false);
     
     if (course) {
-      setEditingCourse(course);
-      setFormData({
-        title: course.title,
-        description: course.description || '',
-        course_type: course.course_type,
-        price: course.price.toString(),
-        original_price: course.original_price?.toString() || '',
-        author: course.author,
-        creator: course.creator,
-        intro_video_url: course.intro_video_url || '',
-        thumbnail_url: course.thumbnail_url || '',
-        is_bestseller: course.is_bestseller,
-      });
+      // Fetch full course data including referral_commission_percentage
+      try {
+        const { data: fullCourse, error } = await supabase
+          .from('courses')
+          .select('*')
+          .eq('id', course.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching full course data:', error);
+          // Fallback to provided course data
+        }
+
+        const courseData = fullCourse || course;
+        
+        setEditingCourse(courseData);
+        setFormData({
+          title: courseData.title || '',
+          description: courseData.description || '',
+          course_type: courseData.course_type || 'Editing',
+          price: courseData.price?.toString() || '0',
+          original_price: courseData.original_price?.toString() || '',
+          author: courseData.author || '',
+          creator: courseData.creator || '',
+          intro_video_url: courseData.intro_video_url || '',
+          thumbnail_url: courseData.thumbnail_url || '',
+          is_bestseller: courseData.is_bestseller || false,
+          referral_commission_percentage: courseData.referral_commission_percentage?.toString() || '0',
+        });
+      } catch (err) {
+        console.error('Error loading course data:', err);
+        // Fallback to provided course data
+        setEditingCourse(course);
+        setFormData({
+          title: course.title,
+          description: course.description || '',
+          course_type: course.course_type,
+          price: course.price.toString(),
+          original_price: course.original_price?.toString() || '',
+          author: course.author,
+          creator: course.creator,
+          intro_video_url: course.intro_video_url || '',
+          thumbnail_url: course.thumbnail_url || '',
+          is_bestseller: course.is_bestseller,
+          referral_commission_percentage: (course as any).referral_commission_percentage?.toString() || '0',
+        });
+      }
     } else {
       setEditingCourse(null);
       setFormData({
@@ -303,6 +338,7 @@ export default function LecturerDashboard() {
         intro_video_url: '',
         thumbnail_url: '',
         is_bestseller: false,
+        referral_commission_percentage: '0',
       });
     }
     setShowModal(true);
@@ -336,6 +372,7 @@ export default function LecturerDashboard() {
       intro_video_url: '',
       thumbnail_url: '',
       is_bestseller: false,
+      referral_commission_percentage: '0',
     });
   };
 
@@ -538,6 +575,7 @@ export default function LecturerDashboard() {
         thumbnail_url: formData.thumbnail_url || null,
         is_bestseller: formData.is_bestseller,
         lecturer_id: user?.id,
+        referral_commission_percentage: parseInt(formData.referral_commission_percentage) || 0,
       };
 
       if (editingCourse) {
@@ -606,15 +644,15 @@ export default function LecturerDashboard() {
 
   if (loading) {
     return (
-      <main className="relative min-h-screen bg-white overflow-hidden">
+      <main className="relative min-h-screen bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900 overflow-hidden">
         <BackgroundShapes />
         <Navigation />
         <div className="relative z-10 pt-24 pb-16 flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-navy-900"></div>
-            <p className="mt-4 text-navy-600">Loading dashboard...</p>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+            <p className="mt-4 text-charcoal-600 dark:text-gray-400">{t('common.loading')}</p>
             {error && (
-              <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm max-w-md mx-auto">
+              <div className="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl text-sm max-w-md mx-auto">
                 {error}
               </div>
             )}
@@ -625,25 +663,25 @@ export default function LecturerDashboard() {
   }
 
   return (
-    <main className="relative min-h-screen bg-white overflow-hidden">
+    <main className="relative min-h-screen bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900 overflow-hidden">
       <BackgroundShapes />
       <Navigation />
-      <div className="relative z-10 pt-24 pb-16">
+      <div className="relative z-10 pt-24 pb-16 md:pb-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <div>
-              <h1 className="text-4xl md:text-5xl font-bold text-navy-900 mb-2">
+              <h1 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white mb-2">
                 {t('lecturerDashboard.title')}
               </h1>
-              <p className="text-lg text-navy-600">
+              <p className="text-lg text-charcoal-600 dark:text-gray-400">
                 {t('lecturerDashboard.subtitle')}
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <Link
                 href="/lecturer/chat"
-                className="bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                className="px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-700 dark:hover:bg-blue-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark flex items-center gap-2"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -655,28 +693,32 @@ export default function LecturerDashboard() {
                 </svg>
                 {t('lecturerDashboard.chat')}
               </Link>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleOpenBundleModal()}
-                  className="bg-purple-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
-                  disabled={courses.length < 2}
-                  title={courses.length < 2 ? t('lecturerDashboard.needTwoCourses') : ''}
-                >
-                  {t('lecturerDashboard.createBundle')}
-                </button>
-                <button
-                  onClick={() => handleOpenModal()}
-                  className="bg-navy-900 text-white font-semibold px-6 py-3 rounded-lg hover:bg-navy-800 transition-colors"
-                >
-                  {t('lecturerDashboard.createCourse')}
-                </button>
-              </div>
+              <button
+                onClick={() => handleOpenBundleModal()}
+                className="px-6 py-3 bg-purple-600 dark:bg-purple-500 text-white font-semibold rounded-xl hover:bg-purple-700 dark:hover:bg-purple-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                disabled={courses.length < 2}
+                title={courses.length < 2 ? t('lecturerDashboard.needTwoCourses') : ''}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                {t('lecturerDashboard.createBundle')}
+              </button>
+              <button
+                onClick={() => handleOpenModal()}
+                className="px-6 py-3 bg-charcoal-950 dark:bg-emerald-500 text-white font-semibold rounded-xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                {t('lecturerDashboard.createCourse')}
+              </button>
             </div>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 animate-in fade-in">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl mb-6">
               <div className="flex items-start">
                 <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -687,7 +729,7 @@ export default function LecturerDashboard() {
                 </div>
                 <button
                   onClick={() => setError(null)}
-                  className="ml-2 text-red-500 hover:text-red-700"
+                  className="ml-2 text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                   aria-label="Dismiss error"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -701,28 +743,26 @@ export default function LecturerDashboard() {
           {/* Bundles Section */}
           {courses.length >= 2 && (
             <div className="mb-12">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h2 className="text-2xl md:text-3xl font-bold text-navy-900 mb-2">
-                    {t('lecturerDashboard.courseBundles')}
-                  </h2>
-                  <p className="text-navy-600">
-                    {t('lecturerDashboard.bundleDescription')}
-                  </p>
-                </div>
+              <div className="mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-charcoal-950 dark:text-white mb-2">
+                  {t('lecturerDashboard.courseBundles')}
+                </h2>
+                <p className="text-charcoal-600 dark:text-gray-400">
+                  {t('lecturerDashboard.bundleDescription')}
+                </p>
               </div>
 
               {bundlesLoading ? (
-                <div className="text-center py-8">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-navy-900"></div>
-                  <p className="mt-4 text-navy-600">{t('lecturerDashboard.loadingBundles')}</p>
+                <div className="text-center py-12 bg-white dark:bg-navy-800 border border-charcoal-100/50 dark:border-navy-700/50 rounded-3xl">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                  <p className="mt-4 text-charcoal-600 dark:text-gray-400">{t('lecturerDashboard.loadingBundles')}</p>
                 </div>
               ) : bundles.length === 0 ? (
-                <div className="text-center py-12 bg-purple-50 rounded-lg border border-purple-200">
-                  <p className="text-purple-700 text-lg mb-4">{t('lecturerDashboard.noBundlesYet')}</p>
+                <div className="text-center py-12 bg-white dark:bg-navy-800 border border-charcoal-100/50 dark:border-navy-700/50 rounded-3xl shadow-soft">
+                  <p className="text-purple-700 dark:text-purple-300 text-lg mb-4">{t('lecturerDashboard.noBundlesYet')}</p>
                   <button
                     onClick={() => handleOpenBundleModal()}
-                    className="bg-purple-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+                    className="px-6 py-3 bg-purple-600 dark:bg-purple-500 text-white font-semibold rounded-xl hover:bg-purple-700 dark:hover:bg-purple-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark"
                   >
                     {t('lecturerDashboard.createFirstBundle')}
                   </button>
@@ -734,43 +774,43 @@ export default function LecturerDashboard() {
                     const totalOriginalPrice = bundleCourses.reduce((sum: number, course: any) => sum + (course?.price || 0), 0);
                     
                     return (
-                      <div key={bundle.id} className="bg-white border border-purple-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                      <div key={bundle.id} className="bg-white dark:bg-navy-800 border border-charcoal-100/50 dark:border-navy-700/50 rounded-3xl p-6 shadow-soft hover:shadow-md transition-all duration-200">
                         <div className="mb-4">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">{t('lecturerDashboard.bundle')}</span>
+                            <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide">{t('lecturerDashboard.bundle')}</span>
                             {!bundle.is_active && (
-                              <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">{t('lecturerDashboard.inactive')}</span>
+                              <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full">{t('lecturerDashboard.inactive')}</span>
                             )}
                           </div>
-                          <h3 className="text-lg font-bold text-navy-900 mb-2">{bundle.title}</h3>
+                          <h3 className="text-lg font-bold text-charcoal-950 dark:text-white mb-2">{bundle.title}</h3>
                           {bundle.description && (
-                            <p className="text-sm text-navy-600 line-clamp-2">{bundle.description}</p>
+                            <p className="text-sm text-charcoal-600 dark:text-gray-400 line-clamp-2">{bundle.description}</p>
                           )}
                         </div>
                         <div className="mb-4">
-                          <p className="text-xs text-navy-500 mb-1">{t('lecturerDashboard.includesCourses', { count: bundleCourses.length })}</p>
-                          <ul className="text-sm text-navy-700 space-y-1">
+                          <p className="text-xs text-charcoal-500 dark:text-gray-500 mb-1">{t('lecturerDashboard.includesCourses', { count: bundleCourses.length })}</p>
+                          <ul className="text-sm text-charcoal-700 dark:text-gray-300 space-y-1">
                             {bundleCourses.slice(0, 3).map((course: any, idx: number) => (
                               <li key={idx} className="flex items-center">
-                                <svg className="w-4 h-4 mr-1 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                <svg className="w-4 h-4 mr-1 text-purple-600 dark:text-purple-400" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                 </svg>
                                 {course?.title || 'Unknown Course'}
                               </li>
                             ))}
                             {bundleCourses.length > 3 && (
-                              <li className="text-xs text-navy-500">+{bundleCourses.length - 3} more</li>
+                              <li className="text-xs text-charcoal-500 dark:text-gray-500">+{bundleCourses.length - 3} more</li>
                             )}
                           </ul>
                         </div>
-                        <div className="flex items-center justify-between mb-4 pt-4 border-t border-purple-100">
+                        <div className="flex items-center justify-between mb-4 pt-4 border-t border-charcoal-200 dark:border-navy-600">
                           <div>
-                            <p className="text-xs text-navy-500">{t('lecturerDashboard.bundlePrice')}</p>
-                            <p className="text-xl font-bold text-navy-900">
+                            <p className="text-xs text-charcoal-500 dark:text-gray-500">{t('lecturerDashboard.bundlePrice')}</p>
+                            <p className="text-xl font-bold text-charcoal-950 dark:text-white">
                               ${bundle.price.toFixed(2)}
                             </p>
                             {bundle.original_price && totalOriginalPrice > bundle.price && (
-                              <p className="text-xs text-navy-400 line-through">
+                              <p className="text-xs text-charcoal-400 dark:text-gray-500 line-through">
                                 ${totalOriginalPrice.toFixed(2)} {t('lecturerDashboard.total')}
                               </p>
                             )}
@@ -779,7 +819,7 @@ export default function LecturerDashboard() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleOpenBundleModal(bundle)}
-                            className="flex-1 inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
+                            className="flex-1 inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-purple-600 dark:bg-purple-500 rounded-xl hover:bg-purple-700 dark:hover:bg-purple-600 transition-all duration-200"
                           >
                             <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -788,7 +828,7 @@ export default function LecturerDashboard() {
                           </button>
                           <button
                             onClick={() => handleDeleteBundle(bundle.id)}
-                            className="px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                            className="px-4 py-2 text-sm font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -805,14 +845,14 @@ export default function LecturerDashboard() {
 
           {/* Courses List */}
           <div className="mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-navy-900 mb-6">{t('lecturerDashboard.individualCourses')}</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-charcoal-950 dark:text-white mb-6">{t('lecturerDashboard.individualCourses')}</h2>
           </div>
           {courses.length === 0 ? (
-            <div className="text-center py-12 bg-navy-50 rounded-lg">
-              <p className="text-navy-600 text-lg mb-4">{t('lecturerDashboard.noCoursesYet')}</p>
+            <div className="text-center py-12 bg-white dark:bg-navy-800 border border-charcoal-100/50 dark:border-navy-700/50 rounded-3xl shadow-soft">
+              <p className="text-charcoal-600 dark:text-gray-400 text-lg mb-4">{t('lecturerDashboard.noCoursesYet')}</p>
               <button
                 onClick={() => handleOpenModal()}
-                className="bg-navy-900 text-white font-semibold px-6 py-3 rounded-lg hover:bg-navy-800 transition-colors"
+                className="px-6 py-3 bg-charcoal-950 dark:bg-emerald-500 text-white font-semibold rounded-xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark"
               >
                 {t('lecturerDashboard.createFirstCourse')}
               </button>
@@ -841,7 +881,7 @@ export default function LecturerDashboard() {
                   customAction={
                     <button
                       onClick={() => handleOpenModal(course)}
-                      className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-navy-900 rounded-full hover:bg-navy-800 transition-colors"
+                      className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-charcoal-950 dark:bg-emerald-500 rounded-xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200"
                     >
                       <svg
                         className="w-3.5 h-3.5 mr-1.5"
@@ -867,7 +907,7 @@ export default function LecturerDashboard() {
           {/* Modal */}
           {showModal && (
             <div 
-              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 bg-black/80 dark:bg-black/90 flex items-center justify-center z-50 p-4"
               onClick={(e) => {
                 // Close modal when clicking outside
                 if (e.target === e.currentTarget) {
@@ -876,17 +916,17 @@ export default function LecturerDashboard() {
               }}
             >
               <div 
-                className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto relative"
+                className="bg-white dark:bg-navy-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="p-6">
                   <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold text-navy-900">
+                    <h2 className="text-2xl font-bold text-charcoal-950 dark:text-white">
                       {editingCourse ? t('lecturerDashboard.editCourse') : t('lecturerDashboard.createNewCourse')}
                     </h2>
                     <button
                       onClick={handleCloseModal}
-                      className="text-navy-600 hover:text-navy-900 focus:outline-none focus:ring-2 focus:ring-navy-500 rounded p-1 transition-colors"
+                      className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-xl p-2 transition-colors"
                       aria-label="Close modal"
                       title="Close (ESC or click outside)"
                     >
@@ -898,18 +938,18 @@ export default function LecturerDashboard() {
 
                   {/* Error Message inside Modal */}
                   {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl mb-4">
                       <div className="flex items-start">
                         <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <div className="flex-1">
-                          <p className="font-semibold">Error</p>
+                          <p className="font-semibold">{t('common.error')}</p>
                           <p className="text-sm">{error}</p>
                         </div>
                         <button
                           onClick={() => setError(null)}
-                          className="ml-2 text-red-500 hover:text-red-700"
+                          className="ml-2 text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                           aria-label="Dismiss error"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -922,7 +962,7 @@ export default function LecturerDashboard() {
 
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-navy-700 mb-2">
+                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                         {t('lecturerDashboard.titleLabel')}
                       </label>
                       <input
@@ -930,31 +970,31 @@ export default function LecturerDashboard() {
                         required
                         value={formData.title}
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                        className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-navy-700 mb-2">
+                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                         {t('lecturerDashboard.descriptionLabel')}
                       </label>
                       <textarea
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         rows={4}
-                        className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                        className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-navy-700 mb-2">
+                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                         {t('lecturerDashboard.courseTypeLabel')}
                       </label>
                       <select
                         required
                         value={formData.course_type}
                         onChange={(e) => setFormData({ ...formData, course_type: e.target.value as any })}
-                        className="w-full px-4 py-2 bg-white border border-navy-200 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                        className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
                       >
                         <option value="Editing">{t('courses.filterEditing')}</option>
                         <option value="Content Creation">{t('courses.filterContentCreation')}</option>
@@ -964,7 +1004,7 @@ export default function LecturerDashboard() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-navy-700 mb-2">
+                        <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                           {t('lecturerDashboard.priceLabel')}
                         </label>
                         <input
@@ -973,11 +1013,11 @@ export default function LecturerDashboard() {
                           required
                           value={formData.price}
                           onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-navy-700 mb-2">
+                        <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                           {t('lecturerDashboard.originalPriceLabel')}
                         </label>
                         <input
@@ -985,14 +1025,53 @@ export default function LecturerDashboard() {
                           step="0.01"
                           value={formData.original_price}
                           onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
-                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
                         />
                       </div>
                     </div>
 
+                    <div>
+                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
+                        {t('lecturerDashboard.referralCommissionLabel') || 'Referral Commission Percentage (0-100%)'}
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={formData.referral_commission_percentage}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 0;
+                            if (value >= 0 && value <= 100) {
+                              setFormData({ ...formData, referral_commission_percentage: value.toString() });
+                            }
+                          }}
+                          className="w-32 px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
+                        />
+                        <span className="text-charcoal-600 dark:text-gray-400">%</span>
+                      </div>
+                      <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">
+                        {t('lecturerDashboard.referralCommissionHint') || 'Percentage of the course price that goes to the referring student. You receive the remaining amount.'}
+                      </p>
+                      {parseInt(formData.referral_commission_percentage) > 0 && formData.price && (
+                        <div className="mt-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                          <p className="text-sm text-purple-700">
+                            <span className="font-semibold">{t('lecturerDashboard.commissionBreakdown') || 'Commission Breakdown'}:</span>
+                          </p>
+                          <p className="text-sm text-purple-600 mt-1">
+                            • {t('lecturerDashboard.referrerGets') || 'Referrer gets'}: ${(parseFloat(formData.price) * parseInt(formData.referral_commission_percentage) / 100).toFixed(2)} ({formData.referral_commission_percentage}%)
+                          </p>
+                          <p className="text-sm text-purple-600">
+                            • {t('lecturerDashboard.youGet') || 'You get'}: ${(parseFloat(formData.price) * (100 - parseInt(formData.referral_commission_percentage)) / 100).toFixed(2)} ({100 - parseInt(formData.referral_commission_percentage)}%)
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-navy-700 mb-2">
+                        <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                           {t('lecturerDashboard.authorLabel')}
                         </label>
                         <input
@@ -1000,11 +1079,11 @@ export default function LecturerDashboard() {
                           required
                           value={formData.author}
                           onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-navy-700 mb-2">
+                        <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                           {t('lecturerDashboard.creatorLabel')}
                         </label>
                         <input
@@ -1012,13 +1091,13 @@ export default function LecturerDashboard() {
                           required
                           value={formData.creator}
                           onChange={(e) => setFormData({ ...formData, creator: e.target.value })}
-                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-navy-700 mb-2">
+                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                         {t('lecturerDashboard.introVideoLabel')}
                       </label>
                       <div className="space-y-2">
@@ -1034,27 +1113,37 @@ export default function LecturerDashboard() {
                               className="hidden"
                               disabled={isUploading}
                             />
-                            <div className={`w-full px-4 py-3 border-2 border-dashed rounded-lg text-center transition-colors ${
+                            <div className={`w-full px-4 py-3 border-2 border-dashed rounded-xl text-center transition-colors ${
                               isUploading && videoUploadProgress > 0
-                                ? 'border-navy-500 bg-navy-50'
-                                : 'border-navy-300 hover:border-navy-400'
+                                ? 'border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
+                                : 'border-charcoal-300 dark:border-navy-600 hover:border-emerald-400 dark:hover:border-emerald-500'
                             }`}>
                               {isUploading && videoUploadProgress > 0 ? (
                                 <>
-                                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-navy-900 mb-2"></div>
-                                  <span className="text-sm text-navy-700 font-medium block">
+                                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500 dark:border-emerald-400 mb-2"></div>
+                                  <span className="text-sm text-charcoal-700 dark:text-gray-300 font-medium block">
                                     {t('lecturerDashboard.uploading')} {videoFile?.name || 'video'}...
                                   </span>
                                 </>
                               ) : (
                                 <>
-                                  <svg className="w-6 h-6 mx-auto mb-2 text-navy-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <svg className="w-6 h-6 mx-auto mb-2 text-charcoal-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                   </svg>
-                                  <span className="text-sm text-navy-700 font-medium block truncate">
-                                    {videoFile ? videoFile.name : t('lecturerDashboard.uploadVideoFile')}
+                                  <span className="text-sm text-charcoal-700 dark:text-gray-300 font-medium block truncate">
+                                    {videoFile 
+                                      ? videoFile.name 
+                                      : editingCourse && formData.intro_video_url
+                                        ? t('lecturerDashboard.currentVideo') + ' ✓'
+                                        : t('lecturerDashboard.uploadVideoFile')
+                                    }
                                   </span>
-                                  <p className="text-xs text-navy-500 mt-1">{t('lecturerDashboard.clickToSelectVideo')}</p>
+                                  <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">
+                                    {editingCourse && formData.intro_video_url
+                                      ? t('lecturerDashboard.clickToReplaceVideo') || 'Click to replace current video'
+                                      : t('lecturerDashboard.clickToSelectVideo')
+                                    }
+                                  </p>
                                 </>
                               )}
                             </div>
@@ -1062,39 +1151,66 @@ export default function LecturerDashboard() {
                         </div>
                         {videoUploadProgress > 0 && (
                           <div className="space-y-1">
-                            <div className="flex justify-between text-xs text-navy-600">
+                            <div className="flex justify-between text-xs text-charcoal-600 dark:text-gray-400">
                               <span>{t('lecturerDashboard.uploading')}</span>
                               <span>{videoUploadProgress}%</span>
                             </div>
-                            <div className="w-full bg-navy-200 rounded-full h-2">
+                            <div className="w-full bg-charcoal-200 dark:bg-navy-600 rounded-full h-2">
                               <div
-                                className="bg-navy-900 h-2 rounded-full transition-all duration-300"
+                                className="bg-emerald-500 dark:bg-emerald-400 h-2 rounded-full transition-all duration-300"
                                 style={{ width: `${videoUploadProgress}%` }}
                               />
                             </div>
                           </div>
                         )}
                         {formData.intro_video_url && (
-                          <div className="text-xs text-green-600 flex items-center">
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            {t('lecturerDashboard.videoUploadedSuccess')}
+                          <div className="space-y-2">
+                            <div className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center">
+                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              {editingCourse ? t('lecturerDashboard.currentVideo') || 'Current Video' : t('lecturerDashboard.videoUploadedSuccess')}
+                            </div>
+                            {editingCourse && formData.intro_video_url && (
+                              <div className="relative rounded-xl overflow-hidden border border-charcoal-200 dark:border-navy-600 bg-charcoal-50 dark:bg-navy-700/30">
+                                <video
+                                  src={formData.intro_video_url}
+                                  controls
+                                  className="w-full h-48 object-contain"
+                                  onError={(e) => {
+                                    console.error('Video load error:', e);
+                                  }}
+                                >
+                                  Your browser does not support the video tag.
+                                </video>
+                                <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                  {t('lecturerDashboard.currentVideo') || 'Current Video'}
+                                </div>
+                              </div>
+                            )}
+                            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3">
+                              <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">
+                                {t('lecturerDashboard.currentVideoUrl') || 'Current Video URL:'}
+                              </p>
+                              <p className="text-xs text-emerald-600 dark:text-emerald-400 break-all font-mono">
+                                {formData.intro_video_url}
+                              </p>
+                            </div>
                           </div>
                         )}
-                        <div className="text-xs text-navy-500 mt-2">{t('lecturerDashboard.orEnterUrl')}</div>
+                        <div className="text-xs text-charcoal-500 dark:text-gray-400 mt-2">{t('lecturerDashboard.orEnterUrl')}</div>
                         <input
                           type="url"
                           value={formData.intro_video_url}
                           onChange={(e) => setFormData({ ...formData, intro_video_url: e.target.value })}
                           placeholder="https://..."
-                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-navy-700 mb-2">
+                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                         {t('lecturerDashboard.thumbnailLabel')}
                       </label>
                       <div className="space-y-2">
@@ -1110,26 +1226,36 @@ export default function LecturerDashboard() {
                               className="hidden"
                               disabled={isUploading}
                             />
-                            <div className="w-full px-4 py-3 border-2 border-dashed border-navy-300 rounded-lg hover:border-navy-400 transition-colors text-center">
-                              <svg className="w-6 h-6 mx-auto mb-2 text-navy-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-full px-4 py-3 border-2 border-dashed border-charcoal-300 dark:border-navy-600 rounded-xl hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors text-center">
+                              <svg className="w-6 h-6 mx-auto mb-2 text-charcoal-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
-                              <span className="text-sm text-navy-700 font-medium">
-                                {thumbnailFile ? thumbnailFile.name : t('lecturerDashboard.uploadThumbnail')}
+                              <span className="text-sm text-charcoal-700 dark:text-gray-300 font-medium">
+                                {thumbnailFile 
+                                  ? thumbnailFile.name 
+                                  : editingCourse && formData.thumbnail_url
+                                    ? t('lecturerDashboard.currentThumbnail') + ' ✓'
+                                    : t('lecturerDashboard.uploadThumbnail')
+                                }
                               </span>
-                              <p className="text-xs text-navy-500 mt-1">{t('lecturerDashboard.clickToSelectImage')}</p>
+                              <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">
+                                {editingCourse && formData.thumbnail_url
+                                  ? t('lecturerDashboard.clickToReplaceThumbnail') || 'Click to replace current thumbnail'
+                                  : t('lecturerDashboard.clickToSelectImage')
+                                }
+                              </p>
                             </div>
                           </label>
                         </div>
                         {thumbnailUploadProgress > 0 && (
                           <div className="space-y-1">
-                            <div className="flex justify-between text-xs text-navy-600">
+                            <div className="flex justify-between text-xs text-charcoal-600 dark:text-gray-400">
                               <span>{t('lecturerDashboard.uploading')}</span>
                               <span>{thumbnailUploadProgress}%</span>
                             </div>
-                            <div className="w-full bg-navy-200 rounded-full h-2">
+                            <div className="w-full bg-charcoal-200 dark:bg-navy-600 rounded-full h-2">
                               <div
-                                className="bg-navy-900 h-2 rounded-full transition-all duration-300"
+                                className="bg-emerald-500 dark:bg-emerald-400 h-2 rounded-full transition-all duration-300"
                                 style={{ width: `${thumbnailUploadProgress}%` }}
                               />
                             </div>
@@ -1137,26 +1263,45 @@ export default function LecturerDashboard() {
                         )}
                         {formData.thumbnail_url && (
                           <div className="space-y-2">
-                            <div className="text-xs text-green-600 flex items-center">
+                            <div className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center">
                               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                               </svg>
-                              {t('lecturerDashboard.thumbnailUploadedSuccess')}
+                              {editingCourse ? t('lecturerDashboard.currentThumbnail') || 'Current Thumbnail' : t('lecturerDashboard.thumbnailUploadedSuccess')}
                             </div>
-                            <img
-                              src={formData.thumbnail_url}
-                              alt="Thumbnail preview"
-                              className="w-full h-32 object-cover rounded-lg border border-navy-200"
-                            />
+                            <div className="relative rounded-xl overflow-hidden border border-charcoal-200 dark:border-navy-600">
+                              <img
+                                src={formData.thumbnail_url}
+                                alt="Thumbnail preview"
+                                className="w-full h-48 object-cover"
+                                onError={(e) => {
+                                  console.error('Thumbnail load error');
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                              {editingCourse && (
+                                <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                  {t('lecturerDashboard.currentThumbnail') || 'Current Thumbnail'}
+                                </div>
+                              )}
+                            </div>
+                            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3">
+                              <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">
+                                {t('lecturerDashboard.currentThumbnailUrl') || 'Current Thumbnail URL:'}
+                              </p>
+                              <p className="text-xs text-emerald-600 dark:text-emerald-400 break-all font-mono">
+                                {formData.thumbnail_url}
+                              </p>
+                            </div>
                           </div>
                         )}
-                        <div className="text-xs text-navy-500 mt-2">{t('lecturerDashboard.orEnterUrl')}</div>
+                        <div className="text-xs text-charcoal-500 dark:text-gray-400 mt-2">{t('lecturerDashboard.orEnterUrl')}</div>
                         <input
                           type="url"
                           value={formData.thumbnail_url}
                           onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
                           placeholder="https://..."
-                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
                         />
                       </div>
                     </div>
@@ -1167,9 +1312,9 @@ export default function LecturerDashboard() {
                         id="is_bestseller"
                         checked={formData.is_bestseller}
                         onChange={(e) => setFormData({ ...formData, is_bestseller: e.target.checked })}
-                        className="w-4 h-4 text-navy-900 focus:ring-navy-500"
+                        className="w-4 h-4 text-emerald-500 dark:text-emerald-400 focus:ring-emerald-500 dark:focus:ring-emerald-400 rounded"
                       />
-                      <label htmlFor="is_bestseller" className="ml-2 text-sm font-medium text-navy-700">
+                      <label htmlFor="is_bestseller" className="ml-2 text-sm font-medium text-charcoal-700 dark:text-gray-300">
                         {t('lecturerDashboard.markAsBestseller')}
                       </label>
                     </div>
@@ -1179,7 +1324,7 @@ export default function LecturerDashboard() {
                         <button
                           type="submit"
                           disabled={isUploading}
-                          className="flex-1 bg-navy-900 text-white font-semibold px-6 py-3 rounded-lg hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex-1 bg-charcoal-950 dark:bg-emerald-500 text-white font-semibold px-6 py-3 rounded-xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {isUploading ? t('lecturerDashboard.uploading') : editingCourse ? t('lecturerDashboard.updateCourse') : t('lecturerDashboard.createCourse')}
                         </button>
@@ -1187,7 +1332,7 @@ export default function LecturerDashboard() {
                           type="button"
                           onClick={handleCloseModal}
                           disabled={isUploading}
-                          className="flex-1 bg-navy-100 text-navy-900 font-semibold px-6 py-3 rounded-lg hover:bg-navy-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex-1 bg-charcoal-100 dark:bg-navy-700 text-charcoal-900 dark:text-gray-300 font-semibold px-6 py-3 rounded-xl hover:bg-charcoal-200 dark:hover:bg-navy-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {t('common.cancel')}
                         </button>
@@ -1200,7 +1345,7 @@ export default function LecturerDashboard() {
                             handleDelete(editingCourse.id);
                           }}
                           disabled={isUploading}
-                          className="w-full bg-red-600 text-white font-semibold px-6 py-4 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          className="w-full bg-red-600 dark:bg-red-500 text-white font-semibold px-6 py-4 rounded-xl hover:bg-red-700 dark:hover:bg-red-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path
@@ -1223,7 +1368,7 @@ export default function LecturerDashboard() {
           {/* Bundle Modal */}
           {showBundleModal && (
             <div 
-              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 bg-black/80 dark:bg-black/90 flex items-center justify-center z-50 p-4"
               onClick={(e) => {
                 if (e.target === e.currentTarget) {
                   handleCloseBundleModal();
@@ -1231,17 +1376,17 @@ export default function LecturerDashboard() {
               }}
             >
               <div 
-                className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto relative"
+                className="bg-white dark:bg-navy-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="p-6">
                   <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold text-navy-900">
+                    <h2 className="text-2xl font-bold text-charcoal-950 dark:text-white">
                       {editingBundle ? t('lecturerDashboard.editBundle') : t('lecturerDashboard.createCourseBundle')}
                     </h2>
                     <button
                       onClick={handleCloseBundleModal}
-                      className="text-navy-600 hover:text-navy-900 focus:outline-none focus:ring-2 focus:ring-navy-500 rounded p-1 transition-colors"
+                      className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-xl p-2 transition-colors"
                       aria-label="Close modal"
                     >
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1251,13 +1396,13 @@ export default function LecturerDashboard() {
                   </div>
 
                   {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl mb-4">
                       <div className="flex items-start">
                         <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <div className="flex-1">
-                          <p className="font-semibold">Error</p>
+                          <p className="font-semibold">{t('common.error')}</p>
                           <p className="text-sm">{error}</p>
                         </div>
                       </div>
@@ -1266,7 +1411,7 @@ export default function LecturerDashboard() {
 
                   <form onSubmit={handleBundleSubmit} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-navy-700 mb-2">
+                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                         {t('lecturerDashboard.bundleTitleLabel')}
                       </label>
                       <input
@@ -1274,27 +1419,27 @@ export default function LecturerDashboard() {
                         required
                         value={bundleFormData.title}
                         onChange={(e) => setBundleFormData({ ...bundleFormData, title: e.target.value })}
-                        className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                        className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
                         placeholder={t('lecturerDashboard.bundleTitlePlaceholder')}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-navy-700 mb-2">
+                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                         {t('lecturerDashboard.descriptionLabel')}
                       </label>
                       <textarea
                         value={bundleFormData.description}
                         onChange={(e) => setBundleFormData({ ...bundleFormData, description: e.target.value })}
                         rows={3}
-                        className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                        className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
                         placeholder={t('lecturerDashboard.bundleDescriptionPlaceholder')}
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-navy-700 mb-2">
+                        <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                           {t('lecturerDashboard.bundlePriceLabel')}
                         </label>
                         <input
@@ -1303,11 +1448,11 @@ export default function LecturerDashboard() {
                           required
                           value={bundleFormData.price}
                           onChange={(e) => setBundleFormData({ ...bundleFormData, price: e.target.value })}
-                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-navy-700 mb-2">
+                        <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                           {t('lecturerDashboard.bundleOriginalPriceLabel')}
                         </label>
                         <input
@@ -1315,41 +1460,41 @@ export default function LecturerDashboard() {
                           step="0.01"
                           value={bundleFormData.original_price}
                           onChange={(e) => setBundleFormData({ ...bundleFormData, original_price: e.target.value })}
-                          className="w-full px-4 py-2 bg-white border border-navy-200 text-black placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-500"
+                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-navy-700 mb-2">
+                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
                         {t('lecturerDashboard.selectCoursesLabel')}
                       </label>
-                      <div className="border border-navy-200 rounded-lg p-4 max-h-64 overflow-y-auto">
+                      <div className="border border-charcoal-200 dark:border-navy-600 rounded-xl p-4 max-h-64 overflow-y-auto bg-charcoal-50/50 dark:bg-navy-700/30">
                         {courses.length === 0 ? (
-                          <p className="text-sm text-navy-500">{t('lecturerDashboard.noCoursesAvailable')}</p>
+                          <p className="text-sm text-charcoal-500 dark:text-gray-400">{t('lecturerDashboard.noCoursesAvailable')}</p>
                         ) : (
                           <div className="space-y-2">
                             {courses.map((course) => (
                               <label
                                 key={course.id}
-                                className="flex items-center p-3 rounded-lg border border-navy-100 hover:bg-navy-50 cursor-pointer"
+                                className="flex items-center p-3 rounded-xl border border-charcoal-200 dark:border-navy-600 hover:bg-white dark:hover:bg-navy-700/50 cursor-pointer transition-colors"
                               >
                                 <input
                                   type="checkbox"
                                   checked={selectedCourseIds.includes(course.id)}
                                   onChange={() => toggleCourseSelection(course.id)}
-                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-navy-300 rounded"
+                                  className="w-4 h-4 text-purple-600 dark:text-purple-400 focus:ring-purple-500 dark:focus:ring-purple-400 border-charcoal-300 dark:border-navy-500 rounded"
                                 />
                                 <div className="ml-3 flex-1">
-                                  <p className="text-sm font-medium text-navy-900">{course.title}</p>
-                                  <p className="text-xs text-navy-500">${course.price.toFixed(2)}</p>
+                                  <p className="text-sm font-medium text-charcoal-950 dark:text-white">{course.title}</p>
+                                  <p className="text-xs text-charcoal-500 dark:text-gray-400">${course.price.toFixed(2)}</p>
                                 </div>
                               </label>
                             ))}
                           </div>
                         )}
                       </div>
-                      <p className="text-xs text-navy-500 mt-2">
+                      <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-2">
                         {t('lecturerDashboard.selected', { count: selectedCourseIds.length })}
                       </p>
                     </div>
@@ -1357,14 +1502,14 @@ export default function LecturerDashboard() {
                     <div className="flex gap-4 pt-4">
                       <button
                         type="submit"
-                        className="flex-1 bg-purple-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+                        className="flex-1 bg-purple-600 dark:bg-purple-500 text-white font-semibold px-6 py-3 rounded-xl hover:bg-purple-700 dark:hover:bg-purple-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark"
                       >
                         {editingBundle ? t('lecturerDashboard.updateBundle') : t('lecturerDashboard.createBundle')}
                       </button>
                       <button
                         type="button"
                         onClick={handleCloseBundleModal}
-                        className="flex-1 bg-navy-100 text-navy-900 font-semibold px-6 py-3 rounded-lg hover:bg-navy-200 transition-colors"
+                        className="flex-1 bg-charcoal-100 dark:bg-navy-700 text-charcoal-900 dark:text-gray-300 font-semibold px-6 py-3 rounded-xl hover:bg-charcoal-200 dark:hover:bg-navy-600 transition-all duration-200"
                       >
                         {t('common.cancel')}
                       </button>

@@ -8,6 +8,8 @@ import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useI18n } from '@/contexts/I18nContext';
 import { useEnrollments } from '@/hooks/useEnrollments';
+import { useBalance } from '@/hooks/useBalance';
+import { useWithdrawalRequests } from '@/hooks/useWithdrawalRequests';
 import useSWR from 'swr';
 import type { Course } from '@/hooks/useCourses';
 
@@ -19,6 +21,34 @@ export default function SettingsPage() {
   const [referralCode, setReferralCode] = useState<string>('');
   const [loadingReferralCode, setLoadingReferralCode] = useState(true);
   
+  // Balance and withdrawal state
+  const { 
+    balance, 
+    bankAccountNumber, 
+    pendingWithdrawal, 
+    totalEarned, 
+    totalWithdrawn,
+    transactions,
+    isLoading: balanceLoading,
+    updateBankAccount,
+    requestWithdrawal,
+    mutate: mutateBalance
+  } = useBalance(user?.id || null);
+  
+  const { requests: withdrawalRequests, mutate: mutateWithdrawals } = useWithdrawalRequests(user?.id || null);
+  
+  const [bankAccountInput, setBankAccountInput] = useState('');
+  const [isUpdatingBankAccount, setIsUpdatingBankAccount] = useState(false);
+  const [bankAccountError, setBankAccountError] = useState<string | null>(null);
+  const [bankAccountSuccess, setBankAccountSuccess] = useState(false);
+  
+  const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [isRequestingWithdrawal, setIsRequestingWithdrawal] = useState(false);
+  const [withdrawalError, setWithdrawalError] = useState<string | null>(null);
+  const [withdrawalSuccess, setWithdrawalSuccess] = useState(false);
+  const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
+  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
+  
   // Password update state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -29,6 +59,13 @@ export default function SettingsPage() {
   
   const [copied, setCopied] = useState(false);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  
+  // Initialize bank account input when data loads
+  useEffect(() => {
+    if (bankAccountNumber && !bankAccountInput) {
+      setBankAccountInput(bankAccountNumber);
+    }
+  }, [bankAccountNumber, bankAccountInput]);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -105,6 +142,103 @@ export default function SettingsPage() {
       : `${baseUrl}/signup?ref=${referralCode}`;
     return link;
   }, [referralCode]);
+
+  const handleBankAccountUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBankAccountError(null);
+    setBankAccountSuccess(false);
+
+    if (!bankAccountInput || bankAccountInput.trim().length < 10) {
+      setBankAccountError(t('settings.invalidBankAccount') || 'Please enter a valid bank account number (at least 10 characters)');
+      return;
+    }
+
+    setIsUpdatingBankAccount(true);
+
+    try {
+      await updateBankAccount(bankAccountInput.trim());
+      setBankAccountSuccess(true);
+      setTimeout(() => setBankAccountSuccess(false), 3000);
+    } catch (err: any) {
+      console.error('Error updating bank account:', err);
+      setBankAccountError(err.message || t('settings.failedToUpdateBankAccount') || 'Failed to update bank account');
+    } finally {
+      setIsUpdatingBankAccount(false);
+    }
+  };
+
+  const handleWithdrawalRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWithdrawalError(null);
+    setWithdrawalSuccess(false);
+
+    const amount = parseFloat(withdrawalAmount);
+
+    if (!amount || amount < 20) {
+      setWithdrawalError(t('settings.minimumWithdrawal') || 'Minimum withdrawal amount is 20 GEL');
+      return;
+    }
+
+    if (amount > balance) {
+      setWithdrawalError(t('settings.insufficientBalance') || 'Insufficient balance');
+      return;
+    }
+
+    const accountToUse = bankAccountInput.trim() || bankAccountNumber;
+    if (!accountToUse || accountToUse.length < 10) {
+      setWithdrawalError(t('settings.bankAccountRequired') || 'Please enter a valid bank account number first');
+      return;
+    }
+
+    setIsRequestingWithdrawal(true);
+
+    try {
+      await requestWithdrawal(amount, accountToUse);
+      setWithdrawalSuccess(true);
+      setWithdrawalAmount('');
+      setShowWithdrawalForm(false);
+      mutateWithdrawals();
+      mutateBalance();
+      setTimeout(() => setWithdrawalSuccess(false), 5000);
+    } catch (err: any) {
+      console.error('Error requesting withdrawal:', err);
+      setWithdrawalError(err.message || t('settings.failedToRequestWithdrawal') || 'Failed to request withdrawal');
+    } finally {
+      setIsRequestingWithdrawal(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getTransactionIcon = (type: string, source: string) => {
+    if (type === 'credit') {
+      if (source === 'referral_commission') {
+        return (
+          <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        );
+      }
+      return (
+        <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+      </svg>
+    );
+  };
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,6 +373,285 @@ export default function SettingsPage() {
               ) : (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
                   <p className="text-sm text-yellow-800 dark:text-yellow-300">{t('settings.referralCodeNotAvailable')}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Balance & Earnings Section */}
+            <div className="bg-white dark:bg-navy-800 border border-charcoal-100/50 dark:border-navy-700/50 rounded-3xl p-6 shadow-soft">
+              <h2 className="text-xl font-semibold text-charcoal-950 dark:text-white mb-4">
+                {t('settings.balanceAndEarnings') || 'Balance & Earnings'}
+              </h2>
+              <p className="text-sm text-charcoal-600 dark:text-gray-400 mb-6">
+                {t('settings.balanceDescription') || 'View your earnings from referrals and course purchases, and manage withdrawals.'}
+              </p>
+
+              {balanceLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Balance Overview Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4">
+                      <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-1">
+                        {t('settings.currentBalance') || 'Current Balance'}
+                      </p>
+                      <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
+                        ₾{balance.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                      <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">
+                        {t('settings.totalEarned') || 'Total Earned'}
+                      </p>
+                      <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                        ₾{totalEarned.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4">
+                      <p className="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wide mb-1">
+                        {t('settings.totalWithdrawn') || 'Total Withdrawn'}
+                      </p>
+                      <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                        ₾{totalWithdrawn.toFixed(2)}
+                      </p>
+                    </div>
+                    {pendingWithdrawal > 0 && (
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+                        <p className="text-xs font-medium text-yellow-600 dark:text-yellow-400 uppercase tracking-wide mb-1">
+                          {t('settings.pendingWithdrawal') || 'Pending'}
+                        </p>
+                        <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
+                          ₾{pendingWithdrawal.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bank Account Section */}
+                  <div className="border-t border-charcoal-200 dark:border-navy-600 pt-6">
+                    <h3 className="text-lg font-medium text-charcoal-950 dark:text-white mb-4">
+                      {t('settings.bankAccount') || 'Bank Account'}
+                    </h3>
+                    <form onSubmit={handleBankAccountUpdate} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
+                          {t('settings.bankAccountNumber') || 'Bank Account Number (IBAN)'}
+                        </label>
+                        <input
+                          type="text"
+                          value={bankAccountInput}
+                          onChange={(e) => setBankAccountInput(e.target.value)}
+                          placeholder="GE00XX0000000000000000"
+                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500"
+                          disabled={isUpdatingBankAccount}
+                        />
+                        <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">
+                          {t('settings.bankAccountHint') || 'Enter your Georgian bank account number (IBAN format)'}
+                        </p>
+                      </div>
+
+                      {bankAccountError && (
+                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl text-sm">
+                          {bankAccountError}
+                        </div>
+                      )}
+
+                      {bankAccountSuccess && (
+                        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded-xl text-sm">
+                          {t('settings.bankAccountUpdated') || 'Bank account updated successfully!'}
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={isUpdatingBankAccount || bankAccountInput === bankAccountNumber}
+                        className="px-6 py-3 bg-charcoal-950 dark:bg-emerald-500 text-white font-semibold rounded-xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isUpdatingBankAccount ? (t('settings.saving') || 'Saving...') : (t('settings.saveBankAccount') || 'Save Bank Account')}
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Withdrawal Section */}
+                  <div className="border-t border-charcoal-200 dark:border-navy-600 pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-medium text-charcoal-950 dark:text-white">
+                        {t('settings.withdrawFunds') || 'Withdraw Funds'}
+                      </h3>
+                      {!showWithdrawalForm && balance >= 20 && (
+                        <button
+                          onClick={() => setShowWithdrawalForm(true)}
+                          className="px-4 py-2 bg-emerald-500 text-white font-semibold rounded-xl hover:bg-emerald-600 transition-all duration-200"
+                        >
+                          {t('settings.requestWithdrawal') || 'Request Withdrawal'}
+                        </button>
+                      )}
+                    </div>
+
+                    {balance < 20 && (
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+                        <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                          {t('settings.minimumBalanceRequired') || 'Minimum balance of ₾20.00 is required to request a withdrawal.'}
+                        </p>
+                      </div>
+                    )}
+
+                    {pendingWithdrawal > 0 && (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-4">
+                        <p className="text-sm text-blue-800 dark:text-blue-300">
+                          {t('settings.pendingWithdrawalMessage', { amount: pendingWithdrawal.toFixed(2) })}
+                        </p>
+                      </div>
+                    )}
+
+                    {showWithdrawalForm && balance >= 20 && pendingWithdrawal === 0 && (
+                      <form onSubmit={handleWithdrawalRequest} className="space-y-4 bg-charcoal-50 dark:bg-navy-700/30 rounded-xl p-4">
+                        <div>
+                          <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
+                            {t('settings.withdrawalAmount') || 'Withdrawal Amount (₾)'}
+                          </label>
+                          <input
+                            type="number"
+                            min="20"
+                            max={balance}
+                            step="0.01"
+                            value={withdrawalAmount}
+                            onChange={(e) => setWithdrawalAmount(e.target.value)}
+                            placeholder="20.00"
+                            className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500"
+                            disabled={isRequestingWithdrawal}
+                          />
+                        <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">
+                          {t('settings.availableBalance', { balance: balance.toFixed(2) })}
+                        </p>
+                        </div>
+
+                        {withdrawalError && (
+                          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl text-sm">
+                            {withdrawalError}
+                          </div>
+                        )}
+
+                        <div className="flex gap-3">
+                          <button
+                            type="submit"
+                            disabled={isRequestingWithdrawal}
+                            className="flex-1 px-6 py-3 bg-emerald-500 text-white font-semibold rounded-xl hover:bg-emerald-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isRequestingWithdrawal ? (t('settings.processing') || 'Processing...') : (t('settings.submitWithdrawal') || 'Submit Withdrawal Request')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowWithdrawalForm(false);
+                              setWithdrawalAmount('');
+                              setWithdrawalError(null);
+                            }}
+                            className="px-6 py-3 bg-charcoal-200 dark:bg-navy-600 text-charcoal-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-charcoal-300 dark:hover:bg-navy-500 transition-all duration-200"
+                          >
+                            {t('common.cancel') || 'Cancel'}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    {withdrawalSuccess && (
+                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded-xl text-sm mt-4">
+                        {t('settings.withdrawalRequestSubmitted') || 'Withdrawal request submitted successfully! You will be notified once it is processed.'}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Transaction History */}
+                  {transactions.length > 0 && (
+                    <div className="border-t border-charcoal-200 dark:border-navy-600 pt-6">
+                      <button
+                        onClick={() => setShowTransactionHistory(!showTransactionHistory)}
+                        className="flex items-center justify-between w-full text-left"
+                      >
+                        <h3 className="text-lg font-medium text-charcoal-950 dark:text-white">
+                          {t('settings.transactionHistory') || 'Transaction History'}
+                        </h3>
+                        <svg
+                          className={`w-5 h-5 text-charcoal-600 dark:text-gray-400 transition-transform ${showTransactionHistory ? 'rotate-180' : ''}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+
+                      {showTransactionHistory && (
+                        <div className="mt-4 space-y-3 max-h-80 overflow-y-auto">
+                          {transactions.map((transaction) => (
+                            <div
+                              key={transaction.id}
+                              className="flex items-center justify-between bg-charcoal-50 dark:bg-navy-700/30 rounded-xl p-3"
+                            >
+                              <div className="flex items-center gap-3">
+                                {getTransactionIcon(transaction.transaction_type, transaction.source)}
+                                <div>
+                                  <p className="text-sm font-medium text-charcoal-950 dark:text-white">
+                                    {transaction.source === 'referral_commission' && (t('settings.referralCommission') || 'Referral Commission')}
+                                    {transaction.source === 'course_purchase' && (t('settings.coursePurchase') || 'Course Purchase')}
+                                    {transaction.source === 'withdrawal' && (t('settings.withdrawal') || 'Withdrawal')}
+                                    {transaction.source === 'admin_adjustment' && (t('settings.adminAdjustment') || 'Admin Adjustment')}
+                                  </p>
+                                  <p className="text-xs text-charcoal-500 dark:text-gray-400">
+                                    {formatDate(transaction.created_at)}
+                                  </p>
+                                </div>
+                              </div>
+                              <p className={`text-sm font-bold ${transaction.transaction_type === 'credit' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {transaction.transaction_type === 'credit' ? '+' : '-'}₾{Math.abs(transaction.amount).toFixed(2)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Withdrawal Requests History */}
+                  {withdrawalRequests.length > 0 && (
+                    <div className="border-t border-charcoal-200 dark:border-navy-600 pt-6">
+                      <h3 className="text-lg font-medium text-charcoal-950 dark:text-white mb-4">
+                        {t('settings.withdrawalRequests') || 'Withdrawal Requests'}
+                      </h3>
+                      <div className="space-y-3 max-h-60 overflow-y-auto">
+                        {withdrawalRequests.map((request) => (
+                          <div
+                            key={request.id}
+                            className="flex items-center justify-between bg-charcoal-50 dark:bg-navy-700/30 rounded-xl p-3"
+                          >
+                            <div>
+                              <p className="text-sm font-medium text-charcoal-950 dark:text-white">
+                                ₾{request.amount.toFixed(2)}
+                              </p>
+                              <p className="text-xs text-charcoal-500 dark:text-gray-400">
+                                {formatDate(request.created_at)}
+                              </p>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              request.status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                              request.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                              request.status === 'rejected' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
+                              'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
+                            }`}>
+                              {request.status === 'pending' && (t('settings.statusPending') || 'Pending')}
+                              {request.status === 'completed' && (t('settings.statusCompleted') || 'Completed')}
+                              {request.status === 'rejected' && (t('settings.statusRejected') || 'Rejected')}
+                              {request.status === 'approved' && (t('settings.statusApproved') || 'Approved')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

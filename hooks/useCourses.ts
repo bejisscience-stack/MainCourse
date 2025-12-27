@@ -15,6 +15,7 @@ export interface Course {
   rating: number;
   review_count: number;
   is_bestseller: boolean;
+  referral_commission_percentage?: number;
   created_at: string;
   updated_at: string;
   lecturer_id?: string;

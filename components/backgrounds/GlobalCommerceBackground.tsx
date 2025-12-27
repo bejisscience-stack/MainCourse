@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, memo } from 'react';
 import { useBackground } from '@/contexts/BackgroundContext';
 
 interface ConnectionLine {
@@ -25,55 +25,64 @@ interface ShippingIcon {
 }
 
 const SHIPPING_TYPES = ['package', 'plane', 'ship', 'truck'] as const;
+const MAX_CONNECTIONS = 3;
+const MAX_SHIPPING_ICONS = 3;
 
-export function GlobalCommerceBackground() {
+function GlobalCommerceBackgroundComponent() {
   const [globe, setGlobe] = useState({ rotation: 0 });
   const [connections, setConnections] = useState<ConnectionLine[]>([]);
   const [shippingIcons, setShippingIcons] = useState<ShippingIcon[]>([]);
   const { intensity, isReducedMotion } = useBackground();
   const connectionIdRef = useRef(0);
   const shippingIdRef = useRef(0);
+  const dimensionsRef = useRef({ width: 1920, height: 1080 });
 
-  const getIntensityMultiplier = () => {
+  // Cache dimensions once
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      dimensionsRef.current = { width: window.innerWidth, height: window.innerHeight };
+    }
+  }, []);
+
+  const intensityMultiplier = useMemo(() => {
     switch (intensity) {
       case 'low': return 0.4;
       case 'medium': return 0.7;
       case 'high': return 1.1;
       default: return 0.7;
     }
-  };
+  }, [intensity]);
 
-  // Rotate globe
+  // Rotate globe - slower interval
   useEffect(() => {
     if (isReducedMotion) return;
 
     const interval = setInterval(() => {
-      setGlobe(prev => ({ rotation: (prev.rotation + 0.5) % 360 }));
-    }, 100);
+      setGlobe(prev => ({ rotation: (prev.rotation + 0.3) % 360 }));
+    }, 200); // Slower rotation
 
     return () => clearInterval(interval);
   }, [isReducedMotion]);
 
-  // Generate connection lines
+  // Generate connection lines - slower interval
   useEffect(() => {
     if (isReducedMotion) return;
 
-    const multiplier = getIntensityMultiplier();
-    const baseInterval = 3000;
-    const intervalTime = Math.max(1500, baseInterval / multiplier);
+    const { width, height } = dimensionsRef.current;
+    const intervalTime = Math.max(5000, 6000 / intensityMultiplier);
 
     const interval = setInterval(() => {
-      const startX = Math.random() * window.innerWidth;
-      const startY = Math.random() * window.innerHeight;
-      const endX = Math.random() * window.innerWidth;
-      const endY = Math.random() * window.innerHeight;
+      const id = connectionIdRef.current++;
+      const startX = Math.random() * width;
+      const startY = Math.random() * height;
+      const endX = Math.random() * width;
+      const endY = Math.random() * height;
 
-      // Only create connections that span a reasonable distance
       const distance = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
       if (distance < 100) return;
 
       const newConnection: ConnectionLine = {
-        id: connectionIdRef.current++,
+        id,
         startX,
         startY,
         endX,
@@ -82,31 +91,31 @@ export function GlobalCommerceBackground() {
         duration: 4000 + Math.random() * 3000,
       };
 
-      setConnections(prev => [...prev, newConnection]);
+      setConnections(prev => [...prev.slice(-MAX_CONNECTIONS + 1), newConnection]);
 
       setTimeout(() => {
-        setConnections(prev => prev.filter(c => c.id !== newConnection.id));
+        setConnections(prev => prev.filter(c => c.id !== id));
       }, newConnection.duration + newConnection.delay);
     }, intervalTime);
 
     return () => clearInterval(interval);
-  }, [intensity, isReducedMotion]);
+  }, [intensityMultiplier, isReducedMotion]);
 
-  // Generate shipping icons
+  // Generate shipping icons - slower interval
   useEffect(() => {
     if (isReducedMotion) return;
 
-    const multiplier = getIntensityMultiplier();
-    const baseInterval = 2500;
-    const intervalTime = Math.max(1200, baseInterval / multiplier);
+    const { width, height } = dimensionsRef.current;
+    const intervalTime = Math.max(4000, 5000 / intensityMultiplier);
 
     const interval = setInterval(() => {
+      const id = shippingIdRef.current++;
       const type = SHIPPING_TYPES[Math.floor(Math.random() * SHIPPING_TYPES.length)];
 
       const newShippingIcon: ShippingIcon = {
-        id: shippingIdRef.current++,
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
+        id,
+        x: Math.random() * width,
+        y: Math.random() * height,
         type,
         size: 16 + Math.random() * 8,
         direction: Math.random() * 360,
@@ -114,15 +123,15 @@ export function GlobalCommerceBackground() {
         duration: 5000 + Math.random() * 4000,
       };
 
-      setShippingIcons(prev => [...prev, newShippingIcon]);
+      setShippingIcons(prev => [...prev.slice(-MAX_SHIPPING_ICONS + 1), newShippingIcon]);
 
       setTimeout(() => {
-        setShippingIcons(prev => prev.filter(s => s.id !== newShippingIcon.id));
+        setShippingIcons(prev => prev.filter(s => s.id !== id));
       }, newShippingIcon.duration + newShippingIcon.delay);
     }, intervalTime);
 
     return () => clearInterval(interval);
-  }, [intensity, isReducedMotion]);
+  }, [intensityMultiplier, isReducedMotion]);
 
   const getShippingIconSVG = (type: ShippingIcon['type'], size: number) => {
     const commonProps = {
@@ -169,7 +178,7 @@ export function GlobalCommerceBackground() {
   if (isReducedMotion) return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true" style={{ contain: 'strict' }}>
       {/* World map outline */}
       <div
         className="absolute inset-0 opacity-[0.002] dark:opacity-[0.004]"
@@ -184,7 +193,7 @@ export function GlobalCommerceBackground() {
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
         <div
           className="w-32 h-32 md:w-48 md:h-48 rounded-full border border-emerald-500/5 dark:border-emerald-400/5"
-          style={{ transform: `rotate(${globe.rotation}deg)` }}
+          style={{ transform: `rotate(${globe.rotation}deg)`, willChange: 'transform' }}
         >
           <div className="absolute inset-2 rounded-full border-2 border-dashed border-emerald-500/8 dark:border-emerald-400/8"></div>
           <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-emerald-500/20 rounded-full"></div>
@@ -231,20 +240,21 @@ export function GlobalCommerceBackground() {
             transform: `translate(-50%, -50%) rotate(${icon.direction}deg)`,
             opacity: 0.06,
             animation: `shippingMove ${icon.duration}ms ease-in-out ${icon.delay}ms forwards`,
+            willChange: 'transform, opacity',
           }}
         >
           {getShippingIconSVG(icon.type, icon.size)}
         </div>
       ))}
 
-      {/* Trade route markers */}
+      {/* Trade route markers - reduced count */}
       <div className="absolute inset-0">
-        {Array.from({ length: 8 }).map((_, i) => (
+        {[0, 1, 2, 3, 4].map((i) => (
           <div
             key={i}
             className="absolute w-1 h-1 bg-emerald-500 rounded-full opacity-[0.03] dark:opacity-[0.05]"
             style={{
-              left: `${10 + i * 12}%`,
+              left: `${10 + i * 18}%`,
               top: `${20 + (i % 3) * 25}%`,
               animation: `tradePulse ${2000 + i * 500}ms ease-in-out infinite`,
               animationDelay: `${i * 300}ms`,
@@ -284,3 +294,5 @@ export function GlobalCommerceBackground() {
     </div>
   );
 }
+
+export const GlobalCommerceBackground = memo(GlobalCommerceBackgroundComponent);

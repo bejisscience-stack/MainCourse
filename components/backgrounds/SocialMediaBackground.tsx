@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react';
 import { useBackground } from '@/contexts/BackgroundContext';
 
 interface SocialElement {
@@ -8,120 +8,83 @@ interface SocialElement {
   x: number;
   y: number;
   type: 'icon' | 'metric' | 'notification';
-  content: string | JSX.Element;
+  content: string;
   size: number;
   delay: number;
   duration: number;
   direction: 'up' | 'down' | 'left' | 'right';
 }
 
-const SOCIAL_ICONS = [
-  { name: 'Instagram', symbol: '📷' },
-  { name: 'YouTube', symbol: '▶️' },
-  { name: 'TikTok', symbol: '🎵' },
-  { name: 'Twitter', symbol: '🐦' },
-  { name: 'LinkedIn', symbol: '💼' },
-  { name: 'Facebook', symbol: '👥' },
-];
+const SOCIAL_ICONS = ['📷', '▶️', '🎵', '🐦', '💼', '👥'];
 
 const ENGAGEMENT_METRICS = [
-  '1.2K', '5.8K', '12K', '24K', '156K', '892K', '1.5M',
-  '+127', '+1.2K', '+4.8K', '+12K',
-  '❤️ 2.5K', '💬 342', '🔄 1.1K', '👁️ 45K'
+  '1.2K', '5.8K', '12K', '24K', '156K',
+  '+127', '+1.2K', '+4.8K',
+  '❤️ 2.5K', '💬 342', '🔄 1.1K'
 ];
 
-export function SocialMediaBackground() {
+const MAX_ELEMENTS = 5;
+
+function SocialMediaBackgroundComponent() {
   const [elements, setElements] = useState<SocialElement[]>([]);
   const { intensity, isReducedMotion } = useBackground();
   const elementIdRef = useRef(0);
+  const dimensionsRef = useRef({ width: 1920, height: 1080 });
 
-  const getIntensityMultiplier = () => {
+  // Cache dimensions once
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      dimensionsRef.current = { width: window.innerWidth, height: window.innerHeight };
+    }
+  }, []);
+
+  const intensityMultiplier = useMemo(() => {
     switch (intensity) {
       case 'low': return 0.4;
       case 'medium': return 0.7;
       case 'high': return 1.1;
       default: return 0.7;
     }
-  };
-
-  const getSocialIconSVG = (name: string, size: number) => {
-    const commonProps = {
-      width: size,
-      height: size,
-      viewBox: '0 0 24 24',
-      fill: 'none',
-      className: 'text-emerald-500 dark:text-emerald-400',
-    };
-
-    switch (name) {
-      case 'Instagram':
-        return (
-          <svg {...commonProps}>
-            <rect x="2" y="2" width="20" height="20" rx="5" stroke="currentColor" strokeWidth="1.5" />
-            <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.5" />
-            <circle cx="17" cy="7" r="1" fill="currentColor" />
-          </svg>
-        );
-      case 'YouTube':
-        return (
-          <svg {...commonProps}>
-            <path d="M22 8.5c0 1.5-.5 2.5-1 3s-1.5 1-3 1h-12c-1.5 0-2-.5-2.5-1S2 10 2 8.5v7c0 1.5.5 2.5 1 3s1.5 1 2.5 1h12c1.5 0 2-.5 2.5-1s1-1.5 1-3v-7z" stroke="currentColor" strokeWidth="1.5" />
-            <polygon points="10,8 16,12 10,16" fill="currentColor" />
-          </svg>
-        );
-      case 'TikTok':
-        return (
-          <svg {...commonProps}>
-            <path d="M19 6.5a4.5 4.5 0 01-4.5-4.5H12v12a3 3 0 11-3-3v-2a5 5 0 105 5V8.5a6.5 6.5 0 003.5 1H19V6.5z" stroke="currentColor" strokeWidth="1.5" />
-          </svg>
-        );
-      default:
-        return (
-          <svg {...commonProps}>
-            <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.5" />
-          </svg>
-        );
-    }
-  };
+  }, [intensity]);
 
   useEffect(() => {
     if (isReducedMotion) return;
 
-    const multiplier = getIntensityMultiplier();
-    const baseInterval = 1500;
-    const intervalTime = Math.max(800, baseInterval / multiplier);
+    // Slower interval for better performance
+    const intervalTime = Math.max(2500, 3500 / intensityMultiplier);
+    const { width, height } = dimensionsRef.current;
+    const directions: SocialElement['direction'][] = ['up', 'down', 'left', 'right'];
 
     const interval = setInterval(() => {
+      const id = elementIdRef.current++;
       const elementType = Math.random() > 0.6 ? 'metric' : Math.random() > 0.5 ? 'icon' : 'notification';
-      const directions: SocialElement['direction'][] = ['up', 'down', 'left', 'right'];
       const direction = directions[Math.floor(Math.random() * directions.length)];
 
-      let content: string | JSX.Element;
+      let content: string;
       let x: number, y: number;
 
       // Position based on direction
       switch (direction) {
         case 'up':
-          x = Math.random() * window.innerWidth;
-          y = window.innerHeight + 50;
+          x = Math.random() * width;
+          y = height + 50;
           break;
         case 'down':
-          x = Math.random() * window.innerWidth;
+          x = Math.random() * width;
           y = -50;
           break;
         case 'left':
-          x = window.innerWidth + 50;
-          y = Math.random() * window.innerHeight;
+          x = width + 50;
+          y = Math.random() * height;
           break;
         case 'right':
           x = -50;
-          y = Math.random() * window.innerHeight;
+          y = Math.random() * height;
           break;
       }
 
       if (elementType === 'icon') {
-        const icon = SOCIAL_ICONS[Math.floor(Math.random() * SOCIAL_ICONS.length)];
-        content = getSocialIconSVG(icon.name, 20);
+        content = SOCIAL_ICONS[Math.floor(Math.random() * SOCIAL_ICONS.length)];
       } else if (elementType === 'metric') {
         content = ENGAGEMENT_METRICS[Math.floor(Math.random() * ENGAGEMENT_METRICS.length)];
       } else {
@@ -129,7 +92,7 @@ export function SocialMediaBackground() {
       }
 
       const newElement: SocialElement = {
-        id: elementIdRef.current++,
+        id,
         x,
         y,
         type: elementType,
@@ -140,20 +103,20 @@ export function SocialMediaBackground() {
         direction,
       };
 
-      setElements(prev => [...prev, newElement]);
+      setElements(prev => [...prev.slice(-MAX_ELEMENTS + 1), newElement]);
 
       setTimeout(() => {
-        setElements(prev => prev.filter(e => e.id !== newElement.id));
+        setElements(prev => prev.filter(e => e.id !== id));
       }, newElement.duration + newElement.delay);
     }, intervalTime);
 
     return () => clearInterval(interval);
-  }, [intensity, isReducedMotion]);
+  }, [intensityMultiplier, isReducedMotion]);
 
   if (isReducedMotion) return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true" style={{ contain: 'strict' }}>
       {/* Social network grid */}
       <div
         className="absolute inset-0 opacity-[0.002] dark:opacity-[0.004]"
@@ -174,29 +137,26 @@ export function SocialMediaBackground() {
             transform: 'translate(-50%, -50%)',
             opacity: element.type === 'icon' ? 0.06 : 0.08,
             animation: `socialMove${element.direction.charAt(0).toUpperCase() + element.direction.slice(1)} ${element.duration}ms ease-out ${element.delay}ms forwards`,
+            willChange: 'transform, opacity',
           }}
         >
-          {element.type === 'icon' ? (
-            element.content
-          ) : (
-            <span
-              className="text-xs font-semibold text-emerald-500 dark:text-emerald-400 bg-emerald-50/10 dark:bg-emerald-950/10 px-2 py-1 rounded-full"
-              style={{ fontSize: `${element.size}px` }}
-            >
-              {element.content}
-            </span>
-          )}
+          <span
+            className="text-xs font-semibold text-emerald-500 dark:text-emerald-400 bg-emerald-50/10 dark:bg-emerald-950/10 px-2 py-1 rounded-full"
+            style={{ fontSize: `${element.size}px` }}
+          >
+            {element.content}
+          </span>
         </div>
       ))}
 
-      {/* Engagement pulse rings */}
+      {/* Engagement pulse rings - reduced count */}
       <div className="absolute inset-0">
-        {Array.from({ length: 4 }).map((_, i) => (
+        {[0, 1, 2].map((i) => (
           <div
             key={i}
             className="absolute rounded-full border border-emerald-500/10"
             style={{
-              left: `${20 + i * 20}%`,
+              left: `${20 + i * 25}%`,
               top: `${30 + i * 15}%`,
               width: `${40 + i * 20}px`,
               height: `${40 + i * 20}px`,
@@ -223,3 +183,5 @@ export function SocialMediaBackground() {
     </div>
   );
 }
+
+export const SocialMediaBackground = memo(SocialMediaBackgroundComponent);

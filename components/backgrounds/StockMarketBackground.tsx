@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, memo } from 'react';
 import { useBackground } from '@/contexts/BackgroundContext';
-import { useWindowDimensions } from '@/hooks/useWindowDimensions';
 
 interface Candle {
   id: number;
@@ -28,36 +27,45 @@ interface Ticker {
 
 const STOCK_SYMBOLS = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'NFLX'];
 
-export function StockMarketBackground() {
+// Max elements to prevent memory issues
+const MAX_CANDLES = 5;
+const MAX_TICKERS = 3;
+
+function StockMarketBackgroundComponent() {
   const [candles, setCandles] = useState<Candle[]>([]);
   const [tickers, setTickers] = useState<Ticker[]>([]);
   const { intensity, isReducedMotion } = useBackground();
-  const { width, height } = useWindowDimensions();
   const candleIdRef = useRef(0);
   const tickerIdRef = useRef(0);
+  const dimensionsRef = useRef({ width: 1920, height: 1080 });
 
-  const getIntensityMultiplier = () => {
+  // Cache dimensions once
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      dimensionsRef.current = { width: window.innerWidth, height: window.innerHeight };
+    }
+  }, []);
+
+  const intensityMultiplier = useMemo(() => {
     switch (intensity) {
       case 'low': return 0.3;
       case 'medium': return 0.6;
       case 'high': return 1.0;
       default: return 0.6;
     }
-  };
+  }, [intensity]);
 
-  // Generate candlestick charts
+  // Generate candlestick charts - slower interval
   useEffect(() => {
     if (isReducedMotion) return;
 
-    const w = width || 1920;
-    const h = height || 1080;
-
-    const multiplier = getIntensityMultiplier();
-    const intervalTime = Math.max(3000, 5000 / multiplier);
+    const { width: w, height: h } = dimensionsRef.current;
+    const intervalTime = Math.max(5000, 8000 / intensityMultiplier);
 
     const interval = setInterval(() => {
+      const id = candleIdRef.current++;
       const newCandle: Candle = {
-        id: candleIdRef.current++,
+        id,
         x: Math.random() * w,
         y: Math.random() * h,
         width: 2 + Math.random() * 4,
@@ -67,34 +75,32 @@ export function StockMarketBackground() {
         duration: 4000 + Math.random() * 3000,
       };
 
-      setCandles(prev => [...prev, newCandle]);
+      setCandles(prev => [...prev.slice(-MAX_CANDLES + 1), newCandle]);
 
       setTimeout(() => {
-        setCandles(prev => prev.filter(c => c.id !== newCandle.id));
+        setCandles(prev => prev.filter(c => c.id !== id));
       }, newCandle.duration + newCandle.delay);
     }, intervalTime);
 
     return () => clearInterval(interval);
-  }, [intensity, isReducedMotion]);
+  }, [intensityMultiplier, isReducedMotion]);
 
-  // Generate ticker symbols
+  // Generate ticker symbols - slower interval
   useEffect(() => {
     if (isReducedMotion) return;
 
-    const w = width || 1920;
-    const h = height || 1080;
-
-    const multiplier = getIntensityMultiplier();
-    const intervalTime = Math.max(2000, 3000 / multiplier);
+    const { width: w, height: h } = dimensionsRef.current;
+    const intervalTime = Math.max(4000, 6000 / intensityMultiplier);
 
     const interval = setInterval(() => {
+      const id = tickerIdRef.current++;
       const symbol = STOCK_SYMBOLS[Math.floor(Math.random() * STOCK_SYMBOLS.length)];
-      const isPositive = Math.random() > 0.4; // 60% chance positive
+      const isPositive = Math.random() > 0.4;
       const price = (Math.random() * 500 + 50).toFixed(2);
       const changePercent = (Math.random() * 5).toFixed(2);
 
       const newTicker: Ticker = {
-        id: tickerIdRef.current++,
+        id,
         symbol,
         price: `$${price}`,
         change: `${isPositive ? '+' : '-'}${changePercent}%`,
@@ -104,26 +110,22 @@ export function StockMarketBackground() {
         speed: 30 + Math.random() * 40,
       };
 
-      setTickers(prev => [...prev, newTicker]);
+      setTickers(prev => [...prev.slice(-MAX_TICKERS + 1), newTicker]);
 
       setTimeout(() => {
-        setTickers(prev => prev.filter(t => t.id !== newTicker.id));
+        setTickers(prev => prev.filter(t => t.id !== id));
       }, ((w + 400) / newTicker.speed) * 1000 + 1000);
     }, intervalTime);
 
     return () => clearInterval(interval);
-  }, [intensity, isReducedMotion]);
-
-  console.log('StockMarketBackground render:', { isReducedMotion, width, height, candles: candles.length, tickers: tickers.length });
+  }, [intensityMultiplier, isReducedMotion]);
 
   if (isReducedMotion) return null;
 
-  // Use fallback dimensions if not available yet
-  const fallbackWidth = width || 1920;
-  const fallbackHeight = height || 1080;
+  const { width: fallbackWidth, height: fallbackHeight } = dimensionsRef.current;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true" style={{ contain: 'strict' }}>
       {/* Candlestick Charts */}
       {candles.map(candle => (
         <div
@@ -139,6 +141,7 @@ export function StockMarketBackground() {
             borderRadius: '1px',
             boxShadow: `0 0 ${candle.width * 2}px ${candle.isGreen ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)'}`,
             animation: `stockFadeIn ${candle.duration}ms ease-out ${candle.delay}ms forwards`,
+            willChange: 'transform, opacity',
           }}
         />
       ))}
@@ -162,7 +165,7 @@ export function StockMarketBackground() {
           className="animate-pulse-subtle"
         />
         <path
-          d={`M0 ${fallbackHeight * 0.6} Q${fallbackWidth * 0.2} ${fallbackHeight * 0.4}, ${fallbackWidth * 0.4} ${fallbackHeight * 0.5} T${fallbackWidth * 0.8} ${fallbackHeight * 0.3} L${fallbackWidth} ${fallbackHeight * 0.35} L${fallbackWidth} 100% L0 100% Z`}
+          d={`M0 ${fallbackHeight * 0.6} Q${fallbackWidth * 0.2} ${fallbackHeight * 0.4}, ${fallbackWidth * 0.4} ${fallbackHeight * 0.5} T${fallbackWidth * 0.8} ${fallbackHeight * 0.3} L${fallbackWidth} ${fallbackHeight * 0.35} L${fallbackWidth} ${fallbackHeight} L0 ${fallbackHeight} Z`}
           fill="url(#stockGradient)"
         />
       </svg>
@@ -178,6 +181,7 @@ export function StockMarketBackground() {
             animation: `tickerScroll ${((fallbackWidth + 400) / ticker.speed)}s linear forwards`,
             opacity: 1,
             textShadow: '0 0 4px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3)',
+            willChange: 'transform',
           }}
         >
           <span className="text-emerald-400 dark:text-emerald-300 font-bold">
@@ -206,3 +210,5 @@ export function StockMarketBackground() {
     </div>
   );
 }
+
+export const StockMarketBackground = memo(StockMarketBackgroundComponent);

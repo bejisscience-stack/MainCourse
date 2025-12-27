@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, memo } from 'react';
 import { useBackground } from '@/contexts/BackgroundContext';
 
 interface ChartElement {
@@ -23,38 +23,49 @@ interface DataPoint {
   duration: number;
 }
 
-export function AnalyticsBackground() {
+const MAX_CHARTS = 3;
+const MAX_DATA_POINTS = 4;
+
+function AnalyticsBackgroundComponent() {
   const [charts, setCharts] = useState<ChartElement[]>([]);
   const [dataPoints, setDataPoints] = useState<DataPoint[]>([]);
   const { intensity, isReducedMotion } = useBackground();
   const chartIdRef = useRef(0);
   const dataPointIdRef = useRef(0);
+  const dimensionsRef = useRef({ width: 1920, height: 1080 });
 
-  const getIntensityMultiplier = () => {
+  // Cache dimensions once
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      dimensionsRef.current = { width: window.innerWidth, height: window.innerHeight };
+    }
+  }, []);
+
+  const intensityMultiplier = useMemo(() => {
     switch (intensity) {
       case 'low': return 0.4;
       case 'medium': return 0.7;
       case 'high': return 1.0;
       default: return 0.7;
     }
-  };
+  }, [intensity]);
 
-  // Generate floating charts
+  // Generate floating charts - slower interval
   useEffect(() => {
     if (isReducedMotion) return;
 
-    const multiplier = getIntensityMultiplier();
-    const baseInterval = 4000;
-    const intervalTime = Math.max(2000, baseInterval / multiplier);
+    const { width, height } = dimensionsRef.current;
+    const intervalTime = Math.max(6000, 8000 / intensityMultiplier);
 
     const interval = setInterval(() => {
+      const id = chartIdRef.current++;
       const types: ChartElement['type'][] = ['bar', 'pie', 'line', 'area'];
       const type = types[Math.floor(Math.random() * types.length)];
 
       const newChart: ChartElement = {
-        id: chartIdRef.current++,
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
+        id,
+        x: Math.random() * width,
+        y: Math.random() * height,
         type,
         size: 40 + Math.random() * 60,
         data: Array.from({ length: 5 }, () => Math.random() * 100),
@@ -62,43 +73,43 @@ export function AnalyticsBackground() {
         duration: 6000 + Math.random() * 4000,
       };
 
-      setCharts(prev => [...prev, newChart]);
+      setCharts(prev => [...prev.slice(-MAX_CHARTS + 1), newChart]);
 
       setTimeout(() => {
-        setCharts(prev => prev.filter(c => c.id !== newChart.id));
+        setCharts(prev => prev.filter(c => c.id !== id));
       }, newChart.duration + newChart.delay);
     }, intervalTime);
 
     return () => clearInterval(interval);
-  }, [intensity, isReducedMotion]);
+  }, [intensityMultiplier, isReducedMotion]);
 
-  // Generate data particles
+  // Generate data particles - slower interval
   useEffect(() => {
     if (isReducedMotion) return;
 
-    const multiplier = getIntensityMultiplier();
-    const baseInterval = 800;
-    const intervalTime = Math.max(400, baseInterval / multiplier);
+    const { width, height } = dimensionsRef.current;
+    const intervalTime = Math.max(2000, 3000 / intensityMultiplier);
 
     const interval = setInterval(() => {
+      const id = dataPointIdRef.current++;
       const newDataPoint: DataPoint = {
-        id: dataPointIdRef.current++,
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
+        id,
+        x: Math.random() * width,
+        y: Math.random() * height,
         value: Math.random() * 100,
         delay: Math.random() * 1000,
         duration: 3000 + Math.random() * 3000,
       };
 
-      setDataPoints(prev => [...prev, newDataPoint]);
+      setDataPoints(prev => [...prev.slice(-MAX_DATA_POINTS + 1), newDataPoint]);
 
       setTimeout(() => {
-        setDataPoints(prev => prev.filter(d => d.id !== newDataPoint.id));
+        setDataPoints(prev => prev.filter(d => d.id !== id));
       }, newDataPoint.duration + newDataPoint.delay);
     }, intervalTime);
 
     return () => clearInterval(interval);
-  }, [intensity, isReducedMotion]);
+  }, [intensityMultiplier, isReducedMotion]);
 
   const renderChart = (chart: ChartElement) => {
     const { size, data, type } = chart;
@@ -194,8 +205,10 @@ export function AnalyticsBackground() {
 
   if (isReducedMotion) return null;
 
+  const { width, height } = dimensionsRef.current;
+
   return (
-    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true" style={{ contain: 'strict' }}>
       {/* Dashboard grid background */}
       <div
         className="absolute inset-0 opacity-[0.002] dark:opacity-[0.004]"
@@ -216,6 +229,7 @@ export function AnalyticsBackground() {
             transform: 'translate(-50%, -50%)',
             opacity: 0.04,
             animation: `chartFloat ${chart.duration}ms ease-in-out ${chart.delay}ms forwards`,
+            willChange: 'transform, opacity',
           }}
         >
           {renderChart(chart)}
@@ -233,6 +247,7 @@ export function AnalyticsBackground() {
             transform: 'translate(-50%, -50%)',
             opacity: 0.06,
             animation: `dataPointFade ${point.duration}ms ease-out ${point.delay}ms forwards`,
+            willChange: 'transform, opacity',
           }}
         >
           {Math.round(point.value)}%
@@ -246,14 +261,10 @@ export function AnalyticsBackground() {
             <rect x="10" y="10" width="40" height="25" stroke="#10b981" strokeWidth="0.5" fill="none" opacity="0.2"/>
             <rect x="70" y="10" width="40" height="40" stroke="#10b981" strokeWidth="0.5" fill="none" opacity="0.2"/>
             <rect x="10" y="70" width="100" height="20" stroke="#10b981" strokeWidth="0.5" fill="none" opacity="0.2"/>
-
-            {/* Chart elements within pattern */}
             <rect x="15" y="25" width="4" height="10" fill="#10b981" opacity="0.1"/>
             <rect x="22" y="20" width="4" height="15" fill="#10b981" opacity="0.1"/>
             <rect x="29" y="27" width="4" height="8" fill="#10b981" opacity="0.1"/>
             <rect x="36" y="18" width="4" height="17" fill="#10b981" opacity="0.1"/>
-
-            {/* Pie chart simulation */}
             <circle cx="90" cy="30" r="12" stroke="#10b981" strokeWidth="1" fill="none" opacity="0.1"/>
             <path d="M 90 18 A 12 12 0 0 1 102 30 Z" fill="#10b981" opacity="0.08"/>
           </pattern>
@@ -261,15 +272,15 @@ export function AnalyticsBackground() {
         <rect width="100%" height="100%" fill="url(#analyticsPattern)"/>
       </svg>
 
-      {/* Performance indicators */}
+      {/* Performance indicators - reduced count */}
       <div className="absolute inset-0">
-        {Array.from({ length: 5 }).map((_, i) => (
+        {[0, 1, 2].map((i) => (
           <div
             key={i}
             className="absolute"
             style={{
-              left: `${15 + i * 18}%`,
-              top: `${10 + i * 15}%`,
+              left: `${15 + i * 25}%`,
+              top: `${10 + i * 20}%`,
             }}
           >
             <div
@@ -304,15 +315,9 @@ export function AnalyticsBackground() {
         >
           💹 +24.5K
         </div>
-        <div
-          className="absolute top-1/2 left-1/5 text-xs font-mono text-emerald-500/[0.04] dark:text-emerald-400/[0.06]"
-          style={{ animation: 'kpiPulse 3.5s ease-in-out infinite', animationDelay: '0.5s' }}
-        >
-          📊 85%
-        </div>
       </div>
 
-      {/* Data flow lines */}
+      {/* Data flow lines - static paths */}
       <svg className="absolute inset-0 w-full h-full">
         <defs>
           <linearGradient id="dataFlowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -321,10 +326,10 @@ export function AnalyticsBackground() {
             <stop offset="100%" stopColor="#10b981" stopOpacity="0"/>
           </linearGradient>
         </defs>
-        {Array.from({ length: 3 }).map((_, i) => (
+        {[0, 1].map((i) => (
           <path
             key={i}
-            d={`M0 ${window.innerHeight * (0.2 + i * 0.3)} Q${window.innerWidth * 0.3} ${window.innerHeight * (0.1 + i * 0.3)} ${window.innerWidth * 0.6} ${window.innerHeight * (0.25 + i * 0.3)} T${window.innerWidth} ${window.innerHeight * (0.2 + i * 0.3)}`}
+            d={`M0 ${height * (0.2 + i * 0.4)} Q${width * 0.3} ${height * (0.1 + i * 0.4)} ${width * 0.6} ${height * (0.25 + i * 0.4)} T${width} ${height * (0.2 + i * 0.4)}`}
             stroke="url(#dataFlowGradient)"
             strokeWidth="1"
             fill="none"
@@ -336,3 +341,5 @@ export function AnalyticsBackground() {
     </div>
   );
 }
+
+export const AnalyticsBackground = memo(AnalyticsBackgroundComponent);
