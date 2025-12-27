@@ -15,7 +15,7 @@ export interface EnrollmentRequest {
     id: string;
     title: string;
     thumbnail_url?: string | null;
-  };
+  } | null;
   profiles?: {
     id: string;
     username?: string | null;
@@ -45,7 +45,13 @@ async function fetchEnrollmentRequests(userId: string): Promise<EnrollmentReques
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data || [];
+  
+  // Transform the data to match the expected type
+  // Supabase returns courses as an array, but we expect a single object
+  return (data || []).map((item: any) => ({
+    ...item,
+    courses: Array.isArray(item.courses) && item.courses.length > 0 ? item.courses[0] : null,
+  }));
 }
 
 async function fetchPendingRequestForCourse(userId: string, courseId: string): Promise<EnrollmentRequest | null> {
@@ -70,7 +76,15 @@ async function fetchPendingRequestForCourse(userId: string, courseId: string): P
     .maybeSingle();
 
   if (error) throw error;
-  return data || null;
+  
+  if (!data) return null;
+  
+  // Transform the data to match the expected type
+  // Supabase returns courses as an array, but we expect a single object
+  return {
+    ...data,
+    courses: Array.isArray(data.courses) && data.courses.length > 0 ? data.courses[0] : null,
+  };
 }
 
 export function useEnrollmentRequests(userId: string | null) {
