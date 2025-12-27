@@ -72,7 +72,7 @@ export async function prefetchProfiles(userIds: string[]) {
         error: error?.message,
         errorCode: error?.code,
         requestedCount: uncachedIds.length,
-        fetchedCount: profiles?.length || 0,
+        fetchedCount: Array.isArray(profiles) ? profiles.length : 0,
       });
     }
   } catch (error) {
