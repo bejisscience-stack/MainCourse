@@ -106,7 +106,10 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
       .eq('id', userId)
       .single();
 
-    if (profile && !error) {
+    // Store error in a variable to avoid type narrowing issues
+    const fetchError = error;
+
+    if (profile && !fetchError) {
       const username = normalizeProfileUsername(profile);
       
       // Debug log
@@ -116,8 +119,8 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
           profileUsername: profile.username,
           normalizedUsername: username,
           profileEmail: profile.email,
-          hasError: !!error,
-          error: error?.message,
+          hasError: !!fetchError,
+          error: fetchError?.message,
         });
       } else {
         console.log(`✅ Fetched profile for user ${userId}:`, {
@@ -137,8 +140,8 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
     } else {
       console.error(`❌ Failed to fetch profile for ${userId}:`, {
         userId,
-        error: error?.message,
-        errorCode: error?.code,
+        error: fetchError?.message,
+        errorCode: fetchError?.code,
         hasProfile: !!profile,
       });
     }
