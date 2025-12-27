@@ -8,6 +8,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
+// TypeScript type guards - these are guaranteed to be strings after the check above
+const safeSupabaseUrl: string = supabaseUrl;
+const safeSupabaseAnonKey: string = supabaseAnonKey;
+
 /**
  * Create a Supabase client with service role key (bypasses RLS)
  * Use this ONLY on the server side for operations that need to bypass RLS
@@ -16,10 +20,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export function createServiceRoleClient() {
   if (!supabaseServiceRoleKey) {
     console.warn('SUPABASE_SERVICE_ROLE_KEY not set. Falling back to anon key (RLS will apply).');
-    return createClient(supabaseUrl, supabaseAnonKey);
+    return createClient(safeSupabaseUrl, safeSupabaseAnonKey);
   }
   
-  return createClient(supabaseUrl, supabaseServiceRoleKey, {
+  return createClient(safeSupabaseUrl, supabaseServiceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -39,7 +43,7 @@ export function createServiceRoleClient() {
  * Create a Supabase client for server-side use with a user's access token
  */
 export function createServerSupabaseClient(accessToken: string) {
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  return createClient(safeSupabaseUrl, safeSupabaseAnonKey, {
     global: {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -59,11 +63,11 @@ export function createServerSupabaseClient(accessToken: string) {
 export async function verifyTokenAndGetUser(accessToken: string) {
   try {
     // Call Supabase Auth API directly to verify the token
-    const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    const response = await fetch(`${safeSupabaseUrl}/auth/v1/user`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'apikey': supabaseAnonKey,
+        'apikey': safeSupabaseAnonKey,
       },
     });
 
