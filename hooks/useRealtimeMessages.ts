@@ -38,6 +38,9 @@ export async function prefetchProfiles(userIds: string[]) {
 
     // Store profiles in a variable to avoid type narrowing issues
     const profilesArray = profiles || [];
+    // Store error properties to avoid type narrowing issues
+    const errorMessage = error?.message;
+    const errorCode = error?.code;
 
     if (profilesArray.length > 0 && !error) {
       console.log(`✅ Prefetched ${profilesArray.length} profiles out of ${uncachedIds.length} requested`);
@@ -72,8 +75,8 @@ export async function prefetchProfiles(userIds: string[]) {
       }
     } else {
       console.error('❌ Failed to prefetch profiles:', {
-        error: error?.message,
-        errorCode: error?.code,
+        error: errorMessage,
+        errorCode: errorCode,
         requestedCount: uncachedIds.length,
         fetchedCount: profilesArray.length,
       });
@@ -108,6 +111,8 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
 
     // Store error in a variable to avoid type narrowing issues
     const fetchError = error;
+    const errorMessage = fetchError?.message;
+    const errorCode = fetchError?.code;
 
     if (profile && !fetchError) {
       const username = normalizeProfileUsername(profile);
@@ -120,7 +125,7 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
           normalizedUsername: username,
           profileEmail: profile.email,
           hasError: !!fetchError,
-          error: fetchError?.message,
+          error: errorMessage,
         });
       } else {
         console.log(`✅ Fetched profile for user ${userId}:`, {
@@ -140,8 +145,8 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
     } else {
       console.error(`❌ Failed to fetch profile for ${userId}:`, {
         userId,
-        error: fetchError?.message,
-        errorCode: fetchError?.code,
+        error: errorMessage,
+        errorCode: errorCode,
         hasProfile: !!profile,
       });
     }
