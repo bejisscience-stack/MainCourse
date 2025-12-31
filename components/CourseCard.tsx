@@ -53,10 +53,17 @@ function CourseCard({
     }).format(price);
   }, []);
 
-  const formattedPrice = useMemo(() => formatPrice(course.price), [formatPrice, course.price]);
-  const formattedOriginalPrice = useMemo(() => 
-    course.original_price ? formatPrice(course.original_price) : null, 
-    [formatPrice, course.original_price]
+  // Ensure prices are never displayed as negative - fallback to $0.00 for any edge cases
+  const safePrice = useMemo(() => Math.max(0, course.price || 0), [course.price]);
+  const safeOriginalPrice = useMemo(() =>
+    course.original_price ? Math.max(0, course.original_price) : null,
+    [course.original_price]
+  );
+
+  const formattedPrice = useMemo(() => formatPrice(safePrice), [formatPrice, safePrice]);
+  const formattedOriginalPrice = useMemo(() =>
+    safeOriginalPrice ? formatPrice(safeOriginalPrice) : null,
+    [formatPrice, safeOriginalPrice]
   );
 
   const handleThumbnailClick = useCallback(() => {
@@ -242,7 +249,7 @@ function CourseCard({
           <span className="text-xl font-semibold text-charcoal-950 dark:text-white">
             {formattedPrice}
           </span>
-          {formattedOriginalPrice && course.original_price && course.original_price > course.price && (
+          {formattedOriginalPrice && safeOriginalPrice && safeOriginalPrice > safePrice && (
             <span className="text-sm text-charcoal-400 dark:text-gray-500 line-through">
               {formattedOriginalPrice}
             </span>

@@ -152,13 +152,27 @@ export default function LecturerDashboard() {
       return;
     }
 
+    // Validate prices are non-negative
+    const bundlePriceValue = parseFloat(bundleFormData.price);
+    const bundleOriginalPriceValue = bundleFormData.original_price ? parseFloat(bundleFormData.original_price) : null;
+
+    if (isNaN(bundlePriceValue) || bundlePriceValue < 0) {
+      setError('Bundle price must be a valid non-negative number');
+      return;
+    }
+
+    if (bundleOriginalPriceValue !== null && (isNaN(bundleOriginalPriceValue) || bundleOriginalPriceValue < 0)) {
+      setError('Bundle original price must be a valid non-negative number');
+      return;
+    }
+
     try {
       const bundleData = {
         lecturer_id: user.id,
         title: bundleFormData.title,
         description: bundleFormData.description || null,
-        price: parseFloat(bundleFormData.price),
-        original_price: bundleFormData.original_price ? parseFloat(bundleFormData.original_price) : null,
+        price: bundlePriceValue,
+        original_price: bundleOriginalPriceValue,
         is_active: true,
       };
 
@@ -562,13 +576,27 @@ export default function LecturerDashboard() {
     e.preventDefault();
     setError(null);
 
+    // Validate prices are non-negative
+    const priceValue = parseFloat(formData.price);
+    const originalPriceValue = formData.original_price ? parseFloat(formData.original_price) : null;
+
+    if (isNaN(priceValue) || priceValue < 0) {
+      setError('Price must be a valid non-negative number');
+      return;
+    }
+
+    if (originalPriceValue !== null && (isNaN(originalPriceValue) || originalPriceValue < 0)) {
+      setError('Original price must be a valid non-negative number');
+      return;
+    }
+
     try {
       const courseData = {
         title: formData.title,
         description: formData.description || null,
         course_type: formData.course_type,
-        price: parseFloat(formData.price),
-        original_price: formData.original_price ? parseFloat(formData.original_price) : null,
+        price: priceValue,
+        original_price: originalPriceValue,
         author: formData.author,
         creator: formData.creator,
         intro_video_url: formData.intro_video_url || null,
@@ -1010,6 +1038,7 @@ export default function LecturerDashboard() {
                         <input
                           type="number"
                           step="0.01"
+                          min="0"
                           required
                           value={formData.price}
                           onChange={(e) => setFormData({ ...formData, price: e.target.value })}
@@ -1023,6 +1052,7 @@ export default function LecturerDashboard() {
                         <input
                           type="number"
                           step="0.01"
+                          min="0"
                           value={formData.original_price}
                           onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
                           className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
@@ -1445,6 +1475,7 @@ export default function LecturerDashboard() {
                         <input
                           type="number"
                           step="0.01"
+                          min="0"
                           required
                           value={bundleFormData.price}
                           onChange={(e) => setBundleFormData({ ...bundleFormData, price: e.target.value })}
@@ -1458,6 +1489,7 @@ export default function LecturerDashboard() {
                         <input
                           type="number"
                           step="0.01"
+                          min="0"
                           value={bundleFormData.original_price}
                           onChange={(e) => setBundleFormData({ ...bundleFormData, original_price: e.target.value })}
                           className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"

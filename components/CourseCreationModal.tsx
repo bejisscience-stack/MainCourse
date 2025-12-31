@@ -253,13 +253,29 @@ export default function CourseCreationModal({
     setError(null);
     setIsSubmitting(true);
 
+    // Validate prices are non-negative
+    const priceValue = parseFloat(formData.price);
+    const originalPriceValue = formData.original_price ? parseFloat(formData.original_price) : null;
+
+    if (isNaN(priceValue) || priceValue < 0) {
+      setError('Price must be a valid non-negative number');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (originalPriceValue !== null && (isNaN(originalPriceValue) || originalPriceValue < 0)) {
+      setError('Original price must be a valid non-negative number');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const courseData = {
         title: formData.title,
         description: formData.description || null,
         course_type: formData.course_type,
-        price: parseFloat(formData.price),
-        original_price: formData.original_price ? parseFloat(formData.original_price) : null,
+        price: priceValue,
+        original_price: originalPriceValue,
         author: formData.author,
         creator: formData.creator,
         intro_video_url: formData.intro_video_url || null,
@@ -410,6 +426,7 @@ export default function CourseCreationModal({
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   required
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
@@ -423,6 +440,7 @@ export default function CourseCreationModal({
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={formData.original_price}
                   onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
                   className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
