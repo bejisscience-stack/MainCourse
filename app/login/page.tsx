@@ -117,6 +117,8 @@ function LoginForm() {
       let destination = '/my-courses';
       if (redirectTo) {
         destination = redirectTo;
+      } else if (resolvedRole === 'admin') {
+        destination = '/admin';
       } else if (resolvedRole === 'lecturer') {
         destination = '/lecturer/dashboard';
       }
