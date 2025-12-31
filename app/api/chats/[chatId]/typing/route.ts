@@ -3,6 +3,24 @@ import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabas
 
 export const dynamic = 'force-dynamic';
 
+// Helper function to check if user is admin using RPC function (bypasses RLS)
+async function checkIsAdmin(supabase: any, userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .rpc('check_is_admin', { user_id: userId });
+
+    if (error) {
+      console.error('[Typing API] Error checking admin status:', error);
+      return false;
+    }
+
+    return data === true;
+  } catch (err) {
+    console.error('[Typing API] Exception checking admin:', err);
+    return false;
+  }
+}
+
 // POST /api/chats/:chatId/typing
 export async function POST(
   request: NextRequest,
@@ -50,32 +68,37 @@ export async function POST(
     }
 
     const courseId = channel.course_id;
-    
-    // Fetch course separately to get lecturer_id
-    const { data: course, error: courseError } = await supabase
-      .from('courses')
-      .select('lecturer_id')
-      .eq('id', courseId)
-      .single();
-    
-    const lecturerId = course?.lecturer_id;
 
-    // Check enrollment or lecturer status
-    const { data: enrollment } = await supabase
-      .from('enrollments')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('course_id', courseId)
-      .single();
+    // Check if user is admin first (admins can access all chats for moderation)
+    const isAdmin = await checkIsAdmin(supabase, user.id);
 
-    const isLecturer = lecturerId === user.id;
-    const isEnrolled = !!enrollment;
+    if (!isAdmin) {
+      // Fetch course separately to get lecturer_id
+      const { data: course, error: courseError } = await supabase
+        .from('courses')
+        .select('lecturer_id')
+        .eq('id', courseId)
+        .single();
 
-    if (!isEnrolled && !isLecturer) {
-      return NextResponse.json(
-        { error: 'Forbidden: You do not have access to this channel' },
-        { status: 403 }
-      );
+      const lecturerId = course?.lecturer_id;
+
+      // Check enrollment or lecturer status for non-admins
+      const { data: enrollment } = await supabase
+        .from('enrollments')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId)
+        .single();
+
+      const isLecturer = lecturerId === user.id;
+      const isEnrolled = !!enrollment;
+
+      if (!isEnrolled && !isLecturer) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have access to this channel' },
+          { status: 403 }
+        );
+      }
     }
 
     // Upsert typing indicator (expires in 3 seconds)

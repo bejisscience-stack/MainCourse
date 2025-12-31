@@ -4,6 +4,24 @@ import { normalizeProfileUsername } from '@/lib/username';
 
 export const dynamic = 'force-dynamic';
 
+// Helper function to check if user is admin using RPC function (bypasses RLS)
+async function checkIsAdmin(supabase: any, userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .rpc('check_is_admin', { user_id: userId });
+
+    if (error) {
+      console.error('[Chat API] Error checking admin status:', error);
+      return false;
+    }
+
+    return data === true;
+  } catch (err) {
+    console.error('[Chat API] Exception checking admin:', err);
+    return false;
+  }
+}
+
 // GET /api/chats/:chatId/messages
 export async function GET(
   request: NextRequest,
@@ -75,28 +93,36 @@ export async function GET(
       );
     }
 
-    // Check enrollment or lecturer status (can run in parallel with message fetch, but we need it for access check)
-    const { data: enrollment, error: enrollmentError } = await supabase
-      .from('enrollments')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('course_id', courseId)
-      .single();
+    // Check if user is admin first (admins can access all chats for moderation)
+    const isAdmin = await checkIsAdmin(supabase, user.id);
 
-    // enrollmentError is expected if user is not enrolled (no rows found)
-    // Only treat it as an error if it's not a "not found" type error
-    if (enrollmentError && enrollmentError.code !== 'PGRST116') {
-      console.error('Enrollment check error:', enrollmentError);
-    }
+    // If not admin, check enrollment or lecturer status
+    let isLecturer = false;
+    let isEnrolled = false;
 
-    const isLecturer = lecturerId === user.id;
-    const isEnrolled = !!enrollment;
+    if (!isAdmin) {
+      const { data: enrollment, error: enrollmentError } = await supabase
+        .from('enrollments')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId)
+        .single();
 
-    if (!isEnrolled && !isLecturer) {
-      return NextResponse.json(
-        { error: 'Access denied', details: 'You must be enrolled in this course or be the course lecturer to view messages' },
-        { status: 403 }
-      );
+      // enrollmentError is expected if user is not enrolled (no rows found)
+      // Only treat it as an error if it's not a "not found" type error
+      if (enrollmentError && enrollmentError.code !== 'PGRST116') {
+        console.error('Enrollment check error:', enrollmentError);
+      }
+
+      isLecturer = lecturerId === user.id;
+      isEnrolled = !!enrollment;
+
+      if (!isEnrolled && !isLecturer) {
+        return NextResponse.json(
+          { error: 'Access denied', details: 'You must be enrolled in this course or be the course lecturer to view messages' },
+          { status: 403 }
+        );
+      }
     }
 
     // Build query - fetch messages first without profile join due to RLS
@@ -413,111 +439,122 @@ export async function POST(
     
     const lecturerId = course.lecturer_id;
 
-    // Check enrollment or lecturer status
-    const { data: enrollment, error: enrollmentError } = await supabase
-      .from('enrollments')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('course_id', courseId)
-      .maybeSingle();
+    // Check if user is admin first (admins can access all chats for moderation)
+    const isAdmin = await checkIsAdmin(supabase, user.id);
 
-    const isLecturer = lecturerId === user.id;
-    
-    console.log('User access check:', {
-      userId: user.id,
-      courseId,
-      lecturerId,
-      isLecturer,
-      enrollmentExists: !!enrollment,
-      enrollmentError: enrollmentError?.message,
-    });
-    const isEnrolled = !!enrollment;
+    // Initialize access variables
+    let isLecturer = false;
+    let isEnrolled = false;
 
-    if (!isEnrolled && !isLecturer) {
-      return NextResponse.json(
-        { error: 'Forbidden: You do not have access to this channel' },
-        { status: 403 }
-      );
-    }
+    if (!isAdmin) {
+      // Check enrollment or lecturer status for non-admins
+      const { data: enrollment, error: enrollmentError } = await supabase
+        .from('enrollments')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId)
+        .maybeSingle();
 
-    // Check if this is a restricted channel (Lectures or Projects)
-    const channelName = channel.name?.toLowerCase() || '';
-    const isLecturesChannel = channelName === 'lectures' && channel.type === 'lectures';
-    const isProjectsChannel = channelName === 'projects';
-    const isRestrictedChannel = isLecturesChannel || isProjectsChannel;
+      isLecturer = lecturerId === user.id;
 
-    // Only lecturers can send messages in Lectures and Projects channels
-    // EXCEPT: Students can reply to project messages (submissions)
-    if (isRestrictedChannel && !isLecturer) {
-      // Allow replies to project messages (submissions)
-      if (isProjectsChannel && replyTo) {
-        try {
-          // Check if the message being replied to is a project by checking the projects table
-          const { data: project, error: projectCheckError } = await supabase
-            .from('projects')
-            .select('id')
-            .eq('message_id', replyTo)
-            .maybeSingle();
-          
-          // Log for debugging
-          console.log('Project check for submission:', {
-            replyTo,
-            projectFound: !!project,
-            error: projectCheckError,
-            channelId: chatId,
-            userId: user.id,
-          });
-          
-          // If there's a real error (not just "not found"), log it
-          if (projectCheckError && projectCheckError.code !== 'PGRST116') {
-            console.error('Error checking project:', projectCheckError);
-            // Don't block on query errors - allow if project exists
-          }
-          
-          if (project && project.id) {
-            // Allow submission - this is a reply to a project
-            console.log('Allowing submission - project found:', project.id);
-          } else {
-            console.warn('Blocking submission - project not found for message_id:', replyTo);
-            return NextResponse.json(
-              { 
-                error: 'Forbidden: You can only reply to project submissions. Only the course lecturer can send messages in this channel.',
-                details: `No project found for message ID: ${replyTo}`
-              },
-              { status: 403 }
-            );
-          }
-        } catch (checkError: any) {
-          console.error('Exception checking project:', checkError);
-          return NextResponse.json(
-            { 
-              error: 'Error validating submission',
-              details: checkError.message || 'Failed to verify project'
-            },
-            { status: 500 }
-          );
-        }
-      } else {
+      console.log('User access check:', {
+        userId: user.id,
+        courseId,
+        lecturerId,
+        isLecturer,
+        enrollmentExists: !!enrollment,
+        enrollmentError: enrollmentError?.message,
+      });
+      isEnrolled = !!enrollment;
+
+      if (!isEnrolled && !isLecturer) {
         return NextResponse.json(
-          { error: 'Forbidden: Only the course lecturer can send messages in this channel' },
+          { error: 'Forbidden: You do not have access to this channel' },
           { status: 403 }
         );
       }
-    }
 
-    // Check if user is muted by this lecturer (lecturer-wise mute)
-    const { data: mutedUser } = await supabase
-      .from('muted_users')
-      .select('id')
-      .eq('lecturer_id', lecturerId)
-      .eq('user_id', user.id)
-      .single();
+      // Check if this is a restricted channel (Lectures or Projects)
+      // Admins can post to any channel for moderation purposes
+      const channelName = channel.name?.toLowerCase() || '';
+      const isLecturesChannel = channelName === 'lectures' && channel.type === 'lectures';
+      const isProjectsChannel = channelName === 'projects';
+      const isRestrictedChannel = isLecturesChannel || isProjectsChannel;
 
-    if (mutedUser) {
-      return NextResponse.json(
-        { error: 'You have been muted by the lecturer' },
-        { status: 403 }
-      );
+      // Only lecturers can send messages in Lectures and Projects channels
+      // EXCEPT: Students can reply to project messages (submissions)
+      if (isRestrictedChannel && !isLecturer) {
+        // Allow replies to project messages (submissions)
+        if (isProjectsChannel && replyTo) {
+          try {
+            // Check if the message being replied to is a project by checking the projects table
+            const { data: project, error: projectCheckError } = await supabase
+              .from('projects')
+              .select('id')
+              .eq('message_id', replyTo)
+              .maybeSingle();
+
+            // Log for debugging
+            console.log('Project check for submission:', {
+              replyTo,
+              projectFound: !!project,
+              error: projectCheckError,
+              channelId: chatId,
+              userId: user.id,
+            });
+
+            // If there's a real error (not just "not found"), log it
+            if (projectCheckError && projectCheckError.code !== 'PGRST116') {
+              console.error('Error checking project:', projectCheckError);
+              // Don't block on query errors - allow if project exists
+            }
+
+            if (project && project.id) {
+              // Allow submission - this is a reply to a project
+              console.log('Allowing submission - project found:', project.id);
+            } else {
+              console.warn('Blocking submission - project not found for message_id:', replyTo);
+              return NextResponse.json(
+                {
+                  error: 'Forbidden: You can only reply to project submissions. Only the course lecturer can send messages in this channel.',
+                  details: `No project found for message ID: ${replyTo}`
+                },
+                { status: 403 }
+              );
+            }
+          } catch (checkError: any) {
+            console.error('Exception checking project:', checkError);
+            return NextResponse.json(
+              {
+                error: 'Error validating submission',
+                details: checkError.message || 'Failed to verify project'
+              },
+              { status: 500 }
+            );
+          }
+        } else {
+          return NextResponse.json(
+            { error: 'Forbidden: Only the course lecturer can send messages in this channel' },
+            { status: 403 }
+          );
+        }
+      }
+
+      // Check if user is muted by this lecturer (lecturer-wise mute)
+      // Admins cannot be muted
+      const { data: mutedUser } = await supabase
+        .from('muted_users')
+        .select('id')
+        .eq('lecturer_id', lecturerId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (mutedUser) {
+        return NextResponse.json(
+          { error: 'You have been muted by the lecturer' },
+          { status: 403 }
+        );
+      }
     }
 
     // Sanitize content (basic XSS prevention) - ensure at least one character for database constraint
@@ -534,14 +571,15 @@ export async function POST(
     }
 
     // Verify enrollment before inserting (for debugging)
-    if (!isLecturer) {
+    // Admins can send messages without enrollment for moderation purposes
+    if (!isLecturer && !isAdmin) {
       const { data: enrollmentCheck } = await supabase
         .from('enrollments')
         .select('id')
         .eq('course_id', courseId)
         .eq('user_id', user.id)
         .maybeSingle();
-      
+
       console.log('Enrollment check before insert:', {
         courseId,
         userId: user.id,
@@ -551,7 +589,7 @@ export async function POST(
 
       if (!enrollmentCheck) {
         return NextResponse.json(
-          { 
+          {
             error: 'Not enrolled in course',
             details: 'You must be enrolled in this course to send messages'
           },

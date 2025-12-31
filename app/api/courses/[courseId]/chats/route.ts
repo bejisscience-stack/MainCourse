@@ -3,6 +3,24 @@ import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabas
 
 export const dynamic = 'force-dynamic';
 
+// Helper function to check if user is admin using RPC function (bypasses RLS)
+async function checkIsAdmin(supabase: any, userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .rpc('check_is_admin', { user_id: userId });
+
+    if (error) {
+      console.error('[Chats API] Error checking admin status:', error);
+      return false;
+    }
+
+    return data === true;
+  } catch (err) {
+    console.error('[Chats API] Exception checking admin:', err);
+    return false;
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { courseId: string } }
@@ -34,28 +52,33 @@ export async function GET(
     // Create Supabase client for database operations
     const supabase = createServerSupabaseClient(token);
 
-    // Check if user is enrolled or is lecturer
-    const { data: enrollment } = await supabase
-      .from('enrollments')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('course_id', courseId)
-      .single();
+    // Check if user is admin first (admins can access all courses for moderation)
+    const isAdmin = await checkIsAdmin(supabase, user.id);
 
-    const { data: course } = await supabase
-      .from('courses')
-      .select('lecturer_id')
-      .eq('id', courseId)
-      .single();
+    if (!isAdmin) {
+      // Check if user is enrolled or is lecturer for non-admins
+      const { data: enrollment } = await supabase
+        .from('enrollments')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId)
+        .single();
 
-    const isLecturer = course?.lecturer_id === user.id;
-    const isEnrolled = !!enrollment;
+      const { data: course } = await supabase
+        .from('courses')
+        .select('lecturer_id')
+        .eq('id', courseId)
+        .single();
 
-    if (!isEnrolled && !isLecturer) {
-      return NextResponse.json(
-        { error: 'Forbidden: You are not enrolled in this course' },
-        { status: 403 }
-      );
+      const isLecturer = course?.lecturer_id === user.id;
+      const isEnrolled = !!enrollment;
+
+      if (!isEnrolled && !isLecturer) {
+        return NextResponse.json(
+          { error: 'Forbidden: You are not enrolled in this course' },
+          { status: 403 }
+        );
+      }
     }
 
     // Fetch channels (chats) for this course

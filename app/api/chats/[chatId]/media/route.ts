@@ -3,6 +3,24 @@ import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabas
 
 export const dynamic = 'force-dynamic';
 
+// Helper function to check if user is admin using RPC function (bypasses RLS)
+async function checkIsAdmin(supabase: any, userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .rpc('check_is_admin', { user_id: userId });
+
+    if (error) {
+      console.error('[Media API] Error checking admin status:', error);
+      return false;
+    }
+
+    return data === true;
+  } catch (err) {
+    console.error('[Media API] Exception checking admin:', err);
+    return false;
+  }
+}
+
 // Increase max file size to 50MB
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
@@ -114,43 +132,50 @@ export async function POST(
       );
     }
 
-    // Check enrollment or lecturer status
+    // Check if user is admin first (admins can access all chats for moderation)
+    const isAdmin = await checkIsAdmin(supabase, user.id);
+
+    // Get course for lecturer check
     const { data: course } = await supabase
       .from('courses')
       .select('lecturer_id')
       .eq('id', channel.course_id)
       .single();
 
-    const { data: enrollment } = await supabase
-      .from('enrollments')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('course_id', channel.course_id)
-      .single();
+    if (!isAdmin) {
+      // Check enrollment or lecturer status for non-admins
+      const { data: enrollment } = await supabase
+        .from('enrollments')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('course_id', channel.course_id)
+        .single();
 
-    const isLecturer = course?.lecturer_id === user.id;
-    const isEnrolled = !!enrollment;
+      const isLecturer = course?.lecturer_id === user.id;
+      const isEnrolled = !!enrollment;
 
-    if (!isEnrolled && !isLecturer) {
-      return NextResponse.json(
-        { error: 'Forbidden: You do not have access to this channel' },
-        { status: 403 }
-      );
-    }
+      if (!isEnrolled && !isLecturer) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have access to this channel' },
+          { status: 403 }
+        );
+      }
 
-    // Check if user is muted by this lecturer (lecturer-wise mute)
-    const { data: mutedUser } = await supabase
-      .from('muted_users')
-      .select('id')
-      .eq('lecturer_id', course?.lecturer_id)
-      .eq('user_id', user.id)
-      .single();
+      // Check if user is muted by this lecturer (lecturer-wise mute)
+      // Admins cannot be muted
+      const { data: mutedUser } = await supabase
+        .from('muted_users')
+        .select('id')
+        .eq('lecturer_id', course?.lecturer_id)
+        .eq('user_id', user.id)
+        .single();
 
-    if (mutedUser) {
-      return NextResponse.json(
-        { error: 'You have been muted and cannot upload files' },
-        { status: 403 }
-      );
+      if (mutedUser) {
+        return NextResponse.json(
+          { error: 'You have been muted and cannot upload files' },
+          { status: 403 }
+        );
+      }
     }
 
     // Generate unique file name with sanitized original name
