@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { normalizeProfileUsername } from '@/lib/username';
 import type { Message, ReplyPreview } from '@/types/message';
@@ -226,10 +226,6 @@ export function useRealtimeMessages({
       return;
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRealtimeMessages.ts:154',message:'Subscription created',data:{channelId,enabled},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A1'})}).catch(()=>{});
-    // #endregion
-
     // Subscribe to message changes
     const channel = supabase
       .channel(`messages:${channelId}`, {
@@ -367,9 +363,6 @@ export function useRealtimeMessages({
     subscriptionRef.current = channel;
 
     return () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useRealtimeMessages.ts:296',message:'Subscription cleanup',data:{channelId,hasSubscription:!!subscriptionRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A1'})}).catch(()=>{});
-      // #endregion
       if (subscriptionRef.current) {
         supabase.removeChannel(subscriptionRef.current);
         subscriptionRef.current = null;

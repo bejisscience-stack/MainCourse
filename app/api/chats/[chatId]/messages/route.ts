@@ -606,8 +606,7 @@ export async function POST(
       reply_to_id: replyTo,
       has_attachments: attachments && attachments.length > 0,
       isLecturer,
-      isRestrictedChannel,
-      isProjectsChannel,
+      isAdmin,
     });
 
     // Insert message

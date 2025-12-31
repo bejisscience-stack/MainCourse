@@ -557,15 +557,14 @@ export default function ChatArea({
       >
         <div className="min-h-full flex flex-col justify-end py-4">
           {isLoading && messages.length === 0 && channel?.id ? (
-            // Loading skeleton
-            <div className="space-y-4 px-4">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="flex gap-4 animate-pulse">
-                  <div className="w-10 h-10 rounded-full bg-navy-800 flex-shrink-0"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-navy-800 rounded w-24"></div>
-                    <div className="h-4 bg-navy-800 rounded" style={{ width: `${60 + Math.random() * 30}%` }}></div>
-                    {i % 3 === 0 && <div className="h-4 bg-navy-800 rounded w-1/2"></div>}
+            // Fast loading skeleton - minimal DOM for speed
+            <div className="space-y-3 px-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex gap-3 animate-pulse">
+                  <div className="w-9 h-9 rounded-full bg-navy-800/60 flex-shrink-0" />
+                  <div className="flex-1 space-y-1.5 py-1">
+                    <div className="h-3 bg-navy-800/60 rounded w-20" />
+                    <div className="h-3 bg-navy-800/40 rounded w-3/4" />
                   </div>
                 </div>
               ))}
@@ -579,17 +578,7 @@ export default function ChatArea({
                   <p className="text-sm">{error}</p>
                 </div>
                 <button
-                  onClick={async () => {
-                    // Refresh session before retrying if it's an auth error
-                    if (error.includes('Unauthorized') || error.includes('session') || error.includes('Session')) {
-                      try {
-                        await supabase.auth.refreshSession();
-                      } catch (refreshError) {
-                        console.warn('Session refresh failed:', refreshError);
-                      }
-                    }
-                    refetch();
-                  }}
+                  onClick={() => refetch()}
                   className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
                 >
                   Try Again

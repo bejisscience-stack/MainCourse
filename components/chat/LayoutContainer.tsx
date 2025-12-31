@@ -5,6 +5,7 @@ import { useI18n } from '@/contexts/I18nContext';
 import ServerSidebar from './ServerSidebar';
 import ChannelSidebar from './ChannelSidebar';
 import ChatArea from './ChatArea';
+import ChatErrorBoundary from './ChatErrorBoundary';
 import MemberSidebar from './MemberSidebar';
 import { useActiveServer } from '@/hooks/useActiveServer';
 import { useActiveChannel } from '@/hooks/useActiveChannel';
@@ -279,13 +280,15 @@ export default function LayoutContainer({
       )}
 
       {/* Chat area */}
-      <ChatArea
-        channel={activeChannel}
-        currentUserId={currentUserId}
-        isLecturer={isLecturer}
-        onSendMessage={onSendMessage || (() => {})}
-        onReaction={onReaction}
-      />
+      <ChatErrorBoundary>
+        <ChatArea
+          channel={activeChannel}
+          currentUserId={currentUserId}
+          isLecturer={isLecturer}
+          onSendMessage={onSendMessage || (() => {})}
+          onReaction={onReaction}
+        />
+      </ChatErrorBoundary>
     </div>
   );
 }
