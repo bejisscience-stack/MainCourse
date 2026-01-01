@@ -118,6 +118,54 @@ function CourseCard({
     setShowPaymentDialog(false);
   }, [onEnroll]);
 
+  // Get course type styling and icon
+  const getCourseTypeConfig = useCallback((courseType: string) => {
+    switch (courseType) {
+      case 'Editing':
+        return {
+          bgColor: 'bg-purple-100 dark:bg-purple-500/20',
+          textColor: 'text-purple-700 dark:text-purple-300',
+          borderColor: 'border-purple-200 dark:border-purple-500/40',
+          icon: (
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          ),
+        };
+      case 'Content Creation':
+        return {
+          bgColor: 'bg-cyan-100 dark:bg-cyan-500/20',
+          textColor: 'text-cyan-700 dark:text-cyan-300',
+          borderColor: 'border-cyan-200 dark:border-cyan-500/40',
+          icon: (
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          ),
+        };
+      case 'Website Creation':
+        return {
+          bgColor: 'bg-amber-100 dark:bg-amber-500/20',
+          textColor: 'text-amber-700 dark:text-amber-300',
+          borderColor: 'border-amber-200 dark:border-amber-500/40',
+          icon: (
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+            </svg>
+          ),
+        };
+      default:
+        return {
+          bgColor: 'bg-charcoal-100 dark:bg-navy-700',
+          textColor: 'text-charcoal-700 dark:text-gray-300',
+          borderColor: 'border-charcoal-200 dark:border-navy-600',
+          icon: null,
+        };
+    }
+  }, []);
+
+  const courseTypeConfig = useMemo(() => getCourseTypeConfig(course.course_type), [course.course_type, getCourseTypeConfig]);
+
   return (
     <>
       <div className="bg-white dark:bg-navy-800 rounded-3xl overflow-hidden shadow-soft hover:shadow-soft-lg dark:hover:shadow-glow-dark transition-all duration-200 border border-charcoal-100/50 dark:border-navy-700/50 hover:scale-[1.01] hover:-translate-y-0.5 will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}>
@@ -200,6 +248,14 @@ function CourseCard({
             </svg>
             <span className="text-charcoal-600 dark:text-gray-300 text-[10px] font-medium">{course.creator}</span>
           </div>
+
+          {/* Course Type Badge - Top right, prominent */}
+          <div className={`absolute top-2 right-2 ${courseTypeConfig.bgColor} backdrop-blur-sm px-2.5 py-1.5 rounded-lg flex items-center space-x-1.5 border ${courseTypeConfig.borderColor} z-20 shadow-md`}>
+            <span className={`${courseTypeConfig.textColor}`}>
+              {courseTypeConfig.icon}
+            </span>
+            <span className={`${courseTypeConfig.textColor} text-xs font-semibold`}>{course.course_type}</span>
+          </div>
         </div>
 
         {/* Course Info Section - Tighter spacing */}
@@ -212,8 +268,14 @@ function CourseCard({
         {/* Author */}
         <p className="text-sm text-charcoal-500 dark:text-gray-400">{course.author}</p>
 
-        {/* Badges: Bestseller, Rating, Reviews */}
-        <div className="flex flex-wrap items-center gap-1.5">
+        {/* Badges: Course Type (prominent), Bestseller, Rating, Reviews */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Course Type Badge - Prominent with color and icon */}
+          <span className={`${courseTypeConfig.bgColor} ${courseTypeConfig.textColor} border ${courseTypeConfig.borderColor} text-xs font-semibold px-2.5 py-1 rounded-md flex items-center space-x-1.5`}>
+            {courseTypeConfig.icon}
+            <span>{course.course_type}</span>
+          </span>
+
           {course.is_bestseller && (
             <span className="bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-medium px-2 py-0.5 rounded-md">
               {t('courseCard.bestseller')}
@@ -235,13 +297,6 @@ function CourseCard({
               {course.review_count.toLocaleString()} {course.review_count === 1 ? t('courseCard.rating') : t('courseCard.ratings')}
             </span>
           )}
-        </div>
-
-        {/* Course Type */}
-        <div>
-          <span className="text-[10px] font-medium text-charcoal-600 dark:text-gray-300 bg-charcoal-50 dark:bg-navy-700 px-2 py-0.5 rounded-md">
-            {course.course_type}
-          </span>
         </div>
 
         {/* Price */}

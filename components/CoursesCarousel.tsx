@@ -18,7 +18,7 @@ export default function CoursesCarousel() {
   const { user, role: userRole } = useUser();
   const { courses, isLoading, error: coursesError } = useCourses('All');
   const { enrolledCourseIds, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
-  const { t } = useI18n();
+  const { t, isReady: translationsReady } = useI18n();
 
   // Reset currentIndex when courses change
   useEffect(() => {
@@ -107,18 +107,18 @@ export default function CoursesCarousel() {
     }
   }, [user, userRole, enrolledCourseIds, router, mutateEnrollments]);
 
-  if (isLoading) {
+  if (isLoading || !translationsReady) {
     return (
       <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
         <div className="max-w-7xl mx-auto">
           <ScrollReveal delay={0} duration={600}>
             <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white text-center mb-12 tracking-tight">
-              {t('home.ourCourses')}
+              {translationsReady ? t('home.ourCourses') : 'Our Courses'}
             </h2>
           </ScrollReveal>
           <ScrollReveal delay={100} duration={600}>
             <div className="flex items-center justify-center">
-              <div className="text-charcoal-500 dark:text-gray-400">{t('home.loadingCourses')}</div>
+              <div className="text-charcoal-500 dark:text-gray-400">{translationsReady ? t('home.loadingCourses') : 'Loading courses...'}</div>
             </div>
           </ScrollReveal>
         </div>
@@ -132,21 +132,21 @@ export default function CoursesCarousel() {
         <div className="max-w-7xl mx-auto">
           <ScrollReveal delay={0} duration={600}>
             <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white text-center mb-12 tracking-tight">
-              {t('home.ourCourses')}
+              {translationsReady ? t('home.ourCourses') : 'Our Courses'}
             </h2>
           </ScrollReveal>
           <ScrollReveal delay={100} duration={600}>
             <div className="flex flex-col items-center justify-center">
               <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 text-red-700 dark:text-red-400 px-6 py-4 rounded-2xl max-w-md text-center shadow-soft">
-                <p className="font-medium mb-2">{t('home.errorLoadingCourses')}</p>
+                <p className="font-medium mb-2">{translationsReady ? t('home.errorLoadingCourses') : 'Error Loading Courses'}</p>
                 <p className="text-sm mb-4 text-red-600 dark:text-red-400">
-                  {coursesError.message || t('home.errorMessage')}
+                  {coursesError.message || (translationsReady ? t('home.errorMessage') : 'An error occurred')}
                 </p>
                 <button
                   onClick={() => window.location.reload()}
                   className="bg-charcoal-950 dark:bg-emerald-500 text-white px-5 py-2 rounded-full font-medium hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft text-sm"
                 >
-                  {t('common.retry')}
+                  {translationsReady ? t('common.retry') : 'Retry'}
                 </button>
               </div>
             </div>
@@ -171,7 +171,7 @@ export default function CoursesCarousel() {
       <div className="max-w-7xl mx-auto">
         <ScrollReveal delay={0} duration={600}>
           <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white text-center mb-12 tracking-tight">
-            {t('home.ourCourses')}
+            {translationsReady ? t('home.ourCourses') : 'Our Courses'}
           </h2>
         </ScrollReveal>
         

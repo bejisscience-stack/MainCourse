@@ -11,6 +11,7 @@ interface I18nContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
+  isReady: boolean;
 }
 
 const translations: Record<Language, Translations> = {
@@ -20,17 +21,22 @@ const translations: Record<Language, Translations> = {
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
+// Get initial language synchronously on client side
+function getInitialLanguage(): Language {
+  if (typeof window === 'undefined') return defaultLanguage;
+  return getStoredLanguage();
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(defaultLanguage);
-  const [mounted, setMounted] = useState(false);
+  const [language, setLanguageState] = useState<Language>(getInitialLanguage);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    const stored = getStoredLanguage();
-    setLanguageState(stored);
+    // Mark as ready after first render to ensure correct language is loaded
+    setIsReady(true);
     // Update HTML lang attribute
-    document.documentElement.lang = stored;
-  }, []);
+    document.documentElement.lang = language;
+  }, [language]);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
@@ -39,46 +45,35 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   };
 
   const t = (key: string, params?: Record<string, string | number>): string => {
-    if (!mounted) {
-      // Return Georgian translation during SSR (default language)
-      const keys = key.split('.');
-      let value: any = translations.ge;
-      for (const k of keys) {
-        value = value?.[k];
-      }
-      if (typeof value !== 'string') return key;
-      return params ? replaceParams(value, params) : value;
-    }
-
     const keys = key.split('.');
     let value: any = translations[language];
-    
+
     for (const k of keys) {
       value = value?.[k];
     }
-    
+
     if (typeof value !== 'string') {
-      // Fallback to Georgian if translation missing (default language)
-      let fallback: any = translations.ge;
+      // Fallback to English if translation missing in current language
+      let fallback: any = translations.en;
       for (const k of keys) {
         fallback = fallback?.[k];
       }
       if (typeof fallback === 'string') {
         value = fallback;
       } else {
-        // Final fallback to English if Georgian translation is missing
-        let englishFallback: any = translations.en;
+        // Final fallback to Georgian if English translation is missing
+        let georgianFallback: any = translations.ge;
         for (const k of keys) {
-          englishFallback = englishFallback?.[k];
+          georgianFallback = georgianFallback?.[k];
         }
-        if (typeof englishFallback === 'string') {
-          value = englishFallback;
+        if (typeof georgianFallback === 'string') {
+          value = georgianFallback;
         } else {
           return key; // Return key if no translation found
         }
       }
     }
-    
+
     return params ? replaceParams(value, params) : value;
   };
 
@@ -89,7 +84,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <I18nContext.Provider value={{ language, setLanguage, t }}>
+    <I18nContext.Provider value={{ language, setLanguage, t, isReady }}>
       {children}
     </I18nContext.Provider>
   );

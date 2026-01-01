@@ -377,6 +377,8 @@
   },
   "enrollment": {
     "requestEnrollment": "Request Enrollment",
+    "courseLockedTooltip": "Course locked - Click to enroll",
+    "videoLockedTooltip": "Complete the previous video to unlock",
     "goToCourse": "Go To Course",
     "pendingApproval": "Pending Approval",
     "requesting": "Requesting...",

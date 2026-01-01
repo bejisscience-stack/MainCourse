@@ -377,6 +377,8 @@
   },
   "enrollment": {
     "requestEnrollment": "რეგისტრაციის მოთხოვნა",
+    "courseLockedTooltip": "კურსი ჩაკეტილია - დააჭირეთ რეგისტრაციისთვის",
+    "videoLockedTooltip": "გახსნისთვის დაასრულეთ წინა ვიდეო",
     "goToCourse": "კურსზე გადასვლა",
     "pendingApproval": "დამტკიცების მოლოდინში",
     "requesting": "მოთხოვნა...",
