@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import type { Course } from './CourseCard';
 import { useI18n } from '@/contexts/I18nContext';
 import { useUser } from '@/hooks/useUser';
+import { supabase } from '@/lib/supabase';
 import EnrollmentStepOverview from './enrollment/EnrollmentStepOverview';
 import EnrollmentStepPayment from './enrollment/EnrollmentStepPayment';
 import EnrollmentStepReferral from './enrollment/EnrollmentStepReferral';
@@ -40,6 +41,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
     uploadedUrls: [],
   });
   const [stepErrors, setStepErrors] = useState<Record<number, string | null>>({});
+  const [isValidating, setIsValidating] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -116,7 +118,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
     setWizardData(prev => ({ ...prev, ...updates }));
   }, []);
 
-  const validateStep = useCallback((step: number): boolean => {
+  const validateStep = useCallback(async (step: number): Promise<boolean> => {
     let isValid = true;
     let error: string | null = null;
 
@@ -127,8 +129,47 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
       case 2: // Payment Instructions - always valid (just viewing)
         isValid = true;
         break;
-      case 3: // Referral - always valid (optional)
-        isValid = true;
+      case 3: // Referral - validate if code is provided
+        if (wizardData.referralCode && wizardData.referralCode.trim()) {
+          setIsValidating(true);
+          try {
+            // Get the current session token
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+              error = 'Please log in to validate referral code';
+              isValid = false;
+              break;
+            }
+
+            // Call API to validate referral code
+            const response = await fetch('/api/validate-referral-code', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                referralCode: wizardData.referralCode.trim(),
+              }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              error = data.error || 'Failed to validate referral code';
+              isValid = false;
+            } else if (!data.valid) {
+              error = 'Invalid referral code. Please check and try again.';
+              isValid = false;
+            }
+          } catch (err) {
+            console.error('Error validating referral code:', err);
+            error = 'Failed to validate referral code. Please try again.';
+            isValid = false;
+          } finally {
+            setIsValidating(false);
+          }
+        }
         break;
       case 4: // Upload - must have at least one image
         if (wizardData.uploadedImages.length === 0) {
@@ -146,10 +187,11 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
 
     setStepErrors(prev => ({ ...prev, [step]: error }));
     return isValid;
-  }, [wizardData.uploadedImages.length, t]);
+  }, [wizardData.uploadedImages.length, wizardData.referralCode, t]);
 
-  const handleNext = useCallback(() => {
-    if (validateStep(currentStep)) {
+  const handleNext = useCallback(async () => {
+    const isValid = await validateStep(currentStep);
+    if (isValid) {
       if (currentStep < TOTAL_STEPS) {
         setCurrentStep(prev => prev + 1);
         // Scroll to top of dialog on step change
@@ -225,6 +267,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
             course={wizardData.course}
             data={wizardData}
             updateData={updateWizardData}
+            error={stepErrors[3]}
           />
         );
       case 4:
@@ -372,13 +415,25 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
                 </button>
                 <button
                   onClick={handleNext}
-                  disabled={!!stepErrors[currentStep]}
+                  disabled={!!stepErrors[currentStep] || isValidating}
                   className="px-8 py-3 text-base font-semibold text-white bg-charcoal-950 dark:bg-emerald-500 rounded-full hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                 >
-                  <span>{t('common.next')}</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  {isValidating ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>{t('common.validating') || 'Validating...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{t('common.next')}</span>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

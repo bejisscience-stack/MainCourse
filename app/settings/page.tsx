@@ -10,6 +10,7 @@ import { useI18n } from '@/contexts/I18nContext';
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { useBalance } from '@/hooks/useBalance';
 import { useWithdrawalRequests } from '@/hooks/useWithdrawalRequests';
+import { useLecturerCourses } from '@/hooks/useLecturerCourses';
 import useSWR from 'swr';
 import type { Course } from '@/hooks/useCourses';
 
@@ -18,6 +19,7 @@ export default function SettingsPage() {
   const { t } = useI18n();
   const { user, isLoading: userLoading } = useUser();
   const { enrolledCourseIds, isLoading: enrollmentsLoading } = useEnrollments(user?.id || null);
+  const { courses: lecturerCourses, isLoading: lecturerCoursesLoading } = useLecturerCourses(user?.id || null);
   const [referralCode, setReferralCode] = useState<string>('');
   const [loadingReferralCode, setLoadingReferralCode] = useState(true);
   
@@ -115,7 +117,7 @@ export default function SettingsPage() {
 
   // Fetch enrolled courses only
   const enrolledIdsArray = useMemo(() => Array.from(enrolledCourseIds).sort(), [enrolledCourseIds]);
-  
+
   const { data: enrolledCourses = [], isLoading: coursesLoading } = useSWR<Course[]>(
     user && enrolledIdsArray.length > 0 ? ['enrolled-courses-for-referral', user.id, enrolledIdsArray.join(',')] : null,
     async () => {
@@ -134,6 +136,22 @@ export default function SettingsPage() {
     }
   );
 
+  // Combine enrolled courses and lecturer's created courses for referral links
+  const allCoursesForReferral = useMemo(() => {
+    const courseMap = new Map<string, Course>();
+
+    // Add enrolled courses
+    enrolledCourses.forEach(course => courseMap.set(course.id, course));
+
+    // Add lecturer's courses (won't duplicate if already enrolled)
+    lecturerCourses.forEach(course => courseMap.set(course.id, course));
+
+    // Convert map to array and sort by created_at
+    return Array.from(courseMap.values()).sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }, [enrolledCourses, lecturerCourses]);
+
   const getReferralLink = useCallback((courseId?: string) => {
     if (typeof window === 'undefined' || !referralCode) return '';
     const baseUrl = window.location.origin;
@@ -148,15 +166,24 @@ export default function SettingsPage() {
     setBankAccountError(null);
     setBankAccountSuccess(false);
 
-    if (!bankAccountInput || bankAccountInput.trim().length < 10) {
-      setBankAccountError(t('settings.invalidBankAccount') || 'Please enter a valid bank account number (at least 10 characters)');
+    if (!bankAccountInput || bankAccountInput.trim().length === 0) {
+      setBankAccountError(t('settings.invalidBankAccount') || 'Please enter a valid bank account number');
+      return;
+    }
+
+    // Convert to uppercase and validate Georgian IBAN format
+    const ibanUpper = bankAccountInput.trim().toUpperCase();
+    const georgianIbanPattern = /^GE[0-9]{2}[A-Z]{2}[0-9]{16}$/;
+
+    if (!georgianIbanPattern.test(ibanUpper)) {
+      setBankAccountError('Invalid Georgian IBAN format. Must be 22 characters: GE + 2 digits + 2 letters + 16 digits');
       return;
     }
 
     setIsUpdatingBankAccount(true);
 
     try {
-      await updateBankAccount(bankAccountInput.trim());
+      await updateBankAccount(ibanUpper);
       setBankAccountSuccess(true);
       setTimeout(() => setBankAccountSuccess(false), 3000);
     } catch (err: any) {
@@ -185,15 +212,24 @@ export default function SettingsPage() {
     }
 
     const accountToUse = bankAccountInput.trim() || bankAccountNumber;
-    if (!accountToUse || accountToUse.length < 10) {
+    if (!accountToUse) {
       setWithdrawalError(t('settings.bankAccountRequired') || 'Please enter a valid bank account number first');
+      return;
+    }
+
+    // Validate Georgian IBAN format
+    const ibanUpper = accountToUse.toUpperCase();
+    const georgianIbanPattern = /^GE[0-9]{2}[A-Z]{2}[0-9]{16}$/;
+
+    if (!georgianIbanPattern.test(ibanUpper)) {
+      setWithdrawalError('Invalid Georgian IBAN format. Must be 22 characters: GE + 2 digits + 2 letters + 16 digits');
       return;
     }
 
     setIsRequestingWithdrawal(true);
 
     try {
-      await requestWithdrawal(amount, accountToUse);
+      await requestWithdrawal(amount, ibanUpper);
       setWithdrawalSuccess(true);
       setWithdrawalAmount('');
       setShowWithdrawalForm(false);
@@ -694,24 +730,32 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Course-Specific Referral Links - Only enrolled courses */}
-                {coursesLoading || enrollmentsLoading ? (
+                {/* Course-Specific Referral Links - Enrolled courses and lecturer's created courses */}
+                {coursesLoading || enrollmentsLoading || lecturerCoursesLoading ? (
                   <div className="flex items-center justify-center py-4">
                     <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
                   </div>
-                ) : enrolledCourses.length > 0 ? (
+                ) : allCoursesForReferral.length > 0 ? (
                   <div>
                     <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-3">
                       {t('settings.courseSpecificLinks')}
                     </label>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {enrolledCourses.map((course) => {
+                      {allCoursesForReferral.map((course) => {
                         const courseLink = getReferralLink(course.id);
+                        const isLecturerCourse = lecturerCourses.some(c => c.id === course.id);
                         return (
                           <div key={course.id} className="bg-charcoal-50 dark:bg-navy-700/30 border border-charcoal-200 dark:border-navy-600 rounded-xl p-4">
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-charcoal-950 dark:text-white mb-2">{course.title}</p>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <p className="text-sm font-semibold text-charcoal-950 dark:text-white">{course.title}</p>
+                                  {isLecturerCourse && (
+                                    <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium rounded-full">
+                                      {t('settings.yourCourse') || 'Your Course'}
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="bg-white dark:bg-navy-800 border border-charcoal-200 dark:border-navy-600 rounded-lg px-3 py-2 mt-2">
                                   <p className="text-xs font-mono text-charcoal-700 dark:text-gray-300 break-all">{courseLink}</p>
                                 </div>
@@ -740,7 +784,7 @@ export default function SettingsPage() {
                 ) : (
                   <div className="bg-charcoal-50 dark:bg-navy-700/30 border border-charcoal-200 dark:border-navy-600 rounded-xl p-4">
                     <p className="text-sm text-charcoal-600 dark:text-gray-400 text-center">
-                      {t('settings.noEnrolledCourses') || 'You need to enroll in courses to generate course-specific referral links.'}
+                      {t('settings.noCoursesForReferral') || 'You need to enroll in or create courses to generate course-specific referral links.'}
                     </p>
                   </div>
                 )}

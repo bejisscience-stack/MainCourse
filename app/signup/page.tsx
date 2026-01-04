@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signUp } from '@/lib/auth';
 import { useI18n } from '@/contexts/I18nContext';
+import { supabase } from '@/lib/supabase';
 
 function SignUpForm() {
   const router = useRouter();
@@ -18,18 +19,42 @@ function SignUpForm() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [referralCode, setReferralCode] = useState<string>('');
+  const [referralError, setReferralError] = useState<string | null>(null);
   const [courseId, setCourseId] = useState<string | null>(null);
 
   // Get referral code and course ID from URL
   useEffect(() => {
-    const ref = searchParams.get('ref');
-    const course = searchParams.get('course');
-    if (ref) {
-      setReferralCode(ref.toUpperCase().trim());
-    }
-    if (course) {
-      setCourseId(course);
-    }
+    const validateReferralCode = async () => {
+      const ref = searchParams.get('ref');
+      const course = searchParams.get('course');
+
+      if (ref) {
+        const normalizedRef = ref.toUpperCase().trim();
+
+        // Validate referral code exists in database
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('referral_code')
+          .eq('referral_code', normalizedRef)
+          .single();
+
+        if (error || !data) {
+          // Referral code is invalid
+          setReferralError(`Invalid referral code: ${normalizedRef}`);
+          setReferralCode(''); // Don't set the referral code
+        } else {
+          // Referral code is valid
+          setReferralCode(normalizedRef);
+          setReferralError(null);
+        }
+      }
+
+      if (course) {
+        setCourseId(course);
+      }
+    };
+
+    validateReferralCode();
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -95,6 +120,11 @@ function SignUpForm() {
           {referralCode && (
             <div className="mt-4 bg-emerald-50 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 px-4 py-3 rounded-lg text-sm text-center">
               {t('auth.referralLinkDetected')?.replace('{{code}}', referralCode) || `You've been referred by someone! Referral code: ${referralCode}`}
+            </div>
+          )}
+          {referralError && (
+            <div className="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm text-center">
+              {referralError}
             </div>
           )}
         </div>

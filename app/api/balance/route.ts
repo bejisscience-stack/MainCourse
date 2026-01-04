@@ -98,11 +98,13 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Validate bank account number format (basic validation)
-    const trimmedAccount = bankAccountNumber.trim();
-    if (trimmedAccount.length < 10 || trimmedAccount.length > 34) {
+    // Validate Georgian IBAN format
+    const ibanUpper = bankAccountNumber.trim().toUpperCase();
+    const georgianIbanPattern = /^GE[0-9]{2}[A-Z]{2}[0-9]{16}$/;
+
+    if (!georgianIbanPattern.test(ibanUpper)) {
       return NextResponse.json(
-        { error: 'Invalid bank account number format' },
+        { error: 'Invalid Georgian IBAN format. Must be 22 characters: GE + 2 digits + 2 letters + 16 digits' },
         { status: 400 }
       );
     }
@@ -111,7 +113,7 @@ export async function PATCH(request: NextRequest) {
 
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ bank_account_number: trimmedAccount })
+      .update({ bank_account_number: ibanUpper })
       .eq('id', user.id);
 
     if (updateError) {
@@ -122,9 +124,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      bankAccountNumber: trimmedAccount 
+      bankAccountNumber: ibanUpper
     });
   } catch (error: any) {
     console.error('Error in PATCH /api/balance:', error);

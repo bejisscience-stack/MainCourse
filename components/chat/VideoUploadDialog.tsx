@@ -47,8 +47,8 @@ export default function VideoUploadDialog({
   const [videoLink, setVideoLink] = useState('');
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [budget, setBudget] = useState('');
-  const [minViews, setMinViews] = useState('');
-  const [maxViews, setMaxViews] = useState('');
+  const [minViews, setMinViews] = useState('5000');
+  const [maxViews, setMaxViews] = useState('100000');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -71,8 +71,8 @@ export default function VideoUploadDialog({
       setVideoLink('');
       setVideoFile(null);
       setBudget('');
-      setMinViews('');
-      setMaxViews('');
+      setMinViews('5000'); // Reset to default value
+      setMaxViews('100000'); // Reset to default value
       setName('');
       setDescription('');
       setSelectedPlatforms([]);

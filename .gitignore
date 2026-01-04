@@ -50,3 +50,19 @@ next-env.d.ts
 
 
 
+# Add to your .gitignore to prevent cache issues
+.next/
+out/
+dist/
+*.tsbuildinfo
+.turbo/
+
+# macOS file system artifacts
+.DS_Store
+._*
+*.swp
+*.swo
+*~
+
+# Next.js artifacts that cause corruption
+.next/cache*

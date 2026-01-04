@@ -1,7 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  
+
+  // Fix file watching issues on macOS
+  webpack: (config, { isServer }) => {
+    // Disable file system caching to prevent corruption
+    config.cache = false;
+
+    // Better file watching for macOS
+    config.watchOptions = {
+      poll: 1000, // Check for changes every second
+      aggregateTimeout: 300,
+      ignored: ['**/node_modules', '**/.git', '**/.next'],
+    };
+
+    return config;
+  },
+
   // Performance optimizations
   compress: true,
   

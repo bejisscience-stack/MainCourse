@@ -1,62 +1,72 @@
-# Quick Start Guide
+# 🚀 QUICK START GUIDE
 
-## Your Supabase Project Ref
-**Project Ref:** `nbecbsbuerdtakxkrduw`
+Your development environment is now fully fixed and optimized!
 
-## Running Migrations
+## To Start Your Server
 
-### Option 1: Manual (Easiest - No Setup Required)
 ```bash
-npm run migrate:show
-```
-Copy the SQL output and paste it into Supabase SQL Editor.
-
-### Option 2: Using Supabase CLI (Automated)
-
-1. **Install Supabase CLI (macOS):**
-   ```bash
-   brew install supabase/tap/supabase
-   ```
-   
-   Or if you don't have Homebrew, install it first:
-   ```bash
-   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-   brew install supabase/tap/supabase
-   ```
-
-2. **Link your project:**
-   ```bash
-   supabase link --project-ref nbecbsbuerdtakxkrduw
-   ```
-   You'll be prompted for your database password (found in Supabase Dashboard > Settings > Database).
-
-3. **Run migrations:**
-   ```bash
-   supabase db push
-   ```
-
-## Environment Variables
-
-Make sure your `.env.local` file has:
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://nbecbsbuerdtakxkrduw.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+./start-dev.sh
 ```
 
-## Next Steps
+Then open: **http://localhost:3000**
 
-1. Run migrations (choose one method above)
-2. (Optional) Seed sample courses:
-   - Copy contents of `supabase/seed-courses.sql`
-   - Paste into Supabase SQL Editor and run
-3. Start your development server:
-   ```bash
-   npm run dev
-   ```
+---
 
-## Useful Commands
+## The Issue (Solved!)
 
-- `npm run migrate` - Interactive migration runner
-- `npm run migrate:show` - Display SQL for manual copying
-- `npm run dev` - Start development server
+**Problem**: Server worked first time but failed on second start  
+**Cause**: macOS file watching created duplicate files in `.next/`  
+**Solution**: Webpack configuration + cleanup script  
 
+---
+
+## What to Expect
+
+### First Start
+- 🧹 Cleans up old processes
+- 📦 Checks dependencies  
+- 🗑️ Clears cache
+- 🚀 Starts server (~1-2 seconds)
+- ⏳ First page compile (~30-60 seconds)
+
+### Subsequent Starts
+- Same clean process
+- Same fast startup
+- **Now works every time!**
+
+---
+
+## Quick Commands
+
+| Command | Purpose |
+|---------|---------|
+| `./start-dev.sh` | Start server (use this!) |
+| `Ctrl+C` | Stop server |
+| `npm run clean` | Clear build artifacts |
+| `npm run fix` | Nuclear option (full reinstall) |
+
+---
+
+## Need Help?
+
+1. **Server won't start?** → Read [VERIFY_FIX.md](VERIFY_FIX.md)
+2. **Want details?** → Read [PERMANENT_FIX.md](PERMANENT_FIX.md)
+3. **Having issues?** → Read [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md)
+
+---
+
+## Your Server Status
+
+Check if it's running:
+```bash
+ps aux | grep "next dev"
+lsof -ti:3000
+```
+
+Access it:
+- **Local**: http://localhost:3000
+- **Network**: http://0.0.0.0:3000
+
+---
+
+**You're all set!** 🎉

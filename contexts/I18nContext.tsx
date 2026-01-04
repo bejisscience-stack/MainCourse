@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Language, getStoredLanguage, setStoredLanguage, defaultLanguage } from '@/lib/i18n';
+import { Language, getStoredLanguage, setStoredLanguage } from '@/lib/i18n';
 import enTranslations from '@/locales/en.json';
 import geTranslations from '@/locales/ge.json';
 
@@ -21,20 +21,28 @@ const translations: Record<Language, Translations> = {
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
-// Get initial language synchronously on client side
-function getInitialLanguage(): Language {
-  if (typeof window === 'undefined') return defaultLanguage;
-  return getStoredLanguage();
+interface I18nProviderProps {
+  children: ReactNode;
+  initialLanguage: Language;
 }
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(getInitialLanguage);
+export function I18nProvider({ children, initialLanguage }: I18nProviderProps) {
+  // Use initialLanguage from server to prevent hydration mismatch
+  const [language, setLanguageState] = useState<Language>(initialLanguage);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    // After hydration, sync with cookie if user changed language in another tab
+    const storedLang = getStoredLanguage();
+    if (storedLang !== language) {
+      setLanguageState(storedLang);
+    }
     // Mark as ready after first render to ensure correct language is loaded
     setIsReady(true);
-    // Update HTML lang attribute
+  }, []);
+
+  useEffect(() => {
+    // Update HTML lang attribute whenever language changes
     document.documentElement.lang = language;
   }, [language]);
 

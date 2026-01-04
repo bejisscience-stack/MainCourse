@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { I18nProvider } from "@/contexts/I18nContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { BackgroundProvider } from "@/contexts/BackgroundContext";
+import { Language, defaultLanguage, LANGUAGE_COOKIE_NAME } from "@/lib/i18n";
 import dynamic from "next/dynamic";
 import ScrollPrevention from "@/components/ScrollPrevention";
 
@@ -41,8 +43,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Read language from cookie on server to prevent hydration mismatch
+  const cookieStore = cookies();
+  const languageCookie = cookieStore.get(LANGUAGE_COOKIE_NAME);
+  const initialLanguage: Language =
+    (languageCookie?.value === 'en' || languageCookie?.value === 'ge')
+      ? languageCookie.value
+      : defaultLanguage;
+
   return (
-      <html lang="ge" className={`${inter.variable} dark`} suppressHydrationWarning>
+      <html lang={initialLanguage} className={`${inter.variable} dark`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -53,7 +63,7 @@ export default function RootLayout({
                   document.documentElement.classList.add('dark');
                   localStorage.setItem('theme', 'dark');
                 } catch (e) {}
-                
+
               })();
             `,
           }}
@@ -62,7 +72,7 @@ export default function RootLayout({
       <body className={`${inter.className} overflow-x-hidden`}>
         <ThemeProvider>
           <BackgroundProvider>
-            <I18nProvider>
+            <I18nProvider initialLanguage={initialLanguage}>
               <ScrollPrevention />
               <GlobalBackgroundManager />
               <div className="min-h-full w-full overflow-x-hidden">
