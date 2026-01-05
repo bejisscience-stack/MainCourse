@@ -3,52 +3,94 @@ import { createServerSupabaseClient, createServiceRoleClient, verifyTokenAndGetU
 
 export const dynamic = 'force-dynamic';
 
-// Helper function to check if user is admin using RPC function (bypasses RLS)
-async function checkAdmin(supabase: any, userId: string): Promise<boolean> {
-  try {
-    const { data, error } = await supabase
-      .rpc('check_is_admin', { user_id: userId });
+// Generate a simple request ID for tracking
+function generateRequestId(): string {
+  return `req_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+}
 
-    if (error) {
-      console.error('[Admin API] Error checking admin status:', error);
-      return false;
+// Retry with exponential backoff for server-side operations
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 500,
+  requestId: string = ''
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      console.error(`[Admin API ${requestId}] Attempt ${attempt + 1}/${maxRetries} failed:`, error.message);
+
+      if (attempt < maxRetries - 1) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
+  }
 
-    return data === true;
+  throw lastError || new Error('All retry attempts failed');
+}
+
+// Helper function to check if user is admin using RPC function (bypasses RLS)
+async function checkAdmin(supabase: any, userId: string, requestId: string = ''): Promise<boolean> {
+  try {
+    const result = await retryWithBackoff(async () => {
+      const { data, error } = await supabase
+        .rpc('check_is_admin', { user_id: userId });
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    }, 3, 500, requestId);
+
+    return result === true;
   } catch (err) {
-    console.error('[Admin API] Exception checking admin:', err);
+    console.error(`[Admin API ${requestId}] Exception checking admin after retries:`, err);
     return false;
   }
 }
 
 // GET: Fetch all enrollment requests (admin only)
 export async function GET(request: NextRequest) {
+  const requestId = generateRequestId();
+  const startTime = Date.now();
+
+  console.log(`[Admin API ${requestId}] Request started at ${new Date().toISOString()}`);
+
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log(`[Admin API ${requestId}] Missing or invalid authorization header`);
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized', requestId },
         { status: 401 }
       );
     }
 
     const token = authHeader.replace('Bearer ', '');
     const { user, error: userError } = await verifyTokenAndGetUser(token);
-    
+
     if (userError || !user) {
+      console.log(`[Admin API ${requestId}] Token verification failed:`, userError?.message);
       return NextResponse.json(
-        { error: 'Unauthorized', details: userError?.message },
+        { error: 'Unauthorized', details: userError?.message, requestId },
         { status: 401 }
       );
     }
 
     const supabase = createServerSupabaseClient(token);
 
-    // Check if user is admin
-    const isAdmin = await checkAdmin(supabase, user.id);
+    // Check if user is admin with retry
+    const isAdmin = await checkAdmin(supabase, user.id, requestId);
     if (!isAdmin) {
+      console.log(`[Admin API ${requestId}] User ${user.id} is not admin`);
       return NextResponse.json(
-        { error: 'Forbidden: Admin access required' },
+        { error: 'Forbidden: Admin access required', requestId },
         { status: 403 }
       );
     }
@@ -60,7 +102,7 @@ export async function GET(request: NextRequest) {
     // Ensure we pass null instead of empty string for "all" requests
     const filterStatus = status && status !== 'all' && status.trim() !== '' ? status : null;
 
-    console.log('[Admin API] Fetching requests, filter:', filterStatus || 'all');
+    console.log(`[Admin API ${requestId}] Fetching requests, filter:`, filterStatus || 'all');
 
     // Fetch enrollment requests using service role to bypass RLS entirely
     let requests: any[] = [];
@@ -221,12 +263,15 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error: any) {
-    console.error('[Admin API] Unhandled exception:', error);
-    console.error('[Admin API] Error stack:', error.stack);
+    const duration = Date.now() - startTime;
+    console.error(`[Admin API ${requestId}] Unhandled exception after ${duration}ms:`, error);
+    console.error(`[Admin API ${requestId}] Error stack:`, error.stack);
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
-        details: error.message || 'An unexpected error occurred'
+        details: error.message || 'An unexpected error occurred',
+        requestId,
+        timestamp: new Date().toISOString()
       },
       { status: 500 }
     );

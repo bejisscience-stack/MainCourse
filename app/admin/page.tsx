@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useUser } from '@/hooks/useUser';
 import { useAdminEnrollmentRequests } from '@/hooks/useAdminEnrollmentRequests';
 import { useAdminBundleEnrollmentRequests } from '@/hooks/useAdminBundleEnrollmentRequests';
@@ -17,6 +18,32 @@ import type { WithdrawalRequest } from '@/types/balance';
 import type { Course } from '@/components/CourseCard';
 
 type TabType = 'overview' | 'enrollment-requests' | 'withdrawals' | 'courses';
+
+// Retry with exponential backoff utility
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      console.error(`[Admin Page] Attempt ${attempt + 1}/${maxRetries} failed:`, error.message);
+
+      if (attempt < maxRetries - 1) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`[Admin Page] Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError || new Error('All retry attempts failed');
+}
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -123,24 +150,29 @@ export default function AdminDashboard() {
   // Only run once on mount, not when dependencies change
   useEffect(() => {
     let isMounted = true;
-    
+
     const verifyAdminDirectly = async () => {
       setIsCheckingAdmin(true);
       console.log('[Admin Page] === DIRECT ADMIN VERIFICATION ===');
-      
+
       try {
-        // Get current session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
+        // Get current session with retry
+        const session = await retryWithBackoff(async () => {
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError) {
+            throw sessionError;
+          }
+          return session;
+        }, 3, 500);
+
         if (!isMounted) return;
-        
-        console.log('[Admin Page] Session check:', { 
-          hasSession: !!session, 
-          userId: session?.user?.id,
-          sessionError 
+
+        console.log('[Admin Page] Session check:', {
+          hasSession: !!session,
+          userId: session?.user?.id
         });
-        
-        if (sessionError || !session?.user) {
+
+        if (!session?.user) {
           console.log('[Admin Page] No session, redirecting to login');
           if (isMounted) {
             setIsAdminVerified(false);
@@ -149,32 +181,43 @@ export default function AdminDashboard() {
           }
           return;
         }
-        
+
         const userId = session.user.id;
         console.log('[Admin Page] Checking admin status for user:', userId);
-        
-        // Use RPC function to check admin status (bypasses RLS)
-        const { data: isAdmin, error: rpcError } = await supabase
-          .rpc('check_is_admin', { user_id: userId });
-        
+
+        // Use RPC function to check admin status (bypasses RLS) with retry
+        const isAdmin = await retryWithBackoff(async () => {
+          const { data, error: rpcError } = await supabase
+            .rpc('check_is_admin', { user_id: userId });
+
+          if (rpcError) {
+            console.error('[Admin Page] RPC error:', rpcError);
+            throw rpcError;
+          }
+          return data;
+        }, 3, 1000);
+
         if (!isMounted) return;
-        
-        console.log('[Admin Page] RPC check_is_admin result:', { 
-          isAdmin, 
-          error: rpcError
-        });
-        
-        if (!rpcError && isAdmin === true) {
-          console.log('[Admin Page] ✓✓✓ DIRECT VERIFICATION: User IS admin!');
+
+        console.log('[Admin Page] RPC check_is_admin result:', { isAdmin });
+
+        if (isAdmin === true) {
+          console.log('[Admin Page] DIRECT VERIFICATION: User IS admin!');
           setIsAdminVerified(true);
         } else {
-          console.log('[Admin Page] ❌ DIRECT VERIFICATION: User is NOT admin');
+          console.log('[Admin Page] DIRECT VERIFICATION: User is NOT admin');
           setIsAdminVerified(false);
         }
       } catch (err: any) {
-        console.error('[Admin Page] Error in direct admin verification:', err);
+        console.error('[Admin Page] Error in direct admin verification after retries:', err);
         if (isMounted) {
-          setIsAdminVerified(false);
+          // On persistent failure, check if hook has admin status as fallback
+          if (userRole === 'admin') {
+            console.log('[Admin Page] Using hook fallback - user is admin');
+            setIsAdminVerified(true);
+          } else {
+            setIsAdminVerified(false);
+          }
         }
       } finally {
         if (isMounted) {
@@ -182,9 +225,9 @@ export default function AdminDashboard() {
         }
       }
     };
-    
+
     verifyAdminDirectly();
-    
+
     return () => {
       isMounted = false;
     };
@@ -455,6 +498,9 @@ export default function AdminDashboard() {
 
           {/* Tab Content */}
           {activeTab === 'overview' && (
+            <ErrorBoundary
+              onError={(error) => console.error('[Admin Dashboard] Overview section error:', error)}
+            >
             <div className="space-y-6">
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -563,9 +609,13 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+            </ErrorBoundary>
           )}
 
           {activeTab === 'enrollment-requests' && (
+            <ErrorBoundary
+              onError={(error) => console.error('[Admin Dashboard] Enrollment requests section error:', error)}
+            >
             <div>
               {/* Manual Refresh Button and Debug Info */}
               <div className="mb-4 flex justify-between items-center">
@@ -637,10 +687,30 @@ export default function AdminDashboard() {
                   <p className="text-navy-700">Loading enrollment requests...</p>
                 </div>
               ) : requests.length === 0 ? (
-                <div className="bg-navy-50 border border-navy-100 rounded-lg p-8 text-center text-navy-700">
-                  <p className="text-lg font-medium">
-                    No {statusFilter === 'all' ? '' : statusFilter} enrollment requests found
+                <div className="bg-navy-50 border border-navy-100 rounded-lg p-12 text-center">
+                  <div className="mb-4">
+                    <svg className="w-16 h-16 mx-auto text-navy-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-navy-900 mb-2">
+                    No {statusFilter === 'all' ? '' : statusFilter} enrollment requests
+                  </h3>
+                  <p className="text-navy-600 mb-4">
+                    New enrollment requests will appear here when students apply for courses
                   </p>
+                  <p className="text-sm text-navy-500">
+                    Last updated: {new Date().toLocaleString()}
+                  </p>
+                  <button
+                    onClick={() => {
+                      mutateRequests();
+                      mutateAllRequests();
+                    }}
+                    className="mt-4 px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm"
+                  >
+                    Refresh
+                  </button>
                 </div>
               ) : (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -748,10 +818,30 @@ export default function AdminDashboard() {
                     <p className="text-navy-700">Loading bundle enrollment requests...</p>
                   </div>
                 ) : bundleRequests.length === 0 ? (
-                  <div className="bg-purple-50 border border-purple-100 rounded-lg p-8 text-center text-purple-700">
-                    <p className="text-lg font-medium">
-                      No {statusFilter === 'all' ? '' : statusFilter} bundle enrollment requests found
+                  <div className="bg-purple-50 border border-purple-100 rounded-lg p-12 text-center">
+                    <div className="mb-4">
+                      <svg className="w-16 h-16 mx-auto text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-purple-900 mb-2">
+                      No {statusFilter === 'all' ? '' : statusFilter} bundle enrollment requests
+                    </h3>
+                    <p className="text-purple-600 mb-4">
+                      Bundle enrollment requests will appear here when students apply for course bundles
                     </p>
+                    <p className="text-sm text-purple-500">
+                      Last updated: {new Date().toLocaleString()}
+                    </p>
+                    <button
+                      onClick={() => {
+                        mutateBundleRequests();
+                        mutateAllBundleRequests();
+                      }}
+                      className="mt-4 px-4 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm"
+                    >
+                      Refresh
+                    </button>
                   </div>
                 ) : (
                   <div className="bg-white rounded-lg shadow-sm border border-purple-200 overflow-hidden">
@@ -873,9 +963,13 @@ export default function AdminDashboard() {
                 )}
               </div>
             </div>
+            </ErrorBoundary>
           )}
 
           {activeTab === 'withdrawals' && (
+            <ErrorBoundary
+              onError={(error) => console.error('[Admin Dashboard] Withdrawals section error:', error)}
+            >
             <div>
               {/* Status Filter Buttons */}
               <div className="flex flex-wrap gap-3 mb-6">
@@ -1051,9 +1145,13 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+            </ErrorBoundary>
           )}
 
           {activeTab === 'courses' && (
+            <ErrorBoundary
+              onError={(error) => console.error('[Admin Dashboard] Courses section error:', error)}
+            >
             <div>
               {coursesLoading ? (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
@@ -1089,6 +1187,7 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+            </ErrorBoundary>
           )}
         </div>
       </div>

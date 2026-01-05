@@ -14,11 +14,17 @@ if [ ! -d "node_modules" ]; then
   npm install
 fi
 
-echo "🗑️  Clearing .next cache and corrupted files..."
-rm -rf .next
-# Also clean any macOS file system cruft
-find . -name "._*" -delete 2>/dev/null || true
-find . -name ".DS_Store" -delete 2>/dev/null || true
+echo "🗑️  Clearing .next cache..."
+# Handle .next cleanup robustly - don't let it hang
+if [ -d ".next" ]; then
+  # Try quick rename first (instant)
+  mv .next .next.old.$$ 2>/dev/null && echo "   Moved old cache" || {
+    # If rename fails, try delete with timeout
+    ( rm -rf .next & ) && sleep 2 && echo "   Deleted cache"
+  }
+fi
+# Clean up any old .next directories from previous runs
+rm -rf .next.old.* ".next "* 2>/dev/null &
 
 echo "🚀 Starting development server..."
 npm run dev

@@ -6,11 +6,15 @@ import type { Course } from './CourseCard';
 import { useI18n } from '@/contexts/I18nContext';
 import { useUser } from '@/hooks/useUser';
 import { supabase } from '@/lib/supabase';
+import { ErrorBoundary } from './ErrorBoundary';
 import EnrollmentStepOverview from './enrollment/EnrollmentStepOverview';
 import EnrollmentStepPayment from './enrollment/EnrollmentStepPayment';
 import EnrollmentStepReferral from './enrollment/EnrollmentStepReferral';
 import EnrollmentStepUpload from './enrollment/EnrollmentStepUpload';
 import EnrollmentStepReview from './enrollment/EnrollmentStepReview';
+
+// localStorage key for backup
+const ENROLLMENT_BACKUP_KEY = 'enrollment_form_backup';
 
 export interface EnrollmentWizardData {
   course: Course;
@@ -28,6 +32,51 @@ interface EnrollmentWizardProps {
 }
 
 const TOTAL_STEPS = 5;
+
+// Helper functions for localStorage backup
+function saveFormBackup(courseId: string, data: { referralCode: string; step: number }) {
+  try {
+    if (typeof window !== 'undefined') {
+      const backup = {
+        courseId,
+        referralCode: data.referralCode,
+        step: data.step,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem(ENROLLMENT_BACKUP_KEY, JSON.stringify(backup));
+    }
+  } catch (e) {
+    console.warn('Failed to save form backup:', e);
+  }
+}
+
+function loadFormBackup(courseId: string): { referralCode: string; step: number } | null {
+  try {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(ENROLLMENT_BACKUP_KEY);
+      if (saved) {
+        const backup = JSON.parse(saved);
+        // Only restore if it's for the same course and not too old (1 hour)
+        if (backup.courseId === courseId && Date.now() - backup.timestamp < 3600000) {
+          return { referralCode: backup.referralCode || '', step: backup.step || 1 };
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load form backup:', e);
+  }
+  return null;
+}
+
+function clearFormBackup() {
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(ENROLLMENT_BACKUP_KEY);
+    }
+  } catch (e) {
+    console.warn('Failed to clear form backup:', e);
+  }
+}
 
 export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, initialReferralCode }: EnrollmentWizardProps) {
   const { t } = useI18n();
@@ -52,16 +101,22 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
   // Reset wizard when opened/closed and auto-fill referral code
   useEffect(() => {
     if (isOpen) {
-      setCurrentStep(1);
-      
-      // Auto-fill referral code from props first, then from profile if available
+      // Try to restore from backup first
+      const backup = loadFormBackup(course.id);
+
+      // Auto-fill referral code: props > backup > profile
       let referralCodeToUse = initialReferralCode || '';
-      
-      // If no referral code from props, check profile
+
+      // If no referral code from props, try backup
+      if (!referralCodeToUse && backup?.referralCode) {
+        referralCodeToUse = backup.referralCode;
+      }
+
+      // If still no referral code, check profile
       if (!referralCodeToUse && profile && course) {
         const referredCourseId = profile.referred_for_course_id;
         const signupReferralCode = profile.signup_referral_code;
-        
+
         // Only auto-fill if:
         // 1. User has a referral code from signup
         // 2. User was referred for this specific course
@@ -70,7 +125,8 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
           referralCodeToUse = signupReferralCode;
         }
       }
-      
+
+      setCurrentStep(1);
       setWizardData({
         course,
         referralCode: referralCodeToUse,
@@ -221,11 +277,17 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
 
     // Use provided URLs or fall back to wizardData.uploadedUrls
     const urlsToUse = uploadedUrls || wizardData.uploadedUrls;
-    
+
     if (urlsToUse.length === 0) {
       setCurrentStep(4); // Go back to upload step if no URLs
       return;
     }
+
+    // Save form backup before submission in case of errors
+    saveFormBackup(course.id, {
+      referralCode: wizardData.referralCode,
+      step: currentStep,
+    });
 
     try {
       await onEnroll(
@@ -233,13 +295,15 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
         urlsToUse,
         wizardData.referralCode.trim() || undefined
       );
-      // Success - dialog will be closed by parent component
+      // Success - clear the backup
+      clearFormBackup();
+      // Dialog will be closed by parent component
     } catch (error: any) {
       // Error handling is done in parent component
       console.error('Enrollment error:', error);
       throw error; // Re-throw so review step can handle it
     }
-  }, [course.id, wizardData.uploadedUrls, wizardData.referralCode, onEnroll, validateStep]);
+  }, [course.id, wizardData.uploadedUrls, wizardData.referralCode, currentStep, onEnroll, validateStep]);
 
   if (!isOpen) return null;
 
@@ -385,9 +449,20 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
 
           {/* Step Content */}
           <div className="min-h-[400px]">
-            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-              {renderStep()}
-            </div>
+            <ErrorBoundary
+              onError={(error) => {
+                console.error('Enrollment wizard error:', error);
+                // Save backup on error
+                saveFormBackup(course.id, {
+                  referralCode: wizardData.referralCode,
+                  step: currentStep,
+                });
+              }}
+            >
+              <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                {renderStep()}
+              </div>
+            </ErrorBoundary>
           </div>
 
           {/* Navigation Buttons - Hidden on review step (step 5) */}

@@ -660,8 +660,59 @@ export default function ProjectCard({
               {isLoadingSubmissions ? (
                 <div className="text-center py-4 text-gray-400 text-sm">{t('projects.loadingSubmissions')}</div>
               ) : submissions.length === 0 ? (
-                <div className="text-center py-4 text-gray-500 text-sm">
-                  {canSubmit ? t('projects.beFirstToSubmit') : t('projects.noSubmissionsYet')}
+                <div className="text-center py-6 space-y-3">
+                  {isLecturer ? (
+                    <>
+                      <div className="mb-2">
+                        <svg className="w-12 h-12 mx-auto text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <p className="text-gray-400 text-sm">{t('projects.noSubmissionsYet')}</p>
+                      <div className="bg-gray-800/50 rounded-lg p-4 space-y-2 text-left max-w-md mx-auto">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400 text-xs">Project Status</span>
+                          <span className="text-green-400 text-xs font-semibold">Published</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400 text-xs">Budget</span>
+                          <span className="text-white text-xs">${project.budget.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400 text-xs">Platforms</span>
+                          <span className="text-white text-xs">{project.platforms.map(p => PLATFORM_NAMES[p] || p).join(', ')}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400 text-xs">View Range</span>
+                          <span className="text-white text-xs">{project.minViews.toLocaleString()} - {project.maxViews.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400 text-xs">Submissions</span>
+                          <span className="text-yellow-400 text-xs">0 submissions</span>
+                        </div>
+                      </div>
+                      <p className="text-gray-500 text-xs pt-2">
+                        Students can submit videos once they meet the view requirements
+                      </p>
+                      <button
+                        onClick={() => loadSubmissions()}
+                        className="mt-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
+                      >
+                        Refresh Submissions
+                      </button>
+                    </>
+                  ) : (
+                    <div className="py-2">
+                      <div className="mb-2">
+                        <svg className="w-10 h-10 mx-auto text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <p className="text-gray-500 text-sm">
+                        {canSubmit ? t('projects.beFirstToSubmit') : t('projects.noSubmissionsYet')}
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">
