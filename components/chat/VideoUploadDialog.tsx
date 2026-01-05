@@ -8,6 +8,7 @@ interface VideoUploadDialogProps {
   onClose: () => void;
   onSubmit: (data: ProjectSubmissionData) => Promise<void>;
   channelId?: string;
+  initialData?: Partial<ProjectSubmissionData>;
 }
 
 export interface ProjectCriteria {
@@ -42,6 +43,7 @@ export default function VideoUploadDialog({
   onClose,
   onSubmit,
   channelId,
+  initialData,
 }: VideoUploadDialogProps) {
   const { t } = useI18n();
   const [videoLink, setVideoLink] = useState('');
@@ -64,7 +66,7 @@ export default function VideoUploadDialog({
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset form when dialog opens/closes
+  // Reset form when dialog closes
   useEffect(() => {
     if (!isOpen) {
       // Reset all fields when closing
@@ -90,6 +92,35 @@ export default function VideoUploadDialog({
       }
     }
   }, [isOpen]);
+
+  // Initialize form with initialData when dialog opens
+  useEffect(() => {
+    if (isOpen && initialData) {
+      if (initialData.videoLink) setVideoLink(initialData.videoLink);
+      if (initialData.budget !== undefined) setBudget(initialData.budget.toString());
+      if (initialData.minViews !== undefined) setMinViews(initialData.minViews.toString());
+      if (initialData.maxViews !== undefined) setMaxViews(initialData.maxViews.toString());
+      if (initialData.name) setName(initialData.name);
+      if (initialData.description) setDescription(initialData.description);
+      if (initialData.platforms && initialData.platforms.length > 0) {
+        setSelectedPlatforms([...initialData.platforms]);
+      }
+      if (initialData.criteria && initialData.criteria.length > 0) {
+        setCriteria([...initialData.criteria]);
+        // Initialize RPM inputs for existing criteria
+        const rpmInputs: Record<number, string> = {};
+        const platformInputs: Record<number, string> = {};
+        initialData.criteria.forEach((c, i) => {
+          rpmInputs[i] = c.rpm.toString();
+          if (c.platform) platformInputs[i] = c.platform;
+        });
+        setCriteriaRpmInputs(rpmInputs);
+        setCriteriaPlatformInputs(platformInputs);
+      }
+      if (initialData.startDate) setStartDate(initialData.startDate);
+      if (initialData.endDate) setEndDate(initialData.endDate);
+    }
+  }, [isOpen, initialData]);
 
   // Close modal on ESC key press and handle body scroll
   useEffect(() => {

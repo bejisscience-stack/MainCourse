@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { EnrollmentWizardData } from '../EnrollmentWizard';
 import { useI18n } from '@/contexts/I18nContext';
+import { formatPriceInGel } from '@/lib/currency';
 
 interface EnrollmentStepReviewProps {
   course: EnrollmentWizardData['course'];
@@ -46,15 +47,7 @@ function generateCourseCode(courseId: string): string {
 
   const courseCode = useMemo(() => generateCourseCode(course.id), [course.id]);
 
-  const formatPrice = useMemo(() => {
-    return (price: number) => new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(price);
-  }, []);
-
-  const formattedPrice = useMemo(() => formatPrice(course.price), [formatPrice, course.price]);
+  const formattedPrice = useMemo(() => formatPriceInGel(course.price), [course.price]);
 
   const handleSubmit = useCallback(async () => {
     if (data.uploadedImages.length === 0) {

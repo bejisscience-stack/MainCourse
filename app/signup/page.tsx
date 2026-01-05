@@ -31,16 +31,16 @@ function SignUpForm() {
       if (ref) {
         const normalizedRef = ref.toUpperCase().trim();
 
-        // Validate referral code exists in database
+        // Validate referral code exists in database (matches enrollment flow validation)
         const { data, error } = await supabase
           .from('profiles')
           .select('referral_code')
           .eq('referral_code', normalizedRef)
-          .single();
+          .maybeSingle();
 
         if (error || !data) {
-          // Referral code is invalid
-          setReferralError(`Invalid referral code: ${normalizedRef}`);
+          // Referral code is invalid - show warning but allow signup to proceed
+          setReferralError(`Note: Referral code "${normalizedRef}" was not found. You can still sign up, but the referral won't be applied.`);
           setReferralCode(''); // Don't set the referral code
         } else {
           // Referral code is valid
@@ -123,7 +123,7 @@ function SignUpForm() {
             </div>
           )}
           {referralError && (
-            <div className="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm text-center">
+            <div className="mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300 px-4 py-3 rounded-lg text-sm text-center">
               {referralError}
             </div>
           )}

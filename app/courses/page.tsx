@@ -13,6 +13,7 @@ import { useEnrollmentRequestStatus } from '@/hooks/useEnrollmentRequests';
 import useSWR from 'swr';
 import { useI18n } from '@/contexts/I18nContext';
 import FirstLoginCoursePopup from '@/components/FirstLoginCoursePopup';
+import { formatPriceInGel } from '@/lib/currency';
 
 type FilterType = 'All' | 'Editing' | 'Content Creation' | 'Website Creation';
 
@@ -367,11 +368,11 @@ function CoursesPageContent() {
                         <div>
                           <p className="text-xs text-charcoal-500 dark:text-gray-500">{t('courses.bundlePrice')}</p>
                           <p className="text-xl font-bold text-charcoal-950 dark:text-white">
-                            ${bundle.price.toFixed(2)}
+                            {formatPriceInGel(bundle.price)}
                           </p>
                           {totalOriginalPrice > bundle.price && (
                             <p className="text-xs text-charcoal-400 dark:text-gray-500 line-through">
-                              ${totalOriginalPrice.toFixed(2)} {t('courses.total')}
+                              {formatPriceInGel(totalOriginalPrice)} {t('courses.total')}
                             </p>
                           )}
                         </div>

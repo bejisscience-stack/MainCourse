@@ -11,6 +11,12 @@ export interface EnrollmentRequest {
   reviewed_by?: string | null;
   reviewed_at?: string | null;
   payment_screenshots?: string[] | null;
+  referral_code?: string | null;
+  referrer?: {
+    id: string;
+    username?: string | null;
+    email: string;
+  } | null;
   courses?: {
     id: string;
     title: string;

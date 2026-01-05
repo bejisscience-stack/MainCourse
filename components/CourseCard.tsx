@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import PaymentDialog from './PaymentDialog';
 import { useI18n } from '@/contexts/I18nContext';
 import { useUser } from '@/hooks/useUser';
+import { formatPriceInGel } from '@/lib/currency';
 
 export interface Course {
   id: string;
@@ -45,25 +46,17 @@ function CourseCard({
   const [isVideoExpanded, setIsVideoExpanded] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
-  const formatPrice = useMemo(() => {
-    return (price: number) => new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(price);
-  }, []);
-
-  // Ensure prices are never displayed as negative - fallback to $0.00 for any edge cases
+  // Ensure prices are never displayed as negative - fallback to 0 for any edge cases
   const safePrice = useMemo(() => Math.max(0, course.price || 0), [course.price]);
   const safeOriginalPrice = useMemo(() =>
     course.original_price ? Math.max(0, course.original_price) : null,
     [course.original_price]
   );
 
-  const formattedPrice = useMemo(() => formatPrice(safePrice), [formatPrice, safePrice]);
+  const formattedPrice = useMemo(() => formatPriceInGel(safePrice), [safePrice]);
   const formattedOriginalPrice = useMemo(() =>
-    safeOriginalPrice ? formatPrice(safeOriginalPrice) : null,
-    [formatPrice, safeOriginalPrice]
+    safeOriginalPrice ? formatPriceInGel(safeOriginalPrice) : null,
+    [safeOriginalPrice]
   );
 
   const handleThumbnailClick = useCallback(() => {

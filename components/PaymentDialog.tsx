@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import type { Course } from './CourseCard';
 import { useI18n } from '@/contexts/I18nContext';
 import { useUser } from '@/hooks/useUser';
+import { formatPriceInGel } from '@/lib/currency';
 
 interface PaymentDialogProps {
   course: Course;
@@ -76,15 +77,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
 
   const courseCode = useMemo(() => generateCourseCode(course.id), [course.id]);
 
-  const formatPrice = useMemo(() => {
-    return (price: number) => new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(price);
-  }, []);
-
-  const formattedPrice = useMemo(() => formatPrice(course.price), [formatPrice, course.price]);
+  const formattedPrice = useMemo(() => formatPriceInGel(course.price), [course.price]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;

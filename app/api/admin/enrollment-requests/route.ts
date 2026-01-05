@@ -173,15 +173,38 @@ export async function GET(request: NextRequest) {
       console.error('[Admin API] Error fetching courses:', err);
     }
 
+    // Fetch referrer profiles for requests that have referral codes
+    const referralCodes = [...new Set(requests.map(r => r.referral_code).filter(Boolean))];
+    let referrerProfiles: any[] = [];
+
+    try {
+      if (referralCodes.length > 0) {
+        const { data: referrerData, error: referrerError } = await createServiceRoleClient()
+          .from('profiles')
+          .select('id, username, email, referral_code')
+          .in('referral_code', referralCodes);
+
+        if (!referrerError && referrerData) {
+          referrerProfiles = referrerData;
+        } else if (referrerError) {
+          console.error('[Admin API] Service role referrer profiles error:', referrerError);
+        }
+      }
+    } catch (err) {
+      console.error('[Admin API] Error fetching referrer profiles:', err);
+    }
+
     // Create lookup maps
     const profilesMap = new Map(profiles.map(p => [p.id, p]));
     const coursesMap = new Map(courses.map(c => [c.id, c]));
+    const referrerMap = new Map(referrerProfiles.map(p => [p.referral_code, p]));
 
     // Combine the data
     const requestsWithRelations = requests.map(request => ({
       ...request,
       profiles: profilesMap.get(request.user_id) || null,
       courses: coursesMap.get(request.course_id) || null,
+      referrer: request.referral_code ? referrerMap.get(request.referral_code) || null : null,
     }));
 
     console.log('[Admin API] Returning', requestsWithRelations.length, 'requests with relations');

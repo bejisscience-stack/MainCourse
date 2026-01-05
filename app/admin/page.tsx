@@ -1227,6 +1227,48 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* Referral Information */}
+              <div className="bg-purple-50 rounded-lg p-4 space-y-3">
+                <h3 className="text-lg font-semibold text-purple-900">Referral Information</h3>
+                {selectedRequest.referral_code ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-purple-600">Referral Code Used</p>
+                      <p className="text-base font-mono font-medium text-purple-900">
+                        {selectedRequest.referral_code}
+                      </p>
+                    </div>
+                    {selectedRequest.referrer ? (
+                      <>
+                        <div>
+                          <p className="text-sm text-purple-600">Referrer Username</p>
+                          <p className="text-base font-medium text-purple-900">
+                            {selectedRequest.referrer.username || 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-purple-600">Referrer Email</p>
+                          <p className="text-base font-medium text-purple-900">
+                            {selectedRequest.referrer.email}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <div>
+                        <p className="text-sm text-purple-600">Referrer</p>
+                        <p className="text-base text-purple-700 italic">
+                          Referrer profile not found
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-base text-purple-700">
+                    No referral code used for this enrollment request
+                  </p>
+                )}
+              </div>
+
               {/* Payment Screenshots */}
               {selectedRequest.payment_screenshots && Array.isArray(selectedRequest.payment_screenshots) && selectedRequest.payment_screenshots.length > 0 && (
                 <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">

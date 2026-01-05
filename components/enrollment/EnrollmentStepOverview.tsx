@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import type { EnrollmentWizardData } from '../EnrollmentWizard';
 import { useI18n } from '@/contexts/I18nContext';
+import { formatPriceInGel } from '@/lib/currency';
 
 interface EnrollmentStepOverviewProps {
   course: EnrollmentWizardData['course'];
@@ -15,18 +16,10 @@ export default function EnrollmentStepOverview({
 }: EnrollmentStepOverviewProps) {
   const { t } = useI18n();
 
-  const formatPrice = useMemo(() => {
-    return (price: number) => new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(price);
-  }, []);
-
-  const formattedPrice = useMemo(() => formatPrice(course.price), [formatPrice, course.price]);
-  const formattedOriginalPrice = useMemo(() => 
-    course.original_price ? formatPrice(course.original_price) : null, 
-    [formatPrice, course.original_price]
+  const formattedPrice = useMemo(() => formatPriceInGel(course.price), [course.price]);
+  const formattedOriginalPrice = useMemo(() =>
+    course.original_price ? formatPriceInGel(course.original_price) : null,
+    [course.original_price]
   );
 
   return (
