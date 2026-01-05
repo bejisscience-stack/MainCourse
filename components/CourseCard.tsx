@@ -161,7 +161,7 @@ function CourseCard({
 
   return (
     <>
-      <div className="bg-white dark:bg-navy-800 rounded-3xl overflow-hidden shadow-soft hover:shadow-soft-lg dark:hover:shadow-glow-dark transition-all duration-200 border border-charcoal-100/50 dark:border-navy-700/50 hover:scale-[1.01] hover:-translate-y-0.5 will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}>
+      <div className="h-full flex flex-col bg-white dark:bg-navy-800 rounded-3xl overflow-hidden shadow-soft hover:shadow-soft-lg dark:hover:shadow-glow-dark transition-all duration-200 border border-charcoal-100/50 dark:border-navy-700/50 hover:scale-[1.01] hover:-translate-y-0.5 will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}>
         {/* Thumbnail Section */}
         <div className="relative w-full h-28 bg-gradient-to-br from-emerald-50 via-white to-charcoal-50/30 dark:from-emerald-500/10 dark:via-navy-800 dark:to-navy-700/30 overflow-hidden cursor-pointer group">
           {course.thumbnail_url ? (
@@ -252,61 +252,63 @@ function CourseCard({
         </div>
 
         {/* Course Info Section - Tighter spacing */}
-        <div className="p-5 space-y-3">
-        {/* Title */}
-        <h3 className="text-base font-semibold text-charcoal-950 dark:text-white line-clamp-2 leading-snug">
-          {course.title}
-        </h3>
+        <div className="flex-1 flex flex-col p-5">
+          <div className="flex-1 space-y-3">
+            {/* Title */}
+            <h3 className="text-base font-semibold text-charcoal-950 dark:text-white line-clamp-2 leading-snug">
+              {course.title}
+            </h3>
 
-        {/* Author */}
-        <p className="text-sm text-charcoal-500 dark:text-gray-400">{course.author}</p>
+            {/* Author */}
+            <p className="text-sm text-charcoal-500 dark:text-gray-400">{course.author}</p>
 
-        {/* Badges: Course Type (prominent), Bestseller, Rating, Reviews */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Course Type Badge - Prominent with color and icon */}
-          <span className={`${courseTypeConfig.bgColor} ${courseTypeConfig.textColor} border ${courseTypeConfig.borderColor} text-xs font-semibold px-2.5 py-1 rounded-md flex items-center space-x-1.5`}>
-            {courseTypeConfig.icon}
-            <span>{course.course_type}</span>
-          </span>
+            {/* Badges: Course Type (prominent), Bestseller, Rating, Reviews */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Course Type Badge - Prominent with color and icon */}
+              <span className={`${courseTypeConfig.bgColor} ${courseTypeConfig.textColor} border ${courseTypeConfig.borderColor} text-xs font-semibold px-2.5 py-1 rounded-md flex items-center space-x-1.5`}>
+                {courseTypeConfig.icon}
+                <span>{course.course_type}</span>
+              </span>
 
-          {course.is_bestseller && (
-            <span className="bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-medium px-2 py-0.5 rounded-md">
-              {t('courseCard.bestseller')}
-            </span>
-          )}
-          {course.rating > 0 && (
-            <span className="bg-white dark:bg-navy-700 border border-charcoal-100 dark:border-navy-600 text-charcoal-600 dark:text-gray-300 text-[10px] font-medium px-2 py-0.5 rounded-md flex items-center space-x-1">
-              <svg
-                className="w-2.5 h-2.5 text-emerald-500 dark:text-emerald-400 fill-current"
-                viewBox="0 0 20 20"
-              >
-                <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-              </svg>
-              <span>{course.rating.toFixed(1)}</span>
-            </span>
-          )}
-          {course.review_count > 0 && (
-            <span className="bg-white dark:bg-navy-700 border border-charcoal-100 dark:border-navy-600 text-charcoal-600 dark:text-gray-300 text-[10px] font-medium px-2 py-0.5 rounded-md">
-              {course.review_count.toLocaleString()} {course.review_count === 1 ? t('courseCard.rating') : t('courseCard.ratings')}
-            </span>
-          )}
-        </div>
+              {course.is_bestseller && (
+                <span className="bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-medium px-2 py-0.5 rounded-md">
+                  {t('courseCard.bestseller')}
+                </span>
+              )}
+              {course.rating > 0 && (
+                <span className="bg-white dark:bg-navy-700 border border-charcoal-100 dark:border-navy-600 text-charcoal-600 dark:text-gray-300 text-[10px] font-medium px-2 py-0.5 rounded-md flex items-center space-x-1">
+                  <svg
+                    className="w-2.5 h-2.5 text-emerald-500 dark:text-emerald-400 fill-current"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                  </svg>
+                  <span>{course.rating.toFixed(1)}</span>
+                </span>
+              )}
+              {course.review_count > 0 && (
+                <span className="bg-white dark:bg-navy-700 border border-charcoal-100 dark:border-navy-600 text-charcoal-600 dark:text-gray-300 text-[10px] font-medium px-2 py-0.5 rounded-md">
+                  {course.review_count.toLocaleString()} {course.review_count === 1 ? t('courseCard.rating') : t('courseCard.ratings')}
+                </span>
+              )}
+            </div>
 
-        {/* Price */}
-        <div className="flex items-center space-x-2 pt-1">
-          <span className="text-xl font-semibold text-charcoal-950 dark:text-white">
-            {formattedPrice}
-          </span>
-          {formattedOriginalPrice && safeOriginalPrice && safeOriginalPrice > safePrice && (
-            <span className="text-sm text-charcoal-400 dark:text-gray-500 line-through">
-              {formattedOriginalPrice}
-            </span>
-          )}
-        </div>
+            {/* Price */}
+            <div className="flex items-center space-x-2 pt-1">
+              <span className="text-xl font-semibold text-charcoal-950 dark:text-white">
+                {formattedPrice}
+              </span>
+              {formattedOriginalPrice && safeOriginalPrice && safeOriginalPrice > safePrice && (
+                <span className="text-sm text-charcoal-400 dark:text-gray-500 line-through">
+                  {formattedOriginalPrice}
+                </span>
+              )}
+            </div>
+          </div>
 
-        {/* Enroll Button or Custom Action */}
-        {(showEnrollButton || customAction) && (
-          <div className="pt-3 border-t border-charcoal-100/50 dark:border-navy-700/50">
+          {/* Enroll Button or Custom Action - Always at bottom */}
+          {(showEnrollButton || customAction) && (
+            <div className="mt-auto pt-3 border-t border-charcoal-100/50 dark:border-navy-700/50">
             {customAction ? (
               customAction
             ) : isEnrolled ? (
@@ -381,8 +383,8 @@ function CourseCard({
                 )}
               </button>
             )}
-          </div>
-        )}
+            </div>
+          )}
         </div>
       </div>
 

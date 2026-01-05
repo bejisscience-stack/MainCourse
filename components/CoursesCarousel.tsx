@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import CourseCard, { type Course } from '@/components/CourseCard';
 import CourseEnrollmentCard from '@/components/CourseEnrollmentCard';
 import { useCourses } from '@/hooks/useCourses';
@@ -170,9 +171,17 @@ export default function CoursesCarousel() {
     <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
       <div className="max-w-7xl mx-auto">
         <ScrollReveal delay={0} duration={600}>
-          <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white text-center mb-12 tracking-tight">
-            {translationsReady ? t('home.ourCourses') : 'Our Courses'}
-          </h2>
+          <div className="text-center mb-12">
+            <Link
+              href="/courses"
+              className="inline-block text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white tracking-tight hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors duration-300 cursor-pointer"
+            >
+              {translationsReady ? t('home.ourCourses') : 'Our Courses'}
+            </Link>
+            <p className="mt-3 text-lg text-charcoal-600 dark:text-gray-400">
+              {courses.length} {translationsReady ? t('home.coursesAvailable') : 'courses available'}
+            </p>
+          </div>
         </ScrollReveal>
         
         <div className="relative">

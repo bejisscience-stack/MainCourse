@@ -112,10 +112,39 @@ export async function signIn({ email, password }: SignInData) {
 }
 
 export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  
-  if (error) {
-    throw error;
+  try {
+    // Set a timeout for the sign out request
+    const timeoutPromise = new Promise<{ error: Error }>((_, reject) => {
+      setTimeout(() => reject(new Error('Sign out request timed out')), 5000);
+    });
+
+    const signOutPromise = supabase.auth.signOut();
+
+    // Race between sign out and timeout
+    const result = await Promise.race([signOutPromise, timeoutPromise]);
+
+    if (result && 'error' in result && result.error) {
+      console.warn('Sign out server error:', result.error);
+      // Continue with local cleanup even if server call failed
+    }
+  } catch (error) {
+    console.warn('Sign out error (will clear local session anyway):', error);
+    // Don't throw - we still want to clear local state
+  }
+
+  // Always clear local storage to ensure user is signed out locally
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem('supabase.auth.token');
+      // Clear any other Supabase auth keys
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (e) {
+      console.warn('Error clearing local storage:', e);
+    }
   }
 }
 

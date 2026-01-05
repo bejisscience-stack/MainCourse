@@ -25,6 +25,18 @@ const CoursesCarousel = dynamic(() => import('@/components/CoursesCarousel'), {
   ),
 });
 
+const ActiveProjectsCarousel = dynamic(() => import('@/components/ActiveProjectsCarousel'), {
+  loading: () => (
+    <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+        </div>
+      </div>
+    </section>
+  ),
+});
+
 
 export default function Home() {
   const router = useRouter();
@@ -54,6 +66,7 @@ export default function Home() {
         <Hero />
         <VideoSection />
         <CoursesCarousel />
+        <ActiveProjectsCarousel />
       </div>
       {/* First Login Course Popup */}
       {shouldShowPopup && profile.referred_for_course_id && profile.signup_referral_code && (

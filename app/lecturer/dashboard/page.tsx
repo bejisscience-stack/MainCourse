@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useLecturerCourses } from '@/hooks/useLecturerCourses';
 import { useI18n } from '@/contexts/I18nContext';
+import { formatPriceInGel } from '@/lib/currency';
 import type { Course } from '@/hooks/useCourses';
 
 export default function LecturerDashboard() {
@@ -835,11 +836,11 @@ export default function LecturerDashboard() {
                           <div>
                             <p className="text-xs text-charcoal-500 dark:text-gray-500">{t('lecturerDashboard.bundlePrice')}</p>
                             <p className="text-xl font-bold text-charcoal-950 dark:text-white">
-                              ${bundle.price.toFixed(2)}
+                              {formatPriceInGel(bundle.price)}
                             </p>
                             {bundle.original_price && totalOriginalPrice > bundle.price && (
                               <p className="text-xs text-charcoal-400 dark:text-gray-500 line-through">
-                                ${totalOriginalPrice.toFixed(2)} {t('lecturerDashboard.total')}
+                                {formatPriceInGel(totalOriginalPrice)} {t('lecturerDashboard.total')}
                               </p>
                             )}
                           </div>
