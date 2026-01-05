@@ -141,9 +141,9 @@ export default function ProjectDetailsModal({ project, isOpen, onClose }: Projec
 
   // Group criteria by platform
   const criteriaByPlatform = useMemo(() => {
-    if (!project?.criteria) return new Map<string | null, typeof project.criteria>();
+    if (!project?.criteria) return new Map<string | null, ActiveProject['criteria']>();
 
-    const grouped = new Map<string | null, typeof project.criteria>();
+    const grouped = new Map<string | null, ActiveProject['criteria']>();
     project.criteria.forEach((c) => {
       const platform = c.platform;
       if (!grouped.has(platform)) {
