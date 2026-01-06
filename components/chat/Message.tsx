@@ -14,6 +14,8 @@ interface ProjectData {
   minViews: number;
   maxViews: number;
   platforms: string[];
+  startDate?: string;
+  endDate?: string;
 }
 
 interface MessageProps {
@@ -294,6 +296,8 @@ const Message = memo(function Message({
               username: message.user.username,
             },
             timestamp: message.timestamp,
+            startDate: projectData.start_date,
+            endDate: projectData.end_date,
           }}
           currentUserId={currentUserId}
           isLecturer={isLecturer}

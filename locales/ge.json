@@ -562,7 +562,20 @@
     "description": "აღწერა",
     "unknownLecturer": "უცნობი ლექტორი",
     "daysLeft": "დღე დარჩენილია",
-    "potentialRPM": "პოტენციური RPM"
+    "potentialRPM": "პოტენციური RPM",
+    "expired": "ვადაგასული",
+    "projectExpired": "პროექტი ვადაგასულია",
+    "noDatesSet": "თარიღები არ არის მითითებული",
+    "remaining": "დარჩენილია",
+    "budgetDepleted": "ბიუჯეტი ამოწურულია",
+    "startsIn": "იწყება",
+    "dayLeft": "დღე დარჩა",
+    "hourLeft": "საათი დარჩა",
+    "hoursLeft": "საათი დარჩა",
+    "minuteLeft": "წუთი დარჩა",
+    "minutesLeft": "წუთი დარჩა",
+    "endingSoon": "მალე დასრულდება",
+    "startsTomorrow": "ხვალ იწყება"
   }
 }
 

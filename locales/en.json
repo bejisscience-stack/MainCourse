@@ -562,7 +562,20 @@
     "description": "Description",
     "unknownLecturer": "Unknown Lecturer",
     "daysLeft": "days left",
-    "potentialRPM": "Potential RPM"
+    "potentialRPM": "Potential RPM",
+    "expired": "Expired",
+    "projectExpired": "Project Expired",
+    "noDatesSet": "No dates set",
+    "remaining": "remaining",
+    "budgetDepleted": "Budget depleted",
+    "startsIn": "Starts in",
+    "dayLeft": "day left",
+    "hourLeft": "hour left",
+    "hoursLeft": "hours left",
+    "minuteLeft": "minute left",
+    "minutesLeft": "minutes left",
+    "endingSoon": "Ending soon",
+    "startsTomorrow": "Starts tomorrow"
   }
 }
 

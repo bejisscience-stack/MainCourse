@@ -1,21 +1,23 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { normalizeProfileUsername } from '@/lib/username';
 import VideoSubmissionDialog from './VideoSubmissionDialog';
 import SubmissionReviewDialog from './SubmissionReviewDialog';
 import { useI18n } from '@/contexts/I18nContext';
+import { useProjectCountdown } from '@/hooks/useProjectCountdown';
+import { useProjectBudget } from '@/hooks/useProjectBudget';
 
 export interface ProjectCriteria {
   id: string;
   text: string;
   rpm: number;
-  platform?: string; // Platform name (optional, for platform-specific criteria)
+  platform?: string;
 }
 
 export interface ProjectData {
-  id: string; // message ID
+  id: string;
   name: string;
   description: string;
   videoLink?: string;
@@ -29,6 +31,8 @@ export interface ProjectData {
     username: string;
   };
   timestamp: number;
+  startDate?: string;
+  endDate?: string;
 }
 
 interface ProjectCardProps {
@@ -39,11 +43,11 @@ interface ProjectCardProps {
   onSubmission?: () => void;
 }
 
-const PLATFORM_NAMES: Record<string, string> = {
-  youtube: 'YouTube',
-  instagram: 'Instagram',
-  facebook: 'Facebook',
-  tiktok: 'TikTok',
+const PLATFORM_CONFIG: Record<string, { name: string; icon: string; color: string; bg: string }> = {
+  youtube: { name: 'YouTube', icon: '▶', color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' },
+  instagram: { name: 'Instagram', icon: '📷', color: 'text-pink-400', bg: 'bg-pink-500/10 border-pink-500/20' },
+  facebook: { name: 'Facebook', icon: 'f', color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
+  tiktok: { name: 'TikTok', icon: '♪', color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' },
 };
 
 export default function ProjectCard({
@@ -63,9 +67,36 @@ export default function ProjectCard({
   const [reviewingSubmission, setReviewingSubmission] = useState<any | null>(null);
   const [projectDbId, setProjectDbId] = useState<string | null>(null);
   const [expandedSubmissionId, setExpandedSubmissionId] = useState<string | null>(null);
-  const [expandedReviewSections, setExpandedReviewSections] = useState<Set<string>>(new Set());
 
-  // Load criteria and project DB ID when component mounts or project changes
+  const countdown = useProjectCountdown(project.startDate, project.endDate);
+  const budget = useProjectBudget(projectDbId || '', project.budget);
+  const isProjectExpired = countdown.isExpired;
+
+  // Format helpers
+  const formattedDates = useMemo(() => {
+    const formatDate = (dateStr: string | null | undefined) => {
+      if (!dateStr) return null;
+      return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+    const start = formatDate(project.startDate);
+    const end = formatDate(project.endDate);
+    if (!start && !end) return null;
+    if (!start) return `Until ${end}`;
+    if (!end) return `From ${start}`;
+    return `${start} - ${end}`;
+  }, [project.startDate, project.endDate]);
+
+  const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', {
+    style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0
+  }).format(amount);
+
+  const formatViews = (num: number) => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
+    return num.toString();
+  };
+
+  // Load criteria and project DB ID
   useEffect(() => {
     const loadCriteria = async () => {
       try {
@@ -77,7 +108,6 @@ export default function ProjectCard({
 
         if (projectData) {
           setProjectDbId(projectData.id);
-
           const { data: criteria } = await supabase
             .from('project_criteria')
             .select('*')
@@ -89,7 +119,7 @@ export default function ProjectCard({
               id: c.id,
               text: c.criteria_text,
               rpm: parseFloat(c.rpm),
-              platform: c.platform || undefined, // Platform-specific or undefined for all platforms
+              platform: c.platform || undefined,
             })));
           }
         }
@@ -97,407 +127,117 @@ export default function ProjectCard({
         console.error('Error loading criteria:', error);
       }
     };
-
     loadCriteria();
-  }, [project.id, supabase]);
+  }, [project.id]);
 
+  // Load submissions (keeping existing logic but simplified)
   const loadSubmissions = useCallback(async () => {
-    // Always reload when called (don't check submissions.length to allow refresh)
-    console.log('🚀 loadSubmissions CALLED - isExpanded:', isExpanded, 'projectId:', project.id);
-    if (!isExpanded) {
-      console.log('⏸️ Skipping - card not expanded');
-      return;
-    }
-    
-    console.log('✅ Starting to load submissions for project:', project.id);
+    if (!isExpanded) return;
     setIsLoadingSubmissions(true);
     try {
-      // Fetch submissions from the database
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Find project by message_id (project.id is the message_id)
-      const { data: projectData, error: projectError } = await supabase
+      const { data: projectData } = await supabase
         .from('projects')
         .select('id')
         .eq('message_id', project.id)
         .single();
 
-      if (projectError || !projectData) {
-        console.error('Error fetching project:', projectError);
+      if (!projectData) {
         setIsLoadingSubmissions(false);
         return;
       }
 
-      // Fetch submissions for this project
-      const { data: submissionRecords, error: submissionsError } = await supabase
+      const { data: submissionRecords } = await supabase
         .from('project_submissions')
-        .select(`
-          *,
-          messages!inner (
-            id,
-            content,
-            user_id,
-            created_at
-          )
-        `)
+        .select(`*, messages!inner (id, content, user_id, created_at)`)
         .eq('project_id', projectData.id)
         .order('created_at', { ascending: false });
-      
-      // Load reviews separately to avoid RLS issues with joins
-      // Now we support multiple reviews per submission (one per platform)
-      let reviewsMap = new Map<string, any[]>(); // Map of submission_id -> reviews array
+
+      let reviewsMap = new Map<string, any[]>();
       if (submissionRecords && submissionRecords.length > 0) {
         const submissionIds = submissionRecords.map((sub: any) => sub.id);
-        const { data: directReviews, error: directReviewsError } = await supabase
+        const { data: directReviews } = await supabase
           .from('submission_reviews')
           .select('*')
           .in('submission_id', submissionIds);
-        
-        console.log('🔍 Direct query of submission_reviews table:', {
-          submissionIds,
-          directReviews,
-          directReviewsError,
-          reviewCount: directReviews?.length || 0,
-        });
-        
-        // Create a map of submission_id -> reviews array (multiple reviews per submission for different platforms)
-        if (directReviews && !directReviewsError) {
-          console.log('📊 All reviews loaded from database:', {
-            totalReviews: directReviews.length,
-            reviews: directReviews.map((r: any) => ({
-              id: r.id,
-              submission_id: r.submission_id,
-              platform: r.platform,
-              platformType: typeof r.platform,
-              matchedCriteriaIds: r.matched_criteria_ids,
-              paymentAmount: r.payment_amount,
-            })),
-          });
-          
+
+        if (directReviews) {
           directReviews.forEach((review: any) => {
             const submissionId = review.submission_id;
-            if (!reviewsMap.has(submissionId)) {
-              reviewsMap.set(submissionId, []);
-            }
+            if (!reviewsMap.has(submissionId)) reviewsMap.set(submissionId, []);
             reviewsMap.get(submissionId)!.push(review);
           });
-          
-          // Log the final reviewsMap
-          console.log('🗺️ ReviewsMap after processing:', {
-            mapSize: reviewsMap.size,
-            entries: Array.from(reviewsMap.entries()).map(([subId, reviews]) => ({
-              submissionId: subId,
-              reviewCount: reviews.length,
-              platforms: reviews.map((r: any) => r.platform),
-            })),
-          });
-        } else if (directReviewsError) {
-          console.error('Error loading reviews directly:', directReviewsError);
         }
       }
 
-      console.log('Loaded submissions:', submissionRecords?.length || 0, {
-        projectId: projectData.id,
-        records: submissionRecords,
-        error: submissionsError,
-      });
-
-      // Debug: Log review data
-      if (submissionRecords && submissionRecords.length > 0) {
-        submissionRecords.forEach((sub: any, idx: number) => {
-          const rawReview = sub.submission_reviews?.[0];
-          console.log(`📋 Submission ${idx + 1} - Raw Data:`, {
-            submissionId: sub.id,
-            userId: sub.messages?.user_id,
-            hasRawReview: !!rawReview,
-            rawReview: rawReview,
-            rawReviewType: typeof rawReview,
-            rawReviewKeys: rawReview ? Object.keys(rawReview) : null,
-            matchedCriteriaIds: rawReview?.matched_criteria_ids,
-            matchedCriteriaIdsType: typeof rawReview?.matched_criteria_ids,
-            paymentAmount: rawReview?.payment_amount,
-            paymentAmountType: typeof rawReview?.payment_amount,
-            allSubmissionReviews: sub.submission_reviews,
-            submissionReviewsLength: sub.submission_reviews?.length || 0,
-          });
-        });
-      }
-
-      if (submissionsError) {
-        console.error('Error loading submissions:', submissionsError);
-        setIsLoadingSubmissions(false);
-        return;
-      }
-
       if (!submissionRecords || submissionRecords.length === 0) {
-        console.log('No submissions found for project:', projectData.id);
         setSubmissions([]);
         setIsLoadingSubmissions(false);
         return;
       }
 
-      // Fetch attachments separately for all messages
-      const messageIds = (submissionRecords || []).map((sub: any) => sub.messages?.id).filter(Boolean);
+      const messageIds = submissionRecords.map((sub: any) => sub.messages?.id).filter(Boolean);
       const attachmentsMap = new Map();
-      
       if (messageIds.length > 0) {
         const { data: attachments } = await supabase
           .from('message_attachments')
           .select('*')
           .in('message_id', messageIds);
-        
-        if (attachments) {
-          attachments.forEach((att: any) => {
-            if (!attachmentsMap.has(att.message_id)) {
-              attachmentsMap.set(att.message_id, []);
-            }
-            attachmentsMap.get(att.message_id).push({
-              id: att.id,
-              fileUrl: att.file_url,
-              fileName: att.file_name,
-              fileType: att.file_type,
-              fileSize: att.file_size,
-              mimeType: att.mime_type,
-            });
-          });
-        }
-      }
-
-      // Batch load all profiles for all submissions at once (more efficient and better for RLS)
-      const userIds = (submissionRecords || [])
-        .map((sub: any) => sub.messages?.user_id)
-        .filter(Boolean) as string[];
-      
-      const uniqueUserIds = [...new Set(userIds)];
-      const profilesMap = new Map<string, { id: string; username: string | null; email: string | null }>();
-      
-      if (uniqueUserIds.length > 0) {
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, username, email')
-          .in('id', uniqueUserIds);
-        
-        if (profilesError) {
-          console.error('❌ Error batch loading profiles:', {
-            error: profilesError.message,
-            code: profilesError.code,
-            details: profilesError.details,
-            hint: profilesError.hint,
-            userIds: uniqueUserIds,
-          });
-        } else if (profiles) {
-          profiles.forEach((profile: any) => {
-            profilesMap.set(profile.id, profile);
-          });
-        }
-        
-        console.log('👥 Batch loaded profiles:', {
-          requested: uniqueUserIds.length,
-          loaded: profiles?.length || 0,
-          profilesMap: Array.from(profilesMap.entries()).map(([id, p]) => ({
-            id,
-            username: p.username,
-            hasEmail: !!p.email,
-          })),
+        attachments?.forEach((att: any) => {
+          if (!attachmentsMap.has(att.message_id)) attachmentsMap.set(att.message_id, []);
+          attachmentsMap.get(att.message_id).push(att);
         });
       }
 
-      // Transform submission records to message format
-      const transformedSubmissions = await Promise.all(
-        (submissionRecords || []).map(async (sub: any) => {
-          if (!sub.messages) return null;
+      const userIds = [...new Set(submissionRecords.map((sub: any) => sub.messages?.user_id).filter(Boolean))];
+      const profilesMap = new Map();
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase.from('profiles').select('id, username, email').in('id', userIds);
+        profiles?.forEach((p: any) => profilesMap.set(p.id, p));
+      }
 
-          const msg = sub.messages;
-          
-          // Get user profile from the batch-loaded map
-          const profile = profilesMap.get(msg.user_id);
+      const transformedSubmissions = submissionRecords.map((sub: any) => {
+        if (!sub.messages) return null;
+        const msg = sub.messages;
+        const profile = profilesMap.get(msg.user_id);
+        const username = profile ? normalizeProfileUsername(profile) : 'User';
+        const reviews = reviewsMap.get(sub.id) || [];
+        const reviewsByPlatform: Record<string, any> = {};
 
-          // Use normalizeProfileUsername to get username from profiles table
-          // This function handles fallbacks: username -> email prefix -> 'User'
-          let username = profile ? normalizeProfileUsername(profile) : 'User';
-          
-          // If we got a profile but username is still 'User', it means both username and email are missing
-          if (profile && username === 'User' && !profile.email) {
-            // Profile exists but has no username or email - this is a data issue
-            console.warn(`⚠️ Profile exists but has no username or email for user ${msg.user_id}`);
-          }
-          
-          // If no profile found in batch load, log it
-          if (!profile) {
-            console.warn(`⚠️ Profile not found in batch load for user ${msg.user_id} (submission ${sub.id})`);
-          }
-          
-          // Final check - if username is still 'User', log detailed info for debugging
-          if (username === 'User') {
-            console.warn(`⚠️ Username fallback to 'User' for submission ${sub.id}:`, {
-              submissionId: sub.id,
-              userId: msg.user_id,
-              hasProfile: !!profile,
-              profileData: profile ? {
-                id: profile.id,
-                username: profile.username,
-                email: profile.email ? '***' : null, // Don't log full email for privacy
-                hasEmail: !!profile.email,
-              } : null,
-              normalizedUsername: username,
-              wasInBatch: uniqueUserIds.includes(msg.user_id),
-            });
-          }
-
-          // Get attachments for this message
-          const messageAttachments = attachmentsMap.get(msg.id) || [];
-
-          // Get review data from the map we created (loaded separately to avoid RLS join issues)
-          // Now supports multiple reviews per submission (one per platform)
-          const reviews = reviewsMap.get(sub.id) || [];
-          
-          // Transform all reviews by platform
-          // Normalize platform keys to lowercase to ensure consistency
-          const reviewsByPlatform: Record<string, any> = {};
-          
-          // IMPORTANT: Process reviews and ensure we don't lose any
-          // If multiple reviews have the same platform (shouldn't happen), we'll keep the most recent one
-          reviews.forEach((review: any) => {
-            // Normalize platform to lowercase for consistency (youtube, instagram, etc.)
-            // Use the raw platform value, not null/undefined
-            const rawPlatform = review.platform;
-            const platform = rawPlatform ? rawPlatform.toLowerCase().trim() : 'all';
-            
-            // Debug: Log each review being processed
-            console.log('📝 Processing review:', {
-              reviewId: review.id,
-              submissionId: sub.id,
-              rawPlatform: rawPlatform,
-              rawPlatformType: typeof rawPlatform,
-              normalizedPlatform: platform,
-              matchedCriteriaIds: review.matched_criteria_ids,
-              paymentAmount: review.payment_amount,
-            });
-            
-            // Handle matched_criteria_ids - it might be an array or null
-            let matchedCriteriaIds: string[] = [];
-            if (review.matched_criteria_ids) {
-              matchedCriteriaIds = Array.isArray(review.matched_criteria_ids) 
-                ? review.matched_criteria_ids 
-                : [];
-            }
-
-            // If a review already exists for this platform, log a warning
-            // This should NOT happen if reviews are platform-specific, but log it if it does
-            if (reviewsByPlatform[platform]) {
-              console.error('❌ ERROR: Multiple reviews for same platform - keeping most recent!', {
-                submissionId: sub.id,
-                platform,
-                existingReviewId: reviewsByPlatform[platform].id,
-                existingPlatform: reviewsByPlatform[platform].platform,
-                existingCreatedAt: reviewsByPlatform[platform].createdAt,
-                newReviewId: review.id,
-                newPlatform: review.platform,
-                newCreatedAt: new Date(review.created_at).getTime(),
-                allReviewsForSubmission: reviews.map((r: any) => ({
-                  id: r.id,
-                  platform: r.platform,
-                  normalized: r.platform ? r.platform.toLowerCase().trim() : 'all',
-                  createdAt: r.created_at,
-                })),
-              });
-              
-              // Keep the most recent review if there's a conflict
-              const existingCreatedAt = reviewsByPlatform[platform].createdAt;
-              const newCreatedAt = new Date(review.created_at).getTime();
-              if (newCreatedAt <= existingCreatedAt) {
-                console.log('⏭️ Skipping older review, keeping existing one');
-                return; // Skip this review, keep the existing one
-              }
-              console.log('✅ Replacing with newer review');
-            }
-
-            reviewsByPlatform[platform] = {
-              id: review.id,
-              status: review.status,
-              matchedCriteriaIds: matchedCriteriaIds,
-              comment: review.comment || null,
-              paymentAmount: parseFloat(review.payment_amount || '0'),
-              createdAt: new Date(review.created_at).getTime(),
-              platform: platform,
-            };
-          });
-          
-          // Debug: Log final reviewsByPlatform with detailed info
-          const platformKeys = Object.keys(reviewsByPlatform);
-          console.log('✅ Final reviewsByPlatform for submission', sub.id, ':', {
-            reviewsByPlatform,
-            platformKeys,
-            platformCount: platformKeys.length,
-            allPlatforms: platformKeys.join(', '),
-            reviewDetails: platformKeys.map(key => ({
-              platform: key,
-              reviewId: reviewsByPlatform[key].id,
-              rpm: reviewsByPlatform[key].paymentAmount,
-              criteriaCount: reviewsByPlatform[key].matchedCriteriaIds?.length || 0,
-            })),
-          });
-          
-          // If we expected multiple platforms but only got one, log a warning
-          if (reviews.length > 1 && platformKeys.length === 1) {
-            console.error('❌ ERROR: Multiple reviews loaded but only one platform in reviewsByPlatform!', {
-              submissionId: sub.id,
-              totalReviewsLoaded: reviews.length,
-              platformsInReviewsByPlatform: platformKeys.length,
-              allReviewPlatforms: reviews.map((r: any) => ({
-                id: r.id,
-                rawPlatform: r.platform,
-                normalizedPlatform: r.platform ? r.platform.toLowerCase() : 'all',
-              })),
-            });
-          }
-
-          // For backward compatibility, use first review if only one exists
-          // Otherwise, we'll use reviewsByPlatform to show platform-specific data
-          const review = reviews.length > 0 ? reviewsByPlatform[Object.keys(reviewsByPlatform)[0]] || null : null;
-
-          // Debug: Log platform links for this submission
-          const platformLinksData = sub.platform_links || null;
-          console.log('🔗 Submission platform links:', {
-            submissionId: sub.id,
-            platformLinks: platformLinksData,
-            platformCount: platformLinksData ? Object.keys(platformLinksData).length : 0,
-            platforms: platformLinksData ? Object.keys(platformLinksData).join(', ') : 'none',
-            reviewsByPlatformCount: Object.keys(reviewsByPlatform).length,
-            reviewsByPlatformKeys: Object.keys(reviewsByPlatform).join(', '),
-          });
-
-          return {
-            id: msg.id,
-            submissionId: sub.id,
-            content: msg.content,
-            timestamp: new Date(msg.created_at).getTime(),
-            user: {
-              id: msg.user_id,
-              username,
-              avatarUrl: '',
-            },
-            attachments: messageAttachments.length > 0 ? messageAttachments : undefined,
-            submissionData: {
-              videoUrl: sub.video_url,
-              message: sub.message,
-              platformLinks: platformLinksData, // Platform-specific links
-            },
-            review: review,
-            reviewsByPlatform: reviewsByPlatform, // All reviews organized by platform
+        reviews.forEach((review: any) => {
+          const platform = review.platform ? review.platform.toLowerCase().trim() : 'all';
+          let matchedCriteriaIds = Array.isArray(review.matched_criteria_ids) ? review.matched_criteria_ids : [];
+          reviewsByPlatform[platform] = {
+            id: review.id,
+            status: review.status,
+            matchedCriteriaIds,
+            comment: review.comment || null,
+            paymentAmount: parseFloat(review.payment_amount || '0'),
+            createdAt: new Date(review.created_at).getTime(),
+            platform,
           };
-        })
-      );
+        });
 
-      // Filter submissions: students see only their own, lecturers see all
-      const filteredSubmissions = transformedSubmissions.filter(Boolean).filter((sub: any) => {
-        if (isLecturer) {
-          return true; // Lecturers see all submissions
-        } else {
-          return sub.user.id === currentUserId; // Students see only their own
-        }
-      });
+        const review = reviews.length > 0 ? reviewsByPlatform[Object.keys(reviewsByPlatform)[0]] || null : null;
+
+        return {
+          id: msg.id,
+          submissionId: sub.id,
+          content: msg.content,
+          timestamp: new Date(msg.created_at).getTime(),
+          user: { id: msg.user_id, username, avatarUrl: '' },
+          attachments: attachmentsMap.get(msg.id) || [],
+          submissionData: { videoUrl: sub.video_url, message: sub.message, platformLinks: sub.platform_links },
+          review,
+          reviewsByPlatform,
+        };
+      }).filter(Boolean);
+
+      const filteredSubmissions = transformedSubmissions.filter((sub: any) =>
+        isLecturer || sub.user.id === currentUserId
+      );
 
       setSubmissions(filteredSubmissions);
     } catch (error) {
@@ -505,1031 +245,405 @@ export default function ProjectCard({
     } finally {
       setIsLoadingSubmissions(false);
     }
-  }, [isExpanded, project.id, channelId, currentUserId, isLecturer, supabase]);
+  }, [isExpanded, project.id, currentUserId, isLecturer]);
 
-  // Load submissions when project card is expanded
   useEffect(() => {
-    console.log('📂 ProjectCard useEffect - isExpanded:', isExpanded, 'projectId:', project.id);
-    if (isExpanded) {
-      console.log('📂 Loading submissions for project:', project.id);
-      loadSubmissions();
-    }
-  }, [isExpanded, loadSubmissions, project.id]);
-
-  const handleExpand = useCallback(() => {
-    const newExpanded = !isExpanded;
-    setIsExpanded(newExpanded);
-    if (newExpanded) {
-      // Load submissions when expanding
-      loadSubmissions();
-    }
+    if (isExpanded) loadSubmissions();
   }, [isExpanded, loadSubmissions]);
 
+  const handleExpand = useCallback(() => {
+    if (isProjectExpired && !isLecturer) return;
+    setIsExpanded(!isExpanded);
+  }, [isExpanded, isProjectExpired, isLecturer]);
+
   const handleSubmissionSuccess = useCallback(() => {
-    setSubmissions([]); // Reset to reload
+    setSubmissions([]);
     loadSubmissions();
     onSubmission?.();
   }, [loadSubmissions, onSubmission]);
 
   const isProjectOwner = project.submittedBy.id === currentUserId;
-  const canSubmit = !isLecturer && !isProjectOwner; // Students can submit, lecturers and project owner cannot
+  const canSubmit = !isLecturer && !isProjectOwner && !isProjectExpired;
+
+  // Calculate total potential RPM
+  const totalPotentialRPM = useMemo(() =>
+    projectCriteria.reduce((sum, c) => sum + c.rpm, 0), [projectCriteria]
+  );
 
   return (
     <>
-      <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 hover:border-gray-600 transition-colors">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold text-sm">
-                🎬
+      <div className={`relative overflow-hidden rounded-xl border transition-all duration-300 ${
+        isProjectExpired
+          ? 'bg-gray-900/50 border-gray-700/50 opacity-70'
+          : 'bg-gradient-to-br from-gray-800/90 via-gray-800/95 to-gray-900/90 border-gray-700/50 hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/5'
+      }`}>
+        {/* Gradient accent line */}
+        <div className={`absolute top-0 left-0 right-0 h-1 ${
+          isProjectExpired ? 'bg-gray-600' : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500'
+        }`} />
+
+        {/* Main Card Content */}
+        <div className="p-5">
+          {/* Header Row */}
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex-1 min-w-0">
+              {/* Title & Status Badges */}
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <h3 className={`text-lg font-bold truncate ${isProjectExpired ? 'text-gray-400' : 'text-white'}`}>
+                  {project.name}
+                </h3>
+
+                {/* Expired Badge */}
+                {isProjectExpired && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-700 text-gray-300 border border-gray-600">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    {t('activeProjects.expired') || 'Expired'}
+                  </span>
+                )}
+
+                {/* Countdown Badge */}
+                {!isProjectExpired && countdown.formattedTime && (
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    countdown.timeRemaining.days <= 1 ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                    countdown.timeRemaining.days <= 3 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                    'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  }`}>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {countdown.formattedTime}
+                  </span>
+                )}
               </div>
-              <div>
-                <h3 className="text-white font-semibold">{project.name}</h3>
-                <p className="text-gray-400 text-xs">
-                  {t('projects.by')} {project.submittedBy.username} • {new Date(project.timestamp).toLocaleDateString()}
-                </p>
+
+              {/* Author & Date */}
+              <p className="text-sm text-gray-400">
+                {t('projects.by')} <span className="text-gray-300 font-medium">{project.submittedBy.username}</span>
+                {formattedDates && (
+                  <span className="ml-2 text-gray-500">• {formattedDates}</span>
+                )}
+              </p>
+            </div>
+
+            {/* Expand Button */}
+            <button
+              onClick={handleExpand}
+              disabled={isProjectExpired && !isLecturer}
+              className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                isProjectExpired && !isLecturer
+                  ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                  : 'bg-gray-700/50 text-gray-300 hover:bg-emerald-500/20 hover:text-emerald-400'
+              }`}
+            >
+              <svg className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Quick Stats Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+            {/* Budget Card */}
+            <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700/50">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-6 h-6 rounded-md bg-emerald-500/20 flex items-center justify-center">
+                  <span className="text-emerald-400 text-xs">$</span>
+                </div>
+                <span className="text-xs text-gray-400 font-medium">{t('activeProjects.budget') || 'Budget'}</span>
+              </div>
+              <p className="text-lg font-bold text-white">{formatCurrency(project.budget)}</p>
+              {projectDbId && !budget.isLoading && (
+                <div className="mt-2">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-gray-500">{t('activeProjects.remaining') || 'Remaining'}</span>
+                    <span className={`font-medium ${
+                      budget.status === 'depleted' ? 'text-gray-500' :
+                      budget.status === 'critical' ? 'text-red-400' :
+                      budget.status === 'low' ? 'text-amber-400' :
+                      'text-emerald-400'
+                    }`}>{formatCurrency(budget.remainingBudget)}</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        budget.status === 'depleted' ? 'bg-gray-500' :
+                        budget.status === 'critical' ? 'bg-red-500' :
+                        budget.status === 'low' ? 'bg-amber-500' :
+                        'bg-emerald-500'
+                      }`}
+                      style={{ width: `${budget.percentageRemaining}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Views Card */}
+            <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700/50">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-6 h-6 rounded-md bg-blue-500/20 flex items-center justify-center">
+                  <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </div>
+                <span className="text-xs text-gray-400 font-medium">{t('activeProjects.viewRange') || 'Views'}</span>
+              </div>
+              <p className="text-lg font-bold text-white">{formatViews(project.minViews)} - {formatViews(project.maxViews)}</p>
+            </div>
+
+            {/* Platforms Card */}
+            <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700/50">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 rounded-md bg-purple-500/20 flex items-center justify-center">
+                  <svg className="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                  </svg>
+                </div>
+                <span className="text-xs text-gray-400 font-medium">{t('projects.platforms') || 'Platforms'}</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {project.platforms.slice(0, 3).map((platform) => {
+                  const config = PLATFORM_CONFIG[platform.toLowerCase()] || { name: platform, icon: '•', color: 'text-gray-400', bg: 'bg-gray-700/50 border-gray-600' };
+                  return (
+                    <span key={platform} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border ${config.bg} ${config.color}`}>
+                      <span>{config.icon}</span>
+                      <span className="hidden sm:inline">{config.name}</span>
+                    </span>
+                  );
+                })}
+                {project.platforms.length > 3 && (
+                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-700/50 text-gray-400">+{project.platforms.length - 3}</span>
+                )}
               </div>
             </div>
-            <p className="text-gray-300 text-sm line-clamp-2">{project.description}</p>
+
+            {/* Potential RPM Card */}
+            <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700/50">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-6 h-6 rounded-md bg-amber-500/20 flex items-center justify-center">
+                  <svg className="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <span className="text-xs text-gray-400 font-medium">{t('activeProjects.potentialRPM') || 'Potential RPM'}</span>
+              </div>
+              <p className="text-lg font-bold text-white">{formatCurrency(totalPotentialRPM)}</p>
+              <p className="text-xs text-gray-500">{projectCriteria.length} criteria</p>
+            </div>
           </div>
-          <button
-            onClick={handleExpand}
-            className="flex-shrink-0 text-gray-400 hover:text-white transition-colors"
-            title={isExpanded ? t('projects.collapse') : t('projects.expand')}
-          >
-            <svg
-              className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+
+          {/* Description */}
+          <p className={`text-sm leading-relaxed ${isProjectExpired ? 'text-gray-500' : 'text-gray-300'} ${!isExpanded ? 'line-clamp-2' : ''}`}>
+            {project.description}
+          </p>
+
+          {/* Action Button (when not expanded) */}
+          {!isExpanded && canSubmit && (
+            <button
+              onClick={() => setShowSubmissionDialog(true)}
+              className="mt-4 w-full py-2.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              {t('projects.submitVideo') || 'Submit Video'}
+            </button>
+          )}
         </div>
 
         {/* Expanded Content */}
         {isExpanded && (
-          <div className="mt-4 pt-4 border-t border-gray-700 space-y-4">
-            {/* Project Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">{t('projects.budget')}</p>
-                <p className="text-white font-semibold">${project.budget.toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">{t('projects.viewCountRange')}</p>
-                <p className="text-white font-semibold">
-                  {project.minViews.toLocaleString()} - {project.maxViews.toLocaleString()} {t('projects.views')}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">{t('projects.platforms')}</p>
-                <div className="flex flex-wrap gap-2">
-                  {project.platforms.map((platform) => (
-                    <span
-                      key={platform}
-                      className="px-2 py-1 bg-indigo-600/20 text-indigo-300 rounded text-xs"
-                    >
-                      {PLATFORM_NAMES[platform] || platform}
-                    </span>
-                  ))}
-                </div>
-              </div>
+          <div className="border-t border-gray-700/50 bg-gray-900/30">
+            <div className="p-5 space-y-5">
+              {/* Reference Video */}
               {project.videoLink && (
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">{t('projects.referenceVideo')}</p>
-                  <a
-                    href={project.videoLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-indigo-400 hover:text-indigo-300 text-sm underline"
-                  >
-                    {t('projects.viewVideo')}
+                <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                  <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-300">{t('projects.referenceVideo') || 'Reference Video'}</p>
+                    <a href={project.videoLink} target="_blank" rel="noopener noreferrer" className="text-sm text-emerald-400 hover:text-emerald-300 truncate block">
+                      {project.videoLink}
+                    </a>
+                  </div>
+                  <a href={project.videoLink} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors">
+                    {t('projects.viewVideo') || 'Watch'}
                   </a>
                 </div>
               )}
-            </div>
 
-            {/* Full Description */}
-            <div>
-              <p className="text-xs text-gray-500 mb-2">{t('projects.description')}</p>
-              <p className="text-gray-300 text-sm whitespace-pre-wrap">{project.description}</p>
-            </div>
-
-            {/* Criteria Section */}
-            {projectCriteria.length > 0 && (
-              <div>
-                <p className="text-xs text-gray-500 mb-2">{t('projects.criteria')}</p>
-                <div className="space-y-2">
-                  {projectCriteria.map((criterion) => (
-                    <div
-                      key={criterion.id}
-                      className="flex items-center justify-between p-2 bg-gray-700/30 rounded border border-gray-600"
-                    >
-                      <span className="text-white text-sm">{criterion.text}</span>
-                      <span className="text-indigo-400 text-sm font-semibold">
-                        ${criterion.rpm.toFixed(2)} RPM
-                      </span>
-                    </div>
-                  ))}
+              {/* Criteria Section */}
+              {projectCriteria.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    {t('projects.criteria') || 'Criteria'} ({projectCriteria.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {projectCriteria.map((criterion) => (
+                      <div key={criterion.id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                          <span className="text-sm text-gray-300">{criterion.text}</span>
+                          {criterion.platform && (
+                            <span className="px-2 py-0.5 text-xs rounded bg-gray-700 text-gray-400">{PLATFORM_CONFIG[criterion.platform.toLowerCase()]?.name || criterion.platform}</span>
+                          )}
+                        </div>
+                        <span className="text-sm font-bold text-emerald-400">${criterion.rpm.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  {t('projects.rpmExplanation')}
-                </p>
-              </div>
-            )}
+              )}
 
-            {/* Submissions Section */}
-            <div className="pt-4 border-t border-gray-700">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-white font-semibold text-sm">
-                  {t('projects.submissions')} {submissions.length > 0 && `(${submissions.length})`}
-                </h4>
-                {canSubmit && (
-                  <button
-                    onClick={() => setShowSubmissionDialog(true)}
-                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors"
-                  >
-                    {t('projects.submitVideo')}
-                  </button>
-                )}
-              </div>
-
-              {isLoadingSubmissions ? (
-                <div className="text-center py-4 text-gray-400 text-sm">{t('projects.loadingSubmissions')}</div>
-              ) : submissions.length === 0 ? (
-                <div className="text-center py-6 space-y-3">
-                  {isLecturer ? (
-                    <>
-                      <div className="mb-2">
-                        <svg className="w-12 h-12 mx-auto text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                      <p className="text-gray-400 text-sm">{t('projects.noSubmissionsYet')}</p>
-                      <div className="bg-gray-800/50 rounded-lg p-4 space-y-2 text-left max-w-md mx-auto">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400 text-xs">Project Status</span>
-                          <span className="text-green-400 text-xs font-semibold">Published</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400 text-xs">Budget</span>
-                          <span className="text-white text-xs">${project.budget.toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400 text-xs">Platforms</span>
-                          <span className="text-white text-xs">{project.platforms.map(p => PLATFORM_NAMES[p] || p).join(', ')}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400 text-xs">View Range</span>
-                          <span className="text-white text-xs">{project.minViews.toLocaleString()} - {project.maxViews.toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400 text-xs">Submissions</span>
-                          <span className="text-yellow-400 text-xs">0 submissions</span>
-                        </div>
-                      </div>
-                      <p className="text-gray-500 text-xs pt-2">
-                        Students can submit videos once they meet the view requirements
-                      </p>
-                      <button
-                        onClick={() => loadSubmissions()}
-                        className="mt-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
-                      >
-                        Refresh Submissions
-                      </button>
-                    </>
-                  ) : (
-                    <div className="py-2">
-                      <div className="mb-2">
-                        <svg className="w-10 h-10 mx-auto text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                      <p className="text-gray-500 text-sm">
-                        {canSubmit ? t('projects.beFirstToSubmit') : t('projects.noSubmissionsYet')}
-                      </p>
-                    </div>
+              {/* Submissions Section */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                    <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    {t('projects.submissions') || 'Submissions'} {submissions.length > 0 && `(${submissions.length})`}
+                  </h4>
+                  {canSubmit && (
+                    <button
+                      onClick={() => setShowSubmissionDialog(true)}
+                      className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-sm font-medium rounded-lg transition-all"
+                    >
+                      {t('projects.submitVideo') || 'Submit Video'}
+                    </button>
                   )}
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {submissions.map((submission: any) => {
-                    const submissionData = submission.submissionData || {};
-                    const review = submission.review;
-                    const reviewsByPlatform = submission.reviewsByPlatform || {};
-                    const isOwnSubmission = submission.user.id === currentUserId;
-                    const isExpanded = expandedSubmissionId === submission.submissionId;
-                    const platformLinks = submissionData.platformLinks || {};
-                    const hasPlatformLinks = Object.keys(platformLinks).length > 0;
-                    
-                    // Debug: Log reviewsByPlatform to see what platforms we have
-                    console.log('🔍 RENDER TIME - Reviews by platform for submission:', submission.submissionId, {
-                      reviewsByPlatform,
-                      platformKeys: Object.keys(reviewsByPlatform),
-                      platformCount: Object.keys(reviewsByPlatform).length,
-                      allPlatforms: Object.keys(reviewsByPlatform).join(', '),
-                      reviewDetails: Object.keys(reviewsByPlatform).map(key => ({
-                        platform: key,
-                        reviewId: reviewsByPlatform[key]?.id,
-                        rpm: reviewsByPlatform[key]?.paymentAmount,
-                        criteriaCount: reviewsByPlatform[key]?.matchedCriteriaIds?.length || 0,
-                      })),
-                    });
-                    
-                    // Calculate RPM per platform - include ALL platforms that have reviews
-                    const rpmByPlatform: Record<string, number> = {};
-                    Object.keys(reviewsByPlatform).forEach(platform => {
-                      const platformReview = reviewsByPlatform[platform];
-                      // Always add an entry for each platform that has a review, even if RPM is 0
-                      rpmByPlatform[platform] = platformReview.paymentAmount > 0
-                        ? platformReview.paymentAmount
-                        : (platformReview.matchedCriteriaIds && platformReview.matchedCriteriaIds.length > 0
-                            ? platformReview.matchedCriteriaIds.reduce((total: number, criteriaId: string) => {
-                                const criterion = projectCriteria.find(c => c.id === criteriaId);
-                                const rpm = criterion?.rpm || 0;
-                                return total + rpm;
-                              }, 0)
-                            : 0);
-                    });
-                    
-                    // Debug: Log RPM by platform
-                    if (Object.keys(rpmByPlatform).length > 0) {
-                      console.log('💰 RPM by platform:', {
-                        rpmByPlatform,
-                        platformKeys: Object.keys(rpmByPlatform),
-                        totalRPM: Object.values(rpmByPlatform).reduce((sum, rpm) => sum + rpm, 0),
-                      });
-                    }
-                    
-                    // Calculate total RPM across all platforms
-                    const totalRPM = Object.values(rpmByPlatform).reduce((sum, rpm) => sum + rpm, 0);
-                    
-                    // Calculate RPM from review if available (for backward compatibility)
-                    // Use payment_amount from review if available, otherwise calculate from criteria
-                    const calculatedRPM = review 
-                      ? (review.paymentAmount > 0 
-                          ? review.paymentAmount 
-                          : (review.matchedCriteriaIds && review.matchedCriteriaIds.length > 0
-                              ? review.matchedCriteriaIds.reduce((total: number, criteriaId: string) => {
-                                  const criterion = projectCriteria.find(c => c.id === criteriaId);
-                                  const rpm = criterion?.rpm || 0;
-                                  return total + rpm;
-                                }, 0)
-                              : 0))
-                      : 0;
-                    
-                    // Debug logging for students viewing their own submissions
-                    if (isOwnSubmission && !isLecturer) {
-                      const willShow = !isLecturer && isOwnSubmission && review;
-                      console.log('🔍 Student submission review check:', {
-                        submissionId: submission.submissionId,
-                        userId: submission.user.id,
-                        currentUserId,
-                        isLecturer,
-                        isOwnSubmission,
-                        hasReview: !!review,
-                        review: review,
-                        reviewType: typeof review,
-                        reviewKeys: review ? Object.keys(review) : null,
-                        calculatedRPM,
-                        matchedCriteriaIds: review?.matchedCriteriaIds,
-                        paymentAmount: review?.paymentAmount,
-                        projectCriteriaCount: projectCriteria.length,
-                        willShowReview: willShow,
-                        conditionBreakdown: {
-                          '!isLecturer': !isLecturer,
-                          'isOwnSubmission': isOwnSubmission,
-                          'review exists': !!review,
-                        },
-                      });
-                    }
-                    
-                    return (
-                      <>
+
+                {isLoadingSubmissions ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="ml-3 text-gray-400 text-sm">{t('projects.loadingSubmissions') || 'Loading...'}</span>
+                  </div>
+                ) : submissions.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-800/30 rounded-lg border border-gray-700/50">
+                    <svg className="w-12 h-12 mx-auto text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <p className="text-gray-400 text-sm mb-1">{t('projects.noSubmissionsYet') || 'No submissions yet'}</p>
+                    <p className="text-gray-500 text-xs">{canSubmit ? (t('projects.beFirstToSubmit') || 'Be the first to submit!') : ''}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {submissions.map((submission: any) => {
+                      const submissionData = submission.submissionData || {};
+                      const reviewsByPlatform = submission.reviewsByPlatform || {};
+                      const isOwnSubmission = submission.user.id === currentUserId;
+                      const totalRPM = Object.values(reviewsByPlatform).reduce((sum: number, r: any) => sum + (r.paymentAmount || 0), 0);
+                      const hasReview = Object.keys(reviewsByPlatform).length > 0;
+                      const platformLinks = submissionData.platformLinks || {};
+
+                      return (
                         <div
                           key={submission.id}
-                          className="bg-gray-700/50 rounded-lg border border-gray-600 cursor-pointer hover:border-gray-500 transition-colors"
-                          onClick={(e) => {
-                            // Don't open dialog if clicking on review details section
-                            const target = e.target as HTMLElement;
-                            if (target.closest('[data-review-details-section]')) {
-                              return;
-                            }
-                            setExpandedSubmissionId(isExpanded ? null : submission.submissionId);
-                          }}
+                          onClick={() => setExpandedSubmissionId(expandedSubmissionId === submission.submissionId ? null : submission.submissionId)}
+                          className="p-4 bg-gray-800/50 rounded-lg border border-gray-700/50 hover:border-gray-600 cursor-pointer transition-all"
                         >
-                          <div className="flex items-start justify-between gap-3 p-3">
-                            <div className="flex-1">
-                              {/* Header */}
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-white font-medium text-sm">
-                                    {submission.user.username}
-                                  </span>
-                                  <span className="text-gray-500 text-xs">
-                                    {new Date(submission.timestamp).toLocaleString()}
-                                  </span>
-                                  {/* Show RPM badges - platform-wise if multiple platforms, total if single */}
-                                  {((isOwnSubmission && (totalRPM > 0 || calculatedRPM > 0)) || (isLecturer && (totalRPM > 0 || calculatedRPM > 0))) && (
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      {Object.keys(reviewsByPlatform).length > 1 ? (
-                                        <>
-                                          {Object.keys(reviewsByPlatform).map((platform) => {
-                                            const platformRPM = rpmByPlatform[platform] || 0;
-                                            const platformName = PLATFORM_NAMES[platform.toLowerCase()] || platform;
-                                            return (
-                                              <span key={platform} className={`px-2 py-0.5 rounded text-xs font-semibold border ${
-                                                platformRPM > 0 
-                                                  ? 'bg-green-900/50 text-green-300 border-green-700' 
-                                                  : 'bg-gray-700/50 text-gray-400 border-gray-600'
-                                              }`}>
-                                                {platformName}: ${platformRPM.toFixed(2)}
-                                              </span>
-                                            );
-                                          })}
-                                          {totalRPM > 0 && (
-                                            <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-900/50 text-green-300 border border-green-700">
-                                              Total: ${totalRPM.toFixed(2)}
-                                            </span>
-                                          )}
-                                        </>
-                                      ) : Object.keys(reviewsByPlatform).length === 1 ? (
-                                        <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-900/50 text-green-300 border border-green-700">
-                                          RPM: ${(totalRPM > 0 ? totalRPM : calculatedRPM).toFixed(2)}
-                                        </span>
-                                      ) : (
-                                        <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-900/50 text-green-300 border border-green-700">
-                                          RPM: ${(totalRPM > 0 ? totalRPM : calculatedRPM).toFixed(2)}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-                                  {/* Show review status badge for students */}
-                                  {isOwnSubmission && review && calculatedRPM > 0 && (
-                                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-indigo-900/50 text-indigo-300 border border-indigo-700">
-                                      ✓ {t('projects.reviewed')}
-                                    </span>
-                                  )}
-                                </div>
-                                {/* Expand/Collapse Button */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white text-sm font-semibold">
+                                {submission.user.username.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-white">{submission.user.username}</p>
+                                <p className="text-xs text-gray-500">{new Date(submission.timestamp).toLocaleString()}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {hasReview && totalRPM > 0 && (
+                                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                  ${totalRPM.toFixed(2)} RPM
+                                </span>
+                              )}
+                              {hasReview && (
+                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                  {t('projects.reviewed') || 'Reviewed'}
+                                </span>
+                              )}
+                              {isLecturer && !hasReview && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setExpandedSubmissionId(isExpanded ? null : submission.submissionId);
+                                    setReviewingSubmissionId(submission.submissionId);
+                                    setReviewingSubmission(submission);
                                   }}
-                                  className="text-gray-400 hover:text-white transition-colors"
-                                  aria-label={isExpanded ? t('projects.collapse') : t('projects.expand')}
+                                  className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs rounded-lg transition-colors"
                                 >
-                                  <svg
-                                    className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                  </svg>
+                                  Review
                                 </button>
-                              </div>
+                              )}
+                              <svg className={`w-5 h-5 text-gray-400 transition-transform ${expandedSubmissionId === submission.submissionId ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </div>
 
-                              {/* Collapsed View - Summary */}
-                              {!isExpanded && (
+                          {/* Expanded Submission Details */}
+                          {expandedSubmissionId === submission.submissionId && (
+                            <div className="mt-4 pt-4 border-t border-gray-700/50 space-y-3">
+                              {/* Platform Links */}
+                              {Object.keys(platformLinks).length > 0 && (
                                 <div className="space-y-2">
-                                  <div className="text-gray-400 text-xs">
-                                    {hasPlatformLinks 
-                                      ? `${Object.keys(platformLinks).length} platform link(s)`
-                                      : submissionData.videoUrl 
-                                        ? 'Video link available'
-                                        : 'Click to view details'
-                                    }
-                                  </div>
-                                  
-                                  {/* Show RPM and Matched Criteria for students on their own submissions, or for lecturers on any reviewed submission */}
-                                  {((isOwnSubmission && (Object.keys(reviewsByPlatform).length > 0 || totalRPM > 0 || calculatedRPM > 0)) || (isLecturer && (Object.keys(reviewsByPlatform).length > 0 || totalRPM > 0 || calculatedRPM > 0))) && (
-                                    <div className="pt-2 border-t border-gray-600" data-review-details-section>
-                                      {/* Collapsible Review Section Header */}
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setExpandedReviewSections(prev => {
-                                            const newSet = new Set(prev);
-                                            if (newSet.has(submission.submissionId)) {
-                                              newSet.delete(submission.submissionId);
-                                            } else {
-                                              newSet.add(submission.submissionId);
-                                            }
-                                            return newSet;
-                                          });
-                                        }}
-                                        className="w-full flex items-center justify-between text-left hover:bg-gray-600/20 rounded-lg p-2 -m-2 transition-colors"
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xs font-semibold text-gray-300">
-                                            Review Details
-                                          </span>
-                                          <span className="text-xs text-gray-500">
-                                            (RPM: ${(totalRPM > 0 ? totalRPM : calculatedRPM).toFixed(2)})
-                                            {Object.keys(rpmByPlatform).length > 1 && ` - ${Object.keys(rpmByPlatform).length} platforms`}
-                                          </span>
-                                        </div>
-                                        <svg
-                                          className={`w-4 h-4 text-gray-400 transition-transform ${
-                                            expandedReviewSections.has(submission.submissionId) ? 'rotate-180' : ''
-                                          }`}
-                                          fill="none"
-                                          stroke="currentColor"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                      </button>
-                                      
-                                      {/* Collapsible Review Content */}
-                                      {expandedReviewSections.has(submission.submissionId) && (
-                                        <div className="space-y-2 mt-2">
-                                          {/* Platform-wise RPM Breakdown - Always show if we have platform-specific reviews */}
-                                          {Object.keys(reviewsByPlatform).length > 0 ? (
-                                            <div className="space-y-3">
-                                              {Object.keys(reviewsByPlatform).map((platform, index) => {
-                                                const platformReview = reviewsByPlatform[platform];
-                                                const platformRPM = rpmByPlatform[platform] || 0;
-                                                const platformName = PLATFORM_NAMES[platform.toLowerCase()] || platform;
-                                                
-                                                // Debug: Log each platform being rendered
-                                                console.log(`🎨 RENDERING platform ${index + 1}/${Object.keys(reviewsByPlatform).length}:`, {
-                                                  platform,
-                                                  platformName,
-                                                  platformRPM,
-                                                  reviewId: platformReview?.id,
-                                                  hasCriteria: platformReview?.matchedCriteriaIds?.length > 0,
-                                                  hasComment: !!platformReview?.comment,
-                                                });
-                                                
-                                                // Show all platforms that have reviews, regardless of RPM or criteria
-                                                
-                                                return (
-                                                  <div key={platform} className="bg-gray-700/30 border border-gray-600 rounded-lg p-3">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                      <span className="text-xs font-semibold text-white">{platformName} Review</span>
-                                                      {platformRPM > 0 && (
-                                                        <span className="text-green-400 font-bold text-sm">${platformRPM.toFixed(2)} RPM</span>
-                                                      )}
-                                                      {platformRPM === 0 && (
-                                                        <span className="text-gray-400 text-xs">{t('projects.noRpmEarned')}</span>
-                                                      )}
-                                                    </div>
-                                                    
-                                                    {/* Matched Criteria for this platform */}
-                                                    {platformReview.matchedCriteriaIds && platformReview.matchedCriteriaIds.length > 0 && (
-                                                      <div className="space-y-1.5 mt-2">
-                                                        {platformReview.matchedCriteriaIds.map((criteriaId: string) => {
-                                                          const criterion = projectCriteria.find(c => c.id === criteriaId);
-                                                          return criterion ? (
-                                                            <div
-                                                              key={criteriaId}
-                                                              className="flex items-center justify-between p-1.5 rounded border bg-indigo-600/10 border-indigo-500/30"
-                                                            >
-                                                              <div className="flex items-center space-x-2">
-                                                                <div className="w-3 h-3 bg-indigo-600 border border-indigo-500 rounded flex items-center justify-center flex-shrink-0">
-                                                                  <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                                                  </svg>
-                                                                </div>
-                                                                <span className="text-white text-xs font-medium">{criterion.text}</span>
-                                                              </div>
-                                                              <span className="text-indigo-400 text-xs font-semibold">
-                                                                ${criterion.rpm.toFixed(2)} RPM
-                                                              </span>
-                                                            </div>
-                                                          ) : null;
-                                                        })}
-                                                      </div>
-                                                    )}
-                                                    
-                                                    {/* Comment for this platform */}
-                                                    {platformReview.comment && (
-                                                      <div className="mt-2 pt-2 border-t border-gray-600">
-                                                        <p className="text-xs text-gray-400 mb-1">Comment:</p>
-                                                        <p className="text-gray-300 text-xs whitespace-pre-wrap">{platformReview.comment}</p>
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                );
-                                              })}
-                                              
-                                              {/* Total RPM Display */}
-                                              {totalRPM > 0 && Object.keys(rpmByPlatform).length > 1 && (
-                                                <div className="bg-green-900/20 border border-green-700 rounded-lg p-2">
-                                                  <p className="text-xs text-gray-300 mb-0.5">
-                                                    <span className="font-semibold">{t('projects.totalRpmAllPlatforms')}</span>{' '}
-                                                    <span className="text-green-400 font-bold">${totalRPM.toFixed(2)}</span>
-                                                  </p>
-                                                </div>
-                                              )}
-                                            </div>
-                                          ) : (
-                                            <>
-                                              {/* Fallback for legacy single review */}
-                                          <div className="bg-green-900/20 border border-green-700 rounded-lg p-2">
-                                            <p className="text-xs text-gray-300 mb-0.5">
-                                              <span className="font-semibold">{t('projects.savedRpm')}</span>{' '}
-                                              <span className="text-green-400 font-bold">${calculatedRPM.toFixed(2)}</span>
-                                            </p>
-                                            <p className="text-xs text-gray-500 mt-0.5">
-                                              {isLecturer 
-                                                ? 'Your review: Student will see this amount based on selected criteria'
-                                                : 'Student will see this amount based on selected criteria'}
-                                            </p>
-                                          </div>
-                                          
-                                              {/* Matched Criteria */}
-                                              {review && review.matchedCriteriaIds && review.matchedCriteriaIds.length > 0 && (
-                                            <div>
-                                              <p className="text-xs text-gray-500 mb-1.5 font-semibold">{t('projects.matchedCriteria')}</p>
-                                              <div className="space-y-1.5">
-                                                {review.matchedCriteriaIds.map((criteriaId: string) => {
-                                                  const criterion = projectCriteria.find(c => c.id === criteriaId);
-                                                  return criterion ? (
-                                                    <div
-                                                      key={criteriaId}
-                                                      className="flex items-center justify-between p-2 rounded-lg border bg-indigo-600/10 border-indigo-500/30"
-                                                    >
-                                                      <div className="flex items-center space-x-2">
-                                                        <div className="w-4 h-4 bg-indigo-600 border border-indigo-500 rounded flex items-center justify-center flex-shrink-0">
-                                                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                                          </svg>
-                                                        </div>
-                                                        <span className="text-white text-xs font-medium">{criterion.text}</span>
-                                                      </div>
-                                                      <span className="text-indigo-400 text-xs font-semibold">
-                                                        ${criterion.rpm.toFixed(2)} RPM
-                                                      </span>
-                                                    </div>
-                                                  ) : null;
-                                                })}
-                                              </div>
-                                            </div>
-                                              )}
-                                            </>
-                                          )}
-                                        </div>
-                                      )}
+                                  {Object.entries(platformLinks).map(([platform, link]) => (
+                                    <div key={platform} className="flex items-center gap-3 p-2 bg-gray-900/50 rounded-lg">
+                                      <span className={`text-sm font-medium ${PLATFORM_CONFIG[platform.toLowerCase()]?.color || 'text-gray-400'}`}>
+                                        {PLATFORM_CONFIG[platform.toLowerCase()]?.name || platform}
+                                      </span>
+                                      <a href={link as string} target="_blank" rel="noopener noreferrer" className="text-sm text-emerald-400 hover:text-emerald-300 truncate flex-1">
+                                        {link as string}
+                                      </a>
                                     </div>
-                                  )}
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Legacy video URL */}
+                              {submissionData.videoUrl && Object.keys(platformLinks).length === 0 && (
+                                <a href={submissionData.videoUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-emerald-400 hover:text-emerald-300 block">
+                                  {submissionData.videoUrl}
+                                </a>
+                              )}
+
+                              {/* Review Details */}
+                              {hasReview && (isOwnSubmission || isLecturer) && (
+                                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
+                                  <p className="text-xs text-emerald-400 font-semibold mb-2">Earned RPM: ${totalRPM.toFixed(2)}</p>
+                                  {Object.entries(reviewsByPlatform).map(([platform, review]: [string, any]) => (
+                                    <div key={platform} className="text-xs text-gray-400">
+                                      {PLATFORM_CONFIG[platform.toLowerCase()]?.name || platform}: ${review.paymentAmount?.toFixed(2) || '0.00'}
+                                      {review.comment && <p className="mt-1 text-gray-500 italic">"{review.comment}"</p>}
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                             </div>
-                          </div>
+                          )}
                         </div>
-
-                        {/* Expanded Dialog Modal */}
-                        {isExpanded && (
-                          <div 
-                            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-                            onClick={(e) => {
-                              // Close modal when clicking outside
-                              if (e.target === e.currentTarget) {
-                                setExpandedSubmissionId(null);
-                              }
-                            }}
-                          >
-                            <div 
-                              className="relative w-full max-w-3xl bg-gray-800 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {/* Close button */}
-                              <button
-                                onClick={() => setExpandedSubmissionId(null)}
-                                className="absolute top-4 right-4 z-10 w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center text-gray-300 transition-colors"
-                                aria-label="Close dialog"
-                              >
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M6 18L18 6M6 6l12 12"
-                                  />
-                                </svg>
-                              </button>
-
-                              <div className="p-6 space-y-4">
-                                {/* Header */}
-                                <div className="border-b border-gray-700 pb-4">
-                                  <div className="flex items-center gap-3 mb-2">
-                                    <span className="text-white font-semibold text-lg">
-                                      {submission.user.username}
-                                    </span>
-                                    <span className="text-gray-500 text-sm">
-                                      {new Date(submission.timestamp).toLocaleString()}
-                                    </span>
-                                    {/* Show RPM badge for students on their own submissions, or for lecturers on any reviewed submission */}
-                                    {((isOwnSubmission && (totalRPM > 0 || calculatedRPM > 0)) || (isLecturer && (totalRPM > 0 || calculatedRPM > 0))) && (
-                                      <span className="px-3 py-1 rounded text-sm font-semibold bg-green-900/50 text-green-300 border border-green-700">
-                                        RPM: ${(totalRPM > 0 ? totalRPM : calculatedRPM).toFixed(2)}
-                                        {Object.keys(rpmByPlatform).length > 1 && ` (${Object.keys(rpmByPlatform).length} platforms)`}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Content */}
-                                <div className="space-y-4">
-                                  {/* Platform Links */}
-                                  {hasPlatformLinks && (
-                                    <div>
-                                      <p className="text-sm text-gray-400 mb-3 font-semibold">Video Links by Platform:</p>
-                                      <div className="space-y-3">
-                                        {Object.entries(platformLinks).map(([platform, link]) => (
-                                          <div key={platform} className="bg-gray-700/50 rounded-lg p-3">
-                                            <div className="flex items-center justify-between gap-3">
-                                              <span className="text-sm text-gray-300 font-medium w-24">{PLATFORM_NAMES[platform.toLowerCase()] || platform}:</span>
-                                              <a
-                                                href={link as string}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-indigo-400 hover:text-indigo-300 text-sm underline flex-1 truncate"
-                                              >
-                                                {link as string}
-                                              </a>
-                                              <a
-                                                href={link as string}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs rounded-lg transition-colors whitespace-nowrap"
-                                              >
-                                                {t('projects.open')}
-                                              </a>
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Legacy Video URL */}
-                                  {submissionData.videoUrl && !hasPlatformLinks && (
-                                    <div>
-                                      <p className="text-sm text-gray-400 mb-2 font-semibold">Video Link:</p>
-                                      <div className="bg-gray-700/50 rounded-lg p-3">
-                                        <a
-                                          href={submissionData.videoUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-indigo-400 hover:text-indigo-300 text-sm underline break-all"
-                                        >
-                                          {submissionData.videoUrl}
-                                        </a>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Review Section for Students - Show prominently after video links */}
-                                  {!isLecturer && isOwnSubmission && (Object.keys(reviewsByPlatform).length > 0 || review) ? (
-                                    <div className="pt-4 border-t border-gray-700">
-                                      <p className="text-sm text-white mb-3 font-bold">{t('projects.matchedCriteriaBreakdown')}</p>
-                                      <div className="space-y-3">
-                                        {/* Platform-wise RPM Breakdown - Show for all platforms */}
-                                        {Object.keys(reviewsByPlatform).length > 0 ? (
-                                          <div className="space-y-3">
-                                            {Object.keys(reviewsByPlatform).map((platform, index) => {
-                                              const platformReview = reviewsByPlatform[platform];
-                                              const platformRPM = rpmByPlatform[platform] || 0;
-                                              const platformName = PLATFORM_NAMES[platform.toLowerCase()] || platform;
-                                              
-                                              // Debug: Log each platform being rendered in expanded view
-                                              console.log(`🎨 EXPANDED VIEW - Rendering platform ${index + 1}/${Object.keys(reviewsByPlatform).length}:`, {
-                                                platform,
-                                                platformName,
-                                                platformRPM,
-                                                reviewId: platformReview?.id,
-                                                hasCriteria: platformReview?.matchedCriteriaIds?.length > 0,
-                                                hasComment: !!platformReview?.comment,
-                                              });
-                                              
-                                              // Show all platforms that have reviews, regardless of RPM or criteria
-                                              
-                                              return (
-                                                <div key={platform} className="bg-gray-700/30 border border-gray-600 rounded-lg p-4">
-                                                  <div className="flex items-center justify-between mb-3">
-                                                    <p className="text-sm font-semibold text-white">{platformName} Review</p>
-                                                    {platformRPM > 0 && (
-                                                      <span className="text-green-400 font-bold text-lg">
-                                                        ${platformRPM.toFixed(2)} RPM
-                                                      </span>
-                                                    )}
-                                                    {platformRPM === 0 && (
-                                                      <span className="text-gray-400 text-sm">No RPM earned</span>
-                                                    )}
-                                                  </div>
-                                                  
-                                                  {/* Matched Criteria for this platform */}
-                                                  {platformReview.matchedCriteriaIds && platformReview.matchedCriteriaIds.length > 0 && (
-                                                    <div className="mt-3">
-                                                      <p className="text-xs text-gray-400 mb-2 font-semibold">{t('projects.matchedCriteriaBreakdown')}</p>
-                                                      <div className="space-y-2">
-                                                        {platformReview.matchedCriteriaIds.map((criteriaId: string) => {
-                                                          const criterion = projectCriteria.find(c => c.id === criteriaId);
-                                                          return criterion ? (
-                                                            <div
-                                                              key={criteriaId}
-                                                              className="bg-indigo-600/10 border border-indigo-600/30 rounded-lg p-3 flex items-center justify-between"
-                                                            >
-                                                              <div className="flex items-center space-x-2">
-                                                                <div className="w-4 h-4 bg-indigo-600 border border-indigo-500 rounded flex items-center justify-center flex-shrink-0">
-                                                                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                                                  </svg>
-                                                                </div>
-                                                                <span className="text-sm text-indigo-300 font-medium">{criterion.text}</span>
-                                                              </div>
-                                                              <span className="text-indigo-400 font-bold">+${criterion.rpm.toFixed(2)} RPM</span>
-                                                            </div>
-                                                          ) : null;
-                                                        })}
-                                                      </div>
-                                                    </div>
-                                                  )}
-                                                  
-                                                  {/* Platform RPM Display */}
-                                                  {platformRPM > 0 && (
-                                                    <div className="mt-3 bg-green-900/20 border border-green-700 rounded-lg p-3">
-                                                      <p className="text-xs text-gray-400 mb-1">{t('projects.rpmEarnedFor', { platform: platformName })}</p>
-                                                      <p className="text-green-400 font-bold text-2xl">
-                                                        ${platformRPM.toFixed(2)}
-                                                      </p>
-                                                    </div>
-                                                  )}
-                                                  
-                                                  {/* Comment for this platform */}
-                                                  {platformReview.comment && (
-                                                    <div className="mt-3 pt-3 border-t border-gray-600">
-                                                      <p className="text-xs text-gray-400 mb-2 font-semibold">Lecturer Comment ({platformName}):</p>
-                                                      <div className="bg-gray-700/50 rounded-lg p-3">
-                                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{platformReview.comment}</p>
-                                                      </div>
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              );
-                                            })}
-                                            
-                                            {/* Total RPM Display - Prominent (only if multiple platforms) */}
-                                            {totalRPM > 0 && Object.keys(rpmByPlatform).length > 1 && (
-                                              <div className="bg-green-900/20 border-2 border-green-700 rounded-lg p-4">
-                                                <p className="text-xs text-gray-400 mb-1">{t('projects.totalRpmEarned')}</p>
-                                                <p className="text-green-400 font-bold text-3xl">
-                                                  ${totalRPM.toFixed(2)}
-                                                </p>
-                                                <p className="text-xs text-green-300 mt-1">{t('projects.totalRpmDescription')}</p>
-                                              </div>
-                                            )}
-                                          </div>
-                                        ) : (
-                                          <>
-                                            {/* Single platform or legacy review - show as before */}
-                                            {review && review.matchedCriteriaIds && review.matchedCriteriaIds.length > 0 ? (
-                                          <div>
-                                            <p className="text-xs text-gray-400 mb-2 font-semibold">Matched Criteria & RPM Breakdown:</p>
-                                            <div className="space-y-2">
-                                              {review.matchedCriteriaIds.map((criteriaId: string) => {
-                                                const criterion = projectCriteria.find(c => c.id === criteriaId);
-                                                return criterion ? (
-                                                  <div
-                                                    key={criteriaId}
-                                                    className="bg-indigo-600/10 border border-indigo-600/30 rounded-lg p-3 flex items-center justify-between"
-                                                  >
-                                                    <div className="flex items-center space-x-2">
-                                                      <div className="w-4 h-4 bg-indigo-600 border border-indigo-500 rounded flex items-center justify-center flex-shrink-0">
-                                                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                                        </svg>
-                                                      </div>
-                                                      <span className="text-sm text-indigo-300 font-medium">{criterion.text}</span>
-                                                    </div>
-                                                    <span className="text-indigo-400 font-bold">+${criterion.rpm.toFixed(2)} RPM</span>
-                                                  </div>
-                                                ) : null;
-                                              })}
-                                            </div>
-                                          </div>
-                                        ) : null}
-                                        
-                                        {/* Total RPM Display - Prominent */}
-                                            {(totalRPM > 0 || calculatedRPM > 0 || (review && review.paymentAmount && review.paymentAmount > 0)) ? (
-                                          <div className="bg-green-900/20 border-2 border-green-700 rounded-lg p-4">
-                                                <p className="text-xs text-gray-400 mb-1">
-                                                  {Object.keys(rpmByPlatform).length > 1 
-                                                    ? t('projects.totalRpmEarned') 
-                                                    : t('projects.totalRpmEarned')}
-                                                </p>
-                                            <p className="text-green-400 font-bold text-3xl">
-                                                  ${(totalRPM > 0 ? totalRPM : (calculatedRPM > 0 ? calculatedRPM : (review?.paymentAmount || 0))).toFixed(2)}
-                                                </p>
-                                                <p className="text-xs text-green-300 mt-1">
-                                                  {Object.keys(rpmByPlatform).length > 1 
-                                                    ? t('projects.totalRpmDescription') 
-                                                    : t('projects.totalRpmDescription')}
-                                                </p>
-                                          </div>
-                                        ) : null}
-                                          </>
-                                        )}
-                                        
-                                        {/* Lecturer Comments - Platform-specific if multiple platforms */}
-                                        {Object.keys(reviewsByPlatform).length > 1 ? (
-                                          <div className="space-y-3">
-                                            {Object.keys(reviewsByPlatform).map((platform) => {
-                                              const platformReview = reviewsByPlatform[platform];
-                                              const platformName = PLATFORM_NAMES[platform.toLowerCase()] || platform;
-                                              if (!platformReview.comment) return null;
-                                              
-                                              return (
-                                                <div key={platform}>
-                                                  <p className="text-xs text-gray-400 mb-2 font-semibold">Lecturer Comment ({platformName}):</p>
-                                                  <div className="bg-gray-700/50 rounded-lg p-3">
-                                                    <p className="text-gray-300 text-sm whitespace-pre-wrap">{platformReview.comment}</p>
-                                                  </div>
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                        ) : (
-                                          review && review.comment ? (
-                                          <div>
-                                            <p className="text-xs text-gray-400 mb-2 font-semibold">{t('projects.lecturerComment')}:</p>
-                                            <div className="bg-gray-700/50 rounded-lg p-3">
-                                              <p className="text-gray-300 text-sm whitespace-pre-wrap">{review.comment}</p>
-                                            </div>
-                                          </div>
-                                          ) : null
-                                        )}
-                                        
-                                        {/* Show message if no criteria matched and no RPM */}
-                                        {(!review.matchedCriteriaIds || review.matchedCriteriaIds.length === 0) && 
-                                         calculatedRPM === 0 && 
-                                         (!review.paymentAmount || review.paymentAmount === 0) ? (
-                                          <div className="bg-gray-700/30 border border-gray-600 rounded-lg p-3">
-                                            <p className="text-sm text-gray-400">{t('projects.noCriteriaMatched')}</p>
-                                          </div>
-                                        ) : null}
-                                      </div>
-                                    </div>
-                                  ) : null}
-                                  
-                                  {/* Debug: Show if student's own submission but no review */}
-                                  {!isLecturer && isOwnSubmission && !review && (
-                                    <div className="pt-4 border-t border-gray-700">
-                                      <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-3">
-                                        <p className="text-xs text-yellow-300">⚠️ Debug: This is your submission but no review found. Check console for details.</p>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Review Section for Lecturers - Show prominently after video links */}
-                                  {isLecturer && review && calculatedRPM > 0 && (
-                                    <div className="pt-4 border-t border-gray-700">
-                                      <p className="text-sm text-white mb-3 font-bold">{t('projects.yourReview')}</p>
-                                      <div className="space-y-3">
-                                        {/* Total RPM Display - Prominent */}
-                                        <div className="bg-green-900/20 border-2 border-green-700 rounded-lg p-4">
-                                          <p className="text-xs text-gray-400 mb-1">{t('projects.totalRpmStudent')}</p>
-                                          <p className="text-green-400 font-bold text-3xl">${calculatedRPM.toFixed(2)}</p>
-                                          <p className="text-xs text-green-300 mt-1">{t('projects.basedOnCriteria', { count: review.matchedCriteriaIds?.length || 0 })}</p>
-                                        </div>
-                                        
-                                        {/* Matched Criteria Breakdown */}
-                                        {review.matchedCriteriaIds && review.matchedCriteriaIds.length > 0 && (
-                                          <div>
-                                            <p className="text-xs text-gray-400 mb-2 font-semibold">Matched Criteria & RPM Breakdown:</p>
-                                            <div className="space-y-2">
-                                              {review.matchedCriteriaIds.map((criteriaId: string) => {
-                                                const criterion = projectCriteria.find(c => c.id === criteriaId);
-                                                return criterion ? (
-                                                  <div
-                                                    key={criteriaId}
-                                                    className="bg-indigo-600/10 border border-indigo-600/30 rounded-lg p-3 flex items-center justify-between"
-                                                  >
-                                                    <div className="flex items-center space-x-2">
-                                                      <div className="w-4 h-4 bg-indigo-600 border border-indigo-500 rounded flex items-center justify-center flex-shrink-0">
-                                                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                                        </svg>
-                                                      </div>
-                                                      <span className="text-sm text-indigo-300 font-medium">{criterion.text}</span>
-                                                    </div>
-                                                    <span className="text-indigo-400 font-bold">+${criterion.rpm.toFixed(2)} RPM</span>
-                                                  </div>
-                                                ) : null;
-                                              })}
-                                            </div>
-                                          </div>
-                                        )}
-                                        
-                                        {/* Lecturer Comment */}
-                                        {review.comment && (
-                                          <div>
-                                            <p className="text-xs text-gray-400 mb-2 font-semibold">Your Comment:</p>
-                                            <div className="bg-gray-700/50 rounded-lg p-3">
-                                              <p className="text-gray-300 text-sm whitespace-pre-wrap">{review.comment}</p>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Message */}
-                                  {submissionData.message && (
-                                    <div>
-                                      <p className="text-sm text-gray-400 mb-2 font-semibold">Message:</p>
-                                      <div className="bg-gray-700/50 rounded-lg p-3">
-                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{submissionData.message}</p>
-                                      </div>
-                                    </div>
-                                  )}
-                                  {submission.content && submission.content !== 'Video submission' && submission.content !== 'Submission' && (
-                                    <div>
-                                      <p className="text-sm text-gray-400 mb-2 font-semibold">Content:</p>
-                                      <div className="bg-gray-700/50 rounded-lg p-3">
-                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{submission.content}</p>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Attachments */}
-                                  {submission.attachments && submission.attachments.length > 0 && (
-                                    <div>
-                                      <p className="text-sm text-gray-400 mb-2 font-semibold">Attachments:</p>
-                                      <div className="space-y-3">
-                                        {submission.attachments.map((att: any) => (
-                                          <div key={att.id} className="bg-gray-700/50 rounded-lg p-3">
-                                            {att.fileType === 'video' ? (
-                                              <video
-                                                src={att.fileUrl}
-                                                controls
-                                                className="w-full max-w-2xl rounded-lg"
-                                                preload="metadata"
-                                              >
-                                                Your browser does not support the video tag.
-                                              </video>
-                                            ) : (
-                                              <a
-                                                href={att.fileUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-indigo-400 hover:text-indigo-300 text-sm underline"
-                                              >
-                                                {att.fileName}
-                                              </a>
-                                            )}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-
-                                  {/* Lecturer Review Button */}
-                                  {isLecturer && !review && (
-                                    <div className="pt-4 border-t border-gray-700">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setExpandedSubmissionId(null);
-                                          setReviewingSubmissionId(submission.submissionId);
-                                          setReviewingSubmission(submission);
-                                        }}
-                                        className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors font-medium"
-                                      >
-                                        Review Submission
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Video Submission Dialog */}
+      {/* Dialogs */}
       {showSubmissionDialog && (
         <VideoSubmissionDialog
           isOpen={showSubmissionDialog}
@@ -1541,23 +655,18 @@ export default function ProjectCard({
         />
       )}
 
-      {/* Submission Review Dialog */}
       {reviewingSubmissionId && projectDbId && reviewingSubmission && (
         <SubmissionReviewDialog
           isOpen={!!reviewingSubmissionId}
           onClose={() => {
             setReviewingSubmissionId(null);
             setReviewingSubmission(null);
-            setSubmissions([]); // Reset to reload
-            if (isExpanded) {
-              loadSubmissions();
-            }
+            setSubmissions([]);
+            if (isExpanded) loadSubmissions();
           }}
           onReview={() => {
-            setSubmissions([]); // Reset to reload
-            if (isExpanded) {
-              loadSubmissions();
-            }
+            setSubmissions([]);
+            if (isExpanded) loadSubmissions();
           }}
           submissionId={reviewingSubmissionId}
           projectId={projectDbId}
@@ -1568,5 +677,3 @@ export default function ProjectCard({
     </>
   );
 }
-
-
