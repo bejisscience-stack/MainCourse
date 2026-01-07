@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, memo, useRef, useEffect, useCallback } from 'react';
+import { useState, memo, useRef, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useUserMuteStatus } from '@/hooks/useMuteStatus';
+import { useProjectCountdown } from '@/hooks/useProjectCountdown';
 import ProjectCard from './ProjectCard';
 import type { Message as MessageType, MessageAttachment } from '@/types/message';
 
@@ -272,8 +273,20 @@ const Message = memo(function Message({
   const isPending = message.pending;
   const isFailed = message.failed;
 
+  // Check if project is expired using countdown hook
+  const projectCountdown = useProjectCountdown(
+    projectData?.start_date,
+    projectData?.end_date
+  );
+
   // If it's a project message, render ProjectCard instead
+  // But hide expired projects for non-lecturers (students)
   if (projectData && !isLoadingProject) {
+    // Filter: Hide expired projects for students
+    if (projectCountdown.isExpired && !isLecturer) {
+      return null; // Don't render expired projects for students
+    }
+
     return (
       <div
         ref={messageRef}
