@@ -1,4 +1,4 @@
-# Course Website
+# Swavleba
 
 A modern, responsive landing page for a course platform with a clean navy + white theme.
 
@@ -80,7 +80,7 @@ npm start
 
 MIT
 
-# Course
+# Swavleba
 
 
 

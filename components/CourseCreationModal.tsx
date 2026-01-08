@@ -186,13 +186,6 @@ export default function CourseCreationModal({
       return;
     }
 
-    const maxSize = 50 * 1024 * 1024;
-    if (file.size > maxSize) {
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-      setError(`Video file size (${sizeMB}MB) exceeds the 50MB limit.`);
-      return;
-    }
-
     setVideoFile(file);
     setVideoUploadProgress(0);
     setIsUploading(true);
@@ -511,7 +504,7 @@ export default function CourseCreationModal({
                         <span className="text-sm text-gray-300 font-medium block truncate">
                           {videoFile ? videoFile.name : 'Upload Video File'}
                         </span>
-                        <p className="text-xs text-gray-500 mt-1">Click to select video (max 50MB)</p>
+                        <p className="text-xs text-gray-500 mt-1">Click to select video</p>
                       </>
                     )}
                   </div>

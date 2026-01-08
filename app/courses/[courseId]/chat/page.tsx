@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import LayoutContainer from '@/components/chat/LayoutContainer';
 import ChatNavigation from '@/components/chat/ChatNavigation';
+import ExpiredEnrollmentOverlay from '@/components/ExpiredEnrollmentOverlay';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useEnrollments } from '@/hooks/useEnrollments';
@@ -20,7 +21,7 @@ export default function CourseChatPage() {
   const params = useParams();
   const courseId = params?.courseId as string;
   const { user, role: userRole, isLoading: userLoading } = useUser();
-  const { enrolledCourseIds, isLoading: enrollmentsLoading } = useEnrollments(user?.id || null);
+  const { enrolledCourseIds, isEnrollmentActive, getEnrollmentInfo, isLoading: enrollmentsLoading, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
   const [activeServerId, setActiveServerId] = useActiveServer();
   const [activeChannelId, setActiveChannelId] = useActiveChannel();
   const [course, setCourse] = useState<any>(null);
@@ -409,10 +410,16 @@ export default function CourseChatPage() {
     );
   }
 
+  // Check if enrollment is expired (admins bypass this)
+  const enrollmentInfo = getEnrollmentInfo(courseId);
+  const isEnrolled = enrolledCourseIds.has(courseId);
+  const isExpired = isEnrolled && !isEnrollmentActive(courseId);
+  const showExpirationOverlay = isExpired && userRole !== 'admin';
+
   return (
     <div className="flex flex-col h-screen bg-navy-950/20 backdrop-blur-[0.5px]">
       <ChatNavigation />
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
         {servers.length === 0 ? (
           <div className="flex-1 flex items-center justify-center bg-navy-950/20 backdrop-blur-[0.5px]">
             <div className="text-center text-gray-400 max-w-md">
@@ -440,16 +447,31 @@ export default function CourseChatPage() {
             </div>
           </div>
         ) : (
-          <LayoutContainer
-            servers={servers}
-            currentUserId={user.id}
-            initialMembers={members}
-            isLecturer={false}
-            enrolledCourseIds={enrolledCourseIds}
-            onSendMessage={handleSendMessage}
-            onReaction={handleReaction}
-            showDMButton={false}
-          />
+          <>
+            <div className={showExpirationOverlay ? 'filter blur-sm pointer-events-none' : ''}>
+              <LayoutContainer
+                servers={servers}
+                currentUserId={user.id}
+                initialMembers={members}
+                isLecturer={false}
+                enrolledCourseIds={enrolledCourseIds}
+                onSendMessage={handleSendMessage}
+                onReaction={handleReaction}
+                showDMButton={false}
+                isEnrollmentExpired={showExpirationOverlay}
+                enrollmentInfo={enrollmentInfo}
+                onReEnrollRequest={mutateEnrollments}
+              />
+            </div>
+            {showExpirationOverlay && (
+              <ExpiredEnrollmentOverlay
+                courseId={courseId}
+                courseName={course?.title || 'Course'}
+                expiresAt={enrollmentInfo?.expiresAt || null}
+                onReEnrollRequest={mutateEnrollments}
+              />
+            )}
+          </>
         )}
       </div>
     </div>

@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { courseId, paymentScreenshots, referralCode } = body;
+    const { courseId, paymentScreenshots, referralCode, isReEnrollment } = body;
 
     if (!courseId) {
       return NextResponse.json(
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
     // Check if user is already enrolled (use maybeSingle to handle no rows gracefully)
     const { data: existingEnrollment, error: enrollmentCheckError } = await supabase
       .from('enrollments')
-      .select('id')
+      .select('id, expires_at')
       .eq('user_id', user.id)
       .eq('course_id', courseId)
       .maybeSingle();
@@ -157,8 +157,28 @@ export async function POST(request: NextRequest) {
     }
 
     if (existingEnrollment) {
+      // Check if this is a re-enrollment request for an expired enrollment
+      if (isReEnrollment) {
+        const expiresAt = existingEnrollment.expires_at ? new Date(existingEnrollment.expires_at) : null;
+        const isExpired = expiresAt ? expiresAt < new Date() : false;
+
+        if (!isExpired) {
+          return NextResponse.json(
+            { error: 'Your enrollment is still active. Re-enrollment is only available for expired enrollments.' },
+            { status: 400 }
+          );
+        }
+        // Allow re-enrollment for expired enrollments - continue to create the request
+      } else {
+        return NextResponse.json(
+          { error: 'You are already enrolled in this course' },
+          { status: 400 }
+        );
+      }
+    } else if (isReEnrollment) {
+      // Re-enrollment requested but no existing enrollment found
       return NextResponse.json(
-        { error: 'You are already enrolled in this course' },
+        { error: 'No previous enrollment found for re-enrollment' },
         { status: 400 }
       );
     }

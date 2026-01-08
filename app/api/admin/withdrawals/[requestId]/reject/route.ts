@@ -91,51 +91,27 @@ export async function POST(
       );
     }
 
-    // Refund the balance back to the user
-    const { error: refundError } = await serviceSupabase
-      .from('profiles')
-      .update({
-        balance: serviceSupabase.rpc('increment_balance', {
-          user_id: withdrawalRequest.user_id,
-          amount: withdrawalRequest.amount
-        })
-      })
-      .eq('id', withdrawalRequest.user_id);
+    // Call the reject_withdrawal_request RPC function to update status
+    // Note: No balance refund needed since balance is not deducted when creating a pending request
+    const { error: rejectError } = await serviceSupabase
+      .rpc('reject_withdrawal_request', {
+        p_request_id: requestId,
+        p_admin_notes: adminNotes
+      });
 
-    // Update the withdrawal request status
-    const { error: updateError } = await serviceSupabase
-      .from('withdrawal_requests')
-      .update({
-        status: 'rejected',
-        admin_notes: adminNotes,
-        processed_at: new Date().toISOString(),
-        processed_by: user.id,
-      })
-      .eq('id', requestId);
-
-    if (updateError) {
-      console.error('[Reject Withdrawal API] Failed to update request:', updateError);
+    if (rejectError) {
+      console.error('[Reject Withdrawal API] RPC error:', rejectError);
       return NextResponse.json(
-        { error: 'Failed to reject withdrawal request' },
+        { error: rejectError.message || 'Failed to reject withdrawal request' },
         { status: 500 }
       );
-    }
-
-    // Refund the balance - use direct SQL update
-    const { error: balanceError } = await serviceSupabase.rpc('refund_withdrawal', {
-      p_user_id: withdrawalRequest.user_id,
-      p_amount: withdrawalRequest.amount
-    });
-
-    if (balanceError) {
-      console.warn('[Reject Withdrawal API] Balance refund may need manual processing:', balanceError);
     }
 
     console.log('[Reject Withdrawal API] Request rejected successfully:', requestId);
 
     return NextResponse.json({
       success: true,
-      message: 'Withdrawal request rejected and balance refunded'
+      message: 'Withdrawal request rejected successfully'
     });
   } catch (error: any) {
     console.error('[Reject Withdrawal API] Unhandled exception:', error);

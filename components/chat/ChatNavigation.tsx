@@ -169,9 +169,9 @@ export default function ChatNavigation() {
           title={t('chat.home')}
         >
           <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-white font-bold">
-            C
+            S
           </div>
-          <span className="font-semibold hidden sm:inline">Course</span>
+          <span className="font-semibold hidden sm:inline">Swavleba</span>
         </Link>
 
         <div className="h-6 w-px bg-navy-700"></div>

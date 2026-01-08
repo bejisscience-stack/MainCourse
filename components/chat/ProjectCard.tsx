@@ -41,6 +41,7 @@ interface ProjectCardProps {
   isLecturer: boolean;
   channelId: string;
   onSubmission?: () => void;
+  isEnrollmentExpired?: boolean;
 }
 
 const PLATFORM_CONFIG: Record<string, { name: string; icon: string; color: string; bg: string }> = {
@@ -56,6 +57,7 @@ export default function ProjectCard({
   isLecturer,
   channelId,
   onSubmission,
+  isEnrollmentExpired = false,
 }: ProjectCardProps) {
   const { t } = useI18n();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -267,12 +269,13 @@ export default function ProjectCard({
   // Enhanced canSubmit validation
   const hasProjectStarted = countdown.isStarted;
   const hasBudgetAvailable = !projectDbId || budget.isLoading || budget.remainingBudget > 0;
-  const canSubmit = !isLecturer && !isProjectOwner && !isProjectExpired && hasProjectStarted && hasBudgetAvailable;
+  const canSubmit = !isLecturer && !isProjectOwner && !isProjectExpired && hasProjectStarted && hasBudgetAvailable && !isEnrollmentExpired;
 
   // Determine why submission is disabled (for tooltip)
   const getSubmitDisabledReason = (): string | null => {
     if (isLecturer) return 'Lecturers cannot submit videos';
     if (isProjectOwner) return 'You cannot submit to your own project';
+    if (isEnrollmentExpired) return 'Your enrollment has expired';
     if (isProjectExpired) return 'This project has expired';
     if (!hasProjectStarted) return countdown.formattedTime || 'Project has not started yet';
     if (projectDbId && !budget.isLoading && budget.remainingBudget <= 0) return 'Budget has been depleted';

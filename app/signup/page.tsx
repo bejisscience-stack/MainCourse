@@ -107,9 +107,9 @@ function SignUpForm() {
         <div>
           <Link href="/" className="flex items-center justify-center space-x-2 mb-6">
             <div className="w-10 h-10 bg-charcoal-950 dark:bg-emerald-500 rounded-lg flex items-center justify-center transition-all duration-200">
-              <span className="text-white font-bold text-xl">C</span>
+              <span className="text-white font-bold text-xl">S</span>
             </div>
-            <span className="text-charcoal-950 dark:text-white font-bold text-2xl">Course</span>
+            <span className="text-charcoal-950 dark:text-white font-bold text-2xl">Swavleba</span>
           </Link>
           <h2 className="text-center text-3xl font-bold text-charcoal-950 dark:text-white">
             {t('auth.createAccount')}

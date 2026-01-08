@@ -19,7 +19,7 @@ export default function MyCoursesPage() {
   const router = useRouter();
   const { t } = useI18n();
   const { user, profile, role: userRole, isLoading: userLoading } = useUser();
-  const { enrolledCourseIds, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
+  const { enrolledCourseIds, getEnrollmentInfo, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
   const [paymentDialogCourse, setPaymentDialogCourse] = useState<CourseCardCourse | null>(null);
 
   // Redirect lecturers immediately
@@ -162,6 +162,7 @@ export default function MyCoursesPage() {
                     is_bestseller: course.is_bestseller || false,
                   };
 
+                  const enrollmentInfo = getEnrollmentInfo(course.id);
                   return (
                     <CourseEnrollmentCard
                       key={course.id}
@@ -171,6 +172,10 @@ export default function MyCoursesPage() {
                       onEnroll={undefined}
                       showEnrollButton={true}
                       userId={user?.id || null}
+                      onEnrollmentApproved={mutateEnrollments}
+                      isExpired={enrollmentInfo?.isExpired}
+                      expiresAt={enrollmentInfo?.expiresAt}
+                      daysRemaining={enrollmentInfo?.daysRemaining}
                     />
                   );
                 })}
@@ -217,6 +222,7 @@ export default function MyCoursesPage() {
                       onEnroll={undefined}
                       showEnrollButton={true}
                       userId={user?.id || null}
+                      onEnrollmentApproved={mutateEnrollments}
                     />
                   );
                 })}

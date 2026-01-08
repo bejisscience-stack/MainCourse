@@ -21,9 +21,6 @@ async function checkIsAdmin(supabase: any, userId: string): Promise<boolean> {
   }
 }
 
-// Increase max file size to 50MB
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
-
 // Allowed MIME types
 const ALLOWED_IMAGE_TYPES = [
   'image/jpeg',
@@ -87,14 +84,6 @@ export async function POST(
     if (!file) {
       return NextResponse.json(
         { error: 'File is required' },
-        { status: 400 }
-      );
-    }
-
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: `File size exceeds ${MAX_FILE_SIZE / (1024 * 1024)}MB limit` },
         { status: 400 }
       );
     }

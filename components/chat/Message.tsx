@@ -20,11 +20,11 @@ interface ProjectData {
 }
 
 interface MessageProps {
-  message: MessageType & { 
-    pending?: boolean; 
-    failed?: boolean; 
-    error?: string; 
-    tempId?: string; 
+  message: MessageType & {
+    pending?: boolean;
+    failed?: boolean;
+    error?: string;
+    tempId?: string;
     onRetry?: () => void;
   };
   currentUserId: string;
@@ -33,6 +33,7 @@ interface MessageProps {
   isLecturer?: boolean;
   channelId?: string;
   showAvatar?: boolean;
+  isEnrollmentExpired?: boolean;
 }
 
 const formatTimestamp = (timestamp: number) => {
@@ -197,6 +198,7 @@ const Message = memo(function Message({
   isLecturer = false,
   channelId,
   showAvatar = true,
+  isEnrollmentExpired = false,
 }: MessageProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
@@ -387,6 +389,7 @@ const Message = memo(function Message({
           currentUserId={currentUserId}
           isLecturer={isLecturer}
           channelId={channelId || ''}
+          isEnrollmentExpired={isEnrollmentExpired}
         />
       </div>
     );
@@ -396,17 +399,17 @@ const Message = memo(function Message({
     <div
       ref={messageRef}
       data-message-id={message.id}
-      className={`group px-4 py-1.5 hover:bg-navy-800/50 transition-colors relative ${
-        isFailed ? 'bg-red-900/10' : ''
-      }`}
+      className={`group px-4 hover:bg-navy-800/30 transition-colors relative ${
+        showAvatar ? 'pt-3 mt-1' : 'py-0.5'
+      } ${isFailed ? 'bg-red-900/10' : ''}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div className="flex gap-3">
+      <div className="flex gap-4">
         {/* Avatar */}
         <div className="flex-shrink-0 w-10">
           {showAvatar ? (
-            <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-semibold text-sm overflow-hidden shadow-sm">
               {message.user.avatarUrl ? (
                   <img
                     src={message.user.avatarUrl}
@@ -418,7 +421,11 @@ const Message = memo(function Message({
                 )}
             </div>
           ) : (
-            <div className="w-10" /> // Spacer for alignment
+            <div className="w-10 h-5 flex items-center justify-center">
+              <span className="text-[10px] text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                {new Date(message.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+              </span>
+            </div>
           )}
         </div>
 
@@ -428,14 +435,14 @@ const Message = memo(function Message({
           {message.replyPreview && (
             <div
               onClick={scrollToOriginal}
-              className="mb-1.5 px-3 py-1.5 border-l-2 border-emerald-500 bg-navy-800/70 rounded text-xs cursor-pointer hover:bg-navy-700/70 transition-colors flex items-center gap-2 group/reply"
+              className="mb-2 pl-3 py-1 border-l-2 border-emerald-500/60 bg-navy-800/40 rounded-r text-xs cursor-pointer hover:bg-navy-700/50 transition-colors flex items-center gap-2 group/reply max-w-md"
             >
-              <svg className="w-3 h-3 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-emerald-400/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
               </svg>
-              <span className="text-emerald-400 font-medium">{message.replyPreview.username}</span>
-              <span className="text-gray-400 truncate">{message.replyPreview.content}</span>
-              <span className="text-gray-500 opacity-0 group-hover/reply:opacity-100 transition-opacity text-xs ml-auto flex-shrink-0">
+              <span className="text-emerald-300 font-medium text-[13px]">{message.replyPreview.username}</span>
+              <span className="text-gray-400 truncate text-[13px]">{message.replyPreview.content}</span>
+              <span className="text-gray-500 opacity-0 group-hover/reply:opacity-100 transition-opacity text-[11px] ml-auto flex-shrink-0 pr-2">
                 Click to jump
               </span>
             </div>
@@ -443,10 +450,10 @@ const Message = memo(function Message({
 
           {/* Header - only show if showAvatar is true */}
           {showAvatar && (
-            <div className="flex items-baseline gap-2 mb-0.5">
+            <div className="flex items-center gap-2 mb-1">
               <div className="relative" ref={userMenuRef}>
                 <span
-                  className={`text-white font-semibold text-sm hover:underline cursor-pointer ${
+                  className={`text-white font-medium text-[15px] hover:underline cursor-pointer ${
                     canMute ? 'hover:text-emerald-400' : ''
                   }`}
                   onClick={(e) => {
@@ -459,10 +466,10 @@ const Message = memo(function Message({
                 >
                   {message.user?.username || 'User'}
                 </span>
-                
+
                 {/* User context menu */}
                 {showUserMenu && canMute && (
-                  <div className="absolute left-0 top-6 bg-navy-800 border border-navy-700 rounded-lg shadow-xl z-50 min-w-[160px] py-1 animate-in fade-in duration-100">
+                  <div className="absolute left-0 top-7 bg-navy-800 border border-navy-700 rounded-lg shadow-xl z-50 min-w-[160px] py-1 animate-in fade-in duration-100">
                     {isMuted ? (
                       <button
                         onClick={handleUnmute}
@@ -488,13 +495,13 @@ const Message = memo(function Message({
                   </div>
                 )}
               </div>
-              
-              <span className="text-gray-500 text-xs">{formatTimestamp(message.timestamp)}</span>
+
+              <span className="text-gray-500 text-xs font-normal">{formatTimestamp(message.timestamp)}</span>
               {message.edited && (
-                <span className="text-gray-500 text-xs italic">(edited)</span>
+                <span className="text-gray-600 text-xs italic">(edited)</span>
               )}
               {isMuted && canMute && (
-                <span className="text-red-400 text-xs flex items-center gap-1">
+                <span className="text-red-400 text-xs flex items-center gap-1 ml-1">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
@@ -507,8 +514,8 @@ const Message = memo(function Message({
 
           {/* Message text */}
           {message.content && (
-            <div className={`text-gray-300 text-sm whitespace-pre-wrap break-words leading-relaxed ${
-              isPending ? 'opacity-60' : isFailed ? 'opacity-80' : ''
+            <div className={`text-gray-200 text-[15px] whitespace-pre-wrap break-words leading-[1.375rem] ${
+              isPending ? 'opacity-50' : isFailed ? 'opacity-70' : ''
             }`}>
               {message.content}
             </div>
@@ -525,7 +532,7 @@ const Message = memo(function Message({
 
           {/* Pending indicator */}
           {isPending && (
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-500">
+            <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-gray-500">
               <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -536,7 +543,7 @@ const Message = memo(function Message({
 
           {/* Failed indicator */}
           {isFailed && (
-            <div className="flex items-center gap-2 mt-1.5 text-xs text-red-400">
+            <div className="flex items-center gap-2 mt-1.5 text-[11px] text-red-400">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -544,7 +551,7 @@ const Message = memo(function Message({
               {message.onRetry && (
                 <button
                   onClick={message.onRetry}
-                  className="text-emerald-400 hover:text-emerald-300 underline font-medium"
+                  className="text-emerald-400 hover:text-emerald-300 underline font-medium text-[11px]"
                 >
                   Retry
                 </button>
@@ -554,21 +561,21 @@ const Message = memo(function Message({
 
           {/* Reactions */}
           {message.reactions && message.reactions.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2">
+            <div className="flex flex-wrap gap-1 mt-1.5">
               {message.reactions.map((reaction, idx) => {
                 const hasReacted = reaction.users.includes(currentUserId);
                 return (
                   <button
                     key={idx}
                     onClick={() => onReaction?.(message.id, reaction.emoji)}
-                    className={`px-2 py-0.5 rounded-full text-xs flex items-center gap-1 transition-all ${
+                    className={`px-2 py-0.5 rounded-md text-xs flex items-center gap-1 transition-all hover:scale-105 ${
                       hasReacted
-                        ? 'bg-emerald-500/30 border border-emerald-500/50 text-emerald-300'
-                        : 'bg-navy-800 hover:bg-navy-700 border border-navy-600 text-gray-300'
+                        ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300'
+                        : 'bg-navy-800/80 hover:bg-navy-700 border border-navy-700 text-gray-300'
                     }`}
                   >
-                    <span>{reaction.emoji}</span>
-                    <span>{reaction.count}</span>
+                    <span className="text-sm">{reaction.emoji}</span>
+                    <span className="text-[11px] font-medium">{reaction.count}</span>
                   </button>
                 );
               })}
@@ -578,7 +585,7 @@ const Message = memo(function Message({
 
         {/* Hover action menu */}
         {showMenu && !isPending && !isFailed && (
-          <div className="absolute right-4 -top-3 flex items-center gap-0.5 bg-navy-800 border border-navy-700 rounded-lg shadow-lg p-1 z-20">
+          <div className="absolute right-4 -top-4 flex items-center gap-0.5 bg-navy-900 border border-navy-700/80 rounded-lg shadow-xl p-0.5 z-20">
             {/* Reaction picker trigger */}
             <div className="relative">
               <button

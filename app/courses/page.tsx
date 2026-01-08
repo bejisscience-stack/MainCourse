@@ -402,6 +402,7 @@ function CoursesPageContent() {
                       onEnroll={undefined}
                       showEnrollButton={shouldShowEnroll}
                       userId={user?.id || null}
+                      onEnrollmentApproved={mutateEnrollments}
                     />
                   );
                 })}
@@ -616,6 +617,7 @@ function CoursesPageContent() {
                           userId={user?.id || null}
                           initialReferralCode={isSelectedCourse ? urlReferralCode : null}
                           autoOpen={isSelectedCourse && shouldShowEnroll}
+                          onEnrollmentApproved={mutateEnrollments}
                         />
                       );
                     })}

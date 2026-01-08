@@ -84,21 +84,17 @@ export async function POST(
       );
     }
 
-    // Update the withdrawal request status
-    const { error: updateError } = await serviceSupabase
-      .from('withdrawal_requests')
-      .update({
-        status: 'approved',
-        admin_notes: adminNotes || null,
-        processed_at: new Date().toISOString(),
-        processed_by: user.id,
-      })
-      .eq('id', requestId);
+    // Call the approve_withdrawal_request RPC function to debit balance and update status
+    const { error: approveError } = await serviceSupabase
+      .rpc('approve_withdrawal_request', {
+        p_request_id: requestId,
+        p_admin_notes: adminNotes || null
+      });
 
-    if (updateError) {
-      console.error('[Approve Withdrawal API] Failed to update request:', updateError);
+    if (approveError) {
+      console.error('[Approve Withdrawal API] RPC error:', approveError);
       return NextResponse.json(
-        { error: 'Failed to approve withdrawal request' },
+        { error: approveError.message || 'Failed to approve withdrawal request' },
         { status: 500 }
       );
     }

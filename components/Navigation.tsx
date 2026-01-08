@@ -81,9 +81,9 @@ function Navigation() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2.5 group">
             <div className="w-8 h-8 md:w-9 md:h-9 bg-charcoal-950 dark:bg-emerald-500 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}>
-              <span className="text-white font-semibold text-base md:text-lg">C</span>
+              <span className="text-white font-semibold text-base md:text-lg">S</span>
             </div>
-            <span className="text-charcoal-950 dark:text-white font-semibold text-lg md:text-xl tracking-tight">Course</span>
+            <span className="text-charcoal-950 dark:text-white font-semibold text-lg md:text-xl tracking-tight">Swavleba</span>
           </Link>
 
           {/* Desktop Menu */}

@@ -14,6 +14,7 @@ import { useUser } from '@/hooks/useUser';
 import { supabase } from '@/lib/supabase';
 import type { Server, Channel } from '@/types/server';
 import type { Member } from '@/types/member';
+import type { EnrollmentInfo } from '@/hooks/useEnrollments';
 
 interface LayoutContainerProps {
   servers: Server[];
@@ -28,6 +29,9 @@ interface LayoutContainerProps {
   onChannelUpdate?: (channelId: string, updates: Partial<Channel>) => Promise<void>;
   onChannelDelete?: (channelId: string) => Promise<void>;
   showDMButton?: boolean;
+  isEnrollmentExpired?: boolean;
+  enrollmentInfo?: EnrollmentInfo | null;
+  onReEnrollRequest?: () => void;
 }
 
 export default function LayoutContainer({
@@ -43,6 +47,9 @@ export default function LayoutContainer({
   onChannelUpdate,
   onChannelDelete,
   showDMButton = true,
+  isEnrollmentExpired = false,
+  enrollmentInfo = null,
+  onReEnrollRequest,
 }: LayoutContainerProps) {
   const [activeServerId, setActiveServerId] = useActiveServer();
   const [activeChannelId, setActiveChannelId] = useActiveChannel();
@@ -287,6 +294,9 @@ export default function LayoutContainer({
           isLecturer={isLecturer}
           onSendMessage={onSendMessage || (() => {})}
           onReaction={onReaction}
+          isEnrollmentExpired={isEnrollmentExpired}
+          enrollmentInfo={enrollmentInfo}
+          onReEnrollRequest={onReEnrollRequest}
         />
       </ChatErrorBoundary>
     </div>

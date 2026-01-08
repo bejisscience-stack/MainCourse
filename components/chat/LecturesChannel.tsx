@@ -5,12 +5,16 @@ import { supabase } from '@/lib/supabase';
 import { useVideos } from '@/hooks/useVideos';
 import { useI18n } from '@/contexts/I18nContext';
 import type { Channel, Video, VideoProgress } from '@/types/server';
+import type { EnrollmentInfo } from '@/hooks/useEnrollments';
 
 interface LecturesChannelProps {
   channel: Channel;
   courseId: string;
   currentUserId: string;
   isLecturer: boolean;
+  isEnrollmentExpired?: boolean;
+  enrollmentInfo?: EnrollmentInfo | null;
+  onReEnrollRequest?: () => void;
 }
 
 export default function LecturesChannel({
@@ -18,6 +22,9 @@ export default function LecturesChannel({
   courseId,
   currentUserId,
   isLecturer,
+  isEnrollmentExpired = false,
+  enrollmentInfo = null,
+  onReEnrollRequest,
 }: LecturesChannelProps) {
   const { t } = useI18n();
   const { videos, isLoading: loading, mutate: mutateVideos } = useVideos(
@@ -30,8 +37,13 @@ export default function LecturesChannel({
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
 
   const isVideoUnlocked = (videoIndex: number) => {
-    if (videoIndex === 0) return true;
+    // Lecturers always have access
     if (isLecturer) return true;
+    // If enrollment is expired, all videos are locked (except for lecturers handled above)
+    if (isEnrollmentExpired) return false;
+    // First video is always unlocked
+    if (videoIndex === 0) return true;
+    // Other videos unlock based on previous video completion
     const previousVideo = videos[videoIndex - 1];
     return previousVideo?.progress?.isCompleted || false;
   };

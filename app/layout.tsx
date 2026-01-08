@@ -8,6 +8,7 @@ import { BackgroundProvider } from "@/contexts/BackgroundContext";
 import { Language, defaultLanguage, LANGUAGE_COOKIE_NAME } from "@/lib/i18n";
 import dynamic from "next/dynamic";
 import ScrollPrevention from "@/components/ScrollPrevention";
+import { Toaster } from "sonner";
 
 const GlobalBackgroundManager = dynamic(() => import("@/components/GlobalBackgroundManager"), {
   ssr: false,
@@ -78,6 +79,14 @@ export default function RootLayout({
               <div className="min-h-full w-full overflow-x-hidden">
                 {children}
               </div>
+              <Toaster
+                position="top-right"
+                richColors
+                closeButton
+                toastOptions={{
+                  className: 'dark:bg-navy-800 dark:border-navy-700',
+                }}
+              />
             </I18nProvider>
           </BackgroundProvider>
         </ThemeProvider>

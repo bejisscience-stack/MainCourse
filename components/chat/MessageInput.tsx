@@ -25,7 +25,6 @@ interface MessageInputProps {
   isMuted?: boolean;
 }
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
 const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
@@ -193,11 +192,6 @@ export default function MessageInput({
       throw new Error(`Invalid file type: ${file.type}. Only images and videos are allowed.`);
     }
 
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
-      throw new Error(`File "${file.name}" exceeds 50MB limit`);
-    }
-
     const uploadId = `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     
     // Create preview for images
@@ -304,10 +298,6 @@ export default function MessageInput({
     for (const file of fileArray) {
       if (!ALLOWED_TYPES.includes(file.type)) {
         errors.push(`"${file.name}" - invalid file type`);
-        continue;
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        errors.push(`"${file.name}" - exceeds 50MB limit`);
         continue;
       }
       validFiles.push(file);

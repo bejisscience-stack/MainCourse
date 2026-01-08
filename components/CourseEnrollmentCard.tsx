@@ -9,6 +9,7 @@ import { useRealtimeEnrollmentRequests } from '@/hooks/useRealtimeEnrollmentRequ
 import { supabase } from '@/lib/supabase';
 import { useI18n } from '@/contexts/I18nContext';
 import { useUser } from '@/hooks/useUser';
+import { toast } from 'sonner';
 
 interface CourseEnrollmentCardProps {
   course: Course;
@@ -19,6 +20,10 @@ interface CourseEnrollmentCardProps {
   userId: string | null;
   initialReferralCode?: string | null;
   autoOpen?: boolean;
+  onEnrollmentApproved?: () => void;
+  isExpired?: boolean;
+  expiresAt?: string | null;
+  daysRemaining?: number | null;
 }
 
 /**
@@ -33,6 +38,10 @@ function CourseEnrollmentCard({
   userId,
   initialReferralCode,
   autoOpen = false,
+  onEnrollmentApproved,
+  isExpired = false,
+  expiresAt = null,
+  daysRemaining = null,
 }: CourseEnrollmentCardProps) {
   const { t, isReady: translationsReady } = useI18n();
   const router = useRouter();
@@ -99,16 +108,38 @@ function CourseEnrollmentCard({
       // If this approval is for the current course, refresh everything
       if (approvedRequest.course_id === course.id) {
         mutate();
-        // Force a page refresh to update enrollment list
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
+        // Show success toast
+        toast.success(
+          t('enrollment.enrollmentApproved') || `Your enrollment for "${course.title}" has been approved!`,
+          { duration: 5000 }
+        );
+        // Call the callback to refresh enrollments list
+        if (onEnrollmentApproved) {
+          onEnrollmentApproved();
+        }
+      }
+    },
+    onRequestRejected: (rejectedRequest) => {
+      // If this rejection is for the current course, show notification
+      if (rejectedRequest.course_id === course.id) {
+        mutate();
+        toast.error(
+          t('enrollment.enrollmentRejected') || `Your enrollment request for "${course.title}" was rejected.`,
+          { duration: 5000 }
+        );
       }
     },
   });
 
   // Determine the button state
   const buttonState = useMemo(() => {
+    if (isEnrolled && isExpired) {
+      // Check if there's a pending re-enrollment request
+      if (hasPendingRequest) {
+        return { type: 'pending' as const, disabled: true };
+      }
+      return { type: 'expired' as const, disabled: false };
+    }
     if (isEnrolled) {
       return { type: 'enrolled' as const, disabled: false };
     }
@@ -119,7 +150,7 @@ function CourseEnrollmentCard({
       return { type: 'loading' as const, disabled: true };
     }
     return { type: 'request' as const, disabled: false };
-  }, [isEnrolled, hasPendingRequest, isEnrolling, isRequestLoading]);
+  }, [isEnrolled, isExpired, hasPendingRequest, isEnrolling, isRequestLoading]);
 
   // Custom action based on enrollment status
   const customAction = useMemo(() => {
@@ -157,28 +188,65 @@ function CourseEnrollmentCard({
       );
     }
 
+    if (buttonState.type === 'expired') {
+      return (
+        <div className="space-y-2">
+          <button
+            onClick={handleOpenEnrollmentWizard}
+            className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-amber-500 rounded-full hover:bg-amber-600 transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5 will-change-transform"
+            style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+          >
+            <svg
+              className="w-3.5 h-3.5 mr-1.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            {t('enrollment.reEnroll')}
+          </button>
+          <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+            {t('enrollment.expired')}
+          </p>
+        </div>
+      );
+    }
+
     if (buttonState.type === 'enrolled') {
       return (
-        <a
-          href={`/courses/${course.id}/chat`}
-          className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-emerald-500 rounded-full hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5 will-change-transform"
-          style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
-        >
-          <svg
-            className="w-3.5 h-3.5 mr-1.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="space-y-2">
+          <a
+            href={`/courses/${course.id}/chat`}
+            className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-emerald-500 rounded-full hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5 will-change-transform"
+            style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-          {t('enrollment.goToCourse')}
-        </a>
+            <svg
+              className="w-3.5 h-3.5 mr-1.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+            {t('enrollment.goToCourse')}
+          </a>
+          {daysRemaining !== null && daysRemaining <= 7 && daysRemaining > 0 && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+              {t('enrollment.expiresIn', { days: daysRemaining })}
+            </p>
+          )}
+        </div>
       );
     }
 
@@ -330,19 +398,19 @@ function CourseEnrollmentCard({
 
       // Success - refresh the request status
       await mutate();
-      
+
       // Close wizard first
       setShowEnrollmentWizard(false);
-      
-      // Show success message
-      alert(t('enrollment.enrollmentRequestSubmitted'));
-      
-      // Refresh page to show updated state
-      window.location.reload();
+
+      // Show success toast
+      toast.success(
+        t('enrollment.enrollmentRequestSubmitted') || 'Enrollment request submitted! Waiting for approval.',
+        { duration: 5000 }
+      );
     } catch (err: any) {
       console.error('Error requesting enrollment:', err);
       const errorMessage = err.message || 'Failed to create enrollment request. Please try again.';
-      alert(errorMessage);
+      toast.error(errorMessage, { duration: 5000 });
       // Don't close dialog on error so user can retry
     }
   }, [userId, mutate]);

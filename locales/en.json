@@ -427,7 +427,17 @@
     "reviewPaymentDetails": "Payment Details",
     "reviewScreenshots": "Payment Screenshots",
     "reviewFinalNotice": "Ready to submit?",
-    "reviewFinalDescription": "Once you submit, your enrollment request will be sent for approval. You'll be notified once it's processed."
+    "reviewFinalDescription": "Once you submit, your enrollment request will be sent for approval. You'll be notified once it's processed.",
+    "enrollmentExpired": "Enrollment Expired",
+    "expiredDescription": "Your access to {{courseName}} has expired.",
+    "expiredOn": "Expired on {{date}}",
+    "reEnroll": "Re-Enroll",
+    "reEnrollmentRequested": "Re-enrollment request submitted! Awaiting approval.",
+    "reEnrollmentFailed": "Failed to request re-enrollment. Please try again.",
+    "reEnrollmentPending": "Re-enrollment Request Pending",
+    "reEnrollmentInfo": "Re-enrollment requires admin approval and payment.",
+    "expiresIn": "Expires in {{days}} days",
+    "expired": "Expired"
   },
   "lecturerDashboard": {
     "title": "Lecturer Dashboard",
@@ -480,7 +490,7 @@
     "noCoursesAvailable": "No courses available. Create courses first.",
     "selected": "Selected: {{count}} course(s)",
     "uploadVideoFile": "Upload Video File",
-    "clickToSelectVideo": "Click to select video (max 50MB)",
+    "clickToSelectVideo": "Click to select video",
     "videoUploadedSuccess": "Video uploaded successfully",
     "orEnterUrl": "Or enter URL:",
     "clickToSelectImage": "Click to select image (max 5MB)",

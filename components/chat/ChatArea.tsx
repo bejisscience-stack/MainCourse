@@ -13,6 +13,7 @@ import { useMuteStatus } from '@/hooks/useMuteStatus';
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import { supabase } from '@/lib/supabase';
 import { useI18n } from '@/contexts/I18nContext';
+import type { EnrollmentInfo } from '@/hooks/useEnrollments';
 
 interface ChatAreaProps {
   channel: Channel | null;
@@ -21,6 +22,9 @@ interface ChatAreaProps {
   onSendMessage: (channelId: string, content: string) => void;
   onReply?: (messageId: string) => void;
   onReaction?: (messageId: string, emoji: string) => void;
+  isEnrollmentExpired?: boolean;
+  enrollmentInfo?: EnrollmentInfo | null;
+  onReEnrollRequest?: () => void;
 }
 
 export default function ChatArea({
@@ -30,6 +34,9 @@ export default function ChatArea({
   onSendMessage,
   onReply,
   onReaction,
+  isEnrollmentExpired = false,
+  enrollmentInfo = null,
+  onReEnrollRequest,
 }: ChatAreaProps) {
   const { t } = useI18n();
   const [replyTo, setReplyTo] = useState<{
@@ -523,6 +530,9 @@ export default function ChatArea({
         courseId={channel.courseId || ''}
         currentUserId={currentUserId}
         isLecturer={isLecturer}
+        isEnrollmentExpired={isEnrollmentExpired}
+        enrollmentInfo={enrollmentInfo}
+        onReEnrollRequest={onReEnrollRequest}
       />
     );
   }
@@ -558,13 +568,16 @@ export default function ChatArea({
         <div className="min-h-full flex flex-col justify-end py-4">
           {isLoading && messages.length === 0 && channel?.id ? (
             // Fast loading skeleton - minimal DOM for speed
-            <div className="space-y-3 px-4">
+            <div className="space-y-4 px-4">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex gap-3 animate-pulse">
-                  <div className="w-9 h-9 rounded-full bg-navy-800/60 flex-shrink-0" />
-                  <div className="flex-1 space-y-1.5 py-1">
-                    <div className="h-3 bg-navy-800/60 rounded w-20" />
-                    <div className="h-3 bg-navy-800/40 rounded w-3/4" />
+                <div key={i} className="flex gap-4 animate-pulse pt-3">
+                  <div className="w-10 h-10 rounded-full bg-navy-800/50 flex-shrink-0" />
+                  <div className="flex-1 space-y-2 py-1">
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 bg-navy-800/50 rounded w-24" />
+                      <div className="h-3 bg-navy-800/30 rounded w-16" />
+                    </div>
+                    <div className="h-4 bg-navy-800/40 rounded w-3/4" />
                   </div>
                 </div>
               ))}
@@ -589,21 +602,23 @@ export default function ChatArea({
             // Empty state
             <div className="flex items-center justify-center flex-1 px-4 text-gray-400">
               <div className="text-center">
-                <svg
-                  className="w-12 h-12 mx-auto mb-4 opacity-50"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
-                <p className="text-base font-medium mb-1">No messages yet</p>
-                <p className="text-sm text-gray-500">Start the conversation!</p>
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-navy-800/50 flex items-center justify-center">
+                  <svg
+                    className="w-8 h-8 text-gray-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                    />
+                  </svg>
+                </div>
+                <p className="text-base font-medium text-gray-300 mb-1">No messages yet</p>
+                <p className="text-sm text-gray-500">Be the first to start the conversation!</p>
               </div>
             </div>
           ) : (
@@ -632,7 +647,7 @@ export default function ChatArea({
               )}
 
               {/* Messages */}
-              <div className="space-y-0.5">
+              <div className="space-y-0">
                 {(() => {
                   // Filter out "Video submission" and "Submission" messages (submission messages without user content)
                   const filteredMessages = messages.filter((message) => {
@@ -680,6 +695,7 @@ export default function ChatArea({
                       isLecturer={isLecturer}
                       channelId={channel.id}
                       showAvatar={showAvatar}
+                      isEnrollmentExpired={isEnrollmentExpired}
                     />
                   );
                 });

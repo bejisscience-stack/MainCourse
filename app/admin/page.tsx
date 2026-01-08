@@ -11,6 +11,9 @@ import { useUser } from '@/hooks/useUser';
 import { useAdminEnrollmentRequests } from '@/hooks/useAdminEnrollmentRequests';
 import { useAdminBundleEnrollmentRequests } from '@/hooks/useAdminBundleEnrollmentRequests';
 import { useAdminWithdrawalRequests } from '@/hooks/useAdminWithdrawalRequests';
+import { useRealtimeAdminEnrollmentRequests } from '@/hooks/useRealtimeAdminEnrollmentRequests';
+import { useRealtimeAdminBundleEnrollmentRequests } from '@/hooks/useRealtimeAdminBundleEnrollmentRequests';
+import { useRealtimeAdminWithdrawalRequests } from '@/hooks/useRealtimeAdminWithdrawalRequests';
 import { useCourses } from '@/hooks/useCourses';
 import { supabase } from '@/lib/supabase';
 import type { EnrollmentRequest } from '@/hooks/useEnrollmentRequests';
@@ -132,6 +135,46 @@ export default function AdminDashboard() {
   }, [requests]);
 
   const { courses, isLoading: coursesLoading } = useCourses('All');
+
+  // Real-time subscriptions for instant updates
+  const { isConnected: enrollmentRtConnected } = useRealtimeAdminEnrollmentRequests({
+    enabled: isAdminVerified === true,
+    onInsert: () => {
+      console.log('[RT Admin] New enrollment request received');
+      mutateAllRequests();
+    },
+    onUpdate: () => {
+      console.log('[RT Admin] Enrollment request updated');
+      mutateAllRequests();
+    },
+  });
+
+  const { isConnected: bundleRtConnected } = useRealtimeAdminBundleEnrollmentRequests({
+    enabled: isAdminVerified === true,
+    onInsert: () => {
+      console.log('[RT Admin] New bundle enrollment request received');
+      mutateAllBundleRequests();
+    },
+    onUpdate: () => {
+      console.log('[RT Admin] Bundle enrollment request updated');
+      mutateAllBundleRequests();
+    },
+  });
+
+  const { isConnected: withdrawalRtConnected } = useRealtimeAdminWithdrawalRequests({
+    enabled: isAdminVerified === true,
+    onInsert: () => {
+      console.log('[RT Admin] New withdrawal request received');
+      mutateWithdrawalRequests();
+    },
+    onUpdate: () => {
+      console.log('[RT Admin] Withdrawal request updated');
+      mutateWithdrawalRequests();
+    },
+  });
+
+  // Combined real-time connection status
+  const isRealtimeConnected = enrollmentRtConnected && bundleRtConnected && withdrawalRtConnected;
 
   // Update requests when approve/reject happens
   const handleApproveWithRefresh = async (requestId: string) => {
@@ -423,9 +466,17 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-4xl md:text-5xl font-bold text-navy-900 mb-4">
-              Admin Dashboard
-            </h1>
+            <div className="flex items-center gap-3 mb-4">
+              <h1 className="text-4xl md:text-5xl font-bold text-navy-900">
+                Admin Dashboard
+              </h1>
+              {isRealtimeConnected && (
+                <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-full text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                  <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  Live
+                </span>
+              )}
+            </div>
             <p className="text-lg text-navy-600">
               Manage enrollment requests, courses, and system access
             </p>

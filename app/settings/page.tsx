@@ -10,8 +10,11 @@ import { useI18n } from '@/contexts/I18nContext';
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { useBalance } from '@/hooks/useBalance';
 import { useWithdrawalRequests } from '@/hooks/useWithdrawalRequests';
+import { useRealtimeWithdrawalRequests } from '@/hooks/useRealtimeWithdrawalRequests';
+import { useRealtimeUserProfile } from '@/hooks/useRealtimeUserProfile';
 import { useLecturerCourses } from '@/hooks/useLecturerCourses';
 import useSWR from 'swr';
+import { toast } from 'sonner';
 import type { Course } from '@/hooks/useCourses';
 
 export default function SettingsPage() {
@@ -38,7 +41,49 @@ export default function SettingsPage() {
   } = useBalance(user?.id || null);
   
   const { requests: withdrawalRequests, mutate: mutateWithdrawals } = useWithdrawalRequests(user?.id || null);
-  
+
+  // Real-time subscription for withdrawal request updates
+  const { isConnected: withdrawalRtConnected } = useRealtimeWithdrawalRequests({
+    userId: user?.id || null,
+    onRequestUpdated: () => {
+      console.log('[Settings] Withdrawal request updated, refreshing data...');
+      mutateWithdrawals();
+      mutateBalance();
+    },
+    onRequestApproved: (request) => {
+      console.log('[Settings] Withdrawal approved:', request);
+      toast.success(
+        t('settings.withdrawalApproved') || `Withdrawal of ₾${request.amount.toFixed(2)} approved!`,
+        { duration: 5000 }
+      );
+      mutateWithdrawals();
+      mutateBalance();
+    },
+    onRequestRejected: (request) => {
+      console.log('[Settings] Withdrawal rejected:', request);
+      toast.error(
+        t('settings.withdrawalRejected') || `Withdrawal of ₾${request.amount.toFixed(2)} was rejected.`,
+        { duration: 5000 }
+      );
+      mutateWithdrawals();
+      mutateBalance();
+    },
+  });
+
+  // Real-time subscription for profile changes (catches direct balance updates)
+  useRealtimeUserProfile({
+    userId: user?.id || null,
+    onProfileUpdated: () => {
+      console.log('[Settings] Profile updated, refreshing balance...');
+      mutateBalance();
+    },
+    onBalanceChanged: (newBalance, oldBalance) => {
+      console.log('[Settings] Balance changed:', oldBalance, '->', newBalance);
+      mutateBalance();
+      mutateWithdrawals();
+    },
+  });
+
   const [bankAccountInput, setBankAccountInput] = useState('');
   const [isUpdatingBankAccount, setIsUpdatingBankAccount] = useState(false);
   const [bankAccountError, setBankAccountError] = useState<string | null>(null);
