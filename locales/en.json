@@ -534,6 +534,27 @@
     "title": "Course - Make Money Today",
     "description": "Start your journey to financial freedom today"
   },
+  "notifications": {
+    "title": "Notifications",
+    "noNotifications": "No notifications yet",
+    "markAsRead": "Mark as read",
+    "markAllAsRead": "Mark all as read",
+    "newNotification": "New notification",
+    "enrollmentApproved": "Enrollment Approved",
+    "enrollmentApprovedMessage": "Your enrollment request has been approved",
+    "enrollmentRejected": "Enrollment Rejected",
+    "enrollmentRejectedMessage": "Your enrollment request has been rejected",
+    "bundleEnrollmentApproved": "Bundle Enrollment Approved",
+    "bundleEnrollmentApprovedMessage": "Your bundle enrollment request has been approved",
+    "bundleEnrollmentRejected": "Bundle Enrollment Rejected",
+    "bundleEnrollmentRejectedMessage": "Your bundle enrollment request has been rejected",
+    "withdrawalApproved": "Withdrawal Approved",
+    "withdrawalApprovedMessage": "Your withdrawal request has been approved",
+    "withdrawalRejected": "Withdrawal Rejected",
+    "withdrawalRejectedMessage": "Your withdrawal request has been rejected",
+    "adminMessage": "Admin Message",
+    "system": "System Notification"
+  },
   "activeProjects": {
     "title": "Active Projects",
     "projectsAvailable": "active projects available",

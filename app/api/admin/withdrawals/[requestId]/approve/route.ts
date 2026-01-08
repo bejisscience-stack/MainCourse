@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,21 +10,21 @@ async function checkAdmin(supabase: any, userId: string): Promise<boolean> {
       .rpc('check_is_admin', { user_id: userId });
 
     if (error) {
-      console.error('[Admin Withdrawals Approve API] Error checking admin status:', error);
+      console.error('[Approve Withdrawal API] Error checking admin status:', error);
       return false;
     }
 
     return data === true;
   } catch (err) {
-    console.error('[Admin Withdrawals Approve API] Exception checking admin:', err);
+    console.error('[Approve Withdrawal API] Exception checking admin:', err);
     return false;
   }
 }
 
-// POST: Approve withdrawal request (admin only)
+// POST: Approve a withdrawal request
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ requestId: string }> }
+  { params }: { params: { requestId: string } }
 ) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -37,7 +37,7 @@ export async function POST(
 
     const token = authHeader.replace('Bearer ', '');
     const { user, error: userError } = await verifyTokenAndGetUser(token);
-    
+
     if (userError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized', details: userError?.message },
@@ -45,19 +45,10 @@ export async function POST(
       );
     }
 
-    const { requestId } = await params;
-    
-    if (!requestId) {
-      return NextResponse.json(
-        { error: 'Request ID is required' },
-        { status: 400 }
-      );
-    }
+    const serviceSupabase = createServiceRoleClient();
 
-    const supabase = createServerSupabaseClient(token);
-
-    // Check if user is admin using RPC (bypasses RLS)
-    const isAdmin = await checkAdmin(supabase, user.id);
+    // Check if user is admin
+    const isAdmin = await checkAdmin(serviceSupabase, user.id);
     if (!isAdmin) {
       return NextResponse.json(
         { error: 'Access denied. Admin only.' },
@@ -65,43 +56,90 @@ export async function POST(
       );
     }
 
-    // Get admin notes from body if provided
-    let adminNotes: string | null = null;
-    try {
-      const body = await request.json();
-      adminNotes = body.adminNotes || null;
-    } catch {
-      // Body is optional
+    const { requestId } = params;
+    const body = await request.json().catch(() => ({}));
+    const { adminNotes } = body;
+
+    console.log('[Approve Withdrawal API] Processing approval for request:', requestId);
+
+    // Fetch the withdrawal request
+    const { data: withdrawalRequest, error: fetchError } = await serviceSupabase
+      .from('withdrawal_requests')
+      .select('*')
+      .eq('id', requestId)
+      .single();
+
+    if (fetchError || !withdrawalRequest) {
+      console.error('[Approve Withdrawal API] Request not found:', fetchError);
+      return NextResponse.json(
+        { error: 'Withdrawal request not found' },
+        { status: 404 }
+      );
     }
 
-    // Call the RPC function to approve withdrawal using user's token
-    // (RPC uses auth.uid() internally to verify admin status)
-    const { error: rpcError } = await supabase
-      .rpc('approve_withdrawal_request', {
-        p_request_id: requestId,
-        p_admin_notes: adminNotes
-      });
-
-    if (rpcError) {
-      console.error('[Admin Withdrawals Approve API] Error approving withdrawal request:', rpcError);
+    if (withdrawalRequest.status !== 'pending') {
       return NextResponse.json(
-        { error: rpcError.message || 'Failed to approve withdrawal request' },
+        { error: `Request is already ${withdrawalRequest.status}` },
         { status: 400 }
       );
     }
 
-    console.log('[Admin Withdrawals Approve API] Successfully approved withdrawal request:', requestId);
+    // Update the withdrawal request status
+    const { error: updateError } = await serviceSupabase
+      .from('withdrawal_requests')
+      .update({
+        status: 'approved',
+        admin_notes: adminNotes || null,
+        processed_at: new Date().toISOString(),
+        processed_by: user.id,
+      })
+      .eq('id', requestId);
 
-    return NextResponse.json({ 
+    if (updateError) {
+      console.error('[Approve Withdrawal API] Failed to update request:', updateError);
+      return NextResponse.json(
+        { error: 'Failed to approve withdrawal request' },
+        { status: 500 }
+      );
+    }
+
+    console.log('[Approve Withdrawal API] Request approved successfully:', requestId);
+
+    // Create notification for the user
+    try {
+      const { error: notificationError } = await serviceSupabase
+        .rpc('create_notification', {
+          p_user_id: withdrawalRequest.user_id,
+          p_type: 'withdrawal_approved',
+          p_title_en: 'Withdrawal Approved',
+          p_title_ge: 'თანხის გატანა დამტკიცებულია',
+          p_message_en: `Your withdrawal request for ₾${withdrawalRequest.amount.toFixed(2)} has been approved and will be processed soon.`,
+          p_message_ge: `თქვენი თანხის გატანის მოთხოვნა ₾${withdrawalRequest.amount.toFixed(2)}-ზე დამტკიცებულია და მალე დამუშავდება.`,
+          p_metadata: {
+            request_id: requestId,
+            amount: withdrawalRequest.amount,
+          },
+          p_created_by: user.id,
+        });
+
+      if (notificationError) {
+        console.error('[Approve Withdrawal API] Error creating notification:', notificationError);
+      } else {
+        console.log('[Approve Withdrawal API] Notification created for user:', withdrawalRequest.user_id);
+      }
+    } catch (notifError) {
+      console.error('[Approve Withdrawal API] Exception creating notification:', notifError);
+    }
+
+    return NextResponse.json({
       success: true,
       message: 'Withdrawal request approved successfully'
     });
   } catch (error: any) {
-    console.error('[Admin Withdrawals Approve API] Error:', error);
+    console.error('[Approve Withdrawal API] Unhandled exception:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }
 }
-

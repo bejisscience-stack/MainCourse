@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import AdminNotificationSender from '@/components/AdminNotificationSender';
 import { useUser } from '@/hooks/useUser';
 import { useAdminEnrollmentRequests } from '@/hooks/useAdminEnrollmentRequests';
 import { useAdminBundleEnrollmentRequests } from '@/hooks/useAdminBundleEnrollmentRequests';
@@ -17,7 +18,7 @@ import type { BundleEnrollmentRequest } from '@/hooks/useAdminBundleEnrollmentRe
 import type { WithdrawalRequest } from '@/types/balance';
 import type { Course } from '@/components/CourseCard';
 
-type TabType = 'overview' | 'enrollment-requests' | 'withdrawals' | 'courses';
+type TabType = 'overview' | 'enrollment-requests' | 'withdrawals' | 'courses' | 'notifications';
 
 // Retry with exponential backoff utility
 async function retryWithBackoff<T>(
@@ -481,6 +482,16 @@ export default function AdminDashboard() {
               }`}
             >
               All Courses ({totalCourses})
+            </button>
+            <button
+              onClick={() => setActiveTab('notifications')}
+              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
+                activeTab === 'notifications'
+                  ? 'text-navy-900 border-navy-900'
+                  : 'text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300'
+              }`}
+            >
+              Send Notifications
             </button>
           </div>
 
@@ -1187,6 +1198,15 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+            </ErrorBoundary>
+          )}
+
+          {/* Notifications Tab Content */}
+          {activeTab === 'notifications' && (
+            <ErrorBoundary
+              onError={(error) => console.error('[Admin Dashboard] Notifications section error:', error)}
+            >
+            <AdminNotificationSender />
             </ErrorBoundary>
           )}
         </div>

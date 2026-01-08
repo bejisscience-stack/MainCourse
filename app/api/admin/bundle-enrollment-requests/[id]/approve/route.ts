@@ -93,14 +93,45 @@ export async function POST(
     // Verify the update was successful by querying the request directly
     const { data: updatedRequest, error: verifyError } = await serviceSupabase
       .from('bundle_enrollment_requests')
-      .select('id, status, updated_at')
+      .select('id, status, updated_at, user_id, bundle_id, course_bundles(title)')
       .eq('id', id)
       .single();
-    
+
     if (verifyError) {
       console.error('[Approve API] Error verifying bundle approval:', verifyError);
     } else {
       console.log('[Approve API] Bundle approval successful, verified status:', updatedRequest?.status, 'updated_at:', updatedRequest?.updated_at);
+
+      // Create notification for the user
+      if (updatedRequest?.user_id) {
+        const bundleTitle = (updatedRequest.course_bundles as { title?: string } | null)?.title || 'Unknown Bundle';
+
+        try {
+          const { error: notificationError } = await serviceSupabase
+            .rpc('create_notification', {
+              p_user_id: updatedRequest.user_id,
+              p_type: 'bundle_enrollment_approved',
+              p_title_en: 'Bundle Enrollment Approved',
+              p_title_ge: 'პაკეტში რეგისტრაცია დამტკიცებულია',
+              p_message_en: `Your enrollment request for bundle "${bundleTitle}" has been approved. You can now access all courses in the bundle.`,
+              p_message_ge: `თქვენი რეგისტრაციის მოთხოვნა პაკეტზე "${bundleTitle}" დამტკიცებულია. ახლა შეგიძლიათ პაკეტის ყველა კურსზე წვდომა.`,
+              p_metadata: {
+                bundle_id: updatedRequest.bundle_id,
+                bundle_title: bundleTitle,
+                request_id: id,
+              },
+              p_created_by: user.id,
+            });
+
+          if (notificationError) {
+            console.error('[Approve API] Error creating notification:', notificationError);
+          } else {
+            console.log('[Approve API] Notification created for user:', updatedRequest.user_id);
+          }
+        } catch (notifError) {
+          console.error('[Approve API] Exception creating notification:', notifError);
+        }
+      }
     }
 
     // Return success - the frontend will refresh the list automatically

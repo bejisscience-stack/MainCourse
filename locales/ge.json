@@ -534,6 +534,27 @@
     "title": "კურსი - გამოიმუშავე ფული დღეს",
     "description": "დაიწყე შენი გზა ფინანსური თავისუფლებისკენ დღეს"
   },
+  "notifications": {
+    "title": "შეტყობინებები",
+    "noNotifications": "შეტყობინებები ჯერ არ არის",
+    "markAsRead": "წაკითხულად მონიშვნა",
+    "markAllAsRead": "ყველას წაკითხულად მონიშვნა",
+    "newNotification": "ახალი შეტყობინება",
+    "enrollmentApproved": "რეგისტრაცია დამტკიცებულია",
+    "enrollmentApprovedMessage": "თქვენი რეგისტრაციის მოთხოვნა დამტკიცებულია",
+    "enrollmentRejected": "რეგისტრაცია უარყოფილია",
+    "enrollmentRejectedMessage": "თქვენი რეგისტრაციის მოთხოვნა უარყოფილია",
+    "bundleEnrollmentApproved": "პაკეტში რეგისტრაცია დამტკიცებულია",
+    "bundleEnrollmentApprovedMessage": "თქვენი პაკეტში რეგისტრაციის მოთხოვნა დამტკიცებულია",
+    "bundleEnrollmentRejected": "პაკეტში რეგისტრაცია უარყოფილია",
+    "bundleEnrollmentRejectedMessage": "თქვენი პაკეტში რეგისტრაციის მოთხოვნა უარყოფილია",
+    "withdrawalApproved": "თანხის გატანა დამტკიცებულია",
+    "withdrawalApprovedMessage": "თქვენი თანხის გატანის მოთხოვნა დამტკიცებულია",
+    "withdrawalRejected": "თანხის გატანა უარყოფილია",
+    "withdrawalRejectedMessage": "თქვენი თანხის გატანის მოთხოვნა უარყოფილია",
+    "adminMessage": "ადმინისტრატორის შეტყობინება",
+    "system": "სისტემური შეტყობინება"
+  },
   "activeProjects": {
     "title": "აქტიური პროექტები",
     "projectsAvailable": "აქტიური პროექტი ხელმისაწვდომია",

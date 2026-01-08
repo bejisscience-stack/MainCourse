@@ -92,14 +92,45 @@ export async function POST(
     const serviceSupabase = createServiceRoleClient();
     const { data: updatedRequest, error: verifyError } = await serviceSupabase
       .from('enrollment_requests')
-      .select('id, status, updated_at')
+      .select('id, status, updated_at, user_id, course_id, courses(title)')
       .eq('id', id)
       .single();
-    
+
     if (verifyError) {
       console.error('[Approve API] Error verifying approval:', verifyError);
     } else {
       console.log('[Approve API] Approval successful, verified status:', updatedRequest?.status, 'updated_at:', updatedRequest?.updated_at);
+
+      // Create notification for the user
+      if (updatedRequest?.user_id) {
+        const courseTitle = (updatedRequest.courses as { title?: string } | null)?.title || 'Unknown Course';
+
+        try {
+          const { error: notificationError } = await serviceSupabase
+            .rpc('create_notification', {
+              p_user_id: updatedRequest.user_id,
+              p_type: 'enrollment_approved',
+              p_title_en: 'Enrollment Approved',
+              p_title_ge: 'რეგისტრაცია დამტკიცებულია',
+              p_message_en: `Your enrollment request for "${courseTitle}" has been approved. You can now access the course.`,
+              p_message_ge: `თქვენი რეგისტრაციის მოთხოვნა კურსზე "${courseTitle}" დამტკიცებულია. ახლა შეგიძლიათ კურსზე წვდომა.`,
+              p_metadata: {
+                course_id: updatedRequest.course_id,
+                course_title: courseTitle,
+                request_id: id,
+              },
+              p_created_by: user.id,
+            });
+
+          if (notificationError) {
+            console.error('[Approve API] Error creating notification:', notificationError);
+          } else {
+            console.log('[Approve API] Notification created for user:', updatedRequest.user_id);
+          }
+        } catch (notifError) {
+          console.error('[Approve API] Exception creating notification:', notifError);
+        }
+      }
     }
 
     // Return success - the frontend will refresh the list automatically

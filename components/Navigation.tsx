@@ -7,6 +7,7 @@ import { signOut } from '@/lib/auth';
 import { useUser } from '@/hooks/useUser';
 import { useI18n } from '@/contexts/I18nContext';
 import LanguageSelector from './LanguageSelector';
+import NotificationBell from './NotificationBell';
 
 function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -119,6 +120,7 @@ function Navigation() {
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-3">
             <LanguageSelector />
+            {user && <NotificationBell />}
             {loading ? (
               <div className="text-charcoal-500 dark:text-gray-500 text-sm">{t('common.loading')}</div>
             ) : user ? (
@@ -346,8 +348,9 @@ function Navigation() {
                 </Link>
               )}
               <div className="pt-4 border-t border-charcoal-100/50 dark:border-navy-800/50">
-                <div className="mb-4 flex items-center justify-center">
+                <div className="mb-4 flex items-center justify-center gap-4">
                   <LanguageSelector />
+                  {user && <NotificationBell />}
                 </div>
                 {loading ? (
                   <div className="text-charcoal-500 dark:text-gray-500 text-sm text-center py-2">{t('common.loading')}</div>
