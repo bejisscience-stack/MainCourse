@@ -110,9 +110,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerSupabaseClient(token);
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'enrollment-requests/route.ts:106',message:'Checking existing request',data:{userId:user.id,courseId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B1'})}).catch(()=>{});
-    // #endregion
     // Check if user already has a pending request (use maybeSingle to handle no rows gracefully)
     const { data: existingRequest, error: requestCheckError } = await supabase
       .from('enrollment_requests')
@@ -130,9 +127,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'enrollment-requests/route.ts:122',message:'Existing request check result',data:{hasExisting:!!existingRequest,requestId:existingRequest?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B1'})}).catch(()=>{});
-    // #endregion
     if (existingRequest) {
       return NextResponse.json(
         { error: 'You already have a pending enrollment request for this course' },

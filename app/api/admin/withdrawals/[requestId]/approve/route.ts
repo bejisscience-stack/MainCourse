@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +56,9 @@ export async function POST(
       );
     }
 
+    // Create authenticated client for RPC calls that rely on auth.uid()
+    const supabase = createServerSupabaseClient(token);
+
     const { requestId } = params;
     const body = await request.json().catch(() => ({}));
     const { adminNotes } = body;
@@ -84,8 +87,9 @@ export async function POST(
       );
     }
 
-    // Call the approve_withdrawal_request RPC function to debit balance and update status
-    const { error: approveError } = await serviceSupabase
+    // Use authenticated client (not service role) so auth.uid() works in the database function
+    // The approve_withdrawal_request function uses auth.uid() to verify admin status
+    const { error: approveError } = await supabase
       .rpc('approve_withdrawal_request', {
         p_request_id: requestId,
         p_admin_notes: adminNotes || null

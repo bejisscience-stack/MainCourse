@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +56,9 @@ export async function POST(
       );
     }
 
+    // Create authenticated client for RPC calls that rely on auth.uid()
+    const supabase = createServerSupabaseClient(token);
+
     const { requestId } = params;
     const body = await request.json().catch(() => ({}));
     const { adminNotes } = body;
@@ -91,9 +94,10 @@ export async function POST(
       );
     }
 
-    // Call the reject_withdrawal_request RPC function to update status
+    // Use authenticated client (not service role) so auth.uid() works in the database function
+    // The reject_withdrawal_request function uses auth.uid() to verify admin status
     // Note: No balance refund needed since balance is not deducted when creating a pending request
-    const { error: rejectError } = await serviceSupabase
+    const { error: rejectError } = await supabase
       .rpc('reject_withdrawal_request', {
         p_request_id: requestId,
         p_admin_notes: adminNotes

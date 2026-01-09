@@ -141,11 +141,11 @@ export default function AdminDashboard() {
     enabled: isAdminVerified === true,
     onInsert: () => {
       console.log('[RT Admin] New enrollment request received');
-      mutateAllRequests();
+      mutateAllRequests(undefined, { revalidate: true });
     },
     onUpdate: () => {
       console.log('[RT Admin] Enrollment request updated');
-      mutateAllRequests();
+      mutateAllRequests(undefined, { revalidate: true });
     },
   });
 
@@ -153,11 +153,11 @@ export default function AdminDashboard() {
     enabled: isAdminVerified === true,
     onInsert: () => {
       console.log('[RT Admin] New bundle enrollment request received');
-      mutateAllBundleRequests();
+      mutateAllBundleRequests(undefined, { revalidate: true });
     },
     onUpdate: () => {
       console.log('[RT Admin] Bundle enrollment request updated');
-      mutateAllBundleRequests();
+      mutateAllBundleRequests(undefined, { revalidate: true });
     },
   });
 
@@ -165,29 +165,31 @@ export default function AdminDashboard() {
     enabled: isAdminVerified === true,
     onInsert: () => {
       console.log('[RT Admin] New withdrawal request received');
-      mutateWithdrawalRequests();
+      mutateWithdrawalRequests(undefined, { revalidate: true });
     },
     onUpdate: () => {
       console.log('[RT Admin] Withdrawal request updated');
-      mutateWithdrawalRequests();
+      mutateWithdrawalRequests(undefined, { revalidate: true });
     },
   });
 
   // Combined real-time connection status
   const isRealtimeConnected = enrollmentRtConnected && bundleRtConnected && withdrawalRtConnected;
+  const allConnected = enrollmentRtConnected && bundleRtConnected && withdrawalRtConnected;
+  const anyDisconnected = isAdminVerified === true && !allConnected;
 
   // Update requests when approve/reject happens
   const handleApproveWithRefresh = async (requestId: string) => {
     await approveRequest(requestId);
-    // Force immediate refresh - single cache key means this updates everything
-    await mutateAllRequests();
+    // Force immediate refresh with cache bypass
+    await mutateAllRequests(undefined, { revalidate: true });
   };
 
   const handleRejectWithRefresh = async (requestId: string) => {
     await rejectRequest(requestId);
-    // Force immediate refresh - single cache key means this updates everything
-    await mutateAllRequests();
-    await mutateRequests();
+    // Force immediate refresh with cache bypass
+    await mutateAllRequests(undefined, { revalidate: true });
+    await mutateRequests(undefined, { revalidate: true });
   };
 
   // Direct database check on mount - bypass hook cache
@@ -470,16 +472,46 @@ export default function AdminDashboard() {
               <h1 className="text-4xl md:text-5xl font-bold text-navy-900">
                 Admin Dashboard
               </h1>
-              {isRealtimeConnected && (
-                <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-full text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                  <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                  Live
-                </span>
-              )}
+              {/* Real-time connection status */}
+              <div className="flex items-center gap-2">
+                {/* Individual status dots */}
+                <div className="flex items-center gap-1" title="Real-time connections">
+                  <span
+                    className={`w-2 h-2 rounded-full ${enrollmentRtConnected ? 'bg-emerald-500' : 'bg-red-500'}`}
+                    title={`Enrollments: ${enrollmentRtConnected ? 'Connected' : 'Disconnected'}`}
+                  />
+                  <span
+                    className={`w-2 h-2 rounded-full ${bundleRtConnected ? 'bg-emerald-500' : 'bg-red-500'}`}
+                    title={`Bundles: ${bundleRtConnected ? 'Connected' : 'Disconnected'}`}
+                  />
+                  <span
+                    className={`w-2 h-2 rounded-full ${withdrawalRtConnected ? 'bg-emerald-500' : 'bg-red-500'}`}
+                    title={`Withdrawals: ${withdrawalRtConnected ? 'Connected' : 'Disconnected'}`}
+                  />
+                </div>
+
+                {/* Status badge */}
+                {allConnected ? (
+                  <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-medium text-emerald-700">
+                    <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                    Live
+                  </span>
+                ) : anyDisconnected ? (
+                  <span className="flex items-center gap-1.5 px-3 py-1 bg-yellow-50 border border-yellow-200 rounded-full text-xs font-medium text-yellow-700">
+                    <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                    Partial
+                  </span>
+                ) : null}
+              </div>
             </div>
             <p className="text-lg text-navy-600">
               Manage enrollment requests, courses, and system access
             </p>
+            {anyDisconnected && (
+              <p className="text-sm text-yellow-600 mt-1">
+                Some real-time connections lost. Click refresh to update data.
+              </p>
+            )}
           </div>
 
           {/* Tabs */}
@@ -705,10 +737,10 @@ export default function AdminDashboard() {
                   </button>
                   <button
                       onClick={() => {
-                        mutateRequests();
-                        mutateAllRequests();
-                        mutateBundleRequests();
-                        mutateAllBundleRequests();
+                        mutateRequests(undefined, { revalidate: true });
+                        mutateAllRequests(undefined, { revalidate: true });
+                        mutateBundleRequests(undefined, { revalidate: true });
+                        mutateAllBundleRequests(undefined, { revalidate: true });
                       }}
                     className="px-4 py-2 bg-navy-900 text-white rounded-lg font-semibold hover:bg-navy-800 transition-colors text-sm flex items-center gap-2"
                   >
@@ -766,8 +798,8 @@ export default function AdminDashboard() {
                   </p>
                   <button
                     onClick={() => {
-                      mutateRequests();
-                      mutateAllRequests();
+                      mutateRequests(undefined, { revalidate: true });
+                      mutateAllRequests(undefined, { revalidate: true });
                     }}
                     className="mt-4 px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm"
                   >
@@ -897,8 +929,8 @@ export default function AdminDashboard() {
                     </p>
                     <button
                       onClick={() => {
-                        mutateBundleRequests();
-                        mutateAllBundleRequests();
+                        mutateBundleRequests(undefined, { revalidate: true });
+                        mutateAllBundleRequests(undefined, { revalidate: true });
                       }}
                       className="mt-4 px-4 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm"
                     >
@@ -974,8 +1006,8 @@ export default function AdminDashboard() {
                                           setProcessingId(request.id);
                                           try {
                                             await approveBundleRequest(request.id);
-                                            // Refresh all bundle requests after approval
-                                            mutateAllBundleRequests();
+                                            // Refresh all bundle requests after approval with cache bypass
+                                            await mutateAllBundleRequests(undefined, { revalidate: true });
                                             setSuccessMessage('Bundle enrollment request approved successfully');
                                             setTimeout(() => setSuccessMessage(null), 3000);
                                           } catch (err: any) {
@@ -995,8 +1027,8 @@ export default function AdminDashboard() {
                                           setProcessingId(request.id);
                                           try {
                                             await rejectBundleRequest(request.id);
-                                            // Refresh all bundle requests after rejection
-                                            mutateAllBundleRequests();
+                                            // Refresh all bundle requests after rejection with cache bypass
+                                            await mutateAllBundleRequests(undefined, { revalidate: true });
                                             setSuccessMessage('Bundle enrollment request rejected successfully');
                                             setTimeout(() => setSuccessMessage(null), 3000);
                                           } catch (err: any) {
@@ -1057,7 +1089,7 @@ export default function AdminDashboard() {
                   {withdrawalStatusFilter !== 'all' && ` (${withdrawalStatusFilter})`}
                 </div>
                 <button
-                  onClick={() => mutateWithdrawalRequests()}
+                  onClick={() => mutateWithdrawalRequests(undefined, { revalidate: true })}
                   className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors text-sm flex items-center gap-2"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

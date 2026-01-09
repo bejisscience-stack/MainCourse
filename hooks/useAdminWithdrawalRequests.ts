@@ -10,15 +10,19 @@ async function fetchAdminWithdrawalRequests(status?: string): Promise<Withdrawal
     throw new Error('Not authenticated');
   }
 
-  const url = status && status !== 'all' 
-    ? `/api/admin/withdrawals?status=${status}` 
-    : '/api/admin/withdrawals';
+  // Add timestamp to bust any caching
+  const timestamp = Date.now();
+  const url = status && status !== 'all'
+    ? `/api/admin/withdrawals?status=${status}&t=${timestamp}`
+    : `/api/admin/withdrawals?t=${timestamp}`;
 
   const response = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Cache-Control': 'no-cache',
     },
+    cache: 'no-store',
+    next: { revalidate: 0 },
   });
 
   if (!response.ok) {
@@ -76,7 +80,8 @@ export function useAdminWithdrawalRequests(status?: string) {
       throw new Error(errorData.error || 'Failed to approve withdrawal request');
     }
 
-    await mutate();
+    // Force revalidation to get fresh data including updated profile balance
+    await mutate(undefined, { revalidate: true });
     return response.json();
   };
 
@@ -101,7 +106,8 @@ export function useAdminWithdrawalRequests(status?: string) {
       throw new Error(errorData.error || 'Failed to reject withdrawal request');
     }
 
-    await mutate();
+    // Force revalidation to get fresh data
+    await mutate(undefined, { revalidate: true });
     return response.json();
   };
 

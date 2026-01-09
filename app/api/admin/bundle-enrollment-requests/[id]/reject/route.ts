@@ -62,13 +62,13 @@ export async function POST(
     }
 
     console.log('[Reject API] Attempting to reject bundle request:', id);
-    
-    // Use service role client to ensure we bypass RLS and get immediate updates
+
+    // Use service role client for queries that need to bypass RLS (verification)
     const serviceSupabase = createServiceRoleClient();
-    
-    // Use the database function to reject (ensures consistency and bypasses RLS)
-    // Pass admin user ID as parameter since we're using service role client
-    const { error: rejectError } = await serviceSupabase.rpc('reject_bundle_enrollment_request', {
+
+    // Use authenticated client (not service role) so auth.uid() works in the database function
+    // The reject_bundle_enrollment_request function may use auth.uid() to verify admin status
+    const { error: rejectError } = await supabase.rpc('reject_bundle_enrollment_request', {
       request_id: id,
       admin_user_id: user.id,
     });

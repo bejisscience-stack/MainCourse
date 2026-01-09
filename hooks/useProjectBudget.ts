@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useRealtimeSubmissionReviews } from './useRealtimeProjects';
 
 export interface BudgetResult {
   totalBudget: number;
@@ -15,7 +16,7 @@ export interface BudgetResult {
 }
 
 /**
- * Custom hook for calculating project budget progress
+ * Custom hook for calculating project budget progress with real-time updates
  * @param projectId - The project ID to fetch budget data for
  * @param totalBudget - The total budget amount for the project
  */
@@ -26,6 +27,20 @@ export function useProjectBudget(
   const [totalSpent, setTotalSpent] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
+  const [refreshKey, setRefreshKey] = useState<number>(0);
+
+  // Callback to trigger a refresh
+  const refreshBudget = useCallback(() => {
+    console.log('[useProjectBudget] Real-time update triggered, refreshing budget data');
+    setRefreshKey(prev => prev + 1);
+  }, []);
+
+  // Set up real-time subscription for submission_reviews
+  useRealtimeSubmissionReviews({
+    projectId,
+    enabled: !!projectId,
+    onChange: refreshBudget,
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -73,7 +88,7 @@ export function useProjectBudget(
     return () => {
       isMounted = false;
     };
-  }, [projectId]);
+  }, [projectId, refreshKey]);
 
   return useMemo(() => {
     const remainingBudget = Math.max(0, totalBudget - totalSpent);

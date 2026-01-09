@@ -18,6 +18,8 @@ export default function LecturerDashboard() {
   const { t } = useI18n();
   const { user, profile, role: userRole, isLoading: userLoading } = useUser();
   const { courses, isLoading: coursesLoading, mutate: mutateCourses } = useLecturerCourses(user?.id || null);
+  // Defensive check: ensure courses is always an array
+  const safeCourses = Array.isArray(courses) ? courses : [];
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -725,8 +727,8 @@ export default function LecturerDashboard() {
               <button
                 onClick={() => handleOpenBundleModal()}
                 className="px-6 py-3 bg-purple-600 dark:bg-purple-500 text-white font-semibold rounded-xl hover:bg-purple-700 dark:hover:bg-purple-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                disabled={courses.length < 2}
-                title={courses.length < 2 ? t('lecturerDashboard.needTwoCourses') : ''}
+                disabled={safeCourses.length < 2}
+                title={safeCourses.length < 2 ? t('lecturerDashboard.needTwoCourses') : ''}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -770,7 +772,7 @@ export default function LecturerDashboard() {
           )}
 
           {/* Bundles Section */}
-          {courses.length >= 2 && (
+          {safeCourses.length >= 2 && (
             <div className="mb-12">
               <div className="mb-6">
                 <h2 className="text-2xl md:text-3xl font-bold text-charcoal-950 dark:text-white mb-2">
@@ -876,7 +878,7 @@ export default function LecturerDashboard() {
           <div className="mb-8">
             <h2 className="text-2xl md:text-3xl font-bold text-charcoal-950 dark:text-white mb-6">{t('lecturerDashboard.individualCourses')}</h2>
           </div>
-          {courses.length === 0 ? (
+          {safeCourses.length === 0 ? (
             <div className="text-center py-12 bg-white dark:bg-navy-800 border border-charcoal-100/50 dark:border-navy-700/50 rounded-3xl shadow-soft">
               <p className="text-charcoal-600 dark:text-gray-400 text-lg mb-4">{t('lecturerDashboard.noCoursesYet')}</p>
               <button
@@ -888,7 +890,7 @@ export default function LecturerDashboard() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {courses.map((course) => (
+              {safeCourses.map((course) => (
                 <CourseCard
                   key={course.id}
                   course={{
@@ -1503,11 +1505,11 @@ export default function LecturerDashboard() {
                         {t('lecturerDashboard.selectCoursesLabel')}
                       </label>
                       <div className="border border-charcoal-200 dark:border-navy-600 rounded-xl p-4 max-h-64 overflow-y-auto bg-charcoal-50/50 dark:bg-navy-700/30">
-                        {courses.length === 0 ? (
+                        {safeCourses.length === 0 ? (
                           <p className="text-sm text-charcoal-500 dark:text-gray-400">{t('lecturerDashboard.noCoursesAvailable')}</p>
                         ) : (
                           <div className="space-y-2">
-                            {courses.map((course) => (
+                            {safeCourses.map((course) => (
                               <label
                                 key={course.id}
                                 className="flex items-center p-3 rounded-xl border border-charcoal-200 dark:border-navy-600 hover:bg-white dark:hover:bg-navy-700/50 cursor-pointer transition-colors"

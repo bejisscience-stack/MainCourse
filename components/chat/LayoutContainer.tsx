@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useI18n } from '@/contexts/I18nContext';
 import ServerSidebar from './ServerSidebar';
 import ChannelSidebar from './ChannelSidebar';
@@ -57,8 +57,15 @@ export default function LayoutContainer({
   const [channelsCollapsed, setChannelsCollapsed] = useState(false);
   const [membersCollapsed, setMembersCollapsed] = useState(false);
   const [userName, setUserName] = useState<string>('');
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const { user } = useUser();
   const { t } = useI18n();
+
+  // Close mobile sidebar when channel is selected
+  const handleMobileChannelSelect = useCallback((channelId: string) => {
+    setActiveChannelId(channelId);
+    setShowMobileSidebar(false);
+  }, [setActiveChannelId]);
 
   const activeServer = activeServerId && activeServerId !== 'home' 
     ? servers.find((s) => s.id === activeServerId) || null
@@ -163,20 +170,53 @@ export default function LayoutContainer({
 
   return (
     <div className="flex h-full bg-navy-950/20 backdrop-blur-[0.5px] text-white overflow-hidden">
-      {/* Server sidebar */}
-      <ServerSidebar
-        servers={servers}
-        activeServerId={activeServerId}
-        onServerSelect={handleServerSelect}
-        onAddCourse={onAddCourse}
-        isLecturer={isLecturer}
-        enrolledCourseIds={enrolledCourseIds}
-        showDMButton={showDMButton}
-      />
+      {/* Mobile Sidebar Toggle Button */}
+      <button
+        onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+        className="md:hidden fixed top-16 left-2 z-50 p-2 bg-navy-800 rounded-lg shadow-lg border border-navy-700"
+        aria-label="Toggle sidebar"
+      >
+        <svg
+          className="w-5 h-5 text-white"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          {showMobileSidebar ? (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          ) : (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          )}
+        </svg>
+      </button>
+
+      {/* Mobile Sidebar Overlay */}
+      {showMobileSidebar && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/50 z-30"
+          onClick={() => setShowMobileSidebar(false)}
+        />
+      )}
+
+      {/* Server sidebar - hidden on mobile unless toggled */}
+      <div className={`${showMobileSidebar ? 'fixed inset-y-0 left-0 z-40' : 'hidden'} md:relative md:block`}>
+        <ServerSidebar
+          servers={servers}
+          activeServerId={activeServerId}
+          onServerSelect={(id) => {
+            handleServerSelect(id);
+            // Don't close sidebar when selecting server on mobile
+          }}
+          onAddCourse={onAddCourse}
+          isLecturer={isLecturer}
+          enrolledCourseIds={enrolledCourseIds}
+          showDMButton={showDMButton}
+        />
+      </div>
 
       {/* Combined Sidebar Container - Channels and Members stacked vertically */}
       {!isDMMode && activeServer && (
-        <div className="w-60 bg-navy-900 flex flex-col">
+        <div className={`${showMobileSidebar ? 'fixed inset-y-0 left-[72px] z-40 w-60' : 'hidden'} md:relative md:block md:w-60 bg-navy-900 flex flex-col`}>
           {/* Channels Section */}
           <div className={`flex flex-col border-b border-navy-700 transition-all ${channelsCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0'}`}>
             {/* Channels Header with Collapse Button - shown when collapsed */}
@@ -208,7 +248,13 @@ export default function LayoutContainer({
                 <ChannelSidebar
                   server={activeServer}
                   activeChannelId={activeChannelId}
-                  onChannelSelect={handleChannelSelect}
+                  onChannelSelect={(channelId) => {
+                    handleChannelSelect(channelId);
+                    // Close mobile sidebar after selecting channel
+                    if (window.innerWidth < 768) {
+                      setShowMobileSidebar(false);
+                    }
+                  }}
                   onChannelCreate={onChannelCreate}
                   onChannelUpdate={onChannelUpdate}
                   onChannelDelete={onChannelDelete}

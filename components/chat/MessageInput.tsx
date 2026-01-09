@@ -61,14 +61,8 @@ export default function MessageInput({
   // Clean up previews on unmount
   useEffect(() => {
     return () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MessageInput.tsx:63',message:'Cleanup effect running',data:{uploadingFilesCount:uploadingFiles.length,previewCount:uploadingFiles.filter(f=>f.preview).length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A2'})}).catch(()=>{});
-      // #endregion
       uploadingFiles.forEach(f => {
         if (f.preview) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MessageInput.tsx:67',message:'Revoking object URL',data:{fileId:f.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A2'})}).catch(()=>{});
-          // #endregion
           URL.revokeObjectURL(f.preview);
         }
       });
@@ -91,9 +85,6 @@ export default function MessageInput({
   }, [onTyping]);
 
   const handleSend = useCallback(async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/695db6a1-160d-40d0-ab86-4058ba2ea89b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MessageInput.tsx:88',message:'handleSend called',data:{hasContent:!!content.trim(),attachmentsCount:attachments.length,isUploading},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B3'})}).catch(()=>{});
-    // #endregion
     // Capture current values at call time to allow concurrent sends
     const currentContent = content;
     const currentAttachments = [...attachments];

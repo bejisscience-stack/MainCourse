@@ -25,7 +25,7 @@ export function useLecturerCourses(lecturerId: string | null) {
   );
 
   return {
-    courses: data || [],
+    courses: Array.isArray(data) ? data : [],
     isLoading,
     error,
     mutate,

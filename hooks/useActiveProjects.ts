@@ -1,5 +1,7 @@
+import { useEffect, useCallback } from 'react';
 import useSWR from 'swr';
 import { supabase } from '@/lib/supabase';
+import { useRealtimeProjects, useRealtimeProjectCriteria } from './useRealtimeProjects';
 
 export interface ProjectCriteria {
   id: string;
@@ -176,10 +178,31 @@ export function useActiveProjects() {
     }
   );
 
+  // Callback to refresh projects data
+  const refreshProjects = useCallback(() => {
+    console.log('[useActiveProjects] Real-time update triggered, refreshing data');
+    mutate();
+  }, [mutate]);
+
+  // Set up real-time subscription for projects table
+  const { isConnected: projectsRtConnected } = useRealtimeProjects({
+    enabled: true,
+    onInsert: refreshProjects,
+    onUpdate: refreshProjects,
+    onDelete: refreshProjects,
+  });
+
+  // Also listen for project criteria changes
+  const { isConnected: criteriaRtConnected } = useRealtimeProjectCriteria({
+    enabled: true,
+    onChange: refreshProjects,
+  });
+
   return {
     projects: data || [],
     isLoading,
     error,
     mutate,
+    isRealtimeConnected: projectsRtConnected && criteriaRtConnected,
   };
 }
