@@ -106,8 +106,8 @@ export function useRealtimeAdminEnrollmentRequests({
               ? (request.courses.length > 0 ? request.courses[0] : null)
               : request.courses ?? null,
             profiles: Array.isArray(request.profiles)
-              ? (request.profiles.length > 0 ? request.profiles[0] : null)
-              : request.profiles ?? null,
+              ? (request.profiles.length > 0 ? request.profiles[0] : undefined)
+              : request.profiles ?? undefined,
           };
 
           onInsertRef.current?.(transformedRequest);
@@ -170,8 +170,8 @@ export function useRealtimeAdminEnrollmentRequests({
               ? (request.courses.length > 0 ? request.courses[0] : null)
               : request.courses ?? null,
             profiles: Array.isArray(request.profiles)
-              ? (request.profiles.length > 0 ? request.profiles[0] : null)
-              : request.profiles ?? null,
+              ? (request.profiles.length > 0 ? request.profiles[0] : undefined)
+              : request.profiles ?? undefined,
           };
 
           onUpdateRef.current?.(transformedRequest, payload.old as Partial<EnrollmentRequest>);
