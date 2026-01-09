@@ -98,12 +98,12 @@ export function useRealtimeAdminBundleEnrollmentRequests({
           // Transform to match expected type
           const transformedRequest: BundleEnrollmentRequest = {
             ...request,
-            profiles: Array.isArray(request.profiles) && request.profiles.length > 0
-              ? request.profiles[0]
-              : request.profiles,
-            bundles: Array.isArray(request.course_bundles) && request.course_bundles.length > 0
-              ? request.course_bundles[0]
-              : request.course_bundles,
+            profiles: Array.isArray(request.profiles)
+              ? (request.profiles.length > 0 ? request.profiles[0] : null)
+              : request.profiles ?? null,
+            bundles: Array.isArray(request.course_bundles)
+              ? (request.course_bundles.length > 0 ? request.course_bundles[0] : null)
+              : request.course_bundles ?? null,
           };
 
           onInsertRef.current?.(transformedRequest);
@@ -160,12 +160,12 @@ export function useRealtimeAdminBundleEnrollmentRequests({
           // Transform to match expected type
           const transformedRequest: BundleEnrollmentRequest = {
             ...request,
-            profiles: Array.isArray(request.profiles) && request.profiles.length > 0
-              ? request.profiles[0]
-              : request.profiles,
-            bundles: Array.isArray(request.course_bundles) && request.course_bundles.length > 0
-              ? request.course_bundles[0]
-              : request.course_bundles,
+            profiles: Array.isArray(request.profiles)
+              ? (request.profiles.length > 0 ? request.profiles[0] : null)
+              : request.profiles ?? null,
+            bundles: Array.isArray(request.course_bundles)
+              ? (request.course_bundles.length > 0 ? request.course_bundles[0] : null)
+              : request.course_bundles ?? null,
           };
 
           onUpdateRef.current?.(transformedRequest, payload.old as Partial<BundleEnrollmentRequest>);
