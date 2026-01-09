@@ -1,3 +1,4 @@
+import { useMemo, useCallback } from 'react';
 import useSWR from 'swr';
 import { supabase } from '@/lib/supabase';
 
@@ -60,18 +61,23 @@ export function useEnrollments(userId: string | null) {
   const enrollments = data || new Map<string, EnrollmentInfo>();
 
   // Backward compatibility: derive Set from Map keys
-  const enrolledCourseIds = new Set(enrollments.keys());
+  // IMPORTANT: Memoize to prevent infinite re-renders when used in dependency arrays
+  const enrolledCourseIds = useMemo(() => {
+    return new Set(enrollments.keys());
+  }, [enrollments]);
 
   // Helper function to check if enrollment is active (not expired)
-  const isEnrollmentActive = (courseId: string): boolean => {
+  // Memoized to prevent unnecessary re-renders
+  const isEnrollmentActive = useCallback((courseId: string): boolean => {
     const info = enrollments.get(courseId);
     return info?.isActive ?? false;
-  };
+  }, [enrollments]);
 
   // Helper function to get full enrollment info for a course
-  const getEnrollmentInfo = (courseId: string): EnrollmentInfo | null => {
+  // Memoized to prevent unnecessary re-renders
+  const getEnrollmentInfo = useCallback((courseId: string): EnrollmentInfo | null => {
     return enrollments.get(courseId) || null;
-  };
+  }, [enrollments]);
 
   return {
     enrollments,

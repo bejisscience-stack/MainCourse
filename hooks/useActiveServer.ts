@@ -1,18 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export function useActiveServer() {
-  const [activeServerId, setActiveServerId] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('activeServerId');
-    }
-    return null;
-  });
+  // Initialize with null to avoid hydration mismatch
+  // localStorage will be read after mount
+  const [activeServerId, setActiveServerIdState] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
 
+  // Read from localStorage after mount to avoid hydration mismatch
   useEffect(() => {
-    if (activeServerId && typeof window !== 'undefined') {
-      localStorage.setItem('activeServerId', activeServerId);
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('activeServerId');
+      if (stored) {
+        setActiveServerIdState(stored);
+      }
+      setIsHydrated(true);
     }
-  }, [activeServerId]);
+  }, []);
+
+  // Save to localStorage when value changes (but only after hydration)
+  useEffect(() => {
+    if (isHydrated && typeof window !== 'undefined') {
+      if (activeServerId) {
+        localStorage.setItem('activeServerId', activeServerId);
+      }
+    }
+  }, [activeServerId, isHydrated]);
+
+  // Memoize setter to prevent unnecessary re-renders
+  const setActiveServerId = useCallback((value: string | null | ((prev: string | null) => string | null)) => {
+    setActiveServerIdState(value);
+  }, []);
 
   return [activeServerId, setActiveServerId] as const;
 }
