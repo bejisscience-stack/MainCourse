@@ -102,12 +102,12 @@ export function useRealtimeAdminEnrollmentRequests({
           // Transform to match expected type
           const transformedRequest: EnrollmentRequest = {
             ...request,
-            courses: Array.isArray(request.courses) && request.courses.length > 0
-              ? request.courses[0]
-              : request.courses,
-            profiles: Array.isArray(request.profiles) && request.profiles.length > 0
-              ? request.profiles[0]
-              : request.profiles,
+            courses: Array.isArray(request.courses)
+              ? (request.courses.length > 0 ? request.courses[0] : null)
+              : request.courses ?? null,
+            profiles: Array.isArray(request.profiles)
+              ? (request.profiles.length > 0 ? request.profiles[0] : null)
+              : request.profiles ?? null,
           };
 
           onInsertRef.current?.(transformedRequest);
@@ -166,12 +166,12 @@ export function useRealtimeAdminEnrollmentRequests({
           // Transform to match expected type
           const transformedRequest: EnrollmentRequest = {
             ...request,
-            courses: Array.isArray(request.courses) && request.courses.length > 0
-              ? request.courses[0]
-              : request.courses,
-            profiles: Array.isArray(request.profiles) && request.profiles.length > 0
-              ? request.profiles[0]
-              : request.profiles,
+            courses: Array.isArray(request.courses)
+              ? (request.courses.length > 0 ? request.courses[0] : null)
+              : request.courses ?? null,
+            profiles: Array.isArray(request.profiles)
+              ? (request.profiles.length > 0 ? request.profiles[0] : null)
+              : request.profiles ?? null,
           };
 
           onUpdateRef.current?.(transformedRequest, payload.old as Partial<EnrollmentRequest>);
