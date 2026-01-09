@@ -85,9 +85,9 @@ export function useRealtimeBundleEnrollmentRequests({
           // Transform to match expected type
           const transformedRequest: BundleEnrollmentRequest = {
             ...request,
-            bundles: Array.isArray(request.course_bundles) && request.course_bundles.length > 0
-              ? request.course_bundles[0]
-              : request.course_bundles,
+            bundles: Array.isArray(request.course_bundles)
+              ? (request.course_bundles.length > 0 ? request.course_bundles[0] : null)
+              : request.course_bundles ?? null,
           };
 
           // Call the appropriate callback based on status change
