@@ -72,7 +72,9 @@ export function useRealtimeEnrollmentRequests({
           // Supabase returns courses as an array, but we expect a single object
           const transformedRequest: EnrollmentRequest = {
             ...request,
-            courses: Array.isArray(request.courses) && request.courses.length > 0 ? request.courses[0] : null,
+            courses: Array.isArray(request.courses)
+              ? (request.courses.length > 0 ? request.courses[0] : null)
+              : request.courses ?? null,
           };
 
           // Call the appropriate callback based on status change
