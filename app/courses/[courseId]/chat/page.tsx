@@ -78,12 +78,13 @@ export default function CourseChatPage() {
       // OPTIMIZATION: Fetch channels, lecturer courses, and members enrollment data in parallel
       const [channelsResult, lecturerCoursesResult, enrollmentsResult] = await Promise.all([
         // Fetch channels for this course
-        supabase
-          .from('channels')
-          .select('*')
-          .eq('course_id', courseId)
-          .order('display_order', { ascending: true })
-          .then(({ data, error }) => {
+        (async () => {
+          try {
+            const { data, error } = await supabase
+              .from('channels')
+              .select('*')
+              .eq('course_id', courseId)
+              .order('display_order', { ascending: true });
             if (error) {
               if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
                 console.warn('Channels table does not exist yet. Using default channels.');
@@ -93,33 +94,40 @@ export default function CourseChatPage() {
               return [];
             }
             return data || [];
-          })
-          .catch((err) => {
+          } catch (err) {
             console.warn('Channels query failed (table may not exist):', err);
             return [];
-          }),
+          }
+        })(),
 
         // Fetch all courses from the same lecturer (if lecturer_id exists)
-        courseData.lecturer_id
-          ? supabase
+        (async () => {
+          if (!courseData.lecturer_id) return [courseData];
+          try {
+            const { data } = await supabase
               .from('courses')
               .select('*')
               .eq('lecturer_id', courseData.lecturer_id)
-              .order('created_at', { ascending: false })
-              .then(({ data }) => data || [courseData])
-              .catch(() => [courseData])
-          : Promise.resolve([courseData]),
+              .order('created_at', { ascending: false });
+            return data || [courseData];
+          } catch {
+            return [courseData];
+          }
+        })(),
 
         // Fetch enrolled students for members list
-        supabase
-          .from('enrollments')
-          .select('user_id')
-          .eq('course_id', courseId)
-          .then(({ data, error }) => {
+        (async () => {
+          try {
+            const { data, error } = await supabase
+              .from('enrollments')
+              .select('user_id')
+              .eq('course_id', courseId);
             if (error) return [];
             return data || [];
-          })
-          .catch(() => []),
+          } catch {
+            return [];
+          }
+        })(),
       ]);
 
       let channelsData = channelsResult;
@@ -155,51 +163,59 @@ export default function CourseChatPage() {
       // OPTIMIZATION: Create channels and fetch all lecturer course channels in parallel
       const [newChannelsResult, allChannelsResult, profilesResult] = await Promise.all([
         // Create missing channels if needed
-        channelsToCreate.length > 0
-          ? supabase
+        (async () => {
+          if (channelsToCreate.length === 0) return [];
+          try {
+            const { data, error } = await supabase
               .from('channels')
               .insert(channelsToCreate)
-              .select()
-              .then(({ data, error }) => {
-                if (error) {
-                  console.warn('Error creating required channels:', error);
-                  return [];
-                }
-                return data || [];
-              })
-              .catch((err) => {
-                console.warn('Error creating required channels:', err);
-                return [];
-              })
-          : Promise.resolve([]),
+              .select();
+            if (error) {
+              console.warn('Error creating required channels:', error);
+              return [];
+            }
+            return data || [];
+          } catch (err) {
+            console.warn('Error creating required channels:', err);
+            return [];
+          }
+        })(),
 
         // Fetch channels for all lecturer courses
-        supabase
-          .from('channels')
-          .select('*')
-          .in('course_id', allLecturerCourses.map((c: any) => c.id))
-          .order('display_order', { ascending: true })
-          .then(({ data }) => data || [])
-          .catch(() => []),
+        (async () => {
+          try {
+            const { data } = await supabase
+              .from('channels')
+              .select('*')
+              .in('course_id', allLecturerCourses.map((c: any) => c.id))
+              .order('display_order', { ascending: true });
+            return data || [];
+          } catch {
+            return [];
+          }
+        })(),
 
         // Fetch member profiles (from enrollments data we already have)
-        (() => {
+        (async () => {
           if (enrollments.length === 0 && !courseData.lecturer_id) {
-            return Promise.resolve([]);
+            return [];
           }
           const userIds = [...new Set(enrollments.map((e: any) => e.user_id))];
           if (courseData.lecturer_id) {
             userIds.push(courseData.lecturer_id);
           }
           if (userIds.length === 0) {
-            return Promise.resolve([]);
+            return [];
           }
-          return supabase
-            .from('profiles')
-            .select('id, username, email, role')
-            .in('id', userIds)
-            .then(({ data }) => data || [])
-            .catch(() => []);
+          try {
+            const { data } = await supabase
+              .from('profiles')
+              .select('id, username, email, role')
+              .in('id', userIds);
+            return data || [];
+          } catch {
+            return [];
+          }
         })(),
       ]);
 
