@@ -97,9 +97,9 @@ export function useRealtimeAdminWithdrawalRequests({
           // Transform to match expected type
           const transformedRequest: WithdrawalRequest = {
             ...request,
-            profiles: Array.isArray(request.profiles) && request.profiles.length > 0
-              ? request.profiles[0]
-              : request.profiles,
+            profiles: Array.isArray(request.profiles)
+              ? (request.profiles.length > 0 ? request.profiles[0] : undefined)
+              : request.profiles ?? undefined,
           };
 
           onInsertRef.current?.(transformedRequest);
@@ -155,9 +155,9 @@ export function useRealtimeAdminWithdrawalRequests({
           // Transform to match expected type
           const transformedRequest: WithdrawalRequest = {
             ...request,
-            profiles: Array.isArray(request.profiles) && request.profiles.length > 0
-              ? request.profiles[0]
-              : request.profiles,
+            profiles: Array.isArray(request.profiles)
+              ? (request.profiles.length > 0 ? request.profiles[0] : undefined)
+              : request.profiles ?? undefined,
           };
 
           onUpdateRef.current?.(transformedRequest, payload.old as Partial<WithdrawalRequest>);
