@@ -49,16 +49,29 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
   }
 }
 
-// Combined fetcher for user and profile
+// Combined fetcher for user and profile with improved error resilience
 async function fetchUserData(): Promise<UserData> {
   try {
     const user = await fetchUserSession();
-    
+
     if (!user) {
       return { user: null, profile: null, role: null };
     }
 
-    const profile = await fetchProfile(user.id);
+    // Fetch profile - use Promise.race with timeout for resilience
+    // Profile fetch failure should not block user data
+    let profile: Profile | null = null;
+    try {
+      profile = await Promise.race([
+        fetchProfile(user.id),
+        // Timeout after 3 seconds to prevent hanging
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+      ]);
+    } catch {
+      // Profile fetch failed, continue with user data only
+      profile = null;
+    }
+
     // Always prioritize profile role over metadata (database is source of truth)
     const role = profile?.role || user.user_metadata?.role || null;
 

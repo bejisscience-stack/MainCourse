@@ -3,28 +3,34 @@ import { supabase } from '@/lib/supabase';
 import type { Video, VideoProgress } from '@/types/server';
 
 async function fetchVideos(channelId: string, courseId: string, userId: string): Promise<Video[]> {
-  const { data, error } = await supabase
-    .from('videos')
-    .select('*')
-    .eq('channel_id', channelId)
-    .eq('course_id', courseId)
-    .order('display_order', { ascending: true });
+  // OPTIMIZATION: Fetch videos and all user progress for this course in parallel
+  // This avoids the sequential dependency on video IDs
+  const [videosResult, progressResult] = await Promise.all([
+    supabase
+      .from('videos')
+      .select('*')
+      .eq('channel_id', channelId)
+      .eq('course_id', courseId)
+      .order('display_order', { ascending: true }),
+    // Fetch all progress for this user in this course (filter by course instead of video_id)
+    supabase
+      .from('video_progress')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('course_id', courseId),
+  ]);
 
-  if (error) throw error;
+  if (videosResult.error) throw videosResult.error;
 
-  // Load progress for each video
-  const videoIds = (data || []).map((v) => v.id);
-  const { data: progressData } = await supabase
-    .from('video_progress')
-    .select('*')
-    .eq('user_id', userId)
-    .in('video_id', videoIds);
+  const data = videosResult.data || [];
+  const progressData = progressResult.data || [];
 
+  // Create progress map for quick lookup
   const progressMap = new Map(
-    (progressData || []).map((p) => [p.video_id, p as VideoProgress])
+    progressData.map((p) => [p.video_id, p as VideoProgress])
   );
 
-  return (data || []).map((v) => ({
+  return data.map((v) => ({
     id: v.id,
     channelId: v.channel_id,
     courseId: v.course_id,

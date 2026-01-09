@@ -59,7 +59,7 @@ export default function CourseChatPage() {
         return;
       }
 
-      // Fetch course details
+      // Fetch course details first (required for dependent queries)
       const { data: courseData, error: courseError } = await supabase
         .from('courses')
         .select('*')
@@ -75,37 +75,61 @@ export default function CourseChatPage() {
 
       setCourse(courseData);
 
-      // Fetch channels from database
-      let channelsData: any[] = [];
-      try {
-        const { data: channels, error: channelsError } = await supabase
+      // OPTIMIZATION: Fetch channels, lecturer courses, and members enrollment data in parallel
+      const [channelsResult, lecturerCoursesResult, enrollmentsResult] = await Promise.all([
+        // Fetch channels for this course
+        supabase
           .from('channels')
           .select('*')
           .eq('course_id', courseId)
-          .order('display_order', { ascending: true });
+          .order('display_order', { ascending: true })
+          .then(({ data, error }) => {
+            if (error) {
+              if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+                console.warn('Channels table does not exist yet. Using default channels.');
+                return [];
+              }
+              console.warn('Error fetching channels:', error);
+              return [];
+            }
+            return data || [];
+          })
+          .catch((err) => {
+            console.warn('Channels query failed (table may not exist):', err);
+            return [];
+          }),
 
-        if (channelsError) {
-          // If channels table doesn't exist or query fails, continue with empty channels
-          if (channelsError.code === 'PGRST116' || channelsError.message?.includes('relation') || channelsError.message?.includes('does not exist')) {
-            console.warn('Channels table does not exist yet. Using default channels.');
-            channelsData = [];
-          } else {
-            console.warn('Error fetching channels:', channelsError);
-            channelsData = [];
-          }
-        } else {
-          channelsData = channels || [];
-        }
-      } catch (channelsErr: any) {
-        // Channels table might not exist yet, continue with empty channels
-        console.warn('Channels query failed (table may not exist):', channelsErr);
-        channelsData = [];
-      }
+        // Fetch all courses from the same lecturer (if lecturer_id exists)
+        courseData.lecturer_id
+          ? supabase
+              .from('courses')
+              .select('*')
+              .eq('lecturer_id', courseData.lecturer_id)
+              .order('created_at', { ascending: false })
+              .then(({ data }) => data || [courseData])
+              .catch(() => [courseData])
+          : Promise.resolve([courseData]),
 
-      // Ensure required channels exist in database
-      const hasLectures = channelsData.some((ch) => ch.name.toLowerCase() === 'lectures' && ch.type === 'lectures');
-      const hasProjects = channelsData.some((ch) => ch.name.toLowerCase() === 'projects');
-      
+        // Fetch enrolled students for members list
+        supabase
+          .from('enrollments')
+          .select('user_id')
+          .eq('course_id', courseId)
+          .then(({ data, error }) => {
+            if (error) return [];
+            return data || [];
+          })
+          .catch(() => []),
+      ]);
+
+      let channelsData = channelsResult;
+      const allLecturerCourses = lecturerCoursesResult;
+      const enrollments = enrollmentsResult;
+
+      // Ensure required channels exist in database (depends on channelsData)
+      const hasLectures = channelsData.some((ch: any) => ch.name.toLowerCase() === 'lectures' && ch.type === 'lectures');
+      const hasProjects = channelsData.some((ch: any) => ch.name.toLowerCase() === 'projects');
+
       const channelsToCreate: any[] = [];
       if (!hasLectures) {
         channelsToCreate.push({
@@ -127,86 +151,72 @@ export default function CourseChatPage() {
           display_order: 1,
         });
       }
-      
-      if (channelsToCreate.length > 0) {
-        try {
-          const { data: newChannels, error: createError } = await supabase
-            .from('channels')
-            .insert(channelsToCreate)
-            .select();
-          
-          if (!createError && newChannels) {
-            channelsData.push(...newChannels);
-          }
-        } catch (err) {
-          console.warn('Error creating required channels:', err);
-        }
-      }
 
-      // Transform course into server/channels structure
-      const courseChannels = channelsData || [];
-      
-      // Group channels by category
-      const channelsByCategory: { [key: string]: Channel[] } = {};
-      courseChannels.forEach((ch) => {
-        const category = ch.category_name || 'COURSE CHANNELS';
-        if (!channelsByCategory[category]) {
-          channelsByCategory[category] = [];
-        }
-        channelsByCategory[category].push({
-          id: ch.id,
-          name: ch.name,
-          type: ch.type as 'text' | 'voice' | 'lectures',
-          description: ch.description || undefined,
-          courseId: courseData.id,
-          categoryName: ch.category_name || undefined,
-          displayOrder: ch.display_order || 0,
-          messages: [],
-        });
-      });
+      // OPTIMIZATION: Create channels and fetch all lecturer course channels in parallel
+      const [newChannelsResult, allChannelsResult, profilesResult] = await Promise.all([
+        // Create missing channels if needed
+        channelsToCreate.length > 0
+          ? supabase
+              .from('channels')
+              .insert(channelsToCreate)
+              .select()
+              .then(({ data, error }) => {
+                if (error) {
+                  console.warn('Error creating required channels:', error);
+                  return [];
+                }
+                return data || [];
+              })
+              .catch((err) => {
+                console.warn('Error creating required channels:', err);
+                return [];
+              })
+          : Promise.resolve([]),
 
-      // Sort channels: lectures first, then projects, then by displayOrder
-      Object.keys(channelsByCategory).forEach((cat) => {
-        channelsByCategory[cat].sort((a, b) => {
-          // Lectures always first
-          if (a.type === 'lectures' && b.type !== 'lectures') return -1;
-          if (b.type === 'lectures' && a.type !== 'lectures') return 1;
-          // Projects second
-          if (a.name.toLowerCase() === 'projects' && b.name.toLowerCase() !== 'projects') return -1;
-          if (b.name.toLowerCase() === 'projects' && a.name.toLowerCase() !== 'projects') return 1;
-          // Then by displayOrder
-          return (a.displayOrder || 0) - (b.displayOrder || 0);
-        });
-      });
-
-      // Fetch all courses from the same lecturer
-      let allLecturerCourses: any[] = [courseData];
-      if (courseData.lecturer_id) {
-        const { data: lecturerCourses } = await supabase
-          .from('courses')
+        // Fetch channels for all lecturer courses
+        supabase
+          .from('channels')
           .select('*')
-          .eq('lecturer_id', courseData.lecturer_id)
-          .order('created_at', { ascending: false });
-        
-        if (lecturerCourses && lecturerCourses.length > 0) {
-          allLecturerCourses = lecturerCourses;
-        }
+          .in('course_id', allLecturerCourses.map((c: any) => c.id))
+          .order('display_order', { ascending: true })
+          .then(({ data }) => data || [])
+          .catch(() => []),
+
+        // Fetch member profiles (from enrollments data we already have)
+        (() => {
+          if (enrollments.length === 0 && !courseData.lecturer_id) {
+            return Promise.resolve([]);
+          }
+          const userIds = [...new Set(enrollments.map((e: any) => e.user_id))];
+          if (courseData.lecturer_id) {
+            userIds.push(courseData.lecturer_id);
+          }
+          if (userIds.length === 0) {
+            return Promise.resolve([]);
+          }
+          return supabase
+            .from('profiles')
+            .select('id, username, email, role')
+            .in('id', userIds)
+            .then(({ data }) => data || [])
+            .catch(() => []);
+        })(),
+      ]);
+
+      // Add newly created channels to channelsData
+      if (newChannelsResult.length > 0) {
+        channelsData = [...channelsData, ...newChannelsResult];
       }
 
-      // Fetch channels for all lecturer courses
-      const lecturerCourseIds = allLecturerCourses.map(c => c.id);
-      const { data: allChannelsData } = await supabase
-        .from('channels')
-        .select('*')
-        .in('course_id', lecturerCourseIds)
-        .order('display_order', { ascending: true });
+      const allChannelsData = allChannelsResult;
+      const profiles = profilesResult;
 
       // Transform all courses into servers
-      const serversData: Server[] = allLecturerCourses.map((course) => {
-        const courseChannels = (allChannelsData || []).filter((ch) => ch.course_id === course.id);
-        
+      const serversData: Server[] = allLecturerCourses.map((course: any) => {
+        const courseChannels = allChannelsData.filter((ch: any) => ch.course_id === course.id);
+
         const channelsByCategory: { [key: string]: Channel[] } = {};
-        courseChannels.forEach((ch) => {
+        courseChannels.forEach((ch: any) => {
           const category = ch.category_name || 'COURSE CHANNELS';
           if (!channelsByCategory[category]) {
             channelsByCategory[category] = [];
@@ -223,7 +233,7 @@ export default function CourseChatPage() {
           });
         });
 
-        // Sort channels
+        // Sort channels: lectures first, then projects, then by displayOrder
         Object.keys(channelsByCategory).forEach((cat) => {
           channelsByCategory[cat].sort((a, b) => {
             if (a.type === 'lectures' && b.type !== 'lectures') return -1;
@@ -247,52 +257,22 @@ export default function CourseChatPage() {
       });
 
       setServers(serversData);
-      
+
       // Set active server to this course
       setActiveServerId(courseId);
 
-      // Fetch members (enrolled students and lecturer)
-      try {
-        // Get enrolled students
-        const { data: enrollments, error: enrollmentsError } = await supabase
-          .from('enrollments')
-          .select('user_id')
-          .eq('course_id', courseId);
-
-        if (!enrollmentsError && enrollments && enrollments.length > 0) {
-          const userIds = [...new Set(enrollments.map((e) => e.user_id))];
-          
-          // Add lecturer ID
-          if (courseData.lecturer_id) {
-            userIds.push(courseData.lecturer_id);
-          }
-
-          if (userIds.length > 0) {
-            const { data: profiles } = await supabase
-              .from('profiles')
-              .select('id, username, email, role')
-              .in('id', userIds);
-
-            const membersData: Member[] =
-              profiles?.map((profile) => {
-                const username = normalizeProfileUsername(profile);
-                return {
-                  id: profile.id,
-                  username,
-                  avatarUrl: '',
-                  status: 'online' as const,
-                  role: profile.role || 'student',
-                };
-              }) || [];
-
-            setMembers(membersData);
-          }
-        }
-      } catch (membersErr) {
-        // Members loading is not critical, continue
-        console.warn('Error loading members:', membersErr);
-        setMembers([]);
-      }
+      // Set members from profiles data
+      const membersData: Member[] = profiles.map((profile: any) => {
+        const username = normalizeProfileUsername(profile);
+        return {
+          id: profile.id,
+          username,
+          avatarUrl: '',
+          status: 'online' as const,
+          role: profile.role || 'student',
+        };
+      });
+      setMembers(membersData);
 
       setIsLoadingCourse(false);
     } catch (err: any) {
@@ -352,9 +332,9 @@ export default function CourseChatPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-screen bg-navy-950">
+      <div className="flex flex-col h-screen overflow-hidden bg-navy-950">
         <ChatNavigation />
-        <div className="flex-1 flex items-center justify-center bg-navy-950">
+        <div className="flex-1 min-h-0 flex items-center justify-center bg-navy-950">
           <div className="text-center text-gray-400">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mb-4"></div>
             <p>Loading course chat...</p>
@@ -366,9 +346,9 @@ export default function CourseChatPage() {
 
   if (!user) {
     return (
-      <div className="flex flex-col h-screen bg-navy-950">
+      <div className="flex flex-col h-screen overflow-hidden bg-navy-950">
         <ChatNavigation />
-        <div className="flex-1 flex items-center justify-center bg-navy-950">
+        <div className="flex-1 min-h-0 flex items-center justify-center bg-navy-950">
           <div className="text-center text-gray-400">
             <p>Please log in to access chat</p>
           </div>
@@ -379,9 +359,9 @@ export default function CourseChatPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col h-screen bg-navy-950">
+      <div className="flex flex-col h-screen overflow-hidden bg-navy-950">
         <ChatNavigation />
-        <div className="flex-1 flex items-center justify-center bg-navy-950">
+        <div className="flex-1 min-h-0 flex items-center justify-center bg-navy-950">
           <div className="text-center text-gray-400 max-w-md">
             <div className="bg-red-900/50 border border-red-700 text-red-200 px-6 py-4 rounded-lg mb-4">
               <p className="font-semibold mb-2">Error loading course chat</p>
@@ -417,11 +397,11 @@ export default function CourseChatPage() {
   const showExpirationOverlay = isExpired && userRole !== 'admin';
 
   return (
-    <div className="flex flex-col h-screen bg-navy-950/20 backdrop-blur-[0.5px]">
+    <div className="flex flex-col h-screen overflow-hidden bg-navy-950/20 backdrop-blur-[0.5px]">
       <ChatNavigation />
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex-1 min-h-0 overflow-hidden relative">
         {servers.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center bg-navy-950/20 backdrop-blur-[0.5px]">
+          <div className="flex-1 min-h-0 flex items-center justify-center bg-navy-950/20 backdrop-blur-[0.5px]">
             <div className="text-center text-gray-400 max-w-md">
               <svg
                 className="w-16 h-16 mx-auto mb-4 opacity-50"

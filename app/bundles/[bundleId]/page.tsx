@@ -21,66 +21,76 @@ export default function BundleEnrollmentPage() {
   const [showEnrollmentWizard, setShowEnrollmentWizard] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
 
+  // OPTIMIZATION: Fetch bundle and check enrollment in parallel
   useEffect(() => {
-    if (bundleId) {
-      fetchBundle();
+    if (!bundleId) return;
+
+    const loadData = async () => {
+      // Build array of promises to run in parallel
+      const promises: Promise<void>[] = [
+        // Fetch bundle data
+        (async () => {
+          try {
+            const { data, error: fetchError } = await supabase
+              .from('course_bundles')
+              .select(`
+                *,
+                course_bundle_items (
+                  course_id,
+                  courses (
+                    id,
+                    title,
+                    description,
+                    price,
+                    thumbnail_url,
+                    course_type
+                  )
+                )
+              `)
+              .eq('id', bundleId)
+              .eq('is_active', true)
+              .single();
+
+            if (fetchError) throw fetchError;
+            if (!data) {
+              setError(t('bundles.bundleNotFound'));
+              return;
+            }
+            setBundle(data);
+          } catch (err: any) {
+            setError(err.message || t('bundles.failedToLoadBundle'));
+          }
+        })(),
+      ];
+
+      // Add enrollment check if user is logged in
       if (user?.id) {
-        checkEnrollment();
-      }
-    }
-  }, [bundleId, user?.id]);
+        promises.push(
+          (async () => {
+            try {
+              const { data, error: checkError } = await supabase
+                .from('bundle_enrollments')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('bundle_id', bundleId)
+                .maybeSingle();
 
-  const fetchBundle = async () => {
-    try {
-      const { data, error: fetchError } = await supabase
-        .from('course_bundles')
-        .select(`
-          *,
-          course_bundle_items (
-            course_id,
-            courses (
-              id,
-              title,
-              description,
-              price,
-              thumbnail_url,
-              course_type
-            )
-          )
-        `)
-        .eq('id', bundleId)
-        .eq('is_active', true)
-        .single();
-
-      if (fetchError) throw fetchError;
-      if (!data) {
-        setError(t('bundles.bundleNotFound'));
-        return;
+              if (checkError) throw checkError;
+              setIsEnrolled(!!data);
+            } catch {
+              // Silently handle enrollment check errors
+            }
+          })()
+        );
       }
-      setBundle(data);
-    } catch (err: any) {
-      setError(err.message || t('bundles.failedToLoadBundle'));
-    } finally {
+
+      // Run all promises in parallel
+      await Promise.all(promises);
       setLoading(false);
-    }
-  };
+    };
 
-  const checkEnrollment = async () => {
-    if (!user?.id) return;
-    try {
-      const { data, error: checkError } = await supabase
-        .from('bundle_enrollments')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('bundle_id', bundleId)
-        .maybeSingle();
-
-      if (checkError) throw checkError;
-      setIsEnrolled(!!data);
-    } catch (err: any) {
-      // Silently handle enrollment check errors
-    }
-  };
+    loadData();
+  }, [bundleId, user?.id, t]);
 
   const handlePaymentSubmit = useCallback(async (bundleId: string, screenshotUrls: string[], referralCode?: string) => {
     if (!user?.id) {
