@@ -62,7 +62,7 @@ export default function LecturesChannel({
 
   if (loading) {
     return (
-      <div className="flex-1 min-h-0 min-w-0 flex items-center justify-center bg-gradient-to-b from-gray-900 to-gray-950">
+      <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-gray-900 to-gray-950">
         <div className="text-center">
           <div className="relative w-16 h-16 mx-auto mb-4">
             <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20"></div>
@@ -75,7 +75,7 @@ export default function LecturesChannel({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gradient-to-b from-gray-900 to-gray-950 min-h-0 min-w-0">
+    <div className="flex-1 flex flex-col bg-gradient-to-b from-gray-900 to-gray-950 min-h-0">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-800/50 bg-gray-900/50 backdrop-blur-sm">
         <div className="flex items-center justify-between">
