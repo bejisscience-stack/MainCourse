@@ -135,7 +135,7 @@ const MediaAttachment = memo(function MediaAttachment({
   if (attachment.fileType === 'image' || attachment.fileType === 'gif') {
     return (
       <>
-        <div className="relative rounded-lg overflow-hidden border border-navy-700 bg-navy-800 max-w-md">
+        <div className="relative rounded-lg overflow-hidden border border-navy-700 bg-navy-800 max-w-3xl">
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-navy-800">
               <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
@@ -174,7 +174,7 @@ const MediaAttachment = memo(function MediaAttachment({
 
   if (attachment.fileType === 'video') {
     return (
-      <div className="rounded-lg overflow-hidden border border-navy-700 max-w-md">
+      <div className="rounded-lg overflow-hidden border border-navy-700 max-w-3xl">
         <video
           src={attachment.fileUrl}
           controls
@@ -435,7 +435,7 @@ const Message = memo(function Message({
           {message.replyPreview && (
             <div
               onClick={scrollToOriginal}
-              className="mb-2 pl-3 py-1 border-l-2 border-emerald-500/60 bg-navy-800/40 rounded-r text-xs cursor-pointer hover:bg-navy-700/50 transition-colors flex items-center gap-2 group/reply max-w-md"
+              className="mb-2 pl-3 py-1 border-l-2 border-emerald-500/60 bg-navy-800/40 rounded-r text-xs cursor-pointer hover:bg-navy-700/50 transition-colors flex items-center gap-2 group/reply max-w-3xl"
             >
               <svg className="w-3.5 h-3.5 text-emerald-400/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
