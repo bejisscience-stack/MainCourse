@@ -162,7 +162,7 @@ export default function LayoutContainer({
   };
 
   return (
-    <div className="flex h-full bg-navy-950/20 backdrop-blur-[0.5px] text-white overflow-hidden">
+    <div className="flex w-full h-full bg-navy-950/20 backdrop-blur-[0.5px] text-white overflow-hidden">
       {/* Server sidebar */}
       <ServerSidebar
         servers={servers}

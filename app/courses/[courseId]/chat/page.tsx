@@ -448,7 +448,7 @@ export default function CourseChatPage() {
           </div>
         ) : (
           <>
-            <div className={showExpirationOverlay ? 'filter blur-sm pointer-events-none' : ''}>
+            <div className={`h-full w-full ${showExpirationOverlay ? 'filter blur-sm pointer-events-none' : ''}`}>
               <LayoutContainer
                 servers={servers}
                 currentUserId={user.id}
