@@ -58,17 +58,13 @@ function NotificationItem({
       <div className="flex items-start gap-3">
         {/* Icon */}
         <div className={`flex-shrink-0 mt-0.5 ${colors.icon}`}>
-          {notification.type.includes('approved') ? (
+          {notification.type.includes('approved') || notification.type === 'admin_message' ? (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           ) : notification.type.includes('rejected') ? (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          ) : notification.type === 'admin_message' ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
             </svg>
           ) : (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,11 +110,10 @@ function NotificationDropdown({ isOpen, onClose, position, onUnreadCountChange }
     try {
       await markAllAsRead();
       await resetCount();
-      onUnreadCountChange?.();
     } catch (err) {
       console.error('Error marking all as read:', err);
     }
-  }, [markAllAsRead, resetCount, onUnreadCountChange]);
+  }, [markAllAsRead, resetCount]);
 
   if (!isOpen) return null;
 
@@ -127,7 +122,7 @@ function NotificationDropdown({ isOpen, onClose, position, onUnreadCountChange }
 
   return (
     <div
-      className="fixed w-96 max-h-[480px] bg-white dark:bg-navy-700 rounded-xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-charcoal-200 dark:border-navy-600/80 backdrop-blur-sm dark:backdrop-blur-md z-50 overflow-hidden flex flex-col"
+      className="fixed w-96 max-h-[480px] bg-white dark:bg-navy-700 rounded-xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-charcoal-200 dark:border-navy-600/80 backdrop-blur-sm dark:backdrop-blur-md z-[9999] overflow-hidden flex flex-col"
       style={{
         top: `${position.top}px`,
         right: `${position.right}px`,

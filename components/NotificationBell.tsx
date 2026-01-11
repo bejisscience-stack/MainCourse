@@ -111,7 +111,7 @@ function NotificationBell() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-[9998] bg-black/20"
             onClick={() => setIsOpen(false)}
           />
 

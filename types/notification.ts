@@ -132,9 +132,9 @@ export const notificationColors: Record<NotificationType, { bg: string; text: st
     icon: 'text-red-500',
   },
   admin_message: {
-    bg: 'bg-blue-50 dark:bg-blue-500/10',
-    text: 'text-blue-700 dark:text-blue-400',
-    icon: 'text-blue-500',
+    bg: 'bg-emerald-50 dark:bg-emerald-500/10',
+    text: 'text-emerald-700 dark:text-emerald-400',
+    icon: 'text-emerald-500',
   },
   system: {
     bg: 'bg-charcoal-50 dark:bg-charcoal-500/10',
