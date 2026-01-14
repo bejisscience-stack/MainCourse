@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { sendWithdrawalApprovedEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -129,6 +130,22 @@ export async function POST(
       }
     } catch (notifError) {
       console.error('[Approve Withdrawal API] Exception creating notification:', notifError);
+    }
+
+    // Send email notification
+    try {
+      const { data: userProfile } = await serviceSupabase
+        .from('profiles')
+        .select('email')
+        .eq('id', withdrawalRequest.user_id)
+        .single();
+
+      if (userProfile?.email) {
+        await sendWithdrawalApprovedEmail(userProfile.email, withdrawalRequest.amount);
+        console.log('[Approve Withdrawal API] Email sent to:', userProfile.email);
+      }
+    } catch (emailError) {
+      console.error('[Approve Withdrawal API] Error sending email:', emailError);
     }
 
     return NextResponse.json({

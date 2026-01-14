@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { sendEnrollmentRejectedEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,6 +62,14 @@ export async function POST(
       );
     }
 
+    // Fetch the enrollment request details before rejecting
+    const serviceSupabase = createServiceRoleClient();
+    const { data: enrollmentRequest } = await serviceSupabase
+      .from('enrollment_requests')
+      .select('user_id, course_id, courses(title)')
+      .eq('id', id)
+      .single();
+
     // Use the database function to reject (ensures consistency and bypasses RLS)
     // The RPC function handles all the logic including checking if request exists and is pending
     const { data: rejectResult, error: rejectError } = await supabase.rpc('reject_enrollment_request', {
@@ -70,8 +79,8 @@ export async function POST(
     if (rejectError) {
       console.error('Error rejecting enrollment request:', rejectError);
       return NextResponse.json(
-        { 
-          error: 'Failed to reject enrollment request', 
+        {
+          error: 'Failed to reject enrollment request',
           details: rejectError.message || 'Unknown error occurred',
           code: rejectError.code
         },
@@ -80,6 +89,47 @@ export async function POST(
     }
 
     console.log('[Reject API] Rejection successful');
+
+    // Send email notification
+    if (enrollmentRequest?.user_id) {
+      const courseTitle = (enrollmentRequest.courses as { title?: string } | null)?.title || 'Unknown Course';
+
+      // Create notification
+      try {
+        await serviceSupabase.rpc('create_notification', {
+          p_user_id: enrollmentRequest.user_id,
+          p_type: 'enrollment_rejected',
+          p_title_en: 'Enrollment Request Update',
+          p_title_ge: 'რეგისტრაციის მოთხოვნის განახლება',
+          p_message_en: `Your enrollment request for "${courseTitle}" was not approved.`,
+          p_message_ge: `თქვენი რეგისტრაციის მოთხოვნა კურსზე "${courseTitle}" არ დამტკიცდა.`,
+          p_metadata: {
+            course_id: enrollmentRequest.course_id,
+            course_title: courseTitle,
+            request_id: id,
+          },
+          p_created_by: user.id,
+        });
+      } catch (notifError) {
+        console.error('[Reject API] Error creating notification:', notifError);
+      }
+
+      // Send email
+      try {
+        const { data: userProfile } = await serviceSupabase
+          .from('profiles')
+          .select('email')
+          .eq('id', enrollmentRequest.user_id)
+          .single();
+
+        if (userProfile?.email) {
+          await sendEnrollmentRejectedEmail(userProfile.email, courseTitle);
+          console.log('[Reject API] Email sent to:', userProfile.email);
+        }
+      } catch (emailError) {
+        console.error('[Reject API] Error sending email:', emailError);
+      }
+    }
 
     // Return success - the frontend will refresh the list
     return NextResponse.json({

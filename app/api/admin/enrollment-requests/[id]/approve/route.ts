@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { sendEnrollmentApprovedEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -129,6 +130,23 @@ export async function POST(
           }
         } catch (notifError) {
           console.error('[Approve API] Exception creating notification:', notifError);
+        }
+
+        // Send email notification
+        try {
+          const { data: userProfile } = await serviceSupabase
+            .from('profiles')
+            .select('email')
+            .eq('id', updatedRequest.user_id)
+            .single();
+
+          if (userProfile?.email) {
+            await sendEnrollmentApprovedEmail(userProfile.email, courseTitle);
+            console.log('[Approve API] Email sent to:', userProfile.email);
+          }
+        } catch (emailError) {
+          // Don't fail the request if email fails
+          console.error('[Approve API] Error sending email:', emailError);
         }
       }
     }

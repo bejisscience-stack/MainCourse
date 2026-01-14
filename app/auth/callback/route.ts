@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendWelcomeEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,16 +27,35 @@ export async function GET(request: NextRequest) {
     if (!error) {
       // Get the user to check their role
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (user) {
         // Check user role and redirect accordingly
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, username')
           .eq('id', user.id)
           .single();
 
         const role = profile?.role || user.user_metadata?.role;
+        const username = profile?.username || user.user_metadata?.username;
+
+        // Check if this is a new user (email just confirmed)
+        // Send welcome email if email_confirmed_at is within last 5 minutes
+        if (user.email_confirmed_at && user.email) {
+          const confirmedAt = new Date(user.email_confirmed_at);
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+          if (confirmedAt > fiveMinutesAgo) {
+            // This is likely a new user verification
+            try {
+              await sendWelcomeEmail(user.email, username);
+              console.log('Welcome email sent to:', user.email);
+            } catch (emailError) {
+              // Don't fail the auth flow if email fails
+              console.error('Failed to send welcome email:', emailError);
+            }
+          }
+        }
 
         if (role === 'lecturer') {
           return NextResponse.redirect(new URL('/lecturer/dashboard', requestUrl.origin));

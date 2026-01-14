@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { sendBundleEnrollmentApprovedEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -130,6 +131,22 @@ export async function POST(
           }
         } catch (notifError) {
           console.error('[Approve API] Exception creating notification:', notifError);
+        }
+
+        // Send email notification
+        try {
+          const { data: userProfile } = await serviceSupabase
+            .from('profiles')
+            .select('email')
+            .eq('id', updatedRequest.user_id)
+            .single();
+
+          if (userProfile?.email) {
+            await sendBundleEnrollmentApprovedEmail(userProfile.email, bundleTitle);
+            console.log('[Approve API] Email sent to:', userProfile.email);
+          }
+        } catch (emailError) {
+          console.error('[Approve API] Error sending email:', emailError);
         }
       }
     }

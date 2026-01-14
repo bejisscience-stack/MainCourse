@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { sendWithdrawalRejectedEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -112,6 +113,49 @@ export async function POST(
     }
 
     console.log('[Reject Withdrawal API] Request rejected successfully:', requestId);
+
+    // Create notification for the user
+    try {
+      const { error: notificationError } = await serviceSupabase
+        .rpc('create_notification', {
+          p_user_id: withdrawalRequest.user_id,
+          p_type: 'withdrawal_rejected',
+          p_title_en: 'Withdrawal Request Update',
+          p_title_ge: 'თანხის გატანის მოთხოვნის განახლება',
+          p_message_en: `Your withdrawal request for ₾${withdrawalRequest.amount.toFixed(2)} was not approved. Reason: ${adminNotes}`,
+          p_message_ge: `თქვენი თანხის გატანის მოთხოვნა ₾${withdrawalRequest.amount.toFixed(2)}-ზე არ დამტკიცდა. მიზეზი: ${adminNotes}`,
+          p_metadata: {
+            request_id: requestId,
+            amount: withdrawalRequest.amount,
+            reason: adminNotes,
+          },
+          p_created_by: user.id,
+        });
+
+      if (notificationError) {
+        console.error('[Reject Withdrawal API] Error creating notification:', notificationError);
+      } else {
+        console.log('[Reject Withdrawal API] Notification created for user:', withdrawalRequest.user_id);
+      }
+    } catch (notifError) {
+      console.error('[Reject Withdrawal API] Exception creating notification:', notifError);
+    }
+
+    // Send email notification
+    try {
+      const { data: userProfile } = await serviceSupabase
+        .from('profiles')
+        .select('email')
+        .eq('id', withdrawalRequest.user_id)
+        .single();
+
+      if (userProfile?.email) {
+        await sendWithdrawalRejectedEmail(userProfile.email, withdrawalRequest.amount, adminNotes);
+        console.log('[Reject Withdrawal API] Email sent to:', userProfile.email);
+      }
+    } catch (emailError) {
+      console.error('[Reject Withdrawal API] Error sending email:', emailError);
+    }
 
     return NextResponse.json({
       success: true,
