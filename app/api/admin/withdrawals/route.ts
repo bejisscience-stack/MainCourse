@@ -23,6 +23,10 @@ async function checkAdmin(supabase: any, userId: string): Promise<boolean> {
 
 // GET: Fetch all withdrawal requests (admin only)
 export async function GET(request: NextRequest) {
+  console.log(`[Admin Withdrawals API] Request started at ${new Date().toISOString()}`);
+  const hasServiceRoleKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+  console.log(`[Admin Withdrawals API] Service role key present: ${hasServiceRoleKey}`);
+
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -65,7 +69,9 @@ export async function GET(request: NextRequest) {
     let requestsError: any = null;
 
     try {
-      const serviceSupabase = createServiceRoleClient();
+      const serviceSupabase = hasServiceRoleKey
+        ? createServiceRoleClient()
+        : createServerSupabaseClient(token);
 
       // Query withdrawal requests
       const queryBuilder = serviceSupabase
@@ -124,7 +130,7 @@ export async function GET(request: NextRequest) {
     
     try {
       if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await createServiceRoleClient()
+        const { data: profilesData, error: profilesError } = await (hasServiceRoleKey ? createServiceRoleClient() : createServerSupabaseClient(token))
           .from('profiles')
           .select('id, username, email, role, balance')
           .in('id', userIds);

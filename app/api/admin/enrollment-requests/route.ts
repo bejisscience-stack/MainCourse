@@ -61,6 +61,8 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   console.log(`[Admin API ${requestId}] Request started at ${new Date().toISOString()}`);
+  const hasServiceRoleKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+  console.log(`[Admin API ${requestId}] Service role key present: ${hasServiceRoleKey}`);
 
   try {
     const authHeader = request.headers.get('authorization');
@@ -109,8 +111,10 @@ export async function GET(request: NextRequest) {
     let requestsError: any = null;
 
     try {
-      // Create a fresh service role client for each request to avoid any connection pooling/caching issues
-      const serviceSupabase = createServiceRoleClient();
+      // Prefer service role client; if missing, fall back to user-scoped client so admins still see data via RLS
+      const serviceSupabase = hasServiceRoleKey
+        ? createServiceRoleClient()
+        : createServerSupabaseClient(token);
 
       // Query with explicit cache control and include all fields
       // Force a fresh query by ordering by updated_at (most recent first)
@@ -183,7 +187,7 @@ export async function GET(request: NextRequest) {
     
     try {
       if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await createServiceRoleClient()
+        const { data: profilesData, error: profilesError } = await (hasServiceRoleKey ? createServiceRoleClient() : createServerSupabaseClient(token))
           .from('profiles')
           .select('id, username, email')
           .in('id', userIds);
@@ -200,7 +204,7 @@ export async function GET(request: NextRequest) {
 
     try {
       if (courseIds.length > 0) {
-        const { data: coursesData, error: coursesError } = await createServiceRoleClient()
+        const { data: coursesData, error: coursesError } = await (hasServiceRoleKey ? createServiceRoleClient() : createServerSupabaseClient(token))
           .from('courses')
           .select('id, title, thumbnail_url')
           .in('id', courseIds);
@@ -221,7 +225,7 @@ export async function GET(request: NextRequest) {
 
     try {
       if (referralCodes.length > 0) {
-        const { data: referrerData, error: referrerError } = await createServiceRoleClient()
+        const { data: referrerData, error: referrerError } = await (hasServiceRoleKey ? createServiceRoleClient() : createServerSupabaseClient(token))
           .from('profiles')
           .select('id, username, email, referral_code')
           .in('referral_code', referralCodes);

@@ -23,6 +23,10 @@ async function checkAdmin(supabase: any, userId: string): Promise<boolean> {
 
 // GET: Fetch all bundle enrollment requests (admin only)
 export async function GET(request: NextRequest) {
+  console.log(`[Admin Bundle API] Request started at ${new Date().toISOString()}`);
+  const hasServiceRoleKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+  console.log(`[Admin Bundle API] Service role key present: ${hasServiceRoleKey}`);
+
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -67,8 +71,10 @@ export async function GET(request: NextRequest) {
     let requestsError: any = null;
 
     try {
-      // Create a fresh service role client for each request to avoid any connection pooling/caching issues
-      const serviceSupabase = createServiceRoleClient();
+      // Prefer service role client; if missing, fall back to user-scoped client so admins still see data via RLS
+      const serviceSupabase = hasServiceRoleKey
+        ? createServiceRoleClient()
+        : createServerSupabaseClient(token);
 
       // Query with explicit cache control and include all fields
       // Force a fresh query by ordering by updated_at (most recent first)
@@ -139,7 +145,9 @@ export async function GET(request: NextRequest) {
     try {
       if (userIds.length > 0) {
         // Use service role client for profiles too to ensure consistency
-        const serviceSupabase = createServiceRoleClient();
+        const serviceSupabase = hasServiceRoleKey
+          ? createServiceRoleClient()
+          : createServerSupabaseClient(token);
         const { data: profilesData, error: profilesError } = await serviceSupabase
           .from('profiles')
           .select('id, username, email')
@@ -156,7 +164,9 @@ export async function GET(request: NextRequest) {
     try {
       if (bundleIds.length > 0) {
         // Use service role client for bundles too to ensure consistency
-        const serviceSupabase = createServiceRoleClient();
+        const serviceSupabase = hasServiceRoleKey
+          ? createServiceRoleClient()
+          : createServerSupabaseClient(token);
         const { data: bundlesData, error: bundlesError } = await serviceSupabase
           .from('course_bundles')
           .select('id, title, price')

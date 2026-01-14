@@ -720,6 +720,62 @@ export default function AdminDashboard() {
                 <div className="flex gap-2">
                   <button
                     onClick={async () => {
+                      // Debug endpoint to see raw database counts
+                      const token = (await supabase.auth.getSession()).data.session?.access_token;
+                      if (token) {
+                        try {
+                          const response = await fetch('/api/admin/debug-requests', {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                          });
+                          const data = await response.json();
+                          console.log('[Admin Dashboard] Debug endpoint results:', data);
+                          const er = data.tables?.enrollment_requests;
+                          const ber = data.tables?.bundle_enrollment_requests;
+                          const wr = data.tables?.withdrawal_requests;
+                          const comp = data.comparison?.enrollment_requests;
+                          const profile = data.profile;
+                          alert(
+                            `=== RAW DATABASE COUNTS ===\n\n` +
+                            `Service Role Key: ${data.serviceRoleKeyPresent ? 'YES' : 'NO'} (len: ${data.serviceRoleKeyLength})\n` +
+                            `Is Admin (RPC): ${data.isAdmin}\n` +
+                            `Profile Role: ${profile?.role || 'NOT FOUND'}\n\n` +
+                            `=== RLS COMPARISON ===\n` +
+                            `Service Role: ${comp?.serviceRoleCount ?? 'N/A'}\n` +
+                            `User Token: ${comp?.userTokenCount ?? 'N/A'}\n` +
+                            `(Different = RLS blocking)\n\n` +
+                            `ENROLLMENT REQUESTS:\n` +
+                            `  Total: ${er?.count || 0}\n` +
+                            `  Pending: ${er?.statusBreakdown?.pending || 0}\n` +
+                            `  Approved: ${er?.statusBreakdown?.approved || 0}\n` +
+                            `  Rejected: ${er?.statusBreakdown?.rejected || 0}\n` +
+                            `  Error: ${er?.error || 'none'}\n\n` +
+                            `BUNDLE ENROLLMENT REQUESTS:\n` +
+                            `  Total: ${ber?.count || 0}\n` +
+                            `  Pending: ${ber?.statusBreakdown?.pending || 0}\n` +
+                            `  Approved: ${ber?.statusBreakdown?.approved || 0}\n` +
+                            `  Rejected: ${ber?.statusBreakdown?.rejected || 0}\n` +
+                            `  Error: ${ber?.error || 'none'}\n\n` +
+                            `WITHDRAWAL REQUESTS:\n` +
+                            `  Total: ${wr?.count || 0}\n` +
+                            `  Pending: ${wr?.statusBreakdown?.pending || 0}\n` +
+                            `  Error: ${wr?.error || 'none'}\n\n` +
+                            `Check console for full details.`
+                          );
+                        } catch (err: unknown) {
+                          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+                          alert(`Debug request failed: ${errorMessage}`);
+                          console.error('[Admin Dashboard] Debug error:', err);
+                        }
+                      } else {
+                        alert('Not authenticated');
+                      }
+                    }}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors text-sm flex items-center gap-2"
+                  >
+                    Debug DB
+                  </button>
+                  <button
+                    onClick={async () => {
                       // Test endpoint to see what's in the database
                       const token = (await supabase.auth.getSession()).data.session?.access_token;
                       if (token) {
