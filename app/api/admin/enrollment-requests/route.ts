@@ -141,6 +141,33 @@ export async function GET(request: NextRequest) {
       requestsError = err;
     }
 
+    // Fallback to SERVICE ROLE direct query if RPC failed
+    // This ensures pending requests are visible even if the RPC function is broken in production
+    if (requestsError) {
+      console.warn('[Admin API] RPC failed, falling back to direct SERVICE ROLE query');
+      try {
+        const serviceSupabase = createServiceRoleClient();
+        const queryBuilder = serviceSupabase
+          .from('enrollment_requests')
+          .select('id, user_id, course_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots, referral_code')
+          .order('created_at', { ascending: false });
+
+        const finalQuery = filterStatus ? queryBuilder.eq('status', filterStatus) : queryBuilder;
+        const { data, error } = await finalQuery;
+
+        if (!error && data) {
+          requests = data;
+          requestsError = null;
+          console.log('[Admin API] Fallback query succeeded, found', data.length, 'requests');
+          console.log('[Admin API] Fallback request statuses:', data.map((r: any) => ({ id: r.id, status: r.status })));
+        } else if (error) {
+          console.error('[Admin API] Fallback query also failed:', error);
+        }
+      } catch (fallbackErr: any) {
+        console.error('[Admin API] Fallback query exception:', fallbackErr);
+      }
+    }
+
     // If we have an error and no requests, return error
     if (requestsError && requests.length === 0) {
       console.error('[Admin API] Failed to fetch requests:', requestsError);

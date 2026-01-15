@@ -91,6 +91,33 @@ export async function GET(request: NextRequest) {
       requestsError = err;
     }
 
+    // Fallback to SERVICE ROLE direct query if RPC failed
+    // This ensures pending withdrawal requests are visible even if the RPC function is broken
+    if (requestsError && requestsError.code !== '42883') {
+      console.warn('[Admin Withdrawals API] RPC failed, falling back to direct SERVICE ROLE query');
+      try {
+        const serviceSupabase = createServiceRoleClient();
+        const queryBuilder = serviceSupabase
+          .from('withdrawal_requests')
+          .select('id, user_id, user_type, amount, bank_account_number, status, admin_notes, processed_at, processed_by, created_at, updated_at')
+          .order('created_at', { ascending: false });
+
+        const finalQuery = filterStatus ? queryBuilder.eq('status', filterStatus) : queryBuilder;
+        const { data, error } = await finalQuery;
+
+        if (!error && data) {
+          requests = data;
+          requestsError = null;
+          console.log('[Admin Withdrawals API] Fallback query succeeded, found', data.length, 'requests');
+          console.log('[Admin Withdrawals API] Fallback request statuses:', data.map((r: any) => ({ id: r.id, status: r.status })));
+        } else if (error) {
+          console.error('[Admin Withdrawals API] Fallback query also failed:', error);
+        }
+      } catch (fallbackErr: any) {
+        console.error('[Admin Withdrawals API] Fallback query exception:', fallbackErr);
+      }
+    }
+
     // If we have an error and no requests, return error
     if (requestsError && requests.length === 0) {
       console.error('[Admin Withdrawals API] Failed to fetch requests:', requestsError);
