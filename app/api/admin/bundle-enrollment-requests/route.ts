@@ -64,38 +64,24 @@ export async function GET(request: NextRequest) {
     // Ensure we pass null instead of empty string for "all" requests
     const filterStatus = status && status !== 'all' && status.trim() !== '' ? status : null;
 
-    console.log('[Admin API] Fetching bundle requests, filter:', filterStatus || 'all');
+    console.log('[Admin Bundle API] Fetching bundle requests, filter:', filterStatus || 'all');
 
-    // Fetch bundle enrollment requests using service role to bypass RLS entirely
+    // Fetch bundle enrollment requests using SECURITY DEFINER RPC function (guarantees RLS bypass)
     let requests: any[] = [];
     let requestsError: any = null;
 
     try {
-      // Prefer service role client; if missing, fall back to user-scoped client so admins still see data via RLS
-      const serviceSupabase = hasServiceRoleKey
-        ? createServiceRoleClient()
-        : createServerSupabaseClient(token);
+      // Use RPC function that runs with SECURITY DEFINER to bypass RLS
+      // This is more reliable than service role client for ensuring all records are returned
+      const { data, error } = await supabase
+        .rpc('get_bundle_enrollment_requests_admin', { filter_status: filterStatus });
 
-      // Query with explicit cache control and include all fields
-      // Force a fresh query by ordering by updated_at (most recent first)
-      // This ensures we get the latest status changes
-      const queryBuilder = serviceSupabase
-        .from('bundle_enrollment_requests')
-        .select('id, user_id, bundle_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots')
-        .order('updated_at', { ascending: false }); // Order by updated_at to get most recently changed first
+      requests = data || [];
+      requestsError = error;
 
-      const finalQuery = filterStatus 
-        ? queryBuilder.eq('status', filterStatus)
-        : queryBuilder;
-
-      // Execute query immediately
-      const result = await finalQuery;
-      requests = result.data || [];
-      requestsError = result.error;
-      
       // Log raw data from database to verify we're getting fresh data
       if (requests.length > 0) {
-        console.log('[Admin API] Raw bundle DB data (first 3):', requests.slice(0, 3).map(r => ({
+        console.log('[Admin Bundle API] Raw bundle DB data (first 3):', requests.slice(0, 3).map((r: any) => ({
           id: r.id.substring(0, 8) + '...',
           status: r.status,
           updated_at: r.updated_at,
@@ -104,18 +90,43 @@ export async function GET(request: NextRequest) {
       }
 
       if (requestsError) {
-        console.error('[Admin API] Service role bundle query error:', requestsError);
+        console.error('[Admin Bundle API] RPC query error:', requestsError);
+        // Check if function doesn't exist yet (migrations not run)
+        if (requestsError.code === '42883' || requestsError.message?.includes('does not exist')) {
+          console.warn('[Admin Bundle API] RPC function not found, falling back to direct query');
+          // Fallback to direct query (for backward compatibility during migration)
+          const serviceSupabase = hasServiceRoleKey
+            ? createServiceRoleClient()
+            : createServerSupabaseClient(token);
+
+          const queryBuilder = serviceSupabase
+            .from('bundle_enrollment_requests')
+            .select('id, user_id, bundle_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots')
+            .order('created_at', { ascending: false });
+
+          const finalQuery = filterStatus
+            ? queryBuilder.eq('status', filterStatus)
+            : queryBuilder;
+
+          const result = await finalQuery;
+          requests = result.data || [];
+          requestsError = result.error;
+
+          if (!requestsError) {
+            console.log('[Admin Bundle API] Fallback query succeeded, found', requests.length, 'requests');
+          }
+        }
       } else {
-        console.log('[Admin API] Service role bundle query succeeded, found', requests.length, 'requests');
+        console.log('[Admin Bundle API] RPC query succeeded, found', requests.length, 'requests');
       }
     } catch (err: any) {
-      console.error('[Admin API] Service role bundle query failed:', err);
+      console.error('[Admin Bundle API] RPC query failed:', err);
       requestsError = err;
     }
 
     // If we have an error and no requests, return error
     if (requestsError && requests.length === 0) {
-      console.error('[Admin API] Failed to fetch bundle requests:', requestsError);
+      console.error('[Admin Bundle API] Failed to fetch bundle requests:', requestsError);
       return NextResponse.json(
         { 
           error: 'Failed to fetch bundle enrollment requests',
@@ -128,11 +139,11 @@ export async function GET(request: NextRequest) {
 
     // If no requests, return empty array
     if (requests.length === 0) {
-      console.log('[Admin API] No bundle requests found');
+      console.log('[Admin Bundle API] No bundle requests found');
       return NextResponse.json({ requests: [] });
     }
 
-    console.log('[Admin API] Processing', requests.length, 'bundle requests');
+    console.log('[Admin Bundle API] Processing', requests.length, 'bundle requests');
 
     // Get unique user IDs and bundle IDs
     const userIds = [...new Set(requests.map(r => r.user_id).filter(Boolean))];
@@ -158,7 +169,7 @@ export async function GET(request: NextRequest) {
         }
       }
     } catch (err) {
-      console.error('[Admin API] Error fetching profiles:', err);
+      console.error('[Admin Bundle API] Error fetching profiles:', err);
     }
 
     try {
@@ -177,7 +188,7 @@ export async function GET(request: NextRequest) {
         }
       }
     } catch (err) {
-      console.error('[Admin API] Error fetching bundles:', err);
+      console.error('[Admin Bundle API] Error fetching bundles:', err);
     }
 
     // Create lookup maps
@@ -192,7 +203,7 @@ export async function GET(request: NextRequest) {
         try {
           paymentScreenshots = JSON.parse(paymentScreenshots);
         } catch (e) {
-          console.warn('[Admin API] Failed to parse payment_screenshots for request', request.id, e);
+          console.warn('[Admin Bundle API] Failed to parse payment_screenshots for request', request.id, e);
           paymentScreenshots = [];
         }
       }
@@ -205,8 +216,8 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    console.log('[Admin API] Returning', requestsWithRelations.length, 'bundle requests with relations');
-    console.log('[Admin API] Final bundle statuses being returned:', requestsWithRelations.map(r => ({ id: r.id, status: r.status, updated_at: r.updated_at })));
+    console.log('[Admin Bundle API] Returning', requestsWithRelations.length, 'bundle requests with relations');
+    console.log('[Admin Bundle API] Final bundle statuses being returned:', requestsWithRelations.map(r => ({ id: r.id, status: r.status, updated_at: r.updated_at })));
 
     // Return with no-cache headers to prevent stale data
     return NextResponse.json({ 
@@ -219,10 +230,10 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error: any) {
-    console.error('[Admin API] Unhandled exception:', error);
-    console.error('[Admin API] Error stack:', error.stack);
+    console.error('[Admin Bundle API] Unhandled exception:', error);
+    console.error('[Admin Bundle API] Error stack:', error.stack);
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         details: error.message || 'An unexpected error occurred'
       },
