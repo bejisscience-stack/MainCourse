@@ -148,9 +148,20 @@ export function useAdminBundleEnrollmentRequests(status?: string) {
       throw new Error(data.error || data.details || 'Failed to approve request');
     }
 
-    // After approval, revalidate the single cache key to get fresh data
+    // Optimistically update the UI by changing the status to 'approved'
+    // This ensures the client-side filter immediately excludes it from 'pending' view
+    await mutate((currentData) => {
+      if (!currentData) return currentData;
+      return currentData.map(req =>
+        req.id === requestId
+          ? { ...req, status: 'approved' as const, updated_at: new Date().toISOString() }
+          : req
+      );
+    }, false);
+
+    // Then revalidate to get fresh data from server
     await mutateAll();
-    
+
     return data;
   };
 
@@ -182,9 +193,20 @@ export function useAdminBundleEnrollmentRequests(status?: string) {
       throw new Error(data.error || data.details || 'Failed to reject request');
     }
 
-    // After rejection, revalidate the single cache key to get fresh data
+    // Optimistically update the UI by changing the status to 'rejected'
+    // This ensures the client-side filter immediately excludes it from 'pending' view
+    await mutate((currentData) => {
+      if (!currentData) return currentData;
+      return currentData.map(req =>
+        req.id === requestId
+          ? { ...req, status: 'rejected' as const, updated_at: new Date().toISOString() }
+          : req
+      );
+    }, false);
+
+    // Then revalidate to get fresh data from server
     await mutateAll();
-    
+
     return data;
   };
 

@@ -138,15 +138,20 @@ export function useAdminEnrollmentRequests(status?: string) {
       throw new Error(data.error || data.details || 'Failed to approve request');
     }
 
-    // Optimistically update the UI by removing the approved request from pending
+    // Optimistically update the UI by changing the status to 'approved'
+    // This ensures the client-side filter immediately excludes it from 'pending' view
     await mutate((currentData) => {
       if (!currentData) return currentData;
-      return currentData.filter(req => req.id !== requestId);
+      return currentData.map(req =>
+        req.id === requestId
+          ? { ...req, status: 'approved', updated_at: new Date().toISOString() }
+          : req
+      );
     }, false);
 
-    // Then revalidate to get fresh data
+    // Then revalidate to get fresh data from server
     await mutateAll();
-    
+
     return data;
   };
 
@@ -182,15 +187,20 @@ export function useAdminEnrollmentRequests(status?: string) {
       throw new Error(data.error || data.details || 'Failed to reject request');
     }
 
-    // Optimistically update the UI by removing the rejected request from pending
+    // Optimistically update the UI by changing the status to 'rejected'
+    // This ensures the client-side filter immediately excludes it from 'pending' view
     await mutate((currentData) => {
       if (!currentData) return currentData;
-      return currentData.filter(req => req.id !== requestId);
+      return currentData.map(req =>
+        req.id === requestId
+          ? { ...req, status: 'rejected', updated_at: new Date().toISOString() }
+          : req
+      );
     }, false);
 
-    // Then revalidate to get fresh data
+    // Then revalidate to get fresh data from server
     await mutateAll();
-    
+
     return data;
   };
 

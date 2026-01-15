@@ -80,7 +80,18 @@ export function useAdminWithdrawalRequests(status?: string) {
       throw new Error(errorData.error || 'Failed to approve withdrawal request');
     }
 
-    // Force revalidation to get fresh data including updated profile balance
+    // Optimistic update - set status to 'completed'
+    // This ensures the client-side filter immediately excludes it from 'pending' view
+    await mutate((currentData) => {
+      if (!currentData) return currentData;
+      return currentData.map(req =>
+        req.id === requestId
+          ? { ...req, status: 'completed', updated_at: new Date().toISOString() }
+          : req
+      );
+    }, false);
+
+    // Then revalidate to get fresh data including updated profile balance
     await mutate(undefined, { revalidate: true });
     return response.json();
   };
@@ -106,7 +117,18 @@ export function useAdminWithdrawalRequests(status?: string) {
       throw new Error(errorData.error || 'Failed to reject withdrawal request');
     }
 
-    // Force revalidation to get fresh data
+    // Optimistic update - set status to 'rejected'
+    // This ensures the client-side filter immediately excludes it from 'pending' view
+    await mutate((currentData) => {
+      if (!currentData) return currentData;
+      return currentData.map(req =>
+        req.id === requestId
+          ? { ...req, status: 'rejected', updated_at: new Date().toISOString() }
+          : req
+      );
+    }, false);
+
+    // Then revalidate to get fresh data
     await mutate(undefined, { revalidate: true });
     return response.json();
   };
