@@ -106,37 +106,22 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Admin API ${requestId}] Fetching requests, filter:`, filterStatus || 'all');
 
-    // Fetch enrollment requests using service role to bypass RLS entirely
+    // Fetch enrollment requests using SECURITY DEFINER RPC function (guarantees RLS bypass)
     let requests: any[] = [];
     let requestsError: any = null;
 
     try {
-      // Prefer service role client; if missing, fall back to user-scoped client so admins still see data via RLS
-      const serviceSupabase = hasServiceRoleKey
-        ? createServiceRoleClient()
-        : createServerSupabaseClient(token);
+      // Use RPC function that runs with SECURITY DEFINER to bypass RLS
+      // This is more reliable than service role client for ensuring all records are returned
+      const { data, error } = await supabase
+        .rpc('get_enrollment_requests_admin', { filter_status: filterStatus });
 
-      // Query with explicit cache control and include all fields
-      // Force a fresh query by ordering by updated_at (most recent first)
-      // This ensures we get the latest status changes
-      // Use a direct query without any intermediate variables to avoid caching
-      const queryBuilder = serviceSupabase
-        .from('enrollment_requests')
-        .select('id, user_id, course_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots, referral_code')
-        .order('updated_at', { ascending: false }); // Order by updated_at to get most recently changed first
+      requests = data || [];
+      requestsError = error;
 
-      const finalQuery = filterStatus 
-        ? queryBuilder.eq('status', filterStatus)
-        : queryBuilder;
-
-      // Execute query immediately
-      const result = await finalQuery;
-      requests = result.data || [];
-      requestsError = result.error;
-      
       // Log raw data from database to verify we're getting fresh data
       if (requests.length > 0) {
-        console.log('[Admin API] Raw DB data (first 3):', requests.slice(0, 3).map(r => ({
+        console.log('[Admin API] Raw DB data (first 3):', requests.slice(0, 3).map((r: any) => ({
           id: r.id.substring(0, 8) + '...',
           status: r.status,
           updated_at: r.updated_at,
@@ -145,14 +130,14 @@ export async function GET(request: NextRequest) {
       }
 
       if (requestsError) {
-        console.error('[Admin API] Service role query error:', requestsError);
+        console.error('[Admin API] RPC query error:', requestsError);
       } else {
-        console.log('[Admin API] Service role query succeeded, found', requests.length, 'requests');
+        console.log('[Admin API] RPC query succeeded, found', requests.length, 'requests');
         // Log the actual statuses returned to debug stale data issues
-        console.log('[Admin API] Request statuses from DB:', requests.map(r => ({ id: r.id, status: r.status, updated_at: r.updated_at })));
+        console.log('[Admin API] Request statuses from DB:', requests.map((r: any) => ({ id: r.id, status: r.status, updated_at: r.updated_at })));
       }
     } catch (err: any) {
-      console.error('[Admin API] Service role query failed:', err);
+      console.error('[Admin API] RPC query failed:', err);
       requestsError = err;
     }
 
@@ -160,7 +145,7 @@ export async function GET(request: NextRequest) {
     if (requestsError && requests.length === 0) {
       console.error('[Admin API] Failed to fetch requests:', requestsError);
       return NextResponse.json(
-        { 
+        {
           error: 'Failed to fetch enrollment requests',
           details: requestsError.message || 'Database query failed',
           code: requestsError.code

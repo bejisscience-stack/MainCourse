@@ -64,40 +64,30 @@ export async function GET(request: NextRequest) {
 
     console.log('[Admin Withdrawals API] Fetching requests, filter:', filterStatus || 'all');
 
-    // Fetch withdrawal requests using service role to bypass RLS entirely
+    // Fetch withdrawal requests using SECURITY DEFINER RPC function (guarantees RLS bypass)
     let requests: any[] = [];
     let requestsError: any = null;
 
     try {
-      const serviceSupabase = hasServiceRoleKey
-        ? createServiceRoleClient()
-        : createServerSupabaseClient(token);
+      // Use RPC function that runs with SECURITY DEFINER to bypass RLS
+      // This is more reliable than service role client for ensuring all records are returned
+      const { data, error } = await supabase
+        .rpc('get_withdrawal_requests_admin', { filter_status: filterStatus });
 
-      // Query withdrawal requests
-      const queryBuilder = serviceSupabase
-        .from('withdrawal_requests')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      const finalQuery = filterStatus 
-        ? queryBuilder.eq('status', filterStatus)
-        : queryBuilder;
-
-      const result = await finalQuery;
-      requests = result.data || [];
-      requestsError = result.error;
+      requests = data || [];
+      requestsError = error;
 
       if (requestsError) {
-        console.error('[Admin Withdrawals API] Service role query error:', requestsError);
-        // Check if table doesn't exist yet (migrations not run)
-        if (requestsError.code === '42P01' || requestsError.message?.includes('does not exist')) {
+        console.error('[Admin Withdrawals API] RPC query error:', requestsError);
+        // Check if function doesn't exist yet (migrations not run)
+        if (requestsError.code === '42883' || requestsError.message?.includes('does not exist')) {
           return NextResponse.json({ requests: [], message: 'Withdrawal system not yet configured' });
         }
       } else {
-        console.log('[Admin Withdrawals API] Service role query succeeded, found', requests.length, 'requests');
+        console.log('[Admin Withdrawals API] RPC query succeeded, found', requests.length, 'requests');
       }
     } catch (err: any) {
-      console.error('[Admin Withdrawals API] Service role query failed:', err);
+      console.error('[Admin Withdrawals API] RPC query failed:', err);
       requestsError = err;
     }
 
