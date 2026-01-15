@@ -64,58 +64,37 @@ export async function GET(request: NextRequest) {
 
     console.log('[Admin Withdrawals API] Fetching requests, filter:', filterStatus || 'all');
 
-    // Fetch withdrawal requests using SECURITY DEFINER RPC function (guarantees RLS bypass)
+    // Use SERVICE ROLE direct query to bypass RLS and get ALL withdrawal requests
+    // This replaces the broken RPC function that was returning incomplete data
     let requests: any[] = [];
     let requestsError: any = null;
 
     try {
-      // Use RPC function that runs with SECURITY DEFINER to bypass RLS
-      // This is more reliable than service role client for ensuring all records are returned
-      const { data, error } = await supabase
-        .rpc('get_withdrawal_requests_admin', { filter_status: filterStatus });
+      console.log('[Admin Withdrawals API] Using SERVICE ROLE direct query (bypassing RPC)');
+      const serviceSupabase = createServiceRoleClient();
 
+      let queryBuilder = serviceSupabase
+        .from('withdrawal_requests')
+        .select('id, user_id, user_type, amount, bank_account_number, status, admin_notes, processed_at, processed_by, created_at, updated_at')
+        .order('created_at', { ascending: false });
+
+      if (filterStatus) {
+        queryBuilder = queryBuilder.eq('status', filterStatus);
+      }
+
+      const { data, error } = await queryBuilder;
       requests = data || [];
       requestsError = error;
 
       if (requestsError) {
-        console.error('[Admin Withdrawals API] RPC query error:', requestsError);
-        // Check if function doesn't exist yet (migrations not run)
-        if (requestsError.code === '42883' || requestsError.message?.includes('does not exist')) {
-          return NextResponse.json({ requests: [], message: 'Withdrawal system not yet configured' });
-        }
+        console.error('[Admin Withdrawals API] Direct query error:', requestsError);
       } else {
-        console.log('[Admin Withdrawals API] RPC query succeeded, found', requests.length, 'requests');
+        console.log('[Admin Withdrawals API] Direct query succeeded, found', requests.length, 'requests');
+        console.log('[Admin Withdrawals API] Request statuses:', requests.map((r: any) => ({ id: r.id, status: r.status })));
       }
     } catch (err: any) {
-      console.error('[Admin Withdrawals API] RPC query failed:', err);
+      console.error('[Admin Withdrawals API] Direct query failed:', err);
       requestsError = err;
-    }
-
-    // Fallback to SERVICE ROLE direct query if RPC failed
-    // This ensures pending withdrawal requests are visible even if the RPC function is broken
-    if (requestsError && requestsError.code !== '42883') {
-      console.warn('[Admin Withdrawals API] RPC failed, falling back to direct SERVICE ROLE query');
-      try {
-        const serviceSupabase = createServiceRoleClient();
-        const queryBuilder = serviceSupabase
-          .from('withdrawal_requests')
-          .select('id, user_id, user_type, amount, bank_account_number, status, admin_notes, processed_at, processed_by, created_at, updated_at')
-          .order('created_at', { ascending: false });
-
-        const finalQuery = filterStatus ? queryBuilder.eq('status', filterStatus) : queryBuilder;
-        const { data, error } = await finalQuery;
-
-        if (!error && data) {
-          requests = data;
-          requestsError = null;
-          console.log('[Admin Withdrawals API] Fallback query succeeded, found', data.length, 'requests');
-          console.log('[Admin Withdrawals API] Fallback request statuses:', data.map((r: any) => ({ id: r.id, status: r.status })));
-        } else if (error) {
-          console.error('[Admin Withdrawals API] Fallback query also failed:', error);
-        }
-      } catch (fallbackErr: any) {
-        console.error('[Admin Withdrawals API] Fallback query exception:', fallbackErr);
-      }
     }
 
     // If we have an error and no requests, return error

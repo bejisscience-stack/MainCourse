@@ -66,16 +66,25 @@ export async function GET(request: NextRequest) {
 
     console.log('[Admin Bundle API] Fetching bundle requests, filter:', filterStatus || 'all');
 
-    // Fetch bundle enrollment requests using SECURITY DEFINER RPC function (guarantees RLS bypass)
+    // Use SERVICE ROLE direct query to bypass RLS and get ALL bundle enrollment requests
+    // This replaces the broken RPC function that was returning incomplete data
     let requests: any[] = [];
     let requestsError: any = null;
 
     try {
-      // Use RPC function that runs with SECURITY DEFINER to bypass RLS
-      // This is more reliable than service role client for ensuring all records are returned
-      const { data, error } = await supabase
-        .rpc('get_bundle_enrollment_requests_admin', { filter_status: filterStatus });
+      console.log('[Admin Bundle API] Using SERVICE ROLE direct query (bypassing RPC)');
+      const serviceSupabase = createServiceRoleClient();
 
+      let queryBuilder = serviceSupabase
+        .from('bundle_enrollment_requests')
+        .select('id, user_id, bundle_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots')
+        .order('created_at', { ascending: false });
+
+      if (filterStatus) {
+        queryBuilder = queryBuilder.eq('status', filterStatus);
+      }
+
+      const { data, error } = await queryBuilder;
       requests = data || [];
       requestsError = error;
 
@@ -90,37 +99,13 @@ export async function GET(request: NextRequest) {
       }
 
       if (requestsError) {
-        console.error('[Admin Bundle API] RPC query error:', requestsError);
-        // Check if function doesn't exist yet (migrations not run)
-        if (requestsError.code === '42883' || requestsError.message?.includes('does not exist')) {
-          console.warn('[Admin Bundle API] RPC function not found, falling back to direct query');
-          // Fallback to direct query (for backward compatibility during migration)
-          const serviceSupabase = hasServiceRoleKey
-            ? createServiceRoleClient()
-            : createServerSupabaseClient(token);
-
-          const queryBuilder = serviceSupabase
-            .from('bundle_enrollment_requests')
-            .select('id, user_id, bundle_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots')
-            .order('created_at', { ascending: false });
-
-          const finalQuery = filterStatus
-            ? queryBuilder.eq('status', filterStatus)
-            : queryBuilder;
-
-          const result = await finalQuery;
-          requests = result.data || [];
-          requestsError = result.error;
-
-          if (!requestsError) {
-            console.log('[Admin Bundle API] Fallback query succeeded, found', requests.length, 'requests');
-          }
-        }
+        console.error('[Admin Bundle API] Direct query error:', requestsError);
       } else {
-        console.log('[Admin Bundle API] RPC query succeeded, found', requests.length, 'requests');
+        console.log('[Admin Bundle API] Direct query succeeded, found', requests.length, 'requests');
+        console.log('[Admin Bundle API] Request statuses:', requests.map((r: any) => ({ id: r.id, status: r.status })));
       }
     } catch (err: any) {
-      console.error('[Admin Bundle API] RPC query failed:', err);
+      console.error('[Admin Bundle API] Direct query failed:', err);
       requestsError = err;
     }
 

@@ -106,16 +106,25 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Admin API ${requestId}] Fetching requests, filter:`, filterStatus || 'all');
 
-    // Fetch enrollment requests using SECURITY DEFINER RPC function (guarantees RLS bypass)
+    // Use SERVICE ROLE direct query to bypass RLS and get ALL enrollment requests
+    // This replaces the broken RPC function that was returning incomplete data
     let requests: any[] = [];
     let requestsError: any = null;
 
     try {
-      // Use RPC function that runs with SECURITY DEFINER to bypass RLS
-      // This is more reliable than service role client for ensuring all records are returned
-      const { data, error } = await supabase
-        .rpc('get_enrollment_requests_admin', { filter_status: filterStatus });
+      console.log('[Admin API] Using SERVICE ROLE direct query (bypassing RPC)');
+      const serviceSupabase = createServiceRoleClient();
 
+      let queryBuilder = serviceSupabase
+        .from('enrollment_requests')
+        .select('id, user_id, course_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots, referral_code')
+        .order('created_at', { ascending: false });
+
+      if (filterStatus) {
+        queryBuilder = queryBuilder.eq('status', filterStatus);
+      }
+
+      const { data, error } = await queryBuilder;
       requests = data || [];
       requestsError = error;
 
@@ -130,42 +139,15 @@ export async function GET(request: NextRequest) {
       }
 
       if (requestsError) {
-        console.error('[Admin API] RPC query error:', requestsError);
+        console.error('[Admin API] Direct query error:', requestsError);
       } else {
-        console.log('[Admin API] RPC query succeeded, found', requests.length, 'requests');
+        console.log('[Admin API] Direct query succeeded, found', requests.length, 'requests');
         // Log the actual statuses returned to debug stale data issues
         console.log('[Admin API] Request statuses from DB:', requests.map((r: any) => ({ id: r.id, status: r.status, updated_at: r.updated_at })));
       }
     } catch (err: any) {
-      console.error('[Admin API] RPC query failed:', err);
+      console.error('[Admin API] Direct query failed:', err);
       requestsError = err;
-    }
-
-    // Fallback to SERVICE ROLE direct query if RPC failed
-    // This ensures pending requests are visible even if the RPC function is broken in production
-    if (requestsError) {
-      console.warn('[Admin API] RPC failed, falling back to direct SERVICE ROLE query');
-      try {
-        const serviceSupabase = createServiceRoleClient();
-        const queryBuilder = serviceSupabase
-          .from('enrollment_requests')
-          .select('id, user_id, course_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots, referral_code')
-          .order('created_at', { ascending: false });
-
-        const finalQuery = filterStatus ? queryBuilder.eq('status', filterStatus) : queryBuilder;
-        const { data, error } = await finalQuery;
-
-        if (!error && data) {
-          requests = data;
-          requestsError = null;
-          console.log('[Admin API] Fallback query succeeded, found', data.length, 'requests');
-          console.log('[Admin API] Fallback request statuses:', data.map((r: any) => ({ id: r.id, status: r.status })));
-        } else if (error) {
-          console.error('[Admin API] Fallback query also failed:', error);
-        }
-      } catch (fallbackErr: any) {
-        console.error('[Admin API] Fallback query exception:', fallbackErr);
-      }
     }
 
     // If we have an error and no requests, return error
