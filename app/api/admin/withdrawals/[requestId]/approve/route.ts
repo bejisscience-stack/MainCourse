@@ -25,7 +25,7 @@ async function checkAdmin(supabase: any, userId: string): Promise<boolean> {
 // POST: Approve a withdrawal request
 export async function POST(
   request: NextRequest,
-  { params }: { params: { requestId: string } }
+  { params }: { params: Promise<{ requestId: string }> }
 ) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -60,7 +60,8 @@ export async function POST(
     // Create authenticated client for RPC calls that rely on auth.uid()
     const supabase = createServerSupabaseClient(token);
 
-    const { requestId } = params;
+    // Await params (Next.js 15 requirement)
+    const { requestId } = await params;
     const body = await request.json().catch(() => ({}));
     const { adminNotes } = body;
 
