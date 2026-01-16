@@ -26,15 +26,21 @@ export async function signUp({ email, password, username, role = 'student', sign
   }
 
   // Get the base URL for redirects (works in both dev and production)
+  // Always prioritize NEXT_PUBLIC_SITE_URL if set (even on client-side)
+  // This ensures production always uses the correct domain
   const getRedirectUrl = () => {
+    // Check environment variable first (works on both client and server)
+    if (process.env.NEXT_PUBLIC_SITE_URL) {
+      return `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
+    }
+    
+    // Fallback to window.location.origin if on client-side
     if (typeof window !== 'undefined') {
-      // Client-side: use current origin
       return `${window.location.origin}/auth/callback`;
     }
-    // Server-side: use environment variable or fallback
-    return process.env.NEXT_PUBLIC_SITE_URL 
-      ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
-      : 'http://localhost:3000/auth/callback';
+    
+    // Server-side fallback to localhost for development
+    return 'http://localhost:3000/auth/callback';
   };
 
   const redirectUrl = getRedirectUrl();
@@ -62,15 +68,22 @@ export async function signUp({ email, password, username, role = 'student', sign
 }
 
 export async function resendVerificationEmail(email: string) {
+  // Get redirect URL using the same logic as signUp
+  const getRedirectUrl = () => {
+    if (process.env.NEXT_PUBLIC_SITE_URL) {
+      return `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
+    }
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/auth/callback`;
+    }
+    return 'http://localhost:3000/auth/callback';
+  };
+
   const { error } = await supabase.auth.resend({
     type: 'signup',
     email: email,
     options: {
-      emailRedirectTo: typeof window !== 'undefined' 
-        ? `${window.location.origin}/auth/callback`
-        : process.env.NEXT_PUBLIC_SITE_URL 
-          ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
-          : 'http://localhost:3000/auth/callback',
+      emailRedirectTo: getRedirectUrl(),
     },
   });
 

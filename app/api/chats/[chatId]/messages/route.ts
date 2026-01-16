@@ -145,51 +145,56 @@ export async function GET(
       .filter(m => m.reply_to_id)
       .map(m => m.reply_to_id);
 
-    // Fetch user profiles
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, username, email')
-      .in('id', userIds);
+    // Get message IDs for attachments
+    const messageIds = messages.map(m => m.id);
+
+    // OPTIMIZED: Fetch profiles, reply messages, and attachments in parallel
+    // These three queries have no dependencies on each other
+    const [profilesResult, replyMessagesResult, attachmentsResult] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('id, username, email')
+        .in('id', userIds),
+      replyIds.length > 0
+        ? supabase
+            .from('messages')
+            .select('id, content, user_id')
+            .in('id', replyIds)
+        : Promise.resolve({ data: null }),
+      supabase
+        .from('message_attachments')
+        .select('id, message_id, file_url, file_name, file_type, file_size, mime_type')
+        .in('message_id', messageIds),
+    ]);
+
+    const profiles = profilesResult.data;
+    const replyMessages = replyMessagesResult.data;
+    const attachments = attachmentsResult.data;
 
     const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
-    // Fetch reply messages if any
+    // Fetch reply profiles if we have reply messages (this depends on replyMessages result)
     let replyMap = new Map();
-    if (replyIds.length > 0) {
-      const { data: replyMessages } = await supabase
-        .from('messages')
-        .select('id, content, user_id')
-        .in('id', replyIds);
+    if (replyMessages && replyMessages.length > 0) {
+      const replyUserIds = [...new Set(replyMessages.map(m => m.user_id))];
+      const { data: replyProfiles } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .in('id', replyUserIds);
 
-      if (replyMessages) {
-        // Get profiles for reply authors
-        const replyUserIds = [...new Set(replyMessages.map(m => m.user_id))];
-        const { data: replyProfiles } = await supabase
-          .from('profiles')
-          .select('id, username')
-          .in('id', replyUserIds);
+      const replyProfileMap = new Map(replyProfiles?.map(p => [p.id, p]) || []);
 
-        const replyProfileMap = new Map(replyProfiles?.map(p => [p.id, p]) || []);
-
-        for (const reply of replyMessages) {
-          const replyProfile = replyProfileMap.get(reply.user_id);
-          replyMap.set(reply.id, {
-            id: reply.id,
-            username: replyProfile?.username || 'User',
-            content: reply.content.length > 100
-              ? reply.content.substring(0, 100) + '...'
-              : reply.content
-          });
-        }
+      for (const reply of replyMessages) {
+        const replyProfile = replyProfileMap.get(reply.user_id);
+        replyMap.set(reply.id, {
+          id: reply.id,
+          username: replyProfile?.username || 'User',
+          content: reply.content.length > 100
+            ? reply.content.substring(0, 100) + '...'
+            : reply.content
+        });
       }
     }
-
-    // Fetch attachments for all messages
-    const messageIds = messages.map(m => m.id);
-    const { data: attachments } = await supabase
-      .from('message_attachments')
-      .select('id, message_id, file_url, file_name, file_type, file_size, mime_type')
-      .in('message_id', messageIds);
 
     // Group attachments by message_id
     const attachmentMap = new Map<string, any[]>();
