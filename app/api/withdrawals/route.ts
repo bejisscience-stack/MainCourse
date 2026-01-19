@@ -114,13 +114,17 @@ export async function POST(request: NextRequest) {
       .eq('id', requestId)
       .single();
 
-    if (fetchError) {
+    if (fetchError || !withdrawalRequest) {
       console.error('Error fetching created request:', fetchError);
+      return NextResponse.json(
+        { error: 'Failed to create withdrawal request' },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      request: withdrawalRequest 
+      request: withdrawalRequest
     }, { status: 201 });
   } catch (error: any) {
     console.error('Error in POST /api/withdrawals:', error);
