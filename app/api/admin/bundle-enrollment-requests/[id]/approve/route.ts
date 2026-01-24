@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
-import { sendBundleEnrollmentApprovedEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +32,7 @@ export async function POST(
 
     const token = authHeader.replace('Bearer ', '');
     const { user, error: userError } = await verifyTokenAndGetUser(token);
-    
+
     if (userError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized', details: userError?.message },
@@ -62,36 +61,34 @@ export async function POST(
       );
     }
 
-    console.log('[Approve API] Attempting to approve bundle request:', id);
+    console.log('[Bundle Approve API] Attempting to approve request:', id);
 
-    // Use service role client for queries that need to bypass RLS (verification, notifications)
-    const serviceSupabase = createServiceRoleClient();
-
-    // Use authenticated client (not service role) so auth.uid() works in the database function
-    // The approve_bundle_enrollment_request function may use auth.uid() to verify admin status
+    // Use the RPC function to approve the bundle enrollment
+    // Pass the admin_user_id parameter so it works with service role
     const { error: approveError } = await supabase.rpc('approve_bundle_enrollment_request', {
       request_id: id,
       admin_user_id: user.id,
     });
 
     if (approveError) {
-      console.error('[Approve API] Error approving bundle enrollment request:', {
+      console.error('[Bundle Approve API] Error approving bundle enrollment request:', {
         code: approveError.code,
         message: approveError.message,
         details: approveError.details,
         hint: approveError.hint
       });
       return NextResponse.json(
-        { 
-          error: 'Failed to approve bundle enrollment request', 
+        {
+          error: 'Failed to approve bundle enrollment request',
           details: approveError.message || 'Unknown error occurred',
           code: approveError.code
         },
         { status: 500 }
       );
     }
-    
+
     // Verify the update was successful by querying the request directly
+    const serviceSupabase = createServiceRoleClient(token);
     const { data: updatedRequest, error: verifyError } = await serviceSupabase
       .from('bundle_enrollment_requests')
       .select('id, status, updated_at, user_id, bundle_id, course_bundles(title)')
@@ -99,9 +96,9 @@ export async function POST(
       .single();
 
     if (verifyError) {
-      console.error('[Approve API] Error verifying bundle approval:', verifyError);
+      console.error('[Bundle Approve API] Error verifying approval:', verifyError);
     } else {
-      console.log('[Approve API] Bundle approval successful, verified status:', updatedRequest?.status, 'updated_at:', updatedRequest?.updated_at);
+      console.log('[Bundle Approve API] Approval successful, verified status:', updatedRequest?.status, 'updated_at:', updatedRequest?.updated_at);
 
       // Create notification for the user
       if (updatedRequest?.user_id) {
@@ -113,9 +110,9 @@ export async function POST(
               p_user_id: updatedRequest.user_id,
               p_type: 'bundle_enrollment_approved',
               p_title_en: 'Bundle Enrollment Approved',
-              p_title_ge: 'პაკეტში რეგისტრაცია დამტკიცებულია',
-              p_message_en: `Your enrollment request for bundle "${bundleTitle}" has been approved. You can now access all courses in the bundle.`,
-              p_message_ge: `თქვენი რეგისტრაციის მოთხოვნა პაკეტზე "${bundleTitle}" დამტკიცებულია. ახლა შეგიძლიათ პაკეტის ყველა კურსზე წვდომა.`,
+              p_title_ge: 'პაკეტის რეგისტრაცია დამტკიცებულია',
+              p_message_en: `Your enrollment request for the bundle "${bundleTitle}" has been approved. You can now access all courses in this bundle.`,
+              p_message_ge: `თქვენი რეგისტრაციის მოთხოვნა პაკეტზე "${bundleTitle}" დამტკიცებულია. ახლა შეგიძლიათ ამ პაკეტის ყველა კურსზე წვდომა.`,
               p_metadata: {
                 bundle_id: updatedRequest.bundle_id,
                 bundle_title: bundleTitle,
@@ -125,28 +122,12 @@ export async function POST(
             });
 
           if (notificationError) {
-            console.error('[Approve API] Error creating notification:', notificationError);
+            console.error('[Bundle Approve API] Error creating notification:', notificationError);
           } else {
-            console.log('[Approve API] Notification created for user:', updatedRequest.user_id);
+            console.log('[Bundle Approve API] Notification created for user:', updatedRequest.user_id);
           }
         } catch (notifError) {
-          console.error('[Approve API] Exception creating notification:', notifError);
-        }
-
-        // Send email notification
-        try {
-          const { data: userProfile } = await serviceSupabase
-            .from('profiles')
-            .select('email')
-            .eq('id', updatedRequest.user_id)
-            .single();
-
-          if (userProfile?.email) {
-            await sendBundleEnrollmentApprovedEmail(userProfile.email, bundleTitle);
-            console.log('[Approve API] Email sent to:', userProfile.email);
-          }
-        } catch (emailError) {
-          console.error('[Approve API] Error sending email:', emailError);
+          console.error('[Bundle Approve API] Exception creating notification:', notifError);
         }
       }
     }
@@ -159,7 +140,7 @@ export async function POST(
   } catch (error: any) {
     console.error('Error in POST /api/admin/bundle-enrollment-requests/[id]/approve:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         details: error.message || 'An unexpected error occurred'
       },
@@ -167,5 +148,3 @@ export async function POST(
     );
   }
 }
-
-

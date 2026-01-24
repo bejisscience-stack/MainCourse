@@ -66,28 +66,41 @@ export async function GET(request: NextRequest) {
 
     console.log('[Admin Bundle API] Fetching bundle requests, filter:', filterStatus || 'all');
 
-    // Use SERVICE ROLE direct query to bypass RLS and get ALL bundle enrollment requests
-    // This replaces the broken RPC function that was returning incomplete data
-    // Pass the user's token as fallback so RLS admin policies work if service role key is missing
+    // Use RPC function to bypass RLS and get ALL bundle enrollment requests
+    // RPC functions are marked VOLATILE to prevent caching
     let requests: any[] = [];
     let requestsError: any = null;
 
     try {
-      console.log('[Admin Bundle API] Using SERVICE ROLE direct query (bypassing RPC)');
+      console.log('[Admin Bundle API] Using RPC function get_bundle_enrollment_requests_admin');
       const serviceSupabase = createServiceRoleClient(token);
 
-      let queryBuilder = serviceSupabase
-        .from('bundle_enrollment_requests')
-        .select('id, user_id, bundle_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots')
-        .order('created_at', { ascending: false });
+      // Use RPC function which is marked VOLATILE to prevent caching
+      const { data: rpcData, error: rpcError } = await serviceSupabase
+        .rpc('get_bundle_enrollment_requests_admin', {
+          filter_status: filterStatus || null
+        });
 
-      if (filterStatus) {
-        queryBuilder = queryBuilder.eq('status', filterStatus);
+      if (rpcError) {
+        console.error('[Admin Bundle API] RPC error:', rpcError);
+        // Fallback to direct query if RPC fails
+        console.log('[Admin Bundle API] Falling back to direct query');
+        let queryBuilder = serviceSupabase
+          .from('bundle_enrollment_requests')
+          .select('id, user_id, bundle_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots')
+          .order('created_at', { ascending: false });
+
+        if (filterStatus) {
+          queryBuilder = queryBuilder.eq('status', filterStatus);
+        }
+
+        const { data, error } = await queryBuilder;
+        requests = data || [];
+        requestsError = error;
+      } else {
+        requests = rpcData || [];
+        console.log('[Admin Bundle API] RPC succeeded, found', requests.length, 'requests');
       }
-
-      const { data, error } = await queryBuilder;
-      requests = data || [];
-      requestsError = error;
 
       // Log raw data from database to verify we're getting fresh data
       if (requests.length > 0) {
@@ -99,14 +112,21 @@ export async function GET(request: NextRequest) {
         })));
       }
 
-      if (requestsError) {
-        console.error('[Admin Bundle API] Direct query error:', requestsError);
-      } else {
-        console.log('[Admin Bundle API] Direct query succeeded, found', requests.length, 'requests');
-        console.log('[Admin Bundle API] Request statuses:', requests.map((r: any) => ({ id: r.id, status: r.status })));
+      // Verify count matches
+      const { count: dbCount, error: dbCountError } = await serviceSupabase
+        .from('bundle_enrollment_requests')
+        .select('*', { count: 'exact', head: true });
+
+      if (!dbCountError && dbCount !== null) {
+        console.log(`[Admin Bundle API] DB total count: ${dbCount}, Query returned: ${requests.length}`);
+        if (dbCount !== requests.length && !filterStatus) {
+          console.warn(`[Admin Bundle API] WARNING: Count mismatch! DB has ${dbCount} records but query returned ${requests.length}`);
+        }
       }
+
+      console.log('[Admin Bundle API] Request statuses:', requests.map((r: any) => ({ id: r.id, status: r.status })));
     } catch (err: any) {
-      console.error('[Admin Bundle API] Direct query failed:', err);
+      console.error('[Admin Bundle API] Query failed:', err);
       requestsError = err;
     }
 

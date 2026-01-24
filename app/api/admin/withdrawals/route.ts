@@ -64,37 +64,57 @@ export async function GET(request: NextRequest) {
 
     console.log('[Admin Withdrawals API] Fetching requests, filter:', filterStatus || 'all');
 
-    // Use SERVICE ROLE direct query to bypass RLS and get ALL withdrawal requests
-    // This replaces the broken RPC function that was returning incomplete data
-    // Pass the user's token as fallback so RLS admin policies work if service role key is missing
+    // Use RPC function to bypass RLS and get ALL withdrawal requests
+    // RPC functions are marked VOLATILE to prevent caching
     let requests: any[] = [];
     let requestsError: any = null;
 
     try {
-      console.log('[Admin Withdrawals API] Using SERVICE ROLE direct query (bypassing RPC)');
+      console.log('[Admin Withdrawals API] Using RPC function get_withdrawal_requests_admin');
       const serviceSupabase = createServiceRoleClient(token);
 
-      let queryBuilder = serviceSupabase
-        .from('withdrawal_requests')
-        .select('id, user_id, user_type, amount, bank_account_number, status, admin_notes, processed_at, processed_by, created_at, updated_at')
-        .order('created_at', { ascending: false });
+      // Use RPC function which is marked VOLATILE to prevent caching
+      const { data: rpcData, error: rpcError } = await serviceSupabase
+        .rpc('get_withdrawal_requests_admin', {
+          filter_status: filterStatus || null
+        });
 
-      if (filterStatus) {
-        queryBuilder = queryBuilder.eq('status', filterStatus);
-      }
+      if (rpcError) {
+        console.error('[Admin Withdrawals API] RPC error:', rpcError);
+        // Fallback to direct query if RPC fails
+        console.log('[Admin Withdrawals API] Falling back to direct query');
+        let queryBuilder = serviceSupabase
+          .from('withdrawal_requests')
+          .select('id, user_id, user_type, amount, bank_account_number, status, admin_notes, processed_at, processed_by, created_at, updated_at')
+          .order('created_at', { ascending: false });
 
-      const { data, error } = await queryBuilder;
-      requests = data || [];
-      requestsError = error;
+        if (filterStatus) {
+          queryBuilder = queryBuilder.eq('status', filterStatus);
+        }
 
-      if (requestsError) {
-        console.error('[Admin Withdrawals API] Direct query error:', requestsError);
+        const { data, error } = await queryBuilder;
+        requests = data || [];
+        requestsError = error;
       } else {
-        console.log('[Admin Withdrawals API] Direct query succeeded, found', requests.length, 'requests');
-        console.log('[Admin Withdrawals API] Request statuses:', requests.map((r: any) => ({ id: r.id, status: r.status })));
+        requests = rpcData || [];
+        console.log('[Admin Withdrawals API] RPC succeeded, found', requests.length, 'requests');
       }
+
+      // Verify count matches
+      const { count: dbCount, error: dbCountError } = await serviceSupabase
+        .from('withdrawal_requests')
+        .select('*', { count: 'exact', head: true });
+
+      if (!dbCountError && dbCount !== null) {
+        console.log(`[Admin Withdrawals API] DB total count: ${dbCount}, Query returned: ${requests.length}`);
+        if (dbCount !== requests.length && !filterStatus) {
+          console.warn(`[Admin Withdrawals API] WARNING: Count mismatch! DB has ${dbCount} records but query returned ${requests.length}`);
+        }
+      }
+
+      console.log('[Admin Withdrawals API] Request statuses:', requests.map((r: any) => ({ id: r.id, status: r.status })));
     } catch (err: any) {
-      console.error('[Admin Withdrawals API] Direct query failed:', err);
+      console.error('[Admin Withdrawals API] Query failed:', err);
       requestsError = err;
     }
 

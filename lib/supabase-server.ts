@@ -45,6 +45,9 @@ export function createServiceRoleClient(fallbackToken?: string) {
     return createClient(safeSupabaseUrl, safeSupabaseAnonKey);
   }
 
+  // Generate unique request ID to prevent connection reuse and query caching
+  const requestId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+
   return createClient(safeSupabaseUrl, supabaseServiceRoleKey, {
     auth: {
       persistSession: false,
@@ -55,7 +58,9 @@ export function createServiceRoleClient(fallbackToken?: string) {
     },
     global: {
       headers: {
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'x-request-id': requestId,
       },
     },
   });

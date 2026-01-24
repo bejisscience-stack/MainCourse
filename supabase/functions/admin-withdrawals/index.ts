@@ -29,23 +29,62 @@ Deno.serve(async (req: Request) => {
     // Pass user token as fallback in case service role key is not available
     const serviceSupabase = createServiceRoleClient(token)
 
-    let queryBuilder = serviceSupabase
-      .from('withdrawal_requests')
-      .select('id, user_id, user_type, amount, bank_account_number, status, admin_notes, processed_at, processed_by, created_at, updated_at')
-      .order('created_at', { ascending: false })
+    // Use RPC function to bypass RLS and prevent caching (marked VOLATILE)
+    let requests: any[] = []
+    let requestsError: any = null
 
-    if (filterStatus) {
-      queryBuilder = queryBuilder.eq('status', filterStatus)
+    try {
+      console.log('[Admin Withdrawals API] Using RPC function get_withdrawal_requests_admin')
+      const { data: rpcData, error: rpcError } = await serviceSupabase
+        .rpc('get_withdrawal_requests_admin', {
+          filter_status: filterStatus || null
+        })
+
+      if (rpcError) {
+        console.error('[Admin Withdrawals API] RPC error:', rpcError)
+        // Fallback to direct query if RPC fails
+        console.log('[Admin Withdrawals API] Falling back to direct query')
+        let queryBuilder = serviceSupabase
+          .from('withdrawal_requests')
+          .select('id, user_id, user_type, amount, bank_account_number, status, admin_notes, processed_at, processed_by, created_at, updated_at')
+          .order('created_at', { ascending: false })
+
+        if (filterStatus) {
+          queryBuilder = queryBuilder.eq('status', filterStatus)
+        }
+
+        const { data, error } = await queryBuilder
+        requests = data || []
+        requestsError = error
+      } else {
+        requests = rpcData || []
+        console.log('[Admin Withdrawals API] RPC succeeded, found', requests.length, 'requests')
+      }
+
+      // Verify count matches
+      const { count: dbCount, error: dbCountError } = await serviceSupabase
+        .from('withdrawal_requests')
+        .select('*', { count: 'exact', head: true })
+
+      if (!dbCountError && dbCount !== null) {
+        console.log(`[Admin Withdrawals API] DB total count: ${dbCount}, Query returned: ${requests.length}`)
+        if (dbCount !== requests.length && !filterStatus) {
+          console.warn(`[Admin Withdrawals API] WARNING: Count mismatch! DB has ${dbCount} records but query returned ${requests.length}`)
+        }
+      }
+
+      console.log('[Admin Withdrawals API] Request statuses:', requests.map((r: any) => ({ id: r.id, status: r.status })))
+    } catch (err: any) {
+      console.error('[Admin Withdrawals API] Query failed:', err)
+      requestsError = err
     }
 
-    const { data: requests, error: requestsError } = await queryBuilder
-
-    if (requestsError) {
+    if (requestsError && requests.length === 0) {
       console.error('[Admin Withdrawals API] Error:', requestsError)
       return jsonResponse(
         {
           error: 'Failed to fetch withdrawal requests',
-          details: requestsError.message,
+          details: requestsError.message || 'Database query failed',
           code: requestsError.code,
         },
         500

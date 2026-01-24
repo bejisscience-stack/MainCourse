@@ -106,28 +106,49 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Admin API ${requestId}] Fetching requests, filter:`, filterStatus || 'all');
 
-    // Use SERVICE ROLE direct query to bypass RLS and get ALL enrollment requests
-    // This replaces the broken RPC function that was returning incomplete data
-    // Pass the user's token as fallback so RLS admin policies work if service role key is missing
+    // Use RPC function to bypass RLS and get ALL enrollment requests
+    // RPC functions are marked VOLATILE to prevent caching
     let requests: any[] = [];
     let requestsError: any = null;
 
     try {
-      console.log('[Admin API] Using SERVICE ROLE direct query (bypassing RPC)');
+      console.log('[Admin API] Using RPC function get_enrollment_requests_admin');
       const serviceSupabase = createServiceRoleClient(token);
 
-      let queryBuilder = serviceSupabase
-        .from('enrollment_requests')
-        .select('id, user_id, course_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots, referral_code')
-        .order('created_at', { ascending: false });
+      // First, verify database count to detect caching issues
+      const { data: countData, error: countError } = await serviceSupabase
+        .rpc('check_is_admin', { user_id: user.id }); // This also warms up the connection
 
-      if (filterStatus) {
-        queryBuilder = queryBuilder.eq('status', filterStatus);
+      if (countError) {
+        console.error('[Admin API] Count verification error:', countError);
       }
 
-      const { data, error } = await queryBuilder;
-      requests = data || [];
-      requestsError = error;
+      // Use RPC function which is marked VOLATILE to prevent caching
+      const { data: rpcData, error: rpcError } = await serviceSupabase
+        .rpc('get_enrollment_requests_admin', {
+          filter_status: filterStatus || null
+        });
+
+      if (rpcError) {
+        console.error('[Admin API] RPC error:', rpcError);
+        // Fallback to direct query if RPC fails
+        console.log('[Admin API] Falling back to direct query');
+        let queryBuilder = serviceSupabase
+          .from('enrollment_requests')
+          .select('id, user_id, course_id, status, created_at, updated_at, reviewed_by, reviewed_at, payment_screenshots, referral_code')
+          .order('created_at', { ascending: false });
+
+        if (filterStatus) {
+          queryBuilder = queryBuilder.eq('status', filterStatus);
+        }
+
+        const { data, error } = await queryBuilder;
+        requests = data || [];
+        requestsError = error;
+      } else {
+        requests = rpcData || [];
+        console.log('[Admin API] RPC succeeded, found', requests.length, 'requests');
+      }
 
       // Log raw data from database to verify we're getting fresh data
       if (requests.length > 0) {
@@ -139,15 +160,22 @@ export async function GET(request: NextRequest) {
         })));
       }
 
-      if (requestsError) {
-        console.error('[Admin API] Direct query error:', requestsError);
-      } else {
-        console.log('[Admin API] Direct query succeeded, found', requests.length, 'requests');
-        // Log the actual statuses returned to debug stale data issues
-        console.log('[Admin API] Request statuses from DB:', requests.map((r: any) => ({ id: r.id, status: r.status, updated_at: r.updated_at })));
+      // Verify count matches
+      const { count: dbCount, error: dbCountError } = await serviceSupabase
+        .from('enrollment_requests')
+        .select('*', { count: 'exact', head: true });
+
+      if (!dbCountError && dbCount !== null) {
+        console.log(`[Admin API] DB total count: ${dbCount}, Query returned: ${requests.length}`);
+        if (dbCount !== requests.length && !filterStatus) {
+          console.warn(`[Admin API] WARNING: Count mismatch! DB has ${dbCount} records but query returned ${requests.length}`);
+        }
       }
+
+      // Log the actual statuses returned to debug stale data issues
+      console.log('[Admin API] Request statuses from DB:', requests.map((r: any) => ({ id: r.id, status: r.status, updated_at: r.updated_at })));
     } catch (err: any) {
-      console.error('[Admin API] Direct query failed:', err);
+      console.error('[Admin API] Query failed:', err);
       requestsError = err;
     }
 

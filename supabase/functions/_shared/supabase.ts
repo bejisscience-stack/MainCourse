@@ -38,6 +38,9 @@ export function createServiceRoleClient(fallbackToken?: string): SupabaseClient 
     throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable and no fallback token provided')
   }
 
+  // Generate unique request ID to prevent connection reuse and query caching
+  const requestId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+
   return createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       persistSession: false,
@@ -45,6 +48,13 @@ export function createServiceRoleClient(fallbackToken?: string): SupabaseClient 
     },
     db: {
       schema: 'public',
+    },
+    global: {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'x-request-id': requestId,
+      },
     },
   })
 }
