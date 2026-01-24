@@ -68,7 +68,7 @@ function CourseEnrollmentCard({
     // Check if user is authenticated before opening enrollment wizard
     if (!user) {
       const redirectUrl = `/courses?pendingEnroll=course:${course.id}`;
-      router.push(`/signup?redirect=${encodeURIComponent(redirectUrl)}`);
+      window.location.href = `/signup?redirect=${encodeURIComponent(redirectUrl)}`;
       return;
     }
     
@@ -82,7 +82,7 @@ function CourseEnrollmentCard({
     setTimeout(() => {
       isOpeningRef.current = false;
     }, 300);
-  }, [user, router, showEnrollmentWizard]);
+  }, [user, router, showEnrollmentWizard, course.id]);
 
   // Auto-open enrollment wizard if autoOpen is true and user is authenticated
   // This must be after hasPendingRequest is defined

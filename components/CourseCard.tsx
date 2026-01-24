@@ -93,7 +93,7 @@ function CourseCard({
     // Check if user is authenticated before opening payment dialog
     if (!user) {
       const redirectUrl = `/courses?pendingEnroll=course:${course.id}`;
-      router.push(`/signup?redirect=${encodeURIComponent(redirectUrl)}`);
+      window.location.href = `/signup?redirect=${encodeURIComponent(redirectUrl)}`;
       return;
     }
     if (onEnroll && !isEnrolled && !isEnrolling) {
