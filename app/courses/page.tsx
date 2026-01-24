@@ -527,7 +527,7 @@ function CoursesPageContent() {
                             onClick={() => {
                               if (!user) {
                                 const redirectUrl = `/courses?pendingEnroll=bundle:${bundle.id}`;
-                                router.push(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
+                                router.push(`/signup?redirect=${encodeURIComponent(redirectUrl)}`);
                                 return;
                               }
                               setSelectedBundleId(bundle.id);
