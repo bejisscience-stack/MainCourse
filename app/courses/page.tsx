@@ -640,6 +640,10 @@ function CoursesPageContent() {
                           initialReferralCode={isSelectedCourse ? urlReferralCode : null}
                           autoOpen={isSelectedCourse && shouldShowEnroll}
                           onEnrollmentApproved={mutateEnrollments}
+                          onWizardClose={() => {
+                            setSelectedCourseId(null);
+                            setUrlReferralCode(null);
+                          }}
                         />
                       );
                     })}
@@ -673,6 +677,12 @@ function CoursesPageContent() {
           onClose={() => {
             setShowBundleEnrollmentWizard(false);
             setSelectedBundleId(null);
+            // Clear URL params
+            if (typeof window !== 'undefined' && window.history) {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('pendingEnroll');
+              window.history.replaceState({}, '', url.toString());
+            }
           }}
         />
       )}

@@ -21,6 +21,7 @@ interface CourseEnrollmentCardProps {
   initialReferralCode?: string | null;
   autoOpen?: boolean;
   onEnrollmentApproved?: () => void;
+  onWizardClose?: () => void;
   isExpired?: boolean;
   expiresAt?: string | null;
   daysRemaining?: number | null;
@@ -39,6 +40,7 @@ function CourseEnrollmentCard({
   initialReferralCode,
   autoOpen = false,
   onEnrollmentApproved,
+  onWizardClose,
   isExpired = false,
   expiresAt = null,
   daysRemaining = null,
@@ -346,9 +348,14 @@ function CourseEnrollmentCard({
       const url = new URL(window.location.href);
       url.searchParams.delete('course');
       url.searchParams.delete('ref');
+      url.searchParams.delete('pendingEnroll');
       window.history.replaceState({}, '', url.toString());
     }
-  }, []);
+    // Notify parent component that wizard was closed
+    if (onWizardClose) {
+      onWizardClose();
+    }
+  }, [onWizardClose]);
 
   const handleEnrollmentSubmit = useCallback(async (courseId: string, screenshotUrls: string[], referralCode?: string) => {
     if (!userId) {
