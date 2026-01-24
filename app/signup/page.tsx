@@ -116,11 +116,12 @@ function SignUpForm() {
       
       <div className="relative z-10 max-w-md w-full space-y-8 bg-white dark:bg-navy-800 p-8 rounded-2xl shadow-xl border border-charcoal-100 dark:border-navy-700/50">
         <div>
-          <Link href="/" className="flex items-center justify-center space-x-2 mb-6">
-            <div className="w-10 h-10 bg-charcoal-950 dark:bg-emerald-500 rounded-lg flex items-center justify-center transition-all duration-200">
-              <span className="text-white font-bold text-xl">S</span>
-            </div>
-            <span className="text-charcoal-950 dark:text-white font-bold text-2xl">Swavleba</span>
+          <Link href="/" className="flex items-center justify-center mb-6">
+            <img
+              src="/wavleba-logo.png"
+              alt="Wavleba"
+              className="h-12 w-auto"
+            />
           </Link>
           <h2 className="text-center text-3xl font-bold text-charcoal-950 dark:text-white">
             {t('auth.createAccount')}
@@ -248,6 +249,28 @@ function SignUpForm() {
                   </p>
                 )}
               </div>
+            </div>
+
+            {/* Terms Agreement Notice */}
+            <div className="text-center text-sm text-charcoal-600 dark:text-gray-400">
+              <p>
+                {t('auth.termsAgreement')}{' '}
+                <Link
+                  href="/terms-and-conditions"
+                  className="font-semibold text-charcoal-950 dark:text-emerald-400 hover:text-charcoal-700 dark:hover:text-emerald-300 transition-colors underline"
+                  target="_blank"
+                >
+                  {t('auth.termsAndConditions')}
+                </Link>
+                {' '}{t('auth.and')}{' '}
+                <Link
+                  href="/privacy-policy"
+                  className="font-semibold text-charcoal-950 dark:text-emerald-400 hover:text-charcoal-700 dark:hover:text-emerald-300 transition-colors underline"
+                  target="_blank"
+                >
+                  {t('auth.privacyPolicy')}
+                </Link>
+              </p>
             </div>
 
             <div>

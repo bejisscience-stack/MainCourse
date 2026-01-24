@@ -165,13 +165,14 @@ export default function ChatNavigation() {
       <div className="flex items-center gap-4">
         <Link
           href="/"
-          className="flex items-center gap-2 text-white hover:text-emerald-400 transition-colors"
+          className="flex items-center text-white hover:text-emerald-400 transition-colors"
           title={t('chat.home')}
         >
-          <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-white font-bold">
-            S
-          </div>
-          <span className="font-semibold hidden sm:inline">Swavleba</span>
+          <img
+            src="/wavleba-logo.png"
+            alt="Wavleba"
+            className="h-8 w-auto brightness-0 invert"
+          />
         </Link>
 
         <div className="h-6 w-px bg-navy-700"></div>

@@ -15,7 +15,7 @@ export interface SendEmailParams {
  * @throws Error if email sending fails
  */
 export async function sendEmail({ to, subject, html, text }: SendEmailParams): Promise<string> {
-  const from = process.env.EMAIL_FROM || 'Swavleba <no-reply@swavleba.ge>';
+  const from = process.env.EMAIL_FROM || 'Wavleba <no-reply@wavleba.ge>';
   const replyTo = process.env.EMAIL_REPLY_TO;
 
   const { data, error } = await resend.emails.send({

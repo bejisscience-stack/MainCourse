@@ -7,6 +7,7 @@ import Hero from '@/components/Hero';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/hooks/useUser';
 import FirstLoginCoursePopup from '@/components/FirstLoginCoursePopup';
+import Footer from '@/components/Footer';
 
 // Lazy load heavy components that are below the fold
 const VideoSection = dynamic(() => import('@/components/VideoSection'), {
@@ -60,14 +61,15 @@ export default function Home() {
     userRole !== 'lecturer'; // Don't show for lecturers
 
   return (
-    <main className="relative min-h-screen">
+    <main className="relative min-h-screen flex flex-col">
       <Navigation />
-      <div className="relative z-10">
+      <div className="relative z-10 flex-1">
         <Hero />
         <VideoSection />
         <CoursesCarousel />
         <ActiveProjectsCarousel />
       </div>
+      <Footer />
       {/* First Login Course Popup */}
       {shouldShowPopup && profile.referred_for_course_id && profile.signup_referral_code && (
         <FirstLoginCoursePopup

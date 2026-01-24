@@ -25,6 +25,20 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Course - Make Money Today",
   description: "Start your journey to financial freedom today",
+  icons: {
+    icon: [
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-48x48.png', sizes: '48x48', type: 'image/png' },
+      { url: '/favicon-128x128.png', sizes: '128x128', type: 'image/png' },
+      { url: '/favicon-256x256.png', sizes: '256x256', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '256x256', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+  },
+  manifest: '/manifest.json',
   openGraph: {
     title: "Course - Make Money Today",
     description: "Start your journey to financial freedom today",
@@ -36,7 +50,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  themeColor: '#1a1a1a',
+  themeColor: '#22c55e',
 };
 
 export default function RootLayout({

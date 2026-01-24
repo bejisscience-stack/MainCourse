@@ -79,11 +79,13 @@ function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2.5 group">
-            <div className="w-8 h-8 md:w-9 md:h-9 bg-charcoal-950 dark:bg-emerald-500 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105 will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}>
-              <span className="text-white font-semibold text-base md:text-lg">S</span>
-            </div>
-            <span className="text-charcoal-950 dark:text-white font-semibold text-lg md:text-xl tracking-tight">Swavleba</span>
+          <Link href="/" className="flex items-center group">
+            <img
+              src="/wavleba-logo.png"
+              alt="Wavleba"
+              className="h-8 md:h-10 w-auto transition-all duration-200 group-hover:scale-105 will-change-transform"
+              style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+            />
           </Link>
 
           {/* Desktop Menu */}
