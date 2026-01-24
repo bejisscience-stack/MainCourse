@@ -13,6 +13,7 @@ import { useEnrollmentRequestStatus } from '@/hooks/useEnrollmentRequests';
 import useSWR from 'swr';
 import { useI18n } from '@/contexts/I18nContext';
 import FirstLoginCoursePopup from '@/components/FirstLoginCoursePopup';
+import BundleEnrollmentModal from '@/components/BundleEnrollmentModal';
 import { formatPriceInGel } from '@/lib/currency';
 
 type FilterType = 'All' | 'Editing' | 'Content Creation' | 'Website Creation';
@@ -36,20 +37,39 @@ function CoursesPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [urlReferralCode, setUrlReferralCode] = useState<string | null>(null);
+  const [selectedBundleId, setSelectedBundleId] = useState<string | null>(null);
+  const [showBundleEnrollmentWizard, setShowBundleEnrollmentWizard] = useState(false);
 
   const { user, profile, role: userRole, isLoading: userLoading } = useUser();
 
-  // Read URL params for course and referral code
+  // Read URL params for course, referral code, and pending enrollment
   useEffect(() => {
     const courseParam = searchParams.get('course');
     const refParam = searchParams.get('ref');
+    const pendingEnrollParam = searchParams.get('pendingEnroll');
+
     if (courseParam) {
       setSelectedCourseId(courseParam);
     }
     if (refParam) {
       setUrlReferralCode(refParam.toUpperCase().trim());
     }
-  }, [searchParams]);
+
+    // Handle pending enrollment from login/signup redirect
+    if (pendingEnrollParam && user) {
+      const [type, id] = pendingEnrollParam.split(':');
+      if (type === 'course' && id) {
+        setSelectedCourseId(id);
+      } else if (type === 'bundle' && id) {
+        setSelectedBundleId(id);
+        setShowBundleEnrollmentWizard(true);
+      }
+      // Clean URL to avoid re-triggering on refresh
+      const url = new URL(window.location.href);
+      url.searchParams.delete('pendingEnroll');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams, user]);
   const { courses, isLoading: coursesLoading, mutate: mutateCourses } = useCourses(filter);
   const { enrolledCourseIds, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
   const [bundles, setBundles] = useState<any[]>([]);
@@ -506,10 +526,12 @@ function CoursesPageContent() {
                           <button
                             onClick={() => {
                               if (!user) {
-                                router.push(`/login?redirect=${encodeURIComponent(`/bundles/${bundle.id}`)}`);
+                                const redirectUrl = `/courses?pendingEnroll=bundle:${bundle.id}`;
+                                router.push(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
                                 return;
                               }
-                              router.push(`/bundles/${bundle.id}`);
+                              setSelectedBundleId(bundle.id);
+                              setShowBundleEnrollmentWizard(true);
                             }}
                             className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-white bg-purple-600 dark:bg-purple-500 rounded-xl hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors"
                           >
@@ -629,16 +651,29 @@ function CoursesPageContent() {
         </div>
       </div>
       {/* First Login Course Popup */}
-      {!userLoading && 
-       user && 
-       profile && 
-       profile.referred_for_course_id && 
-       profile.signup_referral_code && 
+      {!userLoading &&
+       user &&
+       profile &&
+       profile.referred_for_course_id &&
+       profile.signup_referral_code &&
        !profile.first_login_completed &&
        userRole !== 'lecturer' && (
         <FirstLoginCoursePopup
           courseId={profile.referred_for_course_id}
           referralCode={profile.signup_referral_code}
+        />
+      )}
+
+      {/* Bundle Enrollment Modal */}
+      {selectedBundleId && showBundleEnrollmentWizard && (
+        <BundleEnrollmentModal
+          bundleId={selectedBundleId}
+          bundles={bundles}
+          isOpen={showBundleEnrollmentWizard}
+          onClose={() => {
+            setShowBundleEnrollmentWizard(false);
+            setSelectedBundleId(null);
+          }}
         />
       )}
     </main>

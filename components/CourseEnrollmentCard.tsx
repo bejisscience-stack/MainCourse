@@ -67,7 +67,8 @@ function CourseEnrollmentCard({
     
     // Check if user is authenticated before opening enrollment wizard
     if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      const redirectUrl = `/courses?pendingEnroll=course:${course.id}`;
+      router.push(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
       return;
     }
     

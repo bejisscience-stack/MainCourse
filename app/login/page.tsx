@@ -251,7 +251,10 @@ function LoginForm() {
           <div className="text-center">
             <p className="text-sm text-charcoal-600 dark:text-gray-400">
               {t('auth.dontHaveAccount')}{' '}
-              <Link href="/signup" className="font-semibold text-charcoal-950 dark:text-emerald-400 hover:text-charcoal-700 dark:hover:text-emerald-300 transition-colors">
+              <Link
+                href={`/signup${searchParams.get('redirect') ? `?redirect=${encodeURIComponent(searchParams.get('redirect')!)}` : ''}`}
+                className="font-semibold text-charcoal-950 dark:text-emerald-400 hover:text-charcoal-700 dark:hover:text-emerald-300 transition-colors"
+              >
                 {t('nav.signUp')}
               </Link>
             </p>

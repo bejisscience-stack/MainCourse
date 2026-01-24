@@ -21,12 +21,19 @@ function SignUpForm() {
   const [referralCode, setReferralCode] = useState<string>('');
   const [referralError, setReferralError] = useState<string | null>(null);
   const [courseId, setCourseId] = useState<string | null>(null);
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
 
-  // Get referral code and course ID from URL
+  // Get referral code, course ID, and redirect URL from URL params
   useEffect(() => {
     const validateReferralCode = async () => {
       const ref = searchParams.get('ref');
       const course = searchParams.get('course');
+      const redirect = searchParams.get('redirect');
+
+      // Store redirect URL for post-signup navigation
+      if (redirect) {
+        setRedirectUrl(redirect);
+      }
 
       if (ref) {
         const normalizedRef = ref.toUpperCase().trim();
@@ -74,14 +81,18 @@ function SignUpForm() {
       
       if (user) {
         setSuccess(true);
-        // Redirect based on role and course
+        // Redirect based on role and redirect URL
         setTimeout(() => {
           if (role === 'lecturer') {
             router.push('/lecturer');
           } else {
-            // If user registered with referral code, redirect to home page to show course popup
-            // The popup will appear automatically based on their profile data
-            if (referralCode || courseId) {
+            // Priority: redirect URL (from pending enrollment) > referral flow > default
+            if (redirectUrl) {
+              // Use window.location.href for reliable navigation with query params
+              window.location.href = redirectUrl;
+              return;
+            } else if (referralCode || courseId) {
+              // If user registered with referral code, redirect to home page to show course popup
               router.push('/');
             } else {
               router.push('/my-courses');
@@ -252,7 +263,10 @@ function SignUpForm() {
             <div className="text-center">
               <p className="text-sm text-charcoal-600 dark:text-gray-400">
                 {t('auth.alreadyHaveAccount')}{' '}
-                <Link href="/login" className="font-semibold text-charcoal-950 dark:text-emerald-400 hover:text-charcoal-700 dark:hover:text-emerald-300 transition-colors">
+                <Link
+                  href={`/login${redirectUrl ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`}
+                  className="font-semibold text-charcoal-950 dark:text-emerald-400 hover:text-charcoal-700 dark:hover:text-emerald-300 transition-colors"
+                >
                   {t('auth.signIn')}
                 </Link>
               </p>
