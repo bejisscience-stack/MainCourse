@@ -17,7 +17,8 @@ export default function Footer() {
               <img
                 src="/wavleba-logo.png"
                 alt="Wavleba"
-                className="h-10 w-auto brightness-0 invert"
+                className="h-10 w-auto"
+                style={{ filter: 'drop-shadow(0 0 1px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.7))' }}
               />
             </Link>
             <p className="text-charcoal-400 dark:text-gray-400 text-sm">

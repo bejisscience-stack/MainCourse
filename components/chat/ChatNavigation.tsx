@@ -171,7 +171,8 @@ export default function ChatNavigation() {
           <img
             src="/wavleba-logo.png"
             alt="Wavleba"
-            className="h-8 w-auto brightness-0 invert"
+            className="h-8 w-auto"
+            style={{ filter: 'drop-shadow(0 0 1px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.7))' }}
           />
         </Link>
 
