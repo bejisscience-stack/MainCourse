@@ -63,7 +63,8 @@ export async function POST(
     }
 
     // Fetch the enrollment request details before rejecting
-    const serviceSupabase = createServiceRoleClient();
+    // Pass user token as fallback so RLS admin policies work if service role key is missing
+    const serviceSupabase = createServiceRoleClient(token);
     const { data: enrollmentRequest } = await serviceSupabase
       .from('enrollment_requests')
       .select('user_id, course_id, courses(title)')

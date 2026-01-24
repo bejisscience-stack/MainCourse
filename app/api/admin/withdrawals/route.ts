@@ -66,12 +66,13 @@ export async function GET(request: NextRequest) {
 
     // Use SERVICE ROLE direct query to bypass RLS and get ALL withdrawal requests
     // This replaces the broken RPC function that was returning incomplete data
+    // Pass the user's token as fallback so RLS admin policies work if service role key is missing
     let requests: any[] = [];
     let requestsError: any = null;
 
     try {
       console.log('[Admin Withdrawals API] Using SERVICE ROLE direct query (bypassing RPC)');
-      const serviceSupabase = createServiceRoleClient();
+      const serviceSupabase = createServiceRoleClient(token);
 
       let queryBuilder = serviceSupabase
         .from('withdrawal_requests')
@@ -126,7 +127,7 @@ export async function GET(request: NextRequest) {
     
     try {
       if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await (hasServiceRoleKey ? createServiceRoleClient() : createServerSupabaseClient(token))
+        const { data: profilesData, error: profilesError } = await createServiceRoleClient(token)
           .from('profiles')
           .select('id, username, email, role, balance')
           .in('id', userIds);

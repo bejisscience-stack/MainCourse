@@ -12,7 +12,7 @@ Deno.serve(async (req: Request) => {
 
   const auth = await getAuthenticatedUser(req)
   if ('response' in auth) return auth.response
-  const { user, supabase } = auth
+  const { user, supabase, token } = auth
 
   const isAdmin = await checkIsAdmin(supabase, user.id)
   if (!isAdmin) {
@@ -26,7 +26,8 @@ Deno.serve(async (req: Request) => {
 
     console.log('[Admin Withdrawals API] Fetching requests, filter:', filterStatus || 'all')
 
-    const serviceSupabase = createServiceRoleClient()
+    // Pass user token as fallback in case service role key is not available
+    const serviceSupabase = createServiceRoleClient(token)
 
     let queryBuilder = serviceSupabase
       .from('withdrawal_requests')

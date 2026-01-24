@@ -4,13 +4,38 @@ import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-
  * Create a Supabase client with service role key (bypasses RLS)
  * Use this ONLY for operations that need to bypass RLS (admin operations)
  * WARNING: This has full database access - use with caution!
+ *
+ * @param fallbackToken - Optional user access token to use if service role key is not set.
+ *                        When provided, creates a user-scoped client that respects RLS policies.
  */
-export function createServiceRoleClient(): SupabaseClient {
+export function createServiceRoleClient(fallbackToken?: string): SupabaseClient {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
 
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables')
+  if (!supabaseUrl) {
+    throw new Error('Missing SUPABASE_URL environment variable')
+  }
+
+  if (!supabaseServiceRoleKey) {
+    if (fallbackToken && supabaseAnonKey) {
+      console.warn('SUPABASE_SERVICE_ROLE_KEY not set. Falling back to user token (RLS will apply).')
+      return createClient(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${fallbackToken}`,
+          },
+        },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+        db: {
+          schema: 'public',
+        },
+      })
+    }
+    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable and no fallback token provided')
   }
 
   return createClient(supabaseUrl, supabaseServiceRoleKey, {

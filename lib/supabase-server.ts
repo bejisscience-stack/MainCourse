@@ -16,13 +16,35 @@ const safeSupabaseAnonKey: string = supabaseAnonKey;
  * Create a Supabase client with service role key (bypasses RLS)
  * Use this ONLY on the server side for operations that need to bypass RLS
  * WARNING: This has full database access - use with caution!
+ *
+ * @param fallbackToken - Optional user access token to use if service role key is not set.
+ *                        When provided, creates a user-scoped client that respects RLS policies.
+ *                        This allows admin operations to still work via RLS admin policies.
  */
-export function createServiceRoleClient() {
+export function createServiceRoleClient(fallbackToken?: string) {
   if (!supabaseServiceRoleKey) {
-    console.warn('SUPABASE_SERVICE_ROLE_KEY not set. Falling back to anon key (RLS will apply).');
+    if (fallbackToken) {
+      console.warn('SUPABASE_SERVICE_ROLE_KEY not set. Falling back to user token (RLS will apply, admin policies should work).');
+      return createClient(safeSupabaseUrl, safeSupabaseAnonKey, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${fallbackToken}`,
+            'Cache-Control': 'no-cache',
+          },
+        },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+        db: {
+          schema: 'public',
+        },
+      });
+    }
+    console.warn('SUPABASE_SERVICE_ROLE_KEY not set and no fallback token provided. Using anon key (RLS will apply, may fail for admin operations).');
     return createClient(safeSupabaseUrl, safeSupabaseAnonKey);
   }
-  
+
   return createClient(safeSupabaseUrl, supabaseServiceRoleKey, {
     auth: {
       persistSession: false,

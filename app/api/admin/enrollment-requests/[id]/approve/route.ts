@@ -90,7 +90,8 @@ export async function POST(
     
     // Verify the update was successful by querying the request directly
     // Use service role client for verification to bypass any RLS issues
-    const serviceSupabase = createServiceRoleClient();
+    // Pass user token as fallback so RLS admin policies work if service role key is missing
+    const serviceSupabase = createServiceRoleClient(token);
     const { data: updatedRequest, error: verifyError } = await serviceSupabase
       .from('enrollment_requests')
       .select('id, status, updated_at, user_id, course_id, courses(title)')

@@ -108,12 +108,13 @@ export async function GET(request: NextRequest) {
 
     // Use SERVICE ROLE direct query to bypass RLS and get ALL enrollment requests
     // This replaces the broken RPC function that was returning incomplete data
+    // Pass the user's token as fallback so RLS admin policies work if service role key is missing
     let requests: any[] = [];
     let requestsError: any = null;
 
     try {
       console.log('[Admin API] Using SERVICE ROLE direct query (bypassing RPC)');
-      const serviceSupabase = createServiceRoleClient();
+      const serviceSupabase = createServiceRoleClient(token);
 
       let queryBuilder = serviceSupabase
         .from('enrollment_requests')
@@ -181,7 +182,7 @@ export async function GET(request: NextRequest) {
     
     try {
       if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await (hasServiceRoleKey ? createServiceRoleClient() : createServerSupabaseClient(token))
+        const { data: profilesData, error: profilesError } = await createServiceRoleClient(token)
           .from('profiles')
           .select('id, username, email')
           .in('id', userIds);
@@ -198,7 +199,7 @@ export async function GET(request: NextRequest) {
 
     try {
       if (courseIds.length > 0) {
-        const { data: coursesData, error: coursesError } = await (hasServiceRoleKey ? createServiceRoleClient() : createServerSupabaseClient(token))
+        const { data: coursesData, error: coursesError } = await createServiceRoleClient(token)
           .from('courses')
           .select('id, title, thumbnail_url')
           .in('id', courseIds);
@@ -219,7 +220,7 @@ export async function GET(request: NextRequest) {
 
     try {
       if (referralCodes.length > 0) {
-        const { data: referrerData, error: referrerError } = await (hasServiceRoleKey ? createServiceRoleClient() : createServerSupabaseClient(token))
+        const { data: referrerData, error: referrerError } = await createServiceRoleClient(token)
           .from('profiles')
           .select('id, username, email, referral_code')
           .in('referral_code', referralCodes);

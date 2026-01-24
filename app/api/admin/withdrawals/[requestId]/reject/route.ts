@@ -46,7 +46,8 @@ export async function POST(
       );
     }
 
-    const serviceSupabase = createServiceRoleClient();
+    // Pass user token as fallback so RLS admin policies work if service role key is missing
+    const serviceSupabase = createServiceRoleClient(token);
 
     // Check if user is admin
     const isAdmin = await checkAdmin(serviceSupabase, user.id);

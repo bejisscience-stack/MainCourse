@@ -68,12 +68,13 @@ export async function GET(request: NextRequest) {
 
     // Use SERVICE ROLE direct query to bypass RLS and get ALL bundle enrollment requests
     // This replaces the broken RPC function that was returning incomplete data
+    // Pass the user's token as fallback so RLS admin policies work if service role key is missing
     let requests: any[] = [];
     let requestsError: any = null;
 
     try {
       console.log('[Admin Bundle API] Using SERVICE ROLE direct query (bypassing RPC)');
-      const serviceSupabase = createServiceRoleClient();
+      const serviceSupabase = createServiceRoleClient(token);
 
       let queryBuilder = serviceSupabase
         .from('bundle_enrollment_requests')
@@ -141,10 +142,7 @@ export async function GET(request: NextRequest) {
     try {
       if (userIds.length > 0) {
         // Use service role client for profiles too to ensure consistency
-        const serviceSupabase = hasServiceRoleKey
-          ? createServiceRoleClient()
-          : createServerSupabaseClient(token);
-        const { data: profilesData, error: profilesError } = await serviceSupabase
+        const { data: profilesData, error: profilesError } = await createServiceRoleClient(token)
           .from('profiles')
           .select('id, username, email')
           .in('id', userIds);
@@ -160,10 +158,7 @@ export async function GET(request: NextRequest) {
     try {
       if (bundleIds.length > 0) {
         // Use service role client for bundles too to ensure consistency
-        const serviceSupabase = hasServiceRoleKey
-          ? createServiceRoleClient()
-          : createServerSupabaseClient(token);
-        const { data: bundlesData, error: bundlesError } = await serviceSupabase
+        const { data: bundlesData, error: bundlesError } = await createServiceRoleClient(token)
           .from('course_bundles')
           .select('id, title, price')
           .in('id', bundleIds);
