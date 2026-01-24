@@ -92,13 +92,14 @@ function CourseCard({
   const handleEnrollClick = useCallback(() => {
     // Check if user is authenticated before opening payment dialog
     if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      const redirectUrl = `/courses?pendingEnroll=course:${course.id}`;
+      router.push(`/signup?redirect=${encodeURIComponent(redirectUrl)}`);
       return;
     }
     if (onEnroll && !isEnrolled && !isEnrolling) {
       setShowPaymentDialog(true);
     }
-  }, [user, onEnroll, isEnrolled, isEnrolling, router]);
+  }, [user, onEnroll, isEnrolled, isEnrolling, router, course.id]);
 
   const handlePaymentDialogClose = useCallback(() => {
     setShowPaymentDialog(false);
