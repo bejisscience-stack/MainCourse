@@ -23,24 +23,34 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Course - Make Money Today",
+  title: "Swavleba",
   description: "Start your journey to financial freedom today",
   icons: {
     icon: [
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
       { url: '/favicon-48x48.png', sizes: '48x48', type: 'image/png' },
+      { url: '/favicon-64x64.png', sizes: '64x64', type: 'image/png' },
+      { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
       { url: '/favicon-128x128.png', sizes: '128x128', type: 'image/png' },
+      { url: '/favicon-192x192.png', sizes: '192x192', type: 'image/png' },
       { url: '/favicon-256x256.png', sizes: '256x256', type: 'image/png' },
+      { url: '/favicon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [
-      { url: '/apple-touch-icon.png', sizes: '256x256', type: 'image/png' },
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+      { url: '/apple-touch-icon-152x152.png', sizes: '152x152', type: 'image/png' },
+      { url: '/apple-touch-icon-120x120.png', sizes: '120x120', type: 'image/png' },
+      { url: '/apple-touch-icon-76x76.png', sizes: '76x76', type: 'image/png' },
     ],
-    shortcut: '/favicon.ico',
   },
   manifest: '/manifest.json',
+  other: {
+    'msapplication-TileColor': '#22c55e',
+    'msapplication-config': '/browserconfig.xml',
+  },
   openGraph: {
-    title: "Course - Make Money Today",
+    title: "Swavleba",
     description: "Start your journey to financial freedom today",
     type: "website",
   },

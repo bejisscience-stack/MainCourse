@@ -10,9 +10,9 @@ export default function Footer() {
   return (
     <footer className="bg-charcoal-950 dark:bg-navy-950 border-t border-charcoal-800 dark:border-navy-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
           {/* Brand */}
-          <div className="col-span-1 md:col-span-2 lg:col-span-1">
+          <div>
             <Link href="/" className="flex items-center mb-4">
               <img
                 src="/wavleba-logo.png"
@@ -21,7 +21,7 @@ export default function Footer() {
                 style={{ filter: 'drop-shadow(0 0 1px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.7))' }}
               />
             </Link>
-            <p className="text-charcoal-400 dark:text-gray-400 text-sm">
+            <p className="text-charcoal-400 dark:text-gray-400 text-sm max-w-xs">
               {t('footer.description')}
             </p>
           </div>
@@ -84,26 +84,6 @@ export default function Footer() {
                 >
                   {t('nav.courses')}
                 </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h3 className="text-white font-semibold mb-4">{t('footer.contact')}</h3>
-            <ul className="space-y-2 text-charcoal-400 dark:text-gray-400 text-sm">
-              <li>
-                <a href="mailto:bejisscience@gmail.com" className="hover:text-emerald-400 transition-colors">
-                  bejisscience@gmail.com
-                </a>
-              </li>
-              <li>
-                <a href="tel:+995555549988" className="hover:text-emerald-400 transition-colors">
-                  +995 555 54 99 88
-                </a>
-              </li>
-              <li className="text-xs mt-2">
-                {t('footer.address')}
               </li>
             </ul>
           </div>
