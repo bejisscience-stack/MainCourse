@@ -84,11 +84,7 @@ function Navigation() {
               src="/wavleba-logo.png"
               alt="Wavleba"
               className="h-8 md:h-10 w-auto transition-all duration-200 group-hover:scale-105 will-change-transform"
-              style={{
-                transformOrigin: 'center',
-                backfaceVisibility: 'hidden',
-                filter: 'drop-shadow(0 0 1px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.7))'
-              }}
+              style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
             />
           </Link>
 

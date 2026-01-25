@@ -121,7 +121,6 @@ function SignUpForm() {
               src="/wavleba-logo.png"
               alt="Wavleba"
               className="h-12 w-auto"
-              style={{ filter: 'drop-shadow(0 0 1px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.7))' }}
             />
           </Link>
           <h2 className="text-center text-3xl font-bold text-charcoal-950 dark:text-white">
