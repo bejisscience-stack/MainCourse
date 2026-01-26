@@ -1,52 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 90" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 90" fill="none">
   <!-- Dollar Sign Icon - Green Rounded Square -->
-  <rect x="0" y="0" width="90" height="90" rx="18" fill="#22c55e"/>
+  <rect x="0" y="0" width="90" height="90" rx="18" fill="#4CD964"/>
 
-  <!-- Dollar Sign ($) - Cash App Style -->
+  <!-- Dollar Sign ($) - Matching the provided image style -->
   <g transform="translate(45, 45)">
-    <!-- S curve -->
-    <path d="M-10 -18 C-10 -24, 10 -24, 10 -16 C10 -8, -10 -4, -10 6 C-10 14, 10 18, 10 12"
-          stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <!-- S curve - thicker, more traditional style -->
+    <path d="M-12 -20 C-12 -28, 12 -28, 12 -18 C12 -8, -12 -2, -12 8 C-12 18, 12 22, 12 14"
+          stroke="white" stroke-width="10" fill="none" stroke-linecap="round"/>
     <!-- Vertical bar -->
-    <rect x="-3.5" y="-28" width="7" height="56" rx="3.5" fill="white"/>
+    <rect x="-4" y="-30" width="8" height="60" rx="4" fill="white"/>
   </g>
 
-  <!-- WAVLEBA Text with Glitch Effect -->
-  <!-- Using bold condensed slab-serif style lettering -->
+  <!-- WAVLEBA Text - Clean, bold style for dark backgrounds -->
 
   <!-- W -->
-  <g fill="white">
-    <path d="M108,18 L120,18 L120,58 L132,18 L140,18 L152,58 L152,18 L164,18 L164,72 L150,72 L136,32 L122,72 L108,72 Z"/>
-  </g>
+  <path fill="white" d="M108,18 L122,18 L122,55 L134,18 L146,18 L158,55 L158,18 L172,18 L172,72 L156,72 L140,35 L124,72 L108,72 Z"/>
 
   <!-- A (first) -->
-  <g fill="white">
-    <path d="M172,72 L184,72 L188,58 L208,58 L212,72 L224,72 L204,18 L192,18 Z M191,48 L198,28 L205,48 Z"/>
-  </g>
+  <path fill="white" d="M180,72 L194,72 L198,58 L218,58 L222,72 L236,72 L216,18 L200,18 Z M201,48 L208,28 L215,48 Z"/>
 
   <!-- V -->
-  <g fill="white">
-    <path d="M230,18 L244,18 L256,58 L268,18 L282,18 L262,72 L250,72 Z"/>
-  </g>
+  <path fill="white" d="M244,18 L260,18 L274,55 L288,18 L304,18 L280,72 L268,72 Z"/>
 
   <!-- L -->
-  <g fill="white">
-    <path d="M290,18 L302,18 L302,60 L330,60 L330,72 L290,72 Z"/>
-  </g>
+  <path fill="white" d="M312,18 L326,18 L326,58 L356,58 L356,72 L312,72 Z"/>
 
   <!-- E -->
-  <g fill="white">
-    <path d="M340,18 L378,18 L378,30 L352,30 L352,40 L375,40 L375,52 L352,52 L352,60 L378,60 L378,72 L340,72 Z"/>
-  </g>
+  <path fill="white" d="M364,18 L406,18 L406,32 L378,32 L378,40 L402,40 L402,52 L378,52 L378,58 L406,58 L406,72 L364,72 Z"/>
 
   <!-- B -->
-  <g fill="white">
-    <path d="M388,18 L418,18 Q432,18 432,32 Q432,40 424,43 Q434,46 434,58 Q434,72 418,72 L388,72 Z M400,30 L400,40 L415,40 Q420,40 420,35 Q420,30 415,30 Z M400,52 L400,60 L416,60 Q422,60 422,56 Q422,52 416,52 Z"/>
-  </g>
+  <path fill="white" d="M414,18 L448,18 Q464,18 464,34 Q464,42 456,45 Q466,48 466,60 Q466,72 450,72 L414,72 Z M428,32 L428,40 L444,40 Q450,40 450,36 Q450,32 444,32 Z M428,54 L428,60 L446,60 Q452,60 452,57 Q452,54 446,54 Z"/>
 
   <!-- A (second) -->
-  <g fill="white">
-    <path d="M444,72 L456,72 L460,58 L480,58 L484,72 L496,72 L476,18 L464,18 Z M463,48 L470,28 L477,48 Z"/>
-  </g>
-
+  <path fill="white" d="M476,72 L490,72 L494,58 L514,58 L518,72 L532,72 L512,18 L496,18 Z M497,48 L504,28 L511,48 Z"/>
 </svg>

@@ -17,11 +17,11 @@ const mstileSizes = [70, 144, 150, 310];
 
 // Create icon-only SVG for favicons (just the green square with $ sign)
 const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 90" fill="none">
-  <rect x="0" y="0" width="90" height="90" rx="18" fill="#22c55e"/>
+  <rect x="0" y="0" width="90" height="90" rx="18" fill="#4CD964"/>
   <g transform="translate(45, 45)">
-    <path d="M-10 -18 C-10 -24, 10 -24, 10 -16 C10 -8, -10 -4, -10 6 C-10 14, 10 18, 10 12"
-          stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/>
-    <rect x="-3.5" y="-28" width="7" height="56" rx="3.5" fill="white"/>
+    <path d="M-12 -20 C-12 -28, 12 -28, 12 -18 C12 -8, -12 -2, -12 8 C-12 18, 12 22, 12 14"
+          stroke="white" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <rect x="-4" y="-30" width="8" height="60" rx="4" fill="white"/>
   </g>
 </svg>`;
 
