@@ -5,12 +5,104 @@ Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
 
-  if (req.method !== 'GET') return errorResponse('Method not allowed', 405)
+  if (req.method !== 'GET' && req.method !== 'POST') return errorResponse('Method not allowed', 405)
 
   const auth = await getAuthenticatedUser(req)
   if ('response' in auth) return auth.response
   const { user, supabase } = auth
 
+  // Handle POST - send message
+  if (req.method === 'POST') {
+    try {
+      const body = await req.json()
+      const { chatId, content, replyTo } = body
+
+      if (!chatId) return errorResponse('chatId is required', 400)
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return errorResponse('Message content is required', 400)
+      }
+
+      const { data: channel, error: channelError } = await supabase
+        .from('channels')
+        .select('id, course_id')
+        .eq('id', chatId)
+        .single()
+
+      if (channelError || !channel) return errorResponse('Channel not found', 404)
+
+      const isAdmin = await checkIsAdmin(supabase, user.id)
+
+      if (!isAdmin) {
+        const { data: enrollment } = await supabase
+          .from('enrollments').select('id').eq('user_id', user.id).eq('course_id', channel.course_id).single()
+        const { data: course } = await supabase
+          .from('courses').select('lecturer_id').eq('id', channel.course_id).single()
+
+        if (!enrollment && course?.lecturer_id !== user.id) {
+          return errorResponse('Forbidden: You do not have access to this channel', 403)
+        }
+
+        // Check if user is muted
+        const { data: mutedUser } = await supabase
+          .from('muted_users').select('id').eq('lecturer_id', course?.lecturer_id).eq('user_id', user.id).single()
+        if (mutedUser) return errorResponse('You have been muted and cannot send messages', 403)
+      }
+
+      // Insert message
+      const { data: message, error: insertError } = await supabase
+        .from('messages')
+        .insert({
+          channel_id: chatId,
+          course_id: channel.course_id,
+          user_id: user.id,
+          content: content.trim(),
+          reply_to_id: replyTo || null,
+        })
+        .select('id, content, user_id, reply_to_id, edited_at, created_at')
+        .single()
+
+      if (insertError) return errorResponse('Failed to send message', 500)
+
+      // Get user profile
+      const { data: profile } = await supabase
+        .from('profiles').select('id, username').eq('id', user.id).single()
+
+      // Get reply preview if replying
+      let replyPreview = undefined
+      if (replyTo) {
+        const { data: replyMessage } = await supabase
+          .from('messages').select('id, content, user_id').eq('id', replyTo).single()
+
+        if (replyMessage) {
+          const { data: replyProfile } = await supabase
+            .from('profiles').select('username').eq('id', replyMessage.user_id).single()
+          replyPreview = {
+            id: replyMessage.id,
+            username: replyProfile?.username || 'User',
+            content: replyMessage.content.length > 100 ? replyMessage.content.substring(0, 100) + '...' : replyMessage.content,
+          }
+        }
+      }
+
+      const formattedMessage = {
+        id: message.id,
+        user: { id: message.user_id, username: profile?.username || 'User', avatarUrl: '' },
+        content: message.content,
+        timestamp: new Date(message.created_at).getTime(),
+        edited: false,
+        replyTo: message.reply_to_id || undefined,
+        replyPreview,
+        reactions: [],
+      }
+
+      return jsonResponse({ message: formattedMessage }, 201)
+    } catch (error) {
+      console.error('Error:', error)
+      return errorResponse('Internal server error', 500)
+    }
+  }
+
+  // Handle GET - fetch messages
   const url = new URL(req.url)
   const chatId = url.searchParams.get('chatId')
   if (!chatId) return errorResponse('chatId query parameter is required', 400)

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { edgeFunctionUrl } from '@/lib/api-client';
 import type { Message, MessageAttachment } from '@/types/message';
 import { useRealtimeMessages, prefetchProfiles, getCachedUsername } from './useRealtimeMessages';
 
@@ -68,16 +69,19 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
         throw new Error('Not authenticated. Please log in again.');
       }
 
-      const url = new URL(`/api/chats/${targetChannelId}/messages`, window.location.origin);
+      const url = new URL(edgeFunctionUrl('chat-messages'));
+      url.searchParams.set('chatId', targetChannelId);
       if (before) {
         url.searchParams.set('before', before);
       }
       url.searchParams.set('limit', '50');
 
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
       const response = await fetch(url.toString(), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          ...(anonKey && { 'apikey': anonKey }),
         },
         signal,
       });
@@ -93,6 +97,7 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
               headers: {
                 'Authorization': `Bearer ${newSession.access_token}`,
                 'Content-Type': 'application/json',
+                ...(anonKey && { 'apikey': anonKey }),
               },
               signal,
             });

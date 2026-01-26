@@ -5,12 +5,79 @@ Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
 
-  if (req.method !== 'POST') return errorResponse('Method not allowed', 405)
+  if (req.method !== 'POST' && req.method !== 'GET' && req.method !== 'DELETE') {
+    return errorResponse('Method not allowed', 405)
+  }
 
   const auth = await getAuthenticatedUser(req)
   if ('response' in auth) return auth.response
   const { user, supabase } = auth
 
+  const url = new URL(req.url)
+
+  // GET - Check if user is muted
+  if (req.method === 'GET') {
+    const chatId = url.searchParams.get('chatId')
+    const userId = url.searchParams.get('userId')
+
+    if (!chatId) return errorResponse('chatId is required', 400)
+    if (!userId) return errorResponse('userId is required', 400)
+
+    try {
+      const { data: channel, error: channelError } = await supabase
+        .from('channels').select('id, course_id').eq('id', chatId).single()
+      if (channelError || !channel) return errorResponse('Channel not found', 404)
+
+      const { data: course } = await supabase
+        .from('courses').select('lecturer_id').eq('id', channel.course_id).single()
+
+      if (!course?.lecturer_id) return jsonResponse({ muted: false })
+
+      const { data: mutedRecord } = await supabase
+        .from('muted_users')
+        .select('id')
+        .eq('lecturer_id', course.lecturer_id)
+        .eq('user_id', userId)
+        .single()
+
+      return jsonResponse({ muted: !!mutedRecord })
+    } catch (error) {
+      console.error('Error:', error)
+      return errorResponse('Internal server error', 500)
+    }
+  }
+
+  // DELETE - Unmute user
+  if (req.method === 'DELETE') {
+    const chatId = url.searchParams.get('chatId')
+    const userId = url.searchParams.get('userId')
+
+    if (!chatId) return errorResponse('chatId is required', 400)
+    if (!userId) return errorResponse('userId is required', 400)
+
+    try {
+      const { data: channel, error: channelError } = await supabase
+        .from('channels').select('id, course_id').eq('id', chatId).single()
+      if (channelError || !channel) return errorResponse('Channel not found', 404)
+
+      const { data: course } = await supabase
+        .from('courses').select('lecturer_id').eq('id', channel.course_id).single()
+      if (!course) return errorResponse('Course not found', 404)
+      if (course.lecturer_id !== user.id) return errorResponse('Forbidden: Only lecturers can unmute users', 403)
+
+      const { error: unmuteError } = await supabase
+        .from('muted_users').delete().eq('lecturer_id', user.id).eq('user_id', userId)
+
+      if (unmuteError) return jsonResponse({ error: 'Failed to unmute user', details: unmuteError.message }, 500)
+
+      return jsonResponse({ muted: false, message: 'User has been unmuted' })
+    } catch (error) {
+      console.error('Error:', error)
+      return errorResponse('Internal server error', 500)
+    }
+  }
+
+  // POST - Mute/unmute user
   try {
     const body = await req.json()
     const { chatId, muted, userId } = body

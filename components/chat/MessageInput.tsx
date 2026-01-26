@@ -2,6 +2,7 @@
 
 import { useState, useRef, KeyboardEvent, useEffect, useCallback, DragEvent, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { edgeFunctionUrl } from '@/lib/api-client';
 import type { MessageAttachment } from '@/types/message';
 
 interface UploadingFile {
@@ -211,15 +212,17 @@ export default function MessageInput({
 
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('chatId', channelId);
 
       // Use XMLHttpRequest for progress tracking
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
       const response = await new Promise<Response>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        
+
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {
             const progress = Math.round((e.loaded / e.total) * 100);
-            setUploadingFiles(prev => prev.map(f => 
+            setUploadingFiles(prev => prev.map(f =>
               f.id === uploadId ? { ...f, progress } : f
             ));
           }
@@ -236,8 +239,11 @@ export default function MessageInput({
         xhr.onerror = () => reject(new Error('Upload failed'));
         xhr.onabort = () => reject(new Error('Upload cancelled'));
 
-        xhr.open('POST', `/api/chats/${channelId}/media`);
+        xhr.open('POST', edgeFunctionUrl('chat-media'));
         xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+        if (anonKey) {
+          xhr.setRequestHeader('apikey', anonKey);
+        }
         xhr.send(formData);
       });
 

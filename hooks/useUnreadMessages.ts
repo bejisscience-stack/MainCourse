@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { edgeFunctionUrl } from '@/lib/api-client';
 
 interface UseUnreadMessagesOptions {
   channelIds: string[];
@@ -70,11 +71,16 @@ export function useUnreadMessages({ channelIds, enabled = true }: UseUnreadMessa
       }
 
       // Batch fetch unread counts
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
       const promises = channelsToFetch.map(async (channelId) => {
         try {
-          const response = await fetch(`/api/chats/${channelId}/unread`, {
+          const url = new URL(edgeFunctionUrl('chat-unread'));
+          url.searchParams.set('chatId', channelId);
+
+          const response = await fetch(url.toString(), {
             headers: {
               'Authorization': `Bearer ${session.access_token}`,
+              ...(anonKey && { 'apikey': anonKey }),
             },
             signal: fetchControllerRef.current?.signal,
           });
@@ -82,7 +88,7 @@ export function useUnreadMessages({ channelIds, enabled = true }: UseUnreadMessa
           if (response.ok) {
             const data = await response.json();
             const count = data.unreadCount || 0;
-            
+
             // Update cache
             unreadCache.set(channelId, { count, timestamp: Date.now() });
             counts.set(channelId, count);
@@ -205,11 +211,15 @@ export function useUnreadMessages({ channelIds, enabled = true }: UseUnreadMessa
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      await fetch(`/api/chats/${channelId}/unread`, {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      await fetch(edgeFunctionUrl('chat-unread'), {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
+          ...(anonKey && { 'apikey': anonKey }),
         },
+        body: JSON.stringify({ chatId: channelId }),
       });
     } catch (error) {
       console.warn('Failed to mark channel as read:', error);

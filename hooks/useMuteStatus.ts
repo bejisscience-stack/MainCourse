@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { edgeFunctionUrl } from '@/lib/api-client';
 
 interface UseMuteStatusOptions {
   channelId: string | null;
@@ -27,9 +28,15 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
         return;
       }
 
-      const response = await fetch(`/api/chats/${channelId}/mute?userId=${userId}`, {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const url = new URL(edgeFunctionUrl('chat-mute'));
+      url.searchParams.set('chatId', channelId);
+      url.searchParams.set('userId', userId);
+
+      const response = await fetch(url.toString(), {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
+          ...(anonKey && { 'apikey': anonKey }),
         },
       });
 
@@ -97,13 +104,15 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return false;
 
-      const response = await fetch(`/api/chats/${channelId}/mute`, {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const response = await fetch(edgeFunctionUrl('chat-mute'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
+          ...(anonKey && { 'apikey': anonKey }),
         },
-        body: JSON.stringify({ userId: targetUserId }),
+        body: JSON.stringify({ chatId: channelId, muted: true, userId: targetUserId }),
       });
 
       if (response.ok) {
@@ -126,10 +135,16 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return false;
 
-      const response = await fetch(`/api/chats/${channelId}/mute?userId=${targetUserId}`, {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const url = new URL(edgeFunctionUrl('chat-mute'));
+      url.searchParams.set('chatId', channelId);
+      url.searchParams.set('userId', targetUserId);
+
+      const response = await fetch(url.toString(), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
+          ...(anonKey && { 'apikey': anonKey }),
         },
       });
 
@@ -174,9 +189,15 @@ export function useUserMuteStatus(channelId: string | null, targetUserId: string
         return;
       }
 
-      const response = await fetch(`/api/chats/${channelId}/mute?userId=${targetUserId}`, {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const url = new URL(edgeFunctionUrl('chat-mute'));
+      url.searchParams.set('chatId', channelId);
+      url.searchParams.set('userId', targetUserId);
+
+      const response = await fetch(url.toString(), {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
+          ...(anonKey && { 'apikey': anonKey }),
         },
       });
 

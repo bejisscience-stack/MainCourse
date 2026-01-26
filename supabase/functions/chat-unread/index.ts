@@ -5,12 +5,34 @@ Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
 
-  if (req.method !== 'POST') return errorResponse('Method not allowed', 405)
+  if (req.method !== 'POST' && req.method !== 'GET') return errorResponse('Method not allowed', 405)
 
   const auth = await getAuthenticatedUser(req)
   if ('response' in auth) return auth.response
   const { user, supabase } = auth
 
+  // GET - Fetch unread count for a channel
+  if (req.method === 'GET') {
+    const url = new URL(req.url)
+    const chatId = url.searchParams.get('chatId')
+    if (!chatId) return errorResponse('chatId is required', 400)
+
+    try {
+      const { data: unreadData } = await supabase
+        .from('unread_messages')
+        .select('unread_count')
+        .eq('channel_id', chatId)
+        .eq('user_id', user.id)
+        .single()
+
+      return jsonResponse({ unreadCount: unreadData?.unread_count || 0 })
+    } catch (error) {
+      console.error('Error:', error)
+      return errorResponse('Internal server error', 500)
+    }
+  }
+
+  // POST - Mark channel as read (reset unread count)
   try {
     const body = await req.json()
     const { chatId } = body

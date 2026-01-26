@@ -2,6 +2,7 @@
 
 import { useState, memo, useRef, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { edgeFunctionUrl } from '@/lib/api-client';
 import { useUserMuteStatus } from '@/hooks/useMuteStatus';
 import { useProjectCountdown } from '@/hooks/useProjectCountdown';
 import ProjectCard from './ProjectCard';
@@ -221,13 +222,15 @@ const Message = memo(function Message({
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const response = await fetch(`/api/chats/${channelId}/mute`, {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const response = await fetch(edgeFunctionUrl('chat-mute'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
+          ...(anonKey && { 'apikey': anonKey }),
         },
-        body: JSON.stringify({ userId: message.user.id }),
+        body: JSON.stringify({ chatId: channelId, muted: true, userId: message.user.id }),
       });
 
       if (response.ok) {
@@ -247,10 +250,16 @@ const Message = memo(function Message({
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const response = await fetch(`/api/chats/${channelId}/mute?userId=${message.user.id}`, {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const url = new URL(edgeFunctionUrl('chat-mute'));
+      url.searchParams.set('chatId', channelId);
+      url.searchParams.set('userId', message.user.id);
+
+      const response = await fetch(url.toString(), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
+          ...(anonKey && { 'apikey': anonKey }),
         },
       });
 

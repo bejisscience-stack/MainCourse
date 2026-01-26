@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { supabase } from '@/lib/supabase';
+import { edgeFunctionUrl } from '@/lib/api-client';
 import { useI18n } from '@/contexts/I18nContext';
 
 interface VideoSubmissionDialogProps {
@@ -154,14 +156,16 @@ export default function VideoSubmissionDialog({
 
       // First, create the message as a reply to the project
       // Note: projectId is the message_id of the project message
-      const response = await fetch(`/api/chats/${channelId}/messages`, {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const response = await fetch(edgeFunctionUrl('chat-messages'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
+          ...(anonKey && { 'apikey': anonKey }),
         },
-        credentials: 'include',
         body: JSON.stringify({
+          chatId: channelId,
           content: messageContent,
           replyTo: projectId, // This is the message_id of the project
         }),

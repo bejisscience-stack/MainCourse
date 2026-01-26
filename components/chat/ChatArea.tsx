@@ -12,6 +12,7 @@ import { useRealtimeTyping } from '@/hooks/useRealtimeTyping';
 import { useMuteStatus } from '@/hooks/useMuteStatus';
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import { supabase } from '@/lib/supabase';
+import { edgeFunctionUrl } from '@/lib/api-client';
 import { useI18n } from '@/contexts/I18nContext';
 import type { EnrollmentInfo } from '@/hooks/useEnrollments';
 
@@ -243,14 +244,16 @@ export default function ChatArea({
     scrollToBottom('smooth');
 
     try {
-      const response = await fetch(`/api/chats/${channel.id}/messages`, {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const response = await fetch(edgeFunctionUrl('chat-messages'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
+          ...(anonKey && { 'apikey': anonKey }),
         },
-        credentials: 'include',
         body: JSON.stringify({
+          chatId: channel.id,
           content: content || '',
           replyTo: currentReplyTo?.id || null,
           attachments,
@@ -331,11 +334,15 @@ export default function ChatArea({
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      await fetch(`/api/chats/${channel.id}/typing`, {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      await fetch(edgeFunctionUrl('chat-typing'), {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
+          ...(anonKey && { 'apikey': anonKey }),
         },
+        body: JSON.stringify({ chatId: channel.id }),
       });
     } catch {
       // Silently fail - typing indicator is not critical
@@ -428,14 +435,16 @@ export default function ChatArea({
     const messageContent = `🎬 Project: ${data.name}`;
 
     // First, create the message
-    const response = await fetch(`/api/chats/${channel.id}/messages`, {
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const response = await fetch(edgeFunctionUrl('chat-messages'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`,
+        ...(anonKey && { 'apikey': anonKey }),
       },
-      credentials: 'include',
       body: JSON.stringify({
+        chatId: channel.id,
         content: messageContent,
         replyTo: null,
         attachments: attachments.length > 0 ? attachments : undefined,
