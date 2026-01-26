@@ -152,17 +152,18 @@ export default function ChannelManagement({
         {channels.map((channel) => (
           <div
             key={channel.id}
-            className="bg-gradient-to-r from-navy-800/80 to-navy-800/40 rounded-2xl p-4 flex items-center justify-between group border border-navy-700/30 hover:border-navy-600/50 transition-all duration-200 hover:shadow-lg"
+            className="group relative bg-gradient-to-br from-navy-800/90 to-navy-900/70 rounded-2xl p-4 border border-navy-700/40 hover:border-navy-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-navy-900/50"
           >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${
+            <div className="flex items-start gap-4">
+              {/* Channel Icon */}
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0 shadow-lg ${
                 channel.type === 'lectures'
-                  ? 'bg-gradient-to-br from-red-500/20 to-orange-500/20 border border-red-500/30'
+                  ? 'bg-gradient-to-br from-rose-500/30 to-orange-500/20 border border-rose-500/40 shadow-rose-500/10'
                   : channel.name.toLowerCase() === 'projects'
-                  ? 'bg-gradient-to-br from-amber-500/20 to-yellow-500/20 border border-amber-500/30'
+                  ? 'bg-gradient-to-br from-amber-500/30 to-yellow-500/20 border border-amber-500/40 shadow-amber-500/10'
                   : channel.type === 'voice'
-                  ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30'
-                  : 'bg-gradient-to-br from-indigo-500/20 to-blue-500/20 border border-indigo-500/30'
+                  ? 'bg-gradient-to-br from-emerald-500/30 to-teal-500/20 border border-emerald-500/40 shadow-emerald-500/10'
+                  : 'bg-gradient-to-br from-blue-500/30 to-indigo-500/20 border border-blue-500/40 shadow-blue-500/10'
               }`}>
                 {channel.type === 'lectures'
                   ? '📹'
@@ -172,54 +173,71 @@ export default function ChannelManagement({
                   ? '🔊'
                   : '#'}
               </div>
+
+              {/* Channel Info */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-white font-semibold">{channel.name}</span>
-                  <span className="text-gray-500 text-xs px-2 py-0.5 bg-navy-700/50 rounded-full">({channel.type})</span>
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="text-white font-bold text-base">{channel.name}</h4>
+                  {isRequiredChannel(channel) && (
+                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider px-2 py-0.5 bg-emerald-500/15 rounded-md border border-emerald-500/30">
+                      {t('channels.required')}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium ${
+                    channel.type === 'lectures'
+                      ? 'bg-rose-500/10 text-rose-400'
+                      : channel.type === 'voice'
+                      ? 'bg-emerald-500/10 text-emerald-400'
+                      : 'bg-blue-500/10 text-blue-400'
+                  }`}>
+                    {channel.type === 'lectures' && (
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    )}
+                    {channel.type === 'voice' && (
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
+                    )}
+                    {channel.type === 'text' && (
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                      </svg>
+                    )}
+                    {channel.type}
+                  </span>
                 </div>
                 {channel.description && (
-                  <p className="text-gray-400 text-xs mt-1 truncate">{channel.description}</p>
+                  <p className="text-gray-500 text-xs mt-2 line-clamp-2">{channel.description}</p>
                 )}
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {isRequiredChannel(channel) && (
-                <span className="text-xs text-indigo-400 font-semibold px-2.5 py-1 bg-indigo-500/10 rounded-full border border-indigo-500/20">{t('channels.required')}</span>
-              )}
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                {!isRequiredChannel(channel) && (
+
+              {/* Action Buttons */}
+              {!isRequiredChannel(channel) && (
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0">
                   <button
                     onClick={() => handleEdit(channel)}
-                    className="p-2 text-gray-400 hover:text-white hover:bg-navy-700/80 rounded-xl transition-all duration-150 hover:scale-110"
+                    className="p-2.5 text-gray-400 hover:text-white bg-navy-700/0 hover:bg-navy-700/80 rounded-xl transition-all duration-200 hover:scale-105"
                     title="Edit"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   </button>
-                )}
-                {!isRequiredChannel(channel) && (
                   <button
                     onClick={() => handleDelete(channel.id)}
-                    className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all duration-150 hover:scale-110"
+                    className="p-2.5 text-gray-400 hover:text-red-400 bg-navy-700/0 hover:bg-red-500/10 rounded-xl transition-all duration-200 hover:scale-105"
                     title="Delete"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         ))}

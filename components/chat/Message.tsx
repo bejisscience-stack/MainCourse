@@ -570,21 +570,21 @@ const Message = memo(function Message({
 
           {/* Reactions */}
           {message.reactions && message.reactions.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2">
+            <div className="flex flex-wrap gap-2 mt-3">
               {message.reactions.map((reaction, idx) => {
                 const hasReacted = reaction.users.includes(currentUserId);
                 return (
                   <button
                     key={idx}
                     onClick={() => onReaction?.(message.id, reaction.emoji)}
-                    className={`group/reaction px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 transition-all duration-200 hover:scale-110 active:scale-95 ${
+                    className={`group/reaction inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-all duration-200 hover:scale-105 active:scale-95 ${
                       hasReacted
-                        ? 'bg-gradient-to-r from-emerald-500/25 to-emerald-400/15 border border-emerald-400/50 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.2)] hover:shadow-[0_0_16px_rgba(16,185,129,0.35)]'
-                        : 'bg-navy-800/90 hover:bg-navy-700 border border-navy-600/60 text-gray-300 hover:border-navy-500 shadow-sm hover:shadow-md'
+                        ? 'bg-emerald-500/15 border border-emerald-500/40 shadow-lg shadow-emerald-500/10'
+                        : 'bg-navy-800/80 border border-navy-700/60 hover:bg-navy-700/80 hover:border-navy-600'
                     }`}
                   >
-                    <span className="text-base leading-none group-hover/reaction:animate-bounce">{reaction.emoji}</span>
-                    <span className={`text-[11px] font-semibold tabular-nums ${hasReacted ? 'text-emerald-300' : 'text-gray-400'}`}>{reaction.count}</span>
+                    <span className="text-lg leading-none transition-transform duration-200 group-hover/reaction:scale-110">{reaction.emoji}</span>
+                    <span className={`text-xs font-bold tabular-nums ${hasReacted ? 'text-emerald-400' : 'text-gray-400'}`}>{reaction.count}</span>
                   </button>
                 );
               })}
@@ -594,38 +594,53 @@ const Message = memo(function Message({
 
         {/* Hover action menu */}
         {showMenu && !isPending && !isFailed && (
-          <div className="absolute right-4 -top-4 flex items-center gap-0.5 bg-gradient-to-r from-navy-900 to-navy-850 border border-navy-600/60 rounded-xl shadow-2xl p-1 z-20 animate-in fade-in slide-in-from-bottom-1 duration-150">
+          <div className="absolute right-4 -top-5 flex items-center gap-1 bg-navy-900/95 backdrop-blur-xl border border-navy-600/40 rounded-2xl shadow-2xl shadow-black/40 px-1.5 py-1.5 z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
             {/* Reaction picker trigger */}
             <div className="relative">
               <button
                 onClick={() => setShowReactionPicker(!showReactionPicker)}
-                className="p-2 hover:bg-navy-700/80 rounded-lg text-gray-400 hover:text-yellow-400 transition-all duration-150 hover:scale-110"
+                className={`p-2.5 rounded-xl transition-all duration-200 ${
+                  showReactionPicker
+                    ? 'bg-amber-500/20 text-amber-400 ring-2 ring-amber-500/30'
+                    : 'text-gray-400 hover:text-amber-400 hover:bg-navy-700/60'
+                }`}
                 title="Add Reaction"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </button>
-              
-              {/* Reaction picker dropdown */}
+
+              {/* Reaction picker dropdown - Glassmorphism style */}
               {showReactionPicker && (
-                <div className="absolute right-0 top-10 bg-gradient-to-b from-navy-800 to-navy-850 border border-navy-600/50 rounded-2xl shadow-2xl p-2 flex gap-0.5 z-30 animate-in fade-in slide-in-from-top-2 duration-200">
-                  {COMMON_REACTIONS.map((emoji) => (
-                    <button
-                      key={emoji}
-                      onClick={() => {
-                        onReaction?.(message.id, emoji);
-                        setShowReactionPicker(false);
-                        setShowMenu(false);
-                      }}
-                      className="w-10 h-10 flex items-center justify-center hover:bg-navy-700/80 rounded-xl text-xl transition-all duration-150 hover:scale-125 active:scale-100"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
+                <div className="absolute right-0 top-12 z-30 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
+                  <div className="bg-navy-900/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl shadow-black/50 p-3">
+                    {/* Arrow indicator */}
+                    <div className="absolute -top-2 right-4 w-4 h-4 bg-navy-900/90 border-l border-t border-white/10 rotate-45" />
+
+                    <div className="flex gap-1 relative">
+                      {COMMON_REACTIONS.map((emoji, index) => (
+                        <button
+                          key={emoji}
+                          onClick={() => {
+                            onReaction?.(message.id, emoji);
+                            setShowReactionPicker(false);
+                            setShowMenu(false);
+                          }}
+                          className="w-11 h-11 flex items-center justify-center rounded-xl text-2xl transition-all duration-200 hover:bg-white/10 hover:scale-125 hover:-translate-y-1 active:scale-100"
+                          style={{ animationDelay: `${index * 30}ms` }}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
+
+            {/* Divider */}
+            <div className="w-px h-6 bg-navy-600/50 mx-0.5" />
 
             {/* Reply button */}
             <button
@@ -633,10 +648,10 @@ const Message = memo(function Message({
                 onReply?.(message.id);
                 setShowMenu(false);
               }}
-              className="p-2 hover:bg-navy-700/80 rounded-lg text-gray-400 hover:text-emerald-400 transition-all duration-150 hover:scale-110"
+              className="p-2.5 hover:bg-navy-700/60 rounded-xl text-gray-400 hover:text-emerald-400 transition-all duration-200"
               title="Reply"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
               </svg>
             </button>
@@ -645,12 +660,14 @@ const Message = memo(function Message({
             {canMute && (
               <button
                 onClick={isMuted ? handleUnmute : handleMute}
-                className={`p-2 hover:bg-navy-700/80 rounded-lg transition-all duration-150 hover:scale-110 ${
-                  isMuted ? 'text-emerald-400 hover:text-emerald-300' : 'text-gray-400 hover:text-red-400'
+                className={`p-2.5 rounded-xl transition-all duration-200 ${
+                  isMuted
+                    ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10'
+                    : 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'
                 }`}
                 title={isMuted ? 'Unmute user' : 'Mute user'}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {isMuted ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                   ) : (
@@ -665,10 +682,10 @@ const Message = memo(function Message({
 
             {/* More options */}
             <button
-              className="p-2 hover:bg-navy-700/80 rounded-lg text-gray-400 hover:text-gray-300 transition-all duration-150 hover:scale-110"
+              className="p-2.5 hover:bg-navy-700/60 rounded-xl text-gray-400 hover:text-gray-300 transition-all duration-200"
               title="More options"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
               </svg>
             </button>
