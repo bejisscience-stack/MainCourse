@@ -169,10 +169,9 @@ export default function ChatNavigation() {
           title={t('chat.home')}
         >
           <img
-            src="/wavleba-logo.png"
+            src="/wavleba-logo.svg?v=2"
             alt="Wavleba"
             className="h-8 w-auto"
-            style={{ filter: 'drop-shadow(0 0 1px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.7))' }}
           />
         </Link>
 

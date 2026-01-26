@@ -15,10 +15,9 @@ export default function Footer() {
           <div>
             <Link href="/" className="flex items-center mb-4">
               <img
-                src="/wavleba-logo.png"
+                src="/wavleba-logo.svg?v=2"
                 alt="Wavleba"
                 className="h-10 w-auto"
-                style={{ filter: 'drop-shadow(0 0 1px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.7))' }}
               />
             </Link>
             <p className="text-charcoal-400 dark:text-gray-400 text-sm max-w-xs">
