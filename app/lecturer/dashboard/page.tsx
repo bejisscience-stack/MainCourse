@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
@@ -15,6 +15,7 @@ import type { Course } from '@/hooks/useCourses';
 
 export default function LecturerDashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
   const { user, profile, role: userRole, isLoading: userLoading } = useUser();
   const { courses, isLoading: coursesLoading, mutate: mutateCourses } = useLecturerCourses(user?.id || null);
@@ -23,6 +24,8 @@ export default function LecturerDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 4;
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -63,6 +66,15 @@ export default function LecturerDashboard() {
       }
     }
   }, [user, userRole, userLoading, router]);
+
+  // Check for createCourse query parameter and open modal
+  useEffect(() => {
+    if (searchParams.get('createCourse') === 'true' && !userLoading && user && userRole === 'lecturer') {
+      handleOpenModal();
+      // Remove the query parameter from URL without navigating
+      router.replace('/lecturer/dashboard', { scroll: false });
+    }
+  }, [searchParams, userLoading, user, userRole]);
 
   const loading = userLoading || coursesLoading;
 
@@ -369,9 +381,10 @@ export default function LecturerDashboard() {
         return;
       }
     }
-    
+
     setShowModal(false);
     setEditingCourse(null);
+    setCurrentStep(1);
     setVideoFile(null);
     setThumbnailFile(null);
     setVideoUploadProgress(0);
@@ -575,8 +588,8 @@ export default function LecturerDashboard() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
     setError(null);
 
     // Validate prices are non-negative
@@ -935,23 +948,23 @@ export default function LecturerDashboard() {
             </div>
           )}
 
-          {/* Modal */}
+          {/* Course Creation/Edit Modal - Step-based Wizard */}
           {showModal && (
-            <div 
+            <div
               className="fixed inset-0 bg-black/80 dark:bg-black/90 flex items-center justify-center z-50 p-4"
               onClick={(e) => {
-                // Close modal when clicking outside
                 if (e.target === e.currentTarget) {
                   handleCloseModal();
                 }
               }}
             >
-              <div 
-                className="bg-white dark:bg-navy-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl"
+              <div
+                className="bg-white dark:bg-navy-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden relative shadow-2xl flex flex-col"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="p-6">
-                  <div className="flex justify-between items-center mb-6">
+                {/* Modal Header with Step Indicator */}
+                <div className="p-6 border-b border-charcoal-100 dark:border-navy-700 flex-shrink-0">
+                  <div className="flex justify-between items-center mb-4">
                     <h2 className="text-2xl font-bold text-charcoal-950 dark:text-white">
                       {editingCourse ? t('lecturerDashboard.editCourse') : t('lecturerDashboard.createNewCourse')}
                     </h2>
@@ -959,7 +972,6 @@ export default function LecturerDashboard() {
                       onClick={handleCloseModal}
                       className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-xl p-2 transition-colors"
                       aria-label="Close modal"
-                      title="Close (ESC or click outside)"
                     >
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -967,409 +979,430 @@ export default function LecturerDashboard() {
                     </button>
                   </div>
 
-                  {/* Error Message inside Modal */}
-                  {error && (
-                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl mb-4">
-                      <div className="flex items-start">
-                        <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div className="flex-1">
-                          <p className="font-semibold">{t('common.error')}</p>
-                          <p className="text-sm">{error}</p>
-                        </div>
+                  {/* Step Progress */}
+                  <div className="flex items-center justify-between">
+                    {[
+                      { num: 1, label: 'Basic Info' },
+                      { num: 2, label: 'Pricing' },
+                      { num: 3, label: 'Media' },
+                      { num: 4, label: 'Review' },
+                    ].map((step, idx) => (
+                      <div key={step.num} className="flex items-center flex-1">
                         <button
-                          onClick={() => setError(null)}
-                          className="ml-2 text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-                          aria-label="Dismiss error"
+                          type="button"
+                          onClick={() => setCurrentStep(step.num)}
+                          className={`flex flex-col items-center gap-1 transition-all ${
+                            currentStep === step.num
+                              ? 'scale-105'
+                              : currentStep > step.num
+                              ? 'opacity-70'
+                              : 'opacity-50'
+                          }`}
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
+                          <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                              currentStep === step.num
+                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
+                                : currentStep > step.num
+                                ? 'bg-emerald-500/20 text-emerald-500 border-2 border-emerald-500/50'
+                                : 'bg-charcoal-100 dark:bg-navy-700 text-charcoal-400 dark:text-gray-500'
+                            }`}
+                          >
+                            {currentStep > step.num ? (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : (
+                              step.num
+                            )}
+                          </div>
+                          <span className={`text-xs font-medium ${currentStep === step.num ? 'text-emerald-600 dark:text-emerald-400' : 'text-charcoal-400 dark:text-gray-500'}`}>
+                            {step.label}
+                          </span>
                         </button>
+                        {idx < 3 && (
+                          <div className={`flex-1 h-0.5 mx-2 ${currentStep > step.num ? 'bg-emerald-500' : 'bg-charcoal-200 dark:bg-navy-600'}`} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                  <div className="mx-6 mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl flex-shrink-0">
+                    <div className="flex items-start">
+                      <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="font-semibold">{t('common.error')}</p>
+                        <p className="text-sm">{error}</p>
+                      </div>
+                      <button onClick={() => setError(null)} className="ml-2 text-red-500 hover:text-red-700">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step Content */}
+                <div className="flex-1 overflow-y-auto p-6">
+                  {/* Step 1: Basic Info */}
+                  {currentStep === 1 && (
+                    <div className="space-y-5 animate-in fade-in duration-200">
+                      <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/30 rounded-2xl p-4 mb-6">
+                        <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                          Let&apos;s start with the basics. Give your course a compelling title and description.
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-charcoal-700 dark:text-gray-300 mb-2">
+                          {t('lecturerDashboard.titleLabel')} <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.title}
+                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                          placeholder="e.g., Complete Video Editing Masterclass"
+                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-charcoal-700 dark:text-gray-300 mb-2">
+                          {t('lecturerDashboard.descriptionLabel')}
+                        </label>
+                        <textarea
+                          value={formData.description}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          rows={4}
+                          placeholder="Describe what students will learn..."
+                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent resize-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-charcoal-700 dark:text-gray-300 mb-2">
+                          {t('lecturerDashboard.courseTypeLabel')} <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <select
+                            required
+                            value={formData.course_type}
+                            onChange={(e) => setFormData({ ...formData, course_type: e.target.value as any })}
+                            className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent appearance-none cursor-pointer"
+                          >
+                            <option value="Editing">{t('courses.filterEditing')}</option>
+                            <option value="Content Creation">{t('courses.filterContentCreation')}</option>
+                            <option value="Website Creation">{t('courses.filterWebsiteCreation')}</option>
+                          </select>
+                          <svg className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
-                        {t('lecturerDashboard.titleLabel')}
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
-                        {t('lecturerDashboard.descriptionLabel')}
-                      </label>
-                      <textarea
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        rows={4}
-                        className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
-                        {t('lecturerDashboard.courseTypeLabel')}
-                      </label>
-                      <select
-                        required
-                        value={formData.course_type}
-                        onChange={(e) => setFormData({ ...formData, course_type: e.target.value as any })}
-                        className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
-                      >
-                        <option value="Editing">{t('courses.filterEditing')}</option>
-                        <option value="Content Creation">{t('courses.filterContentCreation')}</option>
-                        <option value="Website Creation">{t('courses.filterWebsiteCreation')}</option>
-                      </select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
-                          {t('lecturerDashboard.priceLabel')}
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          required
-                          value={formData.price}
-                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
-                        />
+                  {/* Step 2: Pricing */}
+                  {currentStep === 2 && (
+                    <div className="space-y-5 animate-in fade-in duration-200">
+                      <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800/30 rounded-2xl p-4 mb-6">
+                        <p className="text-sm text-purple-700 dark:text-purple-400">
+                          Set your pricing and referral commission to maximize your earnings.
+                        </p>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
-                          {t('lecturerDashboard.originalPriceLabel')}
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={formData.original_price}
-                          onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
-                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
-                        {t('lecturerDashboard.referralCommissionLabel') || 'Referral Commission Percentage (0-100%)'}
-                      </label>
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="1"
-                          value={formData.referral_commission_percentage}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value) || 0;
-                            if (value >= 0 && value <= 100) {
-                              setFormData({ ...formData, referral_commission_percentage: value.toString() });
-                            }
-                          }}
-                          className="w-32 px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
-                        />
-                        <span className="text-charcoal-600 dark:text-gray-400">%</span>
-                      </div>
-                      <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">
-                        {t('lecturerDashboard.referralCommissionHint') || 'Percentage of the course price that goes to the referring student. You receive the remaining amount.'}
-                      </p>
-                      {parseInt(formData.referral_commission_percentage) > 0 && formData.price && (
-                        <div className="mt-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                          <p className="text-sm text-purple-700">
-                            <span className="font-semibold">{t('lecturerDashboard.commissionBreakdown') || 'Commission Breakdown'}:</span>
-                          </p>
-                          <p className="text-sm text-purple-600 mt-1">
-                            • {t('lecturerDashboard.referrerGets') || 'Referrer gets'}: ${(parseFloat(formData.price) * parseInt(formData.referral_commission_percentage) / 100).toFixed(2)} ({formData.referral_commission_percentage}%)
-                          </p>
-                          <p className="text-sm text-purple-600">
-                            • {t('lecturerDashboard.youGet') || 'You get'}: ${(parseFloat(formData.price) * (100 - parseInt(formData.referral_commission_percentage)) / 100).toFixed(2)} ({100 - parseInt(formData.referral_commission_percentage)}%)
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
-                          {t('lecturerDashboard.authorLabel')}
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.author}
-                          onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
-                          {t('lecturerDashboard.creatorLabel')}
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.creator}
-                          onChange={(e) => setFormData({ ...formData, creator: e.target.value })}
-                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
-                        {t('lecturerDashboard.introVideoLabel')}
-                      </label>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <label className="flex-1 cursor-pointer">
-                            <input
-                              type="file"
-                              accept="video/*,.mov,video/quicktime"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleVideoUpload(file);
-                              }}
-                              className="hidden"
-                              disabled={isUploading}
-                            />
-                            <div className={`w-full px-4 py-3 border-2 border-dashed rounded-xl text-center transition-colors ${
-                              isUploading && videoUploadProgress > 0
-                                ? 'border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
-                                : 'border-charcoal-300 dark:border-navy-600 hover:border-emerald-400 dark:hover:border-emerald-500'
-                            }`}>
-                              {isUploading && videoUploadProgress > 0 ? (
-                                <>
-                                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500 dark:border-emerald-400 mb-2"></div>
-                                  <span className="text-sm text-charcoal-700 dark:text-gray-300 font-medium block">
-                                    {t('lecturerDashboard.uploading')} {videoFile?.name || 'video'}...
-                                  </span>
-                                </>
-                              ) : (
-                                <>
-                                  <svg className="w-6 h-6 mx-auto mb-2 text-charcoal-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                  </svg>
-                                  <span className="text-sm text-charcoal-700 dark:text-gray-300 font-medium block truncate">
-                                    {videoFile 
-                                      ? videoFile.name 
-                                      : editingCourse && formData.intro_video_url
-                                        ? t('lecturerDashboard.currentVideo') + ' ✓'
-                                        : t('lecturerDashboard.uploadVideoFile')
-                                    }
-                                  </span>
-                                  <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">
-                                    {editingCourse && formData.intro_video_url
-                                      ? t('lecturerDashboard.clickToReplaceVideo') || 'Click to replace current video'
-                                      : t('lecturerDashboard.clickToSelectVideo')
-                                    }
-                                  </p>
-                                </>
-                              )}
-                            </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-charcoal-700 dark:text-gray-300 mb-2">
+                            {t('lecturerDashboard.priceLabel')} <span className="text-red-500">*</span>
                           </label>
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-400">$</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              required
+                              value={formData.price}
+                              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                              className="w-full pl-8 pr-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
                         </div>
-                        {videoUploadProgress > 0 && (
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-xs text-charcoal-600 dark:text-gray-400">
-                              <span>{t('lecturerDashboard.uploading')}</span>
-                              <span>{videoUploadProgress}%</span>
+                        <div>
+                          <label className="block text-sm font-semibold text-charcoal-700 dark:text-gray-300 mb-2">
+                            {t('lecturerDashboard.originalPriceLabel')}
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-400">$</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={formData.original_price}
+                              onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
+                              placeholder="For showing discount"
+                              className="w-full pl-8 pr-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-2xl border border-purple-200/50 dark:border-purple-800/30">
+                        <label className="block text-sm font-semibold text-charcoal-700 dark:text-gray-300 mb-3">
+                          {t('lecturerDashboard.referralCommissionLabel') || 'Referral Commission'}
+                        </label>
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="5"
+                            value={formData.referral_commission_percentage}
+                            onChange={(e) => setFormData({ ...formData, referral_commission_percentage: e.target.value })}
+                            className="flex-1 h-2 bg-charcoal-200 dark:bg-navy-600 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                          />
+                          <div className="w-20 px-3 py-2 bg-white dark:bg-navy-700 rounded-xl text-center font-bold text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-700">
+                            {formData.referral_commission_percentage}%
+                          </div>
+                        </div>
+                        <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-2">
+                          {t('lecturerDashboard.referralCommissionHint') || 'Percentage that goes to referring students'}
+                        </p>
+                        {parseInt(formData.referral_commission_percentage) > 0 && formData.price && (
+                          <div className="mt-3 p-3 bg-white dark:bg-navy-800/50 rounded-xl border border-purple-200 dark:border-purple-800/50">
+                            <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-2">Commission Breakdown:</p>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-charcoal-600 dark:text-gray-400">Referrer gets:</span>
+                              <span className="font-semibold text-purple-600 dark:text-purple-400">${(parseFloat(formData.price) * parseInt(formData.referral_commission_percentage) / 100).toFixed(2)}</span>
                             </div>
-                            <div className="w-full bg-charcoal-200 dark:bg-navy-600 rounded-full h-2">
-                              <div
-                                className="bg-emerald-500 dark:bg-emerald-400 h-2 rounded-full transition-all duration-300"
-                                style={{ width: `${videoUploadProgress}%` }}
-                              />
+                            <div className="flex justify-between text-sm mt-1">
+                              <span className="text-charcoal-600 dark:text-gray-400">You receive:</span>
+                              <span className="font-semibold text-emerald-600 dark:text-emerald-400">${(parseFloat(formData.price) * (100 - parseInt(formData.referral_commission_percentage)) / 100).toFixed(2)}</span>
                             </div>
                           </div>
                         )}
-                        {formData.intro_video_url && (
-                          <div className="space-y-2">
-                            <div className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center">
-                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              {editingCourse ? t('lecturerDashboard.currentVideo') || 'Current Video' : t('lecturerDashboard.videoUploadedSuccess')}
-                            </div>
-                            {editingCourse && formData.intro_video_url && (
-                              <div className="relative rounded-xl overflow-hidden border border-charcoal-200 dark:border-navy-600 bg-charcoal-50 dark:bg-navy-700/30">
-                                <video
-                                  src={formData.intro_video_url}
-                                  controls
-                                  className="w-full h-48 object-contain"
-                                  onError={(e) => {
-                                    console.error('Video load error:', e);
-                                  }}
-                                >
-                                  Your browser does not support the video tag.
-                                </video>
-                                <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                                  {t('lecturerDashboard.currentVideo') || 'Current Video'}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 3: Media */}
+                  {currentStep === 3 && (
+                    <div className="space-y-5 animate-in fade-in duration-200">
+                      <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-2xl p-4 mb-6">
+                        <p className="text-sm text-blue-700 dark:text-blue-400">
+                          Add an intro video and thumbnail to make your course stand out.
+                        </p>
+                      </div>
+                      {/* Video Upload */}
+                      <div>
+                        <label className="block text-sm font-semibold text-charcoal-700 dark:text-gray-300 mb-2">
+                          {t('lecturerDashboard.introVideoLabel')}
+                        </label>
+                        <label className="cursor-pointer block">
+                          <input
+                            type="file"
+                            accept="video/*,.mov,video/quicktime"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleVideoUpload(file);
+                            }}
+                            className="hidden"
+                            disabled={isUploading}
+                          />
+                          <div className={`w-full px-6 py-8 border-2 border-dashed rounded-2xl text-center transition-all ${
+                            isUploading && videoUploadProgress > 0
+                              ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                              : formData.intro_video_url
+                              ? 'border-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10'
+                              : 'border-charcoal-300 dark:border-navy-600 hover:border-emerald-400'
+                          }`}>
+                            {isUploading && videoUploadProgress > 0 ? (
+                              <div className="space-y-3">
+                                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                                <p className="text-sm text-charcoal-700 dark:text-gray-300 font-medium">Uploading {videoFile?.name}...</p>
+                                <div className="w-full bg-charcoal-200 dark:bg-navy-600 rounded-full h-2">
+                                  <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${videoUploadProgress}%` }} />
+                                </div>
+                                <p className="text-xs text-charcoal-500">{videoUploadProgress}%</p>
+                              </div>
+                            ) : formData.intro_video_url ? (
+                              <div className="space-y-2">
+                                <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                                  <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </div>
+                                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Video uploaded</p>
+                                <p className="text-xs text-charcoal-500 dark:text-gray-400">Click to replace</p>
+                              </div>
+                            ) : (
+                              <>
+                                <svg className="w-10 h-10 mx-auto mb-3 text-charcoal-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                <p className="text-sm font-medium text-charcoal-700 dark:text-gray-300">Click to upload video</p>
+                                <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">MP4, MOV up to 50MB</p>
+                              </>
+                            )}
+                          </div>
+                        </label>
+                        <div className="mt-2">
+                          <p className="text-xs text-charcoal-500 dark:text-gray-400 mb-1">Or enter URL directly:</p>
+                          <input
+                            type="url"
+                            value={formData.intro_video_url}
+                            onChange={(e) => setFormData({ ...formData, intro_video_url: e.target.value })}
+                            placeholder="https://..."
+                            className="w-full px-4 py-2 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+                      {/* Thumbnail Upload */}
+                      <div>
+                        <label className="block text-sm font-semibold text-charcoal-700 dark:text-gray-300 mb-2">
+                          {t('lecturerDashboard.thumbnailLabel')}
+                        </label>
+                        <label className="cursor-pointer block">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleThumbnailUpload(file);
+                            }}
+                            className="hidden"
+                            disabled={isUploading}
+                          />
+                          <div className={`w-full px-6 py-8 border-2 border-dashed rounded-2xl text-center transition-all ${
+                            isUploading && thumbnailUploadProgress > 0
+                              ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                              : formData.thumbnail_url
+                              ? 'border-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10'
+                              : 'border-charcoal-300 dark:border-navy-600 hover:border-emerald-400'
+                          }`}>
+                            {isUploading && thumbnailUploadProgress > 0 ? (
+                              <div className="space-y-3">
+                                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                                <p className="text-sm text-charcoal-700 dark:text-gray-300 font-medium">Uploading...</p>
+                                <div className="w-full bg-charcoal-200 dark:bg-navy-600 rounded-full h-2">
+                                  <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${thumbnailUploadProgress}%` }} />
                                 </div>
                               </div>
+                            ) : formData.thumbnail_url ? (
+                              <div className="space-y-2">
+                                <img src={formData.thumbnail_url} alt="Thumbnail" className="w-24 h-16 object-cover rounded-lg mx-auto" />
+                                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Thumbnail uploaded</p>
+                                <p className="text-xs text-charcoal-500 dark:text-gray-400">Click to replace</p>
+                              </div>
+                            ) : (
+                              <>
+                                <svg className="w-10 h-10 mx-auto mb-3 text-charcoal-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <p className="text-sm font-medium text-charcoal-700 dark:text-gray-300">Click to upload thumbnail</p>
+                                <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">PNG, JPG up to 5MB</p>
+                              </>
                             )}
-                            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3">
-                              <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">
-                                {t('lecturerDashboard.currentVideoUrl') || 'Current Video URL:'}
-                              </p>
-                              <p className="text-xs text-emerald-600 dark:text-emerald-400 break-all font-mono">
-                                {formData.intro_video_url}
-                              </p>
-                            </div>
                           </div>
-                        )}
-                        <div className="text-xs text-charcoal-500 dark:text-gray-400 mt-2">{t('lecturerDashboard.orEnterUrl')}</div>
-                        <input
-                          type="url"
-                          value={formData.intro_video_url}
-                          onChange={(e) => setFormData({ ...formData, intro_video_url: e.target.value })}
-                          placeholder="https://..."
-                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
-                        {t('lecturerDashboard.thumbnailLabel')}
-                      </label>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <label className="flex-1 cursor-pointer">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleThumbnailUpload(file);
-                              }}
-                              className="hidden"
-                              disabled={isUploading}
-                            />
-                            <div className="w-full px-4 py-3 border-2 border-dashed border-charcoal-300 dark:border-navy-600 rounded-xl hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors text-center">
-                              <svg className="w-6 h-6 mx-auto mb-2 text-charcoal-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                              <span className="text-sm text-charcoal-700 dark:text-gray-300 font-medium">
-                                {thumbnailFile 
-                                  ? thumbnailFile.name 
-                                  : editingCourse && formData.thumbnail_url
-                                    ? t('lecturerDashboard.currentThumbnail') + ' ✓'
-                                    : t('lecturerDashboard.uploadThumbnail')
-                                }
-                              </span>
-                              <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">
-                                {editingCourse && formData.thumbnail_url
-                                  ? t('lecturerDashboard.clickToReplaceThumbnail') || 'Click to replace current thumbnail'
-                                  : t('lecturerDashboard.clickToSelectImage')
-                                }
-                              </p>
-                            </div>
-                          </label>
+                        </label>
+                        <div className="mt-2">
+                          <p className="text-xs text-charcoal-500 dark:text-gray-400 mb-1">Or enter URL directly:</p>
+                          <input
+                            type="url"
+                            value={formData.thumbnail_url}
+                            onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
+                            placeholder="https://..."
+                            className="w-full px-4 py-2 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
                         </div>
-                        {thumbnailUploadProgress > 0 && (
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-xs text-charcoal-600 dark:text-gray-400">
-                              <span>{t('lecturerDashboard.uploading')}</span>
-                              <span>{thumbnailUploadProgress}%</span>
-                            </div>
-                            <div className="w-full bg-charcoal-200 dark:bg-navy-600 rounded-full h-2">
-                              <div
-                                className="bg-emerald-500 dark:bg-emerald-400 h-2 rounded-full transition-all duration-300"
-                                style={{ width: `${thumbnailUploadProgress}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-                        {formData.thumbnail_url && (
-                          <div className="space-y-2">
-                            <div className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center">
-                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              {editingCourse ? t('lecturerDashboard.currentThumbnail') || 'Current Thumbnail' : t('lecturerDashboard.thumbnailUploadedSuccess')}
-                            </div>
-                            <div className="relative rounded-xl overflow-hidden border border-charcoal-200 dark:border-navy-600">
-                              <img
-                                src={formData.thumbnail_url}
-                                alt="Thumbnail preview"
-                                className="w-full h-48 object-cover"
-                                onError={(e) => {
-                                  console.error('Thumbnail load error');
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                              />
-                              {editingCourse && (
-                                <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                                  {t('lecturerDashboard.currentThumbnail') || 'Current Thumbnail'}
-                                </div>
-                              )}
-                            </div>
-                            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3">
-                              <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">
-                                {t('lecturerDashboard.currentThumbnailUrl') || 'Current Thumbnail URL:'}
-                              </p>
-                              <p className="text-xs text-emerald-600 dark:text-emerald-400 break-all font-mono">
-                                {formData.thumbnail_url}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        <div className="text-xs text-charcoal-500 dark:text-gray-400 mt-2">{t('lecturerDashboard.orEnterUrl')}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 4: Review */}
+                  {currentStep === 4 && (
+                    <div className="space-y-5 animate-in fade-in duration-200">
+                      <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-2xl p-4 mb-6">
+                        <p className="text-sm text-amber-700 dark:text-amber-400">
+                          Review your course details and add author information before {editingCourse ? 'saving changes' : 'creating'}.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-charcoal-700 dark:text-gray-300 mb-2">
+                            {t('lecturerDashboard.authorLabel')} <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={formData.author}
+                            onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                            className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-charcoal-700 dark:text-gray-300 mb-2">
+                            {t('lecturerDashboard.creatorLabel')} <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={formData.creator}
+                            onChange={(e) => setFormData({ ...formData, creator: e.target.value })}
+                            className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center p-4 bg-charcoal-50 dark:bg-navy-700/30 rounded-xl">
                         <input
-                          type="url"
-                          value={formData.thumbnail_url}
-                          onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
-                          placeholder="https://..."
-                          className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent"
+                          type="checkbox"
+                          id="is_bestseller_wizard"
+                          checked={formData.is_bestseller}
+                          onChange={(e) => setFormData({ ...formData, is_bestseller: e.target.checked })}
+                          className="w-5 h-5 text-emerald-500 focus:ring-emerald-500 rounded"
                         />
+                        <label htmlFor="is_bestseller_wizard" className="ml-3 text-sm font-medium text-charcoal-700 dark:text-gray-300">
+                          {t('lecturerDashboard.markAsBestseller')}
+                        </label>
                       </div>
-                    </div>
-
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="is_bestseller"
-                        checked={formData.is_bestseller}
-                        onChange={(e) => setFormData({ ...formData, is_bestseller: e.target.checked })}
-                        className="w-4 h-4 text-emerald-500 dark:text-emerald-400 focus:ring-emerald-500 dark:focus:ring-emerald-400 rounded"
-                      />
-                      <label htmlFor="is_bestseller" className="ml-2 text-sm font-medium text-charcoal-700 dark:text-gray-300">
-                        {t('lecturerDashboard.markAsBestseller')}
-                      </label>
-                    </div>
-
-                    <div className="flex flex-col gap-4 pt-4">
-                      <div className="flex gap-4">
-                        <button
-                          type="submit"
-                          disabled={isUploading}
-                          className="flex-1 bg-charcoal-950 dark:bg-emerald-500 text-white font-semibold px-6 py-3 rounded-xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isUploading ? t('lecturerDashboard.uploading') : editingCourse ? t('lecturerDashboard.updateCourse') : t('lecturerDashboard.createCourse')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleCloseModal}
-                          disabled={isUploading}
-                          className="flex-1 bg-charcoal-100 dark:bg-navy-700 text-charcoal-900 dark:text-gray-300 font-semibold px-6 py-3 rounded-xl hover:bg-charcoal-200 dark:hover:bg-navy-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {t('common.cancel')}
-                        </button>
+                      {/* Summary Card */}
+                      <div className="p-5 bg-gradient-to-br from-charcoal-50 to-charcoal-100 dark:from-navy-700/50 dark:to-navy-800/50 rounded-2xl border border-charcoal-200 dark:border-navy-600">
+                        <h4 className="text-sm font-bold text-charcoal-700 dark:text-gray-300 mb-4">Course Summary</h4>
+                        <div className="space-y-3 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-charcoal-500 dark:text-gray-400">Title:</span>
+                            <span className="font-medium text-charcoal-900 dark:text-white truncate ml-4 max-w-[200px]">{formData.title || '-'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-charcoal-500 dark:text-gray-400">Type:</span>
+                            <span className="font-medium text-charcoal-900 dark:text-white">{formData.course_type}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-charcoal-500 dark:text-gray-400">Price:</span>
+                            <span className="font-medium text-emerald-600 dark:text-emerald-400">${formData.price || '0'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-charcoal-500 dark:text-gray-400">Referral Commission:</span>
+                            <span className="font-medium text-purple-600 dark:text-purple-400">{formData.referral_commission_percentage}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-charcoal-500 dark:text-gray-400">Video:</span>
+                            <span className={`font-medium ${formData.intro_video_url ? 'text-emerald-600' : 'text-charcoal-400'}`}>
+                              {formData.intro_video_url ? 'Uploaded' : 'Not uploaded'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-charcoal-500 dark:text-gray-400">Thumbnail:</span>
+                            <span className={`font-medium ${formData.thumbnail_url ? 'text-emerald-600' : 'text-charcoal-400'}`}>
+                              {formData.thumbnail_url ? 'Uploaded' : 'Not uploaded'}
+                            </span>
+                          </div>
+                        </div>
                       </div>
+                      {/* Delete button for editing */}
                       {editingCourse && (
                         <button
                           type="button"
@@ -1378,21 +1411,74 @@ export default function LecturerDashboard() {
                             handleDelete(editingCourse.id);
                           }}
                           disabled={isUploading}
-                          className="w-full bg-red-600 dark:bg-red-500 text-white font-semibold px-6 py-4 rounded-xl hover:bg-red-700 dark:hover:bg-red-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          className="w-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-semibold px-6 py-3 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 border border-red-200 dark:border-red-800/50 flex items-center justify-center gap-2"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                           {t('lecturerDashboard.deleteCourse')}
                         </button>
                       )}
                     </div>
-                  </form>
+                  )}
+                </div>
+
+                {/* Modal Footer with Navigation */}
+                <div className="p-6 border-t border-charcoal-100 dark:border-navy-700 flex-shrink-0">
+                  <div className="flex gap-3">
+                    {currentStep > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setCurrentStep(currentStep - 1)}
+                        className="px-6 py-3 bg-charcoal-100 dark:bg-navy-700 text-charcoal-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-charcoal-200 dark:hover:bg-navy-600 transition-all"
+                      >
+                        Back
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleCloseModal}
+                      className="px-6 py-3 bg-charcoal-100 dark:bg-navy-700 text-charcoal-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-charcoal-200 dark:hover:bg-navy-600 transition-all"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    <div className="flex-1" />
+                    {currentStep < totalSteps ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (currentStep === 1 && !formData.title) {
+                            setError('Please enter a course title');
+                            return;
+                          }
+                          setError(null);
+                          setCurrentStep(currentStep + 1);
+                        }}
+                        className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-emerald-500/25"
+                      >
+                        Continue
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={isUploading || !formData.title || !formData.price || !formData.author || !formData.creator}
+                        className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-emerald-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {isUploading ? (
+                          <>
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            <span>Processing...</span>
+                          </>
+                        ) : (
+                          <span>{editingCourse ? t('lecturerDashboard.updateCourse') : t('lecturerDashboard.createCourse')}</span>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

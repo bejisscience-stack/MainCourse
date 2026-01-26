@@ -251,11 +251,11 @@ export default function ServerSidebar({
         })}
 
         {/* Add Course button (lecturer only) */}
-        {isLecturer && onAddCourse && (
+        {isLecturer && (
           <button
             className="w-12 h-12 rounded-full bg-navy-800 hover:bg-emerald-500 transition-all duration-200 flex items-center justify-center text-emerald-400 hover:text-white text-2xl font-light"
             title={t('lecturerDashboard.createCourse')}
-            onClick={onAddCourse}
+            onClick={() => router.push('/lecturer/dashboard?createCourse=true')}
           >
             +
           </button>

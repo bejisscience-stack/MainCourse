@@ -100,67 +100,97 @@ export default function ChannelManagement({
 
   return (
     <>
-      <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-        <h3 className="text-white font-semibold">{t('channels.manageChannels')}</h3>
-        <div className="flex gap-2">
-          <button
-            onClick={() => {
-              setEditingChannel(null);
-              setFormData({ name: '', type: 'text', description: '', categoryName: 'COURSE CHANNELS' });
-              setShowCreateModal(true);
-            }}
-            className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 transition-colors"
-          >
-            {t('channels.addChannel')}
-          </button>
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 bg-gray-700 text-gray-300 text-sm rounded hover:bg-gray-600 transition-colors"
-          >
-            {t('common.close')}
-          </button>
+      {/* Header */}
+      <div className="p-5 border-b border-navy-700/50 bg-gradient-to-r from-navy-800/50 to-navy-900/50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">{t('channels.manageChannels')}</h3>
+              <p className="text-xs text-gray-400">{channels.length} {channels.length === 1 ? 'channel' : 'channels'}</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setEditingChannel(null);
+                setFormData({ name: '', type: 'text', description: '', categoryName: 'COURSE CHANNELS' });
+                setShowCreateModal(true);
+              }}
+              className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-semibold rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-indigo-500/25 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              {t('channels.addChannel')}
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-navy-700/80 text-gray-300 text-sm font-medium rounded-xl hover:bg-navy-600 transition-all duration-200 border border-navy-600/50"
+            >
+              {t('common.close')}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
+      {/* Channel List */}
+      <div className="p-4 space-y-3 max-h-[400px] overflow-y-auto">
         {error && (
-          <div className="bg-red-900/50 border border-red-700 text-red-200 px-3 py-2 rounded text-sm">
-            {error}
+          <div className="bg-red-900/30 border border-red-700/50 text-red-300 px-4 py-3 rounded-xl text-sm flex items-start gap-3">
+            <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{error}</span>
           </div>
         )}
 
         {channels.map((channel) => (
           <div
             key={channel.id}
-            className="bg-gray-700/50 rounded p-3 flex items-center justify-between group"
+            className="bg-gradient-to-r from-navy-800/80 to-navy-800/40 rounded-2xl p-4 flex items-center justify-between group border border-navy-700/30 hover:border-navy-600/50 transition-all duration-200 hover:shadow-lg"
           >
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">
-                  {channel.type === 'lectures' 
-                    ? '📹' 
-                    : channel.name.toLowerCase() === 'projects' 
-                    ? '📁' 
-                    : channel.type === 'voice' 
-                    ? '🔊' 
-                    : '#'}
-                </span>
-                <span className="text-white font-medium">{channel.name}</span>
-                <span className="text-gray-400 text-xs">({channel.type})</span>
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${
+                channel.type === 'lectures'
+                  ? 'bg-gradient-to-br from-red-500/20 to-orange-500/20 border border-red-500/30'
+                  : channel.name.toLowerCase() === 'projects'
+                  ? 'bg-gradient-to-br from-amber-500/20 to-yellow-500/20 border border-amber-500/30'
+                  : channel.type === 'voice'
+                  ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30'
+                  : 'bg-gradient-to-br from-indigo-500/20 to-blue-500/20 border border-indigo-500/30'
+              }`}>
+                {channel.type === 'lectures'
+                  ? '📹'
+                  : channel.name.toLowerCase() === 'projects'
+                  ? '📁'
+                  : channel.type === 'voice'
+                  ? '🔊'
+                  : '#'}
               </div>
-              {channel.description && (
-                <p className="text-gray-400 text-xs mt-1 truncate">{channel.description}</p>
-              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-semibold">{channel.name}</span>
+                  <span className="text-gray-500 text-xs px-2 py-0.5 bg-navy-700/50 rounded-full">({channel.type})</span>
+                </div>
+                {channel.description && (
+                  <p className="text-gray-400 text-xs mt-1 truncate">{channel.description}</p>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {isRequiredChannel(channel) && (
-                <span className="text-xs text-indigo-400 font-medium">{t('channels.required')}</span>
+                <span className="text-xs text-indigo-400 font-semibold px-2.5 py-1 bg-indigo-500/10 rounded-full border border-indigo-500/20">{t('channels.required')}</span>
               )}
-              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
                 {!isRequiredChannel(channel) && (
                   <button
                     onClick={() => handleEdit(channel)}
-                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"
+                    className="p-2 text-gray-400 hover:text-white hover:bg-navy-700/80 rounded-xl transition-all duration-150 hover:scale-110"
                     title="Edit"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -176,7 +206,7 @@ export default function ChannelManagement({
                 {!isRequiredChannel(channel) && (
                   <button
                     onClick={() => handleDelete(channel.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-600 rounded transition-colors"
+                    className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all duration-150 hover:scale-110"
                     title="Delete"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -195,18 +225,22 @@ export default function ChannelManagement({
         ))}
 
         {channels.length === 0 && (
-          <div className="text-center text-gray-400 py-8">
-            <p>{t('channels.noChannelsYet')}</p>
+          <div className="text-center py-12">
+            <div className="w-16 h-16 rounded-2xl bg-navy-800/50 border border-navy-700/50 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <p className="text-gray-400 text-sm">{t('channels.noChannelsYet')}</p>
           </div>
         )}
       </div>
 
       {/* Create/Edit Modal */}
       {showCreateModal && (
-        <div 
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={(e) => {
-            // Close modal when clicking outside
             if (e.target === e.currentTarget) {
               setShowCreateModal(false);
               setEditingChannel(null);
@@ -214,80 +248,117 @@ export default function ChannelManagement({
             }
           }}
         >
-          <div 
-            className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md"
+          <div
+            className="bg-gradient-to-b from-navy-800 to-navy-900 rounded-3xl shadow-2xl w-full max-w-md border border-navy-700/50 animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 border-b border-gray-700">
-              <h3 className="text-white font-semibold">
-                {editingChannel ? t('channels.editChannel') : t('channels.createChannel')}
-              </h3>
+            {/* Modal Header */}
+            <div className="p-6 border-b border-navy-700/50">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  editingChannel ? 'bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30' : 'bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30'
+                }`}>
+                  {editingChannel ? (
+                    <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    {editingChannel ? t('channels.editChannel') : t('channels.createChannel')}
+                  </h3>
+                  <p className="text-xs text-gray-400">
+                    {editingChannel ? 'Update channel settings' : 'Add a new channel to your course'}
+                  </p>
+                </div>
+              </div>
             </div>
-            <form onSubmit={handleSubmit} className="p-4 space-y-4">
+
+            {/* Modal Form */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  {t('channels.channelName')}
+                <label className="block text-gray-300 text-sm font-semibold mb-2">
+                  {t('channels.channelName')} <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 bg-navy-700/50 border border-navy-600/50 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all placeholder-gray-500"
                   placeholder="general"
                 />
               </div>
 
               <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  {t('channels.channelType')}
+                <label className="block text-gray-300 text-sm font-semibold mb-2">
+                  {t('channels.channelType')} <span className="text-red-400">*</span>
                 </label>
-                <select
-                  value={formData.type}
-                  onChange={(e) =>
-                    setFormData({ ...formData, type: e.target.value as any })
-                  }
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="text">{t('channels.textChannel')}</option>
-                  <option value="voice">{t('channels.voiceChannel')}</option>
-                  <option value="lectures">{t('channels.lecturesChannel')}</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={formData.type}
+                    onChange={(e) =>
+                      setFormData({ ...formData, type: e.target.value as any })
+                    }
+                    className="w-full px-4 py-3 bg-navy-700/50 border border-navy-600/50 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="text">{t('channels.textChannel')}</option>
+                    <option value="voice">{t('channels.voiceChannel')}</option>
+                    <option value="lectures">{t('channels.lecturesChannel')}</option>
+                  </select>
+                  <svg className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
 
               <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-gray-300 text-sm font-semibold mb-2">
                   {t('channels.description')}
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 bg-navy-700/50 border border-navy-600/50 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all placeholder-gray-500 resize-none"
                   placeholder={t('channels.descriptionPlaceholder')}
                 />
               </div>
 
               <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-gray-300 text-sm font-semibold mb-2">
                   {t('channels.categoryName')}
                 </label>
                 <input
                   type="text"
                   value={formData.categoryName}
                   onChange={(e) => setFormData({ ...formData, categoryName: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 bg-navy-700/50 border border-navy-600/50 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all placeholder-gray-500"
                   placeholder="COURSE CHANNELS"
                 />
               </div>
 
-              <div className="flex gap-2 pt-2">
+              {/* Modal Actions */}
+              <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 bg-indigo-600 text-white font-semibold px-4 py-2 rounded hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold px-6 py-3 rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {loading ? t('channels.saving') : editingChannel ? t('channels.update') : t('channels.create')}
+                  {loading ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      {t('channels.saving')}
+                    </>
+                  ) : editingChannel ? t('channels.update') : t('channels.create')}
                 </button>
                 <button
                   type="button"
@@ -296,7 +367,7 @@ export default function ChannelManagement({
                     setEditingChannel(null);
                     setFormData({ name: '', type: 'text', description: '', categoryName: 'COURSE CHANNELS' });
                   }}
-                  className="flex-1 bg-gray-700 text-gray-300 font-semibold px-4 py-2 rounded hover:bg-gray-600 transition-colors"
+                  className="flex-1 bg-navy-700/80 text-gray-300 font-semibold px-6 py-3 rounded-xl hover:bg-navy-600 transition-all duration-200 border border-navy-600/50"
                 >
                   {t('common.cancel')}
                 </button>
