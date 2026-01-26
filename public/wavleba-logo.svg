@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 90" fill="none">
+  <!-- Dollar Sign Icon - Green Rounded Square -->
+  <rect x="0" y="0" width="90" height="90" rx="18" fill="#22c55e"/>
+
+  <!-- Dollar Sign ($) - Cash App Style -->
+  <g transform="translate(45, 45)">
+    <!-- S curve -->
+    <path d="M-10 -18 C-10 -24, 10 -24, 10 -16 C10 -8, -10 -4, -10 6 C-10 14, 10 18, 10 12"
+          stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <!-- Vertical bar -->
+    <rect x="-3.5" y="-28" width="7" height="56" rx="3.5" fill="white"/>
+  </g>
+
+  <!-- WAVLEBA Text with Glitch Effect -->
+  <!-- Using bold condensed slab-serif style lettering -->
+
+  <!-- W -->
+  <g fill="white">
+    <path d="M108,18 L120,18 L120,58 L132,18 L140,18 L152,58 L152,18 L164,18 L164,72 L150,72 L136,32 L122,72 L108,72 Z"/>
+  </g>
+
+  <!-- A (first) -->
+  <g fill="white">
+    <path d="M172,72 L184,72 L188,58 L208,58 L212,72 L224,72 L204,18 L192,18 Z M191,48 L198,28 L205,48 Z"/>
+  </g>
+
+  <!-- V -->
+  <g fill="white">
+    <path d="M230,18 L244,18 L256,58 L268,18 L282,18 L262,72 L250,72 Z"/>
+  </g>
+
+  <!-- L -->
+  <g fill="white">
+    <path d="M290,18 L302,18 L302,60 L330,60 L330,72 L290,72 Z"/>
+  </g>
+
+  <!-- E -->
+  <g fill="white">
+    <path d="M340,18 L378,18 L378,30 L352,30 L352,40 L375,40 L375,52 L352,52 L352,60 L378,60 L378,72 L340,72 Z"/>
+  </g>
+
+  <!-- B -->
+  <g fill="white">
+    <path d="M388,18 L418,18 Q432,18 432,32 Q432,40 424,43 Q434,46 434,58 Q434,72 418,72 L388,72 Z M400,30 L400,40 L415,40 Q420,40 420,35 Q420,30 415,30 Z M400,52 L400,60 L416,60 Q422,60 422,56 Q422,52 416,52 Z"/>
+  </g>
+
+  <!-- A (second) -->
+  <g fill="white">
+    <path d="M444,72 L456,72 L460,58 L480,58 L484,72 L496,72 L476,18 L464,18 Z M463,48 L470,28 L477,48 Z"/>
+  </g>
+
+  <!-- Glitch Effect - Horizontal cut lines through text -->
+  <!-- Top glitch line -->
+  <rect x="105" y="33" width="395" height="3" fill="none"/>
+  <!-- Bottom glitch line -->
+  <rect x="105" y="53" width="395" height="3" fill="none"/>
+
+  <!-- Glitch lines with slight displacement effect -->
+  <g opacity="0.85">
+    <!-- Glitch line 1 - cuts through upper portion -->
+    <line x1="106" y1="34" x2="175" y2="34" stroke="white" stroke-width="2"/>
+    <line x1="178" y1="34" x2="228" y2="34" stroke="white" stroke-width="2"/>
+    <line x1="231" y1="34" x2="285" y2="34" stroke="white" stroke-width="2"/>
+    <line x1="338" y1="34" x2="382" y2="34" stroke="white" stroke-width="2"/>
+    <line x1="385" y1="34" x2="440" y2="34" stroke="white" stroke-width="2"/>
+    <line x1="443" y1="34" x2="500" y2="34" stroke="white" stroke-width="2"/>
+
+    <!-- Glitch line 2 - cuts through lower portion -->
+    <line x1="104" y1="56" x2="173" y2="56" stroke="white" stroke-width="2"/>
+    <line x1="176" y1="56" x2="226" y2="56" stroke="white" stroke-width="2"/>
+    <line x1="229" y1="56" x2="333" y2="56" stroke="white" stroke-width="2"/>
+    <line x1="336" y1="56" x2="438" y2="56" stroke="white" stroke-width="2"/>
+    <line x1="441" y1="56" x2="498" y2="56" stroke="white" stroke-width="2"/>
+  </g>
+</svg>
