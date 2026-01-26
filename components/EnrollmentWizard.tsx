@@ -91,6 +91,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
   });
   const [stepErrors, setStepErrors] = useState<Record<number, string | null>>({});
   const [isValidating, setIsValidating] = useState(false);
+  const [wasAutoFilled, setWasAutoFilled] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -112,20 +113,30 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
         referralCodeToUse = backup.referralCode;
       }
 
+      // Track if we auto-filled from profile
+      let autoFilledFromProfile = false;
+
       // If still no referral code, check profile
       if (!referralCodeToUse && profile && course) {
         const referredCourseId = profile.referred_for_course_id;
         const signupReferralCode = profile.signup_referral_code;
 
-        // Only auto-fill if:
-        // 1. User has a referral code from signup
-        // 2. User was referred for this specific course
-        // 3. Current course ID matches the referred course ID
-        if (signupReferralCode && referredCourseId && referredCourseId === course.id) {
-          referralCodeToUse = signupReferralCode;
+        // Auto-fill referral code based on referral type:
+        if (signupReferralCode) {
+          // General referral (no specific course) - auto-fill for ALL courses
+          if (!referredCourseId) {
+            referralCodeToUse = signupReferralCode;
+            autoFilledFromProfile = true;
+          }
+          // Course-specific referral - only auto-fill for that specific course
+          else if (referredCourseId === course.id) {
+            referralCodeToUse = signupReferralCode;
+            autoFilledFromProfile = true;
+          }
         }
       }
 
+      setWasAutoFilled(autoFilledFromProfile);
       setCurrentStep(1);
       setWizardData({
         course,
@@ -332,6 +343,8 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
             data={wizardData}
             updateData={updateWizardData}
             error={stepErrors[3]}
+            isAutoFilled={wasAutoFilled}
+            onAutoFilledCleared={() => setWasAutoFilled(false)}
           />
         );
       case 4:

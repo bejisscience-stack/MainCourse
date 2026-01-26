@@ -10,17 +10,27 @@ interface EnrollmentStepReferralProps {
   data: EnrollmentWizardData;
   updateData: (updates: Partial<EnrollmentWizardData>) => void;
   error?: string | null;
+  isAutoFilled?: boolean;
+  onAutoFilledCleared?: () => void;
 }
 
 export default function EnrollmentStepReferral({
   data,
   updateData,
   error,
+  isAutoFilled,
+  onAutoFilledCleared,
 }: EnrollmentStepReferralProps) {
   const { t } = useI18n();
   const [validationState, setValidationState] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
   const [validationMessage, setValidationMessage] = useState<string>('');
+  const [showAutoFillMessage, setShowAutoFillMessage] = useState(isAutoFilled);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update showAutoFillMessage when isAutoFilled prop changes
+  useEffect(() => {
+    setShowAutoFillMessage(isAutoFilled);
+  }, [isAutoFilled]);
 
   const handleReferralCodeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toUpperCase().trim();
@@ -29,6 +39,12 @@ export default function EnrollmentStepReferral({
     // Clear any existing validation state when user types
     setValidationState('idle');
     setValidationMessage('');
+
+    // Hide auto-fill message when user modifies the code
+    setShowAutoFillMessage(false);
+    if (onAutoFilledCleared) {
+      onAutoFilledCleared();
+    }
 
     // Clear existing debounce timer
     if (debounceTimerRef.current) {
@@ -44,7 +60,18 @@ export default function EnrollmentStepReferral({
     debounceTimerRef.current = setTimeout(() => {
       validateReferralCode(value);
     }, 500);
-  }, [updateData]);
+  }, [updateData, onAutoFilledCleared]);
+
+  // Handle clear button click
+  const handleClear = useCallback(() => {
+    updateData({ referralCode: '' });
+    setValidationState('idle');
+    setValidationMessage('');
+    setShowAutoFillMessage(false);
+    if (onAutoFilledCleared) {
+      onAutoFilledCleared();
+    }
+  }, [updateData, onAutoFilledCleared]);
 
   const validateReferralCode = useCallback(async (code: string) => {
     if (!code || !code.trim()) {
@@ -127,7 +154,9 @@ export default function EnrollmentStepReferral({
             value={data.referralCode}
             onChange={handleReferralCodeChange}
             placeholder={t('payment.referralCodePlaceholder') || 'Enter referral code (optional)'}
-            className={`w-full px-5 py-3 text-base bg-white dark:bg-navy-800 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 pr-12 ${
+            className={`w-full px-5 py-3 text-base bg-white dark:bg-navy-800 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 ${
+              data.referralCode ? 'pr-20' : 'pr-5'
+            } ${
               validationState === 'valid'
                 ? 'border-emerald-500 dark:border-emerald-400 focus:ring-emerald-500 dark:focus:ring-emerald-400'
                 : validationState === 'invalid'
@@ -136,30 +165,55 @@ export default function EnrollmentStepReferral({
             }`}
             maxLength={20}
           />
-          {/* Validation Icon */}
-          {validationState !== 'idle' && (
-            <div className="absolute right-4 top-1/2 -translate-y-1/2">
-              {validationState === 'validating' && (
-                <svg className="animate-spin h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              )}
-              {validationState === 'valid' && (
-                <svg className="h-5 w-5 text-emerald-500 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-              {validationState === 'invalid' && (
-                <svg className="h-5 w-5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Clear Button and Validation Icon */}
+          {data.referralCode && (
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+              {/* Clear/Delete Button */}
+              <button
+                type="button"
+                onClick={handleClear}
+                className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-navy-600 transition-colors"
+                aria-label={t('common.clear') || 'Clear'}
+              >
+                <svg className="h-4 w-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
+              </button>
+              {/* Validation Icon */}
+              {validationState !== 'idle' && (
+                <>
+                  {validationState === 'validating' && (
+                    <svg className="animate-spin h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {validationState === 'valid' && (
+                    <svg className="h-5 w-5 text-emerald-500 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                  {validationState === 'invalid' && (
+                    <svg className="h-5 w-5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
+                </>
               )}
             </div>
           )}
         </div>
+        {/* Auto-fill Indicator Message */}
+        {showAutoFillMessage && data.referralCode && (
+          <p className="text-sm mt-2 text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {t('enrollment.referralAutoFilled') || 'Auto-filled from your referral link'}
+          </p>
+        )}
         {/* Validation Message */}
-        {validationMessage && (
+        {validationMessage && !showAutoFillMessage && (
           <p className={`text-sm mt-2 ${
             validationState === 'valid'
               ? 'text-emerald-600 dark:text-emerald-400'
@@ -170,7 +224,7 @@ export default function EnrollmentStepReferral({
             {validationMessage}
           </p>
         )}
-        {!validationMessage && (
+        {!validationMessage && !showAutoFillMessage && (
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
             {t('payment.referralCodeDescription')}
           </p>
