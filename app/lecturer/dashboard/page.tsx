@@ -508,11 +508,11 @@ export default function LecturerDashboard() {
       return;
     }
 
-    // Validate file size (50MB limit)
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    // Validate file size (10GB limit)
+    const maxSize = 10 * 1024 * 1024 * 1024; // 10GB
     if (file.size > maxSize) {
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-      setError(`Video file size (${sizeMB}MB) exceeds the 50MB limit. Please compress your video or use a smaller file.`);
+      const sizeGB = (file.size / (1024 * 1024 * 1024)).toFixed(2);
+      setError(`Video file size (${sizeGB}GB) exceeds the 10GB limit. Please compress your video or use a smaller file.`);
       return;
     }
 
