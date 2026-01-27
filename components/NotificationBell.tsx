@@ -71,6 +71,20 @@ function NotificationBell() {
     }
   }, []);
 
+  // Close dropdown on ESC key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen]);
+
   if (!user) {
     return null;
   }
@@ -109,10 +123,11 @@ function NotificationBell() {
       {/* Notification Dropdown */}
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop - click to close */}
           <div
-            className="fixed inset-0 z-[9998] bg-black/20"
+            className="fixed inset-0 z-[9998] bg-black/10 dark:bg-black/30 cursor-default"
             onClick={() => setIsOpen(false)}
+            aria-hidden="true"
           />
 
           {/* Dropdown */}

@@ -617,7 +617,7 @@ export default function LecturerDashboard() {
         creator: formData.creator,
         intro_video_url: formData.intro_video_url || null,
         thumbnail_url: formData.thumbnail_url || null,
-        is_bestseller: formData.is_bestseller,
+        // Lecturers cannot set bestseller status - only admins can
         lecturer_id: user?.id,
         referral_commission_percentage: parseInt(formData.referral_commission_percentage) || 0,
       };
@@ -1120,7 +1120,7 @@ export default function LecturerDashboard() {
                             {t('lecturerDashboard.priceLabel')} <span className="text-red-500">*</span>
                           </label>
                           <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-400">$</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-400">₾</span>
                             <input
                               type="number"
                               step="0.01"
@@ -1137,7 +1137,7 @@ export default function LecturerDashboard() {
                             {t('lecturerDashboard.originalPriceLabel')}
                           </label>
                           <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-400">$</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-400">₾</span>
                             <input
                               type="number"
                               step="0.01"
@@ -1176,11 +1176,11 @@ export default function LecturerDashboard() {
                             <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-2">Commission Breakdown:</p>
                             <div className="flex justify-between text-sm">
                               <span className="text-charcoal-600 dark:text-gray-400">Referrer gets:</span>
-                              <span className="font-semibold text-purple-600 dark:text-purple-400">${(parseFloat(formData.price) * parseInt(formData.referral_commission_percentage) / 100).toFixed(2)}</span>
+                              <span className="font-semibold text-purple-600 dark:text-purple-400">₾{(parseFloat(formData.price) * parseInt(formData.referral_commission_percentage) / 100).toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-sm mt-1">
                               <span className="text-charcoal-600 dark:text-gray-400">You receive:</span>
-                              <span className="font-semibold text-emerald-600 dark:text-emerald-400">${(parseFloat(formData.price) * (100 - parseInt(formData.referral_commission_percentage)) / 100).toFixed(2)}</span>
+                              <span className="font-semibold text-emerald-600 dark:text-emerald-400">₾{(parseFloat(formData.price) * (100 - parseInt(formData.referral_commission_percentage)) / 100).toFixed(2)}</span>
                             </div>
                           </div>
                         )}
@@ -1356,18 +1356,6 @@ export default function LecturerDashboard() {
                           />
                         </div>
                       </div>
-                      <div className="flex items-center p-4 bg-charcoal-50 dark:bg-navy-700/30 rounded-xl">
-                        <input
-                          type="checkbox"
-                          id="is_bestseller_wizard"
-                          checked={formData.is_bestseller}
-                          onChange={(e) => setFormData({ ...formData, is_bestseller: e.target.checked })}
-                          className="w-5 h-5 text-emerald-500 focus:ring-emerald-500 rounded"
-                        />
-                        <label htmlFor="is_bestseller_wizard" className="ml-3 text-sm font-medium text-charcoal-700 dark:text-gray-300">
-                          {t('lecturerDashboard.markAsBestseller')}
-                        </label>
-                      </div>
                       {/* Summary Card */}
                       <div className="p-5 bg-gradient-to-br from-charcoal-50 to-charcoal-100 dark:from-navy-700/50 dark:to-navy-800/50 rounded-2xl border border-charcoal-200 dark:border-navy-600">
                         <h4 className="text-sm font-bold text-charcoal-700 dark:text-gray-300 mb-4">Course Summary</h4>
@@ -1382,7 +1370,7 @@ export default function LecturerDashboard() {
                           </div>
                           <div className="flex justify-between">
                             <span className="text-charcoal-500 dark:text-gray-400">Price:</span>
-                            <span className="font-medium text-emerald-600 dark:text-emerald-400">${formData.price || '0'}</span>
+                            <span className="font-medium text-emerald-600 dark:text-emerald-400">₾{formData.price || '0'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-charcoal-500 dark:text-gray-400">Referral Commission:</span>
@@ -1608,7 +1596,7 @@ export default function LecturerDashboard() {
                                 />
                                 <div className="ml-3 flex-1">
                                   <p className="text-sm font-medium text-charcoal-950 dark:text-white">{course.title}</p>
-                                  <p className="text-xs text-charcoal-500 dark:text-gray-400">${course.price.toFixed(2)}</p>
+                                  <p className="text-xs text-charcoal-500 dark:text-gray-400">₾{course.price.toFixed(2)}</p>
                                 </div>
                               </label>
                             ))}

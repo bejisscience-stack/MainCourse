@@ -56,8 +56,8 @@ export function useUnreadNotifications() {
   };
 
   const resetCount = async () => {
-    // Optimistically set count to 0
-    await mutate({ count: 0 }, { revalidate: false });
+    // Optimistically set count to 0, then revalidate to confirm with server
+    await mutate({ count: 0 }, { revalidate: true });
   };
 
   const refresh = async () => {
