@@ -417,8 +417,8 @@ function CourseEnrollmentCard({
         { duration: 5000 }
       );
 
-      // Clear the course-specific referral from persistent storage
-      clearReferral(courseId);
+      // Clear referral from persistent storage after successful enrollment
+      clearReferral();
     } catch (err: any) {
       console.error('Error requesting enrollment:', err);
       const errorMessage = err.message || 'Failed to create enrollment request. Please try again.';
