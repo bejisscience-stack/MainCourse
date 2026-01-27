@@ -24,22 +24,15 @@ export async function signUp({ email, password, username, role = 'student', sign
     throw new Error('Username can only contain letters, numbers, and underscores');
   }
 
-  // Get the base URL for redirects (works in both dev and production)
-  // Always prioritize NEXT_PUBLIC_SITE_URL if set (even on client-side)
-  // This ensures production always uses the correct domain
+  // Production URL - hardcoded to ensure email links always work
+  const PRODUCTION_URL = 'https://swavleba.ge';
+
   const getRedirectUrl = () => {
-    // Check environment variable first (works on both client and server)
-    if (process.env.NEXT_PUBLIC_SITE_URL) {
-      return `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
-    }
-    
-    // Fallback to window.location.origin if on client-side
-    if (typeof window !== 'undefined') {
+    // Use production URL unless explicitly in development
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
       return `${window.location.origin}/auth/callback`;
     }
-    
-    // Server-side fallback to localhost for development
-    return 'http://localhost:3000/auth/callback';
+    return `${PRODUCTION_URL}/auth/callback`;
   };
 
   const redirectUrl = getRedirectUrl();
@@ -66,15 +59,14 @@ export async function signUp({ email, password, username, role = 'student', sign
 }
 
 export async function resendVerificationEmail(email: string) {
-  // Get redirect URL using the same logic as signUp
+  // Production URL - hardcoded to ensure email links always work
+  const PRODUCTION_URL = 'https://swavleba.ge';
+
   const getRedirectUrl = () => {
-    if (process.env.NEXT_PUBLIC_SITE_URL) {
-      return `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
-    }
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
       return `${window.location.origin}/auth/callback`;
     }
-    return 'http://localhost:3000/auth/callback';
+    return `${PRODUCTION_URL}/auth/callback`;
   };
 
   const { error } = await supabase.auth.resend({
