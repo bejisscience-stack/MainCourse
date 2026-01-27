@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signUp } from '@/lib/auth';
 import { useI18n } from '@/contexts/I18nContext';
-import { supabase } from '@/lib/supabase';
 
 function SignUpForm() {
   const router = useRouter();
@@ -38,21 +37,30 @@ function SignUpForm() {
       if (ref) {
         const normalizedRef = ref.toUpperCase().trim();
 
-        // Validate referral code exists in database (matches enrollment flow validation)
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('referral_code')
-          .eq('referral_code', normalizedRef)
-          .maybeSingle();
+        // Validate referral code using public API endpoint (bypasses RLS for unauthenticated users)
+        try {
+          const response = await fetch('/api/public/validate-referral-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ referralCode: normalizedRef }),
+          });
 
-        if (error || !data) {
-          // Referral code is invalid - show warning but allow signup to proceed
-          setReferralError(`Note: Referral code "${normalizedRef}" was not found. You can still sign up, but the referral won't be applied.`);
-          setReferralCode(''); // Don't set the referral code
-        } else {
-          // Referral code is valid
-          setReferralCode(normalizedRef);
-          setReferralError(null);
+          const result = await response.json();
+
+          if (!result.valid) {
+            // Referral code is invalid - show warning but allow signup to proceed
+            setReferralError(`Note: Referral code "${normalizedRef}" was not found. You can still sign up, but the referral won't be applied.`);
+            setReferralCode(''); // Don't set the referral code
+          } else {
+            // Referral code is valid
+            setReferralCode(normalizedRef);
+            setReferralError(null);
+          }
+        } catch (error) {
+          // If API call fails, allow signup without referral
+          console.error('Failed to validate referral code:', error);
+          setReferralError(`Note: Referral code "${normalizedRef}" could not be validated. You can still sign up, but the referral won't be applied.`);
+          setReferralCode('');
         }
       }
 
