@@ -12,15 +12,11 @@ export async function GET(request: NextRequest) {
   const type = requestUrl.searchParams.get('type');
   const next = requestUrl.searchParams.get('next') || '/my-courses';
 
-  // Use production URL for redirects (reverse proxy may report localhost)
+  // Always use production URL - reverse proxy reports localhost even in production
   const PRODUCTION_URL = 'https://swavleba.ge';
-  const getBaseUrl = () => {
-    if (requestUrl.hostname === 'localhost' || requestUrl.hostname === '127.0.0.1') {
-      return requestUrl.origin; // Use actual origin for local dev
-    }
-    return PRODUCTION_URL;
-  };
-  const baseUrl = getBaseUrl();
+  const baseUrl = process.env.NODE_ENV === 'development'
+    ? requestUrl.origin
+    : PRODUCTION_URL;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
