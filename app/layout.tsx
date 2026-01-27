@@ -15,6 +15,11 @@ const GlobalBackgroundManager = dynamic(() => import("@/components/GlobalBackgro
   loading: () => null,
 });
 
+const ReferralCapture = dynamic(() => import("@/components/ReferralCapture"), {
+  ssr: false,
+  loading: () => null,
+});
+
 const inter = Inter({ 
   subsets: ["latin"],
   display: 'swap',
@@ -100,6 +105,7 @@ export default function RootLayout({
             <I18nProvider initialLanguage={initialLanguage}>
               <ScrollPrevention />
               <GlobalBackgroundManager />
+              <ReferralCapture />
               <div className="min-h-full w-full overflow-x-hidden">
                 {children}
               </div>

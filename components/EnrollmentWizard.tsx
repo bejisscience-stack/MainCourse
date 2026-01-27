@@ -7,6 +7,7 @@ import { useI18n } from '@/contexts/I18nContext';
 import { useUser } from '@/hooks/useUser';
 import { supabase } from '@/lib/supabase';
 import { ErrorBoundary } from './ErrorBoundary';
+import { getReferral } from '@/lib/referral-storage';
 import EnrollmentStepOverview from './enrollment/EnrollmentStepOverview';
 import EnrollmentStepPayment from './enrollment/EnrollmentStepPayment';
 import EnrollmentStepReferral from './enrollment/EnrollmentStepReferral';
@@ -105,10 +106,18 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
       // Try to restore from backup first
       const backup = loadFormBackup(course.id);
 
-      // Auto-fill referral code: props > backup > profile
+      // Auto-fill referral code: props > persistent storage > backup > profile
       let referralCodeToUse = initialReferralCode || '';
 
-      // If no referral code from props, try backup
+      // If no referral code from props, try persistent referral storage (30-day TTL)
+      if (!referralCodeToUse) {
+        const persistentReferral = getReferral(course.id);
+        if (persistentReferral) {
+          referralCodeToUse = persistentReferral;
+        }
+      }
+
+      // If no referral code from persistent storage, try backup (1-hour TTL)
       if (!referralCodeToUse && backup?.referralCode) {
         referralCodeToUse = backup.referralCode;
       }

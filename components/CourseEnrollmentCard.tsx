@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { useI18n } from '@/contexts/I18nContext';
 import { useUser } from '@/hooks/useUser';
 import { toast } from 'sonner';
+import { clearReferral } from '@/lib/referral-storage';
 
 interface CourseEnrollmentCardProps {
   course: Course;
@@ -415,6 +416,9 @@ function CourseEnrollmentCard({
         t('enrollment.enrollmentRequestSubmitted') || 'Enrollment request submitted! Waiting for approval.',
         { duration: 5000 }
       );
+
+      // Clear the course-specific referral from persistent storage
+      clearReferral(courseId);
     } catch (err: any) {
       console.error('Error requesting enrollment:', err);
       const errorMessage = err.message || 'Failed to create enrollment request. Please try again.';

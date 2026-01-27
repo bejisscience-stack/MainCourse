@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signUp } from '@/lib/auth';
 import { useI18n } from '@/contexts/I18nContext';
+import { saveReferral } from '@/lib/referral-storage';
 
 function SignUpForm() {
   const router = useRouter();
@@ -52,9 +53,10 @@ function SignUpForm() {
             setReferralError(`Note: Referral code "${normalizedRef}" was not found. You can still sign up, but the referral won't be applied.`);
             setReferralCode(''); // Don't set the referral code
           } else {
-            // Referral code is valid
+            // Referral code is valid - save to persistent storage
             setReferralCode(normalizedRef);
             setReferralError(null);
+            saveReferral(normalizedRef, course || null);
           }
         } catch (error) {
           // If API call fails, allow signup without referral
