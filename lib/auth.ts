@@ -136,31 +136,15 @@ export async function signOut() {
 
     if (result && 'error' in result && result.error) {
       console.warn('Sign out server error:', result.error);
-      // Continue with local cleanup even if server call failed
     }
   } catch (error) {
-    console.warn('Sign out error (will clear local session anyway):', error);
-    // Don't throw - we still want to clear local state
+    console.warn('Sign out error:', error);
   }
-
-  // Always clear local storage to ensure user is signed out locally
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.removeItem('supabase.auth.token');
-      // Clear any other Supabase auth keys
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('sb-') || key.includes('supabase')) {
-          localStorage.removeItem(key);
-        }
-      });
-    } catch (e) {
-      console.warn('Error clearing local storage:', e);
-    }
-  }
+  // Note: @supabase/ssr handles cookie cleanup automatically
 }
 
 export async function getCurrentUser() {
-  // First check session from localStorage (faster, works offline)
+  // First check session from cookies (faster)
   const { data: { session } } = await supabase.auth.getSession();
   if (session?.user) {
     return session.user;

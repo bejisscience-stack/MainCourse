@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { sendWelcomeEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +20,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const cookieStore = await cookies();
+
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // Handle Server Component context
+          }
+        },
+      },
+    });
 
     // Exchange the code for a session
     const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -75,18 +93,3 @@ export async function GET(request: NextRequest) {
   // If no code, redirect to login
   return NextResponse.redirect(new URL('/login', requestUrl.origin));
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
