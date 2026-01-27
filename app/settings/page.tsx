@@ -1,28 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useI18n } from '@/contexts/I18nContext';
-import { useEnrollments } from '@/hooks/useEnrollments';
 import { useBalance } from '@/hooks/useBalance';
 import { useWithdrawalRequests } from '@/hooks/useWithdrawalRequests';
 import { useRealtimeWithdrawalRequests } from '@/hooks/useRealtimeWithdrawalRequests';
 import { useRealtimeUserProfile } from '@/hooks/useRealtimeUserProfile';
-import { useLecturerCourses } from '@/hooks/useLecturerCourses';
-import useSWR from 'swr';
 import { toast } from 'sonner';
-import type { Course } from '@/hooks/useCourses';
 
 export default function SettingsPage() {
   const router = useRouter();
   const { t } = useI18n();
   const { user, isLoading: userLoading } = useUser();
-  const { enrolledCourseIds, isLoading: enrollmentsLoading } = useEnrollments(user?.id || null);
-  const { courses: lecturerCourses, isLoading: lecturerCoursesLoading } = useLecturerCourses(user?.id || null);
   const [referralCode, setReferralCode] = useState<string>('');
   const [loadingReferralCode, setLoadingReferralCode] = useState(true);
   
@@ -160,50 +154,10 @@ export default function SettingsPage() {
     setTimeout(() => setCopiedLink(null), 2000);
   }, []);
 
-  // Fetch enrolled courses only
-  const enrolledIdsArray = useMemo(() => Array.from(enrolledCourseIds).sort(), [enrolledCourseIds]);
-
-  const { data: enrolledCourses = [], isLoading: coursesLoading } = useSWR<Course[]>(
-    user && enrolledIdsArray.length > 0 ? ['enrolled-courses-for-referral', user.id, enrolledIdsArray.join(',')] : null,
-    async () => {
-      if (enrolledIdsArray.length === 0) return [];
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .in('id', enrolledIdsArray)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 10000,
-    }
-  );
-
-  // Combine enrolled courses and lecturer's created courses for referral links
-  const allCoursesForReferral = useMemo(() => {
-    const courseMap = new Map<string, Course>();
-
-    // Add enrolled courses
-    enrolledCourses.forEach(course => courseMap.set(course.id, course));
-
-    // Add lecturer's courses (won't duplicate if already enrolled)
-    lecturerCourses.forEach(course => courseMap.set(course.id, course));
-
-    // Convert map to array and sort by created_at
-    return Array.from(courseMap.values()).sort((a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-  }, [enrolledCourses, lecturerCourses]);
-
-  const getReferralLink = useCallback((courseId?: string) => {
+  const getReferralLink = useCallback(() => {
     if (typeof window === 'undefined' || !referralCode) return '';
     const baseUrl = window.location.origin;
-    const link = courseId 
-      ? `${baseUrl}/signup?ref=${referralCode}&course=${courseId}`
-      : `${baseUrl}/signup?ref=${referralCode}`;
-    return link;
+    return `${baseUrl}/signup?ref=${referralCode}`;
   }, [referralCode]);
 
   const handleBankAccountUpdate = async (e: React.FormEvent) => {
@@ -775,64 +729,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Course-Specific Referral Links - Enrolled courses and lecturer's created courses */}
-                {coursesLoading || enrollmentsLoading || lecturerCoursesLoading ? (
-                  <div className="flex items-center justify-center py-4">
-                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
-                  </div>
-                ) : allCoursesForReferral.length > 0 ? (
-                  <div>
-                    <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-3">
-                      {t('settings.courseSpecificLinks')}
-                    </label>
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {allCoursesForReferral.map((course) => {
-                        const courseLink = getReferralLink(course.id);
-                        const isLecturerCourse = lecturerCourses.some(c => c.id === course.id);
-                        return (
-                          <div key={course.id} className="bg-charcoal-50 dark:bg-navy-700/30 border border-charcoal-200 dark:border-navy-600 rounded-xl p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <p className="text-sm font-semibold text-charcoal-950 dark:text-white">{course.title}</p>
-                                  {isLecturerCourse && (
-                                    <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium rounded-full">
-                                      {t('settings.yourCourse') || 'Your Course'}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="bg-white dark:bg-navy-800 border border-charcoal-200 dark:border-navy-600 rounded-lg px-3 py-2 mt-2">
-                                  <p className="text-xs font-mono text-charcoal-700 dark:text-gray-300 break-all">{courseLink}</p>
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => handleCopyReferralLink(courseLink)}
-                                className="px-3 py-2 bg-charcoal-950 dark:bg-emerald-500 text-white text-sm font-semibold rounded-lg hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark flex items-center gap-1.5 whitespace-nowrap"
-                                title={t('settings.copy')}
-                              >
-                                {copiedLink === courseLink ? (
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                  </svg>
-                                ) : (
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                  </svg>
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-charcoal-50 dark:bg-navy-700/30 border border-charcoal-200 dark:border-navy-600 rounded-xl p-4">
-                    <p className="text-sm text-charcoal-600 dark:text-gray-400 text-center">
-                      {t('settings.noCoursesForReferral') || 'You need to enroll in or create courses to generate course-specific referral links.'}
-                    </p>
-                  </div>
-                )}
               </div>
             )}
 

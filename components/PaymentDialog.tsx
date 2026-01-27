@@ -53,27 +53,22 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
     return () => setMounted(false);
   }, []);
 
-  // Auto-fill referral code if user was referred for this specific course
+  // Auto-fill referral code from profile if user signed up with a referral
   useEffect(() => {
-    if (isOpen && profile && course) {
-      const referredCourseId = profile.referred_for_course_id;
+    if (isOpen && profile) {
       const signupReferralCode = profile.signup_referral_code;
-      
-      // Only auto-fill if:
-      // 1. User has a referral code from signup
-      // 2. User was referred for this specific course
-      // 3. Current course ID matches the referred course ID
-      if (signupReferralCode && referredCourseId && referredCourseId === course.id) {
+
+      // Auto-fill referral code from signup
+      if (signupReferralCode) {
         setReferralCode(signupReferralCode);
       } else {
-        // Clear referral code if course doesn't match
         setReferralCode('');
       }
     } else if (!isOpen) {
       // Reset when dialog closes
       setReferralCode('');
     }
-  }, [isOpen, profile, course]);
+  }, [isOpen, profile]);
 
   const courseCode = useMemo(() => generateCourseCode(course.id), [course.id]);
 

@@ -6,7 +6,6 @@ import Navigation from '@/components/Navigation';
 import Hero from '@/components/Hero';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/hooks/useUser';
-import FirstLoginCoursePopup from '@/components/FirstLoginCoursePopup';
 import Footer from '@/components/Footer';
 
 // Lazy load heavy components that are below the fold
@@ -41,7 +40,7 @@ const ActiveProjectsCarousel = dynamic(() => import('@/components/ActiveProjects
 
 export default function Home() {
   const router = useRouter();
-  const { user, profile, role: userRole, isLoading: userLoading } = useUser();
+  const { role: userRole, isLoading: userLoading } = useUser();
 
   // Redirect lecturers
   useEffect(() => {
@@ -49,16 +48,6 @@ export default function Home() {
       router.push('/lecturer/dashboard');
     }
   }, [userRole, userLoading, router]);
-
-  // Show first-login popup if user was referred for a course
-  const shouldShowPopup = 
-    !userLoading && 
-    user && 
-    profile && 
-    profile.referred_for_course_id && 
-    profile.signup_referral_code && 
-    !profile.first_login_completed &&
-    userRole !== 'lecturer'; // Don't show for lecturers
 
   return (
     <main className="relative min-h-screen flex flex-col">
@@ -70,13 +59,6 @@ export default function Home() {
         <ActiveProjectsCarousel />
       </div>
       <Footer />
-      {/* First Login Course Popup */}
-      {shouldShowPopup && profile.referred_for_course_id && profile.signup_referral_code && (
-        <FirstLoginCoursePopup
-          courseId={profile.referred_for_course_id}
-          referralCode={profile.signup_referral_code}
-        />
-      )}
     </main>
   );
 }

@@ -111,7 +111,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
 
       // If no referral code from props, try persistent referral storage (30-day TTL)
       if (!referralCodeToUse) {
-        const persistentReferral = getReferral(course.id);
+        const persistentReferral = getReferral();
         if (persistentReferral) {
           referralCodeToUse = persistentReferral;
         }
@@ -125,23 +125,13 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
       // Track if we auto-filled from profile
       let autoFilledFromProfile = false;
 
-      // If still no referral code, check profile
-      if (!referralCodeToUse && profile && course) {
-        const referredCourseId = profile.referred_for_course_id;
+      // If still no referral code, check profile for signup referral
+      if (!referralCodeToUse && profile) {
         const signupReferralCode = profile.signup_referral_code;
 
-        // Auto-fill referral code based on referral type:
         if (signupReferralCode) {
-          // General referral (no specific course) - auto-fill for ALL courses
-          if (!referredCourseId) {
-            referralCodeToUse = signupReferralCode;
-            autoFilledFromProfile = true;
-          }
-          // Course-specific referral - only auto-fill for that specific course
-          else if (referredCourseId === course.id) {
-            referralCodeToUse = signupReferralCode;
-            autoFilledFromProfile = true;
-          }
+          referralCodeToUse = signupReferralCode;
+          autoFilledFromProfile = true;
         }
       }
 

@@ -6,7 +6,6 @@ export interface SignUpData {
   username: string;
   role?: 'student' | 'lecturer';
   signupReferralCode?: string;
-  signupCourseId?: string;
 }
 
 export interface SignInData {
@@ -14,7 +13,7 @@ export interface SignInData {
   password: string;
 }
 
-export async function signUp({ email, password, username, role = 'student', signupReferralCode, signupCourseId }: SignUpData) {
+export async function signUp({ email, password, username, role = 'student', signupReferralCode }: SignUpData) {
   // Validate username format
   if (!username || username.trim().length < 3 || username.trim().length > 30) {
     throw new Error('Username must be between 3 and 30 characters');
@@ -54,7 +53,6 @@ export async function signUp({ email, password, username, role = 'student', sign
         username: username.trim(),
         role: role,
         signup_referral_code: signupReferralCode ? signupReferralCode.toUpperCase().trim() : null,
-        signup_course_id: signupCourseId ? signupCourseId.trim() : null,
       },
     },
   });

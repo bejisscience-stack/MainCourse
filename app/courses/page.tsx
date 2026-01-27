@@ -12,7 +12,6 @@ import { useEnrollments } from '@/hooks/useEnrollments';
 import { useEnrollmentRequestStatus } from '@/hooks/useEnrollmentRequests';
 import useSWR from 'swr';
 import { useI18n } from '@/contexts/I18nContext';
-import FirstLoginCoursePopup from '@/components/FirstLoginCoursePopup';
 import BundleEnrollmentModal from '@/components/BundleEnrollmentModal';
 import { formatPriceInGel } from '@/lib/currency';
 
@@ -654,20 +653,6 @@ function CoursesPageContent() {
           )}
         </div>
       </div>
-      {/* First Login Course Popup */}
-      {!userLoading &&
-       user &&
-       profile &&
-       profile.referred_for_course_id &&
-       profile.signup_referral_code &&
-       !profile.first_login_completed &&
-       userRole !== 'lecturer' && (
-        <FirstLoginCoursePopup
-          courseId={profile.referred_for_course_id}
-          referralCode={profile.signup_referral_code}
-        />
-      )}
-
       {/* Bundle Enrollment Modal */}
       {selectedBundleId && showBundleEnrollmentWizard && (
         <BundleEnrollmentModal

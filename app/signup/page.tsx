@@ -20,14 +20,12 @@ function SignUpForm() {
   const [success, setSuccess] = useState(false);
   const [referralCode, setReferralCode] = useState<string>('');
   const [referralError, setReferralError] = useState<string | null>(null);
-  const [courseId, setCourseId] = useState<string | null>(null);
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
 
-  // Get referral code, course ID, and redirect URL from URL params
+  // Get referral code and redirect URL from URL params
   useEffect(() => {
     const validateReferralCode = async () => {
       const ref = searchParams.get('ref');
-      const course = searchParams.get('course');
       const redirect = searchParams.get('redirect');
 
       // Store redirect URL for post-signup navigation
@@ -56,7 +54,7 @@ function SignUpForm() {
             // Referral code is valid - save to persistent storage
             setReferralCode(normalizedRef);
             setReferralError(null);
-            saveReferral(normalizedRef, course || null);
+            saveReferral(normalizedRef);
           }
         } catch (error) {
           // If API call fails, allow signup without referral
@@ -64,10 +62,6 @@ function SignUpForm() {
           setReferralError(`Note: Referral code "${normalizedRef}" could not be validated. You can still sign up, but the referral won't be applied.`);
           setReferralCode('');
         }
-      }
-
-      if (course) {
-        setCourseId(course);
       }
     };
 
@@ -80,13 +74,12 @@ function SignUpForm() {
     setLoading(true);
 
     try {
-      const { user } = await signUp({ 
-        email, 
-        password, 
-        username, 
+      const { user } = await signUp({
+        email,
+        password,
+        username,
         role,
-        signupReferralCode: referralCode || undefined,
-        signupCourseId: courseId || undefined
+        signupReferralCode: referralCode || undefined
       });
       
       if (user) {
@@ -101,8 +94,8 @@ function SignUpForm() {
               // Use window.location.href for reliable navigation with query params
               window.location.href = redirectUrl;
               return;
-            } else if (referralCode || courseId) {
-              // If user registered with referral code, redirect to home page to show course popup
+            } else if (referralCode) {
+              // If user registered with referral code, redirect to home page
               router.push('/');
             } else {
               router.push('/my-courses');

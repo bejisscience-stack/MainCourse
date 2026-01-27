@@ -4,15 +4,12 @@
  * Stores referral codes in localStorage for 30 days so users who click a referral link
  * but don't register immediately still get the referral applied when they enroll.
  *
- * Supports:
- * - Course-specific referrals: Only apply to a specific course
- * - General referrals: Apply to all courses
- * - Last-click attribution: New referral links override existing ones
+ * Supports general referrals that apply to all courses.
+ * Last-click attribution: New referral links override existing ones.
  */
 
 interface StoredReferral {
   referralCode: string;
-  courseId: string | null;  // null = general referral (applies to all courses)
   timestamp: number;
 }
 
@@ -21,28 +18,32 @@ const EXPIRY_DAYS = 30;
 const EXPIRY_MS = EXPIRY_DAYS * 24 * 60 * 60 * 1000;
 
 /**
- * Get all stored referrals from localStorage
+ * Get stored referral from localStorage
  */
-function getStoredReferrals(): StoredReferral[] {
-  if (typeof window === 'undefined') return [];
+function getStoredReferral(): StoredReferral | null {
+  if (typeof window === 'undefined') return null;
 
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
-    return JSON.parse(stored) as StoredReferral[];
+    if (!stored) return null;
+    return JSON.parse(stored) as StoredReferral;
   } catch {
-    return [];
+    return null;
   }
 }
 
 /**
- * Save referrals to localStorage
+ * Save referral to localStorage
  */
-function setStoredReferrals(referrals: StoredReferral[]): void {
+function setStoredReferral(referral: StoredReferral | null): void {
   if (typeof window === 'undefined') return;
 
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(referrals));
+    if (referral) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(referral));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
   } catch {
     // localStorage might be full or disabled
   }
@@ -59,100 +60,51 @@ function isExpired(referral: StoredReferral): boolean {
  * Save a referral code to persistent storage
  *
  * @param referralCode - The referral code to save
- * @param courseId - Optional course ID. If provided, referral only applies to that course.
- *                   If null/undefined, it's a general referral that applies to all courses.
  */
-export function saveReferral(referralCode: string, courseId?: string | null): void {
+export function saveReferral(referralCode: string): void {
   if (typeof window === 'undefined') return;
   if (!referralCode) return;
 
   const normalizedCode = referralCode.toUpperCase().trim();
-  const normalizedCourseId = courseId?.trim() || null;
 
-  let referrals = getStoredReferrals();
-
-  // Remove expired referrals
-  referrals = referrals.filter(r => !isExpired(r));
-
-  // Remove existing referral for the same course (or general referral if courseId is null)
-  referrals = referrals.filter(r => r.courseId !== normalizedCourseId);
-
-  // If this is a general referral, also remove all course-specific referrals
-  // (general referral overrides everything)
-  if (normalizedCourseId === null) {
-    referrals = [];
-  }
-
-  // Add new referral
-  referrals.push({
+  setStoredReferral({
     referralCode: normalizedCode,
-    courseId: normalizedCourseId,
     timestamp: Date.now(),
   });
-
-  setStoredReferrals(referrals);
 }
 
 /**
- * Get the referral code for a specific course
+ * Get the stored referral code
  *
- * Priority:
- * 1. Course-specific referral matching the courseId
- * 2. General referral (applies to all courses)
- *
- * @param courseId - The course ID to get referral for
  * @returns The referral code if found and not expired, null otherwise
  */
-export function getReferral(courseId?: string): string | null {
+export function getReferral(): string | null {
   if (typeof window === 'undefined') return null;
 
-  const referrals = getStoredReferrals();
-  const normalizedCourseId = courseId?.trim() || null;
+  const referral = getStoredReferral();
 
-  // First, try to find a course-specific referral
-  if (normalizedCourseId) {
-    const courseSpecific = referrals.find(
-      r => r.courseId === normalizedCourseId && !isExpired(r)
-    );
-    if (courseSpecific) {
-      return courseSpecific.referralCode;
+  if (!referral || isExpired(referral)) {
+    // Clean up expired referral
+    if (referral) {
+      setStoredReferral(null);
     }
+    return null;
   }
 
-  // Fall back to general referral
-  const generalReferral = referrals.find(
-    r => r.courseId === null && !isExpired(r)
-  );
-
-  return generalReferral?.referralCode || null;
+  return referral.referralCode;
 }
 
 /**
  * Clear referral code after successful enrollment
- *
- * @param courseId - The course ID to clear referral for.
- *                   If the stored referral was general, it will be cleared regardless.
  */
-export function clearReferral(courseId?: string): void {
+export function clearReferral(): void {
   if (typeof window === 'undefined') return;
-
-  let referrals = getStoredReferrals();
-  const normalizedCourseId = courseId?.trim() || null;
-
-  // Remove the course-specific referral if it exists
-  if (normalizedCourseId) {
-    referrals = referrals.filter(r => r.courseId !== normalizedCourseId);
-  }
-
-  // Note: We don't clear general referral here because it should apply to all courses
-  // The general referral will naturally expire after 30 days
-
-  setStoredReferrals(referrals);
+  setStoredReferral(null);
 }
 
 /**
  * Check if there's any stored referral (for UI indicators)
  */
-export function hasStoredReferral(courseId?: string): boolean {
-  return getReferral(courseId) !== null;
+export function hasStoredReferral(): boolean {
+  return getReferral() !== null;
 }

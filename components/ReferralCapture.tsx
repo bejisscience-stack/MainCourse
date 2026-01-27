@@ -13,7 +13,6 @@ import { saveReferral } from '@/lib/referral-storage';
  *
  * Supported URL parameters:
  * - ref: The referral code
- * - course: Optional course ID for course-specific referrals
  */
 export default function ReferralCapture() {
   const searchParams = useSearchParams();
@@ -21,7 +20,6 @@ export default function ReferralCapture() {
   useEffect(() => {
     const captureReferral = async () => {
       const ref = searchParams.get('ref');
-      const course = searchParams.get('course');
 
       if (!ref) return;
 
@@ -39,12 +37,12 @@ export default function ReferralCapture() {
 
         if (result.valid) {
           // Save to persistent storage
-          saveReferral(normalizedRef, course || null);
+          saveReferral(normalizedRef);
         }
       } catch (error) {
         // If validation fails, still save the referral code
         // It will be validated again during enrollment
-        saveReferral(normalizedRef, course || null);
+        saveReferral(normalizedRef);
       }
     };
 
