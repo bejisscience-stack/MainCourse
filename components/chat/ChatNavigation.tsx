@@ -169,7 +169,7 @@ export default function ChatNavigation() {
           title={t('chat.home')}
         >
           <img
-            src="/wavleba-logo.svg?v=2"
+            src="/wavleba-logo-new.png"
             alt="Wavleba"
             className="h-8 w-auto"
           />
