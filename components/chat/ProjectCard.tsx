@@ -291,14 +291,14 @@ export default function ProjectCard({
 
   return (
     <>
-      <div className={`relative overflow-hidden rounded-xl border transition-all duration-300 max-w-4xl ${
+      <div className={`relative overflow-hidden rounded-2xl border transition-all duration-300 w-full max-w-4xl ${
         isProjectExpired
-          ? 'bg-gray-900/50 border-gray-700/50 opacity-70'
-          : 'bg-gradient-to-br from-gray-800/90 via-gray-800/95 to-gray-900/90 border-gray-700/50 hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/5'
+          ? 'bg-navy-900/50 border-navy-800/60 opacity-70'
+          : 'bg-gradient-to-br from-navy-900/80 via-navy-900/90 to-navy-950/90 border-navy-800/60 hover:border-emerald-500/30 hover:shadow-soft-lg'
       }`}>
         {/* Gradient accent line */}
         <div className={`absolute top-0 left-0 right-0 h-1 ${
-          isProjectExpired ? 'bg-gray-600' : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500'
+          isProjectExpired ? 'bg-navy-700' : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500'
         }`} />
 
         {/* Main Card Content */}
@@ -314,7 +314,7 @@ export default function ProjectCard({
 
                 {/* Expired Badge */}
                 {isProjectExpired && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-700 text-gray-300 border border-gray-600">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-navy-800/70 text-gray-300 border border-navy-700/70">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
@@ -350,10 +350,10 @@ export default function ProjectCard({
             <button
               onClick={handleExpand}
               disabled={isProjectExpired && !isLecturer}
-              className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center transition-all ${
+              className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center transition-all border ${
                 isProjectExpired && !isLecturer
-                  ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
-                  : 'bg-gray-700/50 text-gray-300 hover:bg-emerald-500/20 hover:text-emerald-400'
+                  ? 'bg-navy-900/60 text-gray-600 border-navy-800/60 cursor-not-allowed'
+                  : 'bg-navy-900/60 text-gray-300 border-navy-800/60 hover:bg-emerald-500/15 hover:text-emerald-300 hover:border-emerald-500/30'
               }`}
             >
               <svg className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -365,7 +365,7 @@ export default function ProjectCard({
           {/* Quick Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-3 sm:mb-4">
             {/* Budget Card */}
-            <div className="bg-gray-900/50 rounded-lg p-2 sm:p-3 border border-gray-700/50">
+            <div className="bg-navy-900/60 rounded-lg p-2 sm:p-3 border border-navy-800/60">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-emerald-500/20 flex items-center justify-center">
                   <span className="text-emerald-400 text-[10px] sm:text-xs">$</span>
@@ -384,10 +384,10 @@ export default function ProjectCard({
                       'text-emerald-400'
                     }`}>{formatCurrency(budget.remainingBudget)}</span>
                   </div>
-                  <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-navy-800/70 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
-                        budget.status === 'depleted' ? 'bg-gray-500' :
+                        budget.status === 'depleted' ? 'bg-navy-700' :
                         budget.status === 'critical' ? 'bg-red-500' :
                         budget.status === 'low' ? 'bg-amber-500' :
                         'bg-emerald-500'
@@ -400,7 +400,7 @@ export default function ProjectCard({
             </div>
 
             {/* Views Card */}
-            <div className="bg-gray-900/50 rounded-lg p-2 sm:p-3 border border-gray-700/50">
+            <div className="bg-navy-900/60 rounded-lg p-2 sm:p-3 border border-navy-800/60">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-blue-500/20 flex items-center justify-center">
                   <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -414,7 +414,7 @@ export default function ProjectCard({
             </div>
 
             {/* Platforms Card */}
-            <div className="bg-gray-900/50 rounded-lg p-2 sm:p-3 border border-gray-700/50">
+            <div className="bg-navy-900/60 rounded-lg p-2 sm:p-3 border border-navy-800/60">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-purple-500/20 flex items-center justify-center">
                   <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -425,7 +425,7 @@ export default function ProjectCard({
               </div>
               <div className="flex flex-wrap gap-1">
                 {project.platforms.slice(0, 3).map((platform) => {
-                  const config = PLATFORM_CONFIG[platform.toLowerCase()] || { name: platform, icon: '•', color: 'text-gray-400', bg: 'bg-gray-700/50 border-gray-600' };
+                  const config = PLATFORM_CONFIG[platform.toLowerCase()] || { name: platform, icon: '•', color: 'text-gray-400', bg: 'bg-navy-800/60 border-navy-700/70' };
                   return (
                     <span key={platform} className={`inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium border ${config.bg} ${config.color}`}>
                       <span>{config.icon}</span>
@@ -434,13 +434,13 @@ export default function ProjectCard({
                   );
                 })}
                 {project.platforms.length > 3 && (
-                  <span className="px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium bg-gray-700/50 text-gray-400">+{project.platforms.length - 3}</span>
+                  <span className="px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium bg-navy-800/60 text-gray-400">+{project.platforms.length - 3}</span>
                 )}
               </div>
             </div>
 
             {/* Potential RPM Card */}
-            <div className="bg-gray-900/50 rounded-lg p-2 sm:p-3 border border-gray-700/50">
+            <div className="bg-navy-900/60 rounded-lg p-2 sm:p-3 border border-navy-800/60">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-amber-500/20 flex items-center justify-center">
                   <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -468,7 +468,7 @@ export default function ProjectCard({
                 className={`w-full py-2 sm:py-2.5 px-3 sm:px-4 text-sm sm:text-base font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 ${
                   canSubmit
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white cursor-pointer'
-                    : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                    : 'bg-navy-800/70 text-gray-400 cursor-not-allowed'
                 }`}
               >
                 <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -478,9 +478,9 @@ export default function ProjectCard({
               </button>
               {/* Tooltip for disabled state */}
               {!canSubmit && submitDisabledReason && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-gray-300 text-xs rounded-lg opacity-0 group-hover/submit:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 border border-gray-700">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-navy-950/90 text-gray-300 text-xs rounded-lg opacity-0 group-hover/submit:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 border border-navy-800/60">
                   {submitDisabledReason}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-navy-950"></div>
                 </div>
               )}
             </div>
@@ -488,13 +488,13 @@ export default function ProjectCard({
         </div>
 
         {/* Expanded Content */}
-        <div className={`border-t border-gray-700/50 bg-gray-900/30 overflow-hidden transition-all duration-300 ease-in-out ${
+        <div className={`border-t border-navy-800/60 bg-navy-900/50 overflow-hidden transition-all duration-300 ease-in-out ${
           isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
         }`}>
-          <div className="p-3 sm:p-4 md:p-5 space-y-3 sm:space-y-4 md:space-y-5 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+          <div className="p-3 sm:p-4 md:p-5 space-y-3 sm:space-y-4 md:space-y-5 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto chat-scrollbar">
               {/* Reference Video */}
               {project.videoLink && (
-                <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                <div className="flex items-center gap-3 p-3 bg-navy-900/50 rounded-lg border border-navy-800/60">
                   <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
                     <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -507,7 +507,7 @@ export default function ProjectCard({
                       {project.videoLink}
                     </a>
                   </div>
-                  <a href={project.videoLink} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors">
+                  <a href={project.videoLink} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-navy-800/70 hover:bg-navy-700 text-white text-sm rounded-lg transition-colors">
                     {t('projects.viewVideo') || 'Watch'}
                   </a>
                 </div>
@@ -524,12 +524,12 @@ export default function ProjectCard({
                   </h4>
                   <div className="space-y-2">
                     {projectCriteria.map((criterion) => (
-                      <div key={criterion.id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                      <div key={criterion.id} className="flex items-center justify-between p-3 bg-navy-900/50 rounded-lg border border-navy-800/60">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                           <span className="text-sm text-gray-300">{criterion.text}</span>
                           {criterion.platform && (
-                            <span className="px-2 py-0.5 text-xs rounded bg-gray-700 text-gray-400">{PLATFORM_CONFIG[criterion.platform.toLowerCase()]?.name || criterion.platform}</span>
+                            <span className="px-2 py-0.5 text-xs rounded bg-navy-800/70 text-gray-400">{PLATFORM_CONFIG[criterion.platform.toLowerCase()]?.name || criterion.platform}</span>
                           )}
                         </div>
                         <span className="text-sm font-bold text-emerald-400">${criterion.rpm.toFixed(2)}</span>
@@ -556,16 +556,16 @@ export default function ProjectCard({
                         className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                           canSubmit
                             ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white cursor-pointer'
-                            : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                            : 'bg-navy-800/70 text-gray-400 cursor-not-allowed'
                         }`}
                       >
                         {t('projects.submitVideo') || 'Submit Video'}
                       </button>
                       {/* Tooltip for disabled state */}
                       {!canSubmit && submitDisabledReason && (
-                        <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-900 text-gray-300 text-xs rounded-lg opacity-0 group-hover/expandsubmit:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 border border-gray-700">
+                        <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-navy-950/90 text-gray-300 text-xs rounded-lg opacity-0 group-hover/expandsubmit:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 border border-navy-800/60">
                           {submitDisabledReason}
-                          <div className="absolute top-full right-4 border-4 border-transparent border-t-gray-900"></div>
+                          <div className="absolute top-full right-4 border-4 border-transparent border-t-navy-950"></div>
                         </div>
                       )}
                     </div>
@@ -578,8 +578,8 @@ export default function ProjectCard({
                     <span className="ml-3 text-gray-400 text-sm">{t('projects.loadingSubmissions') || 'Loading...'}</span>
                   </div>
                 ) : submissions.length === 0 ? (
-                  <div className="text-center py-8 bg-gray-800/30 rounded-lg border border-gray-700/50">
-                    <svg className="w-12 h-12 mx-auto text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="text-center py-8 bg-navy-900/50 rounded-lg border border-navy-800/60">
+                    <svg className="w-12 h-12 mx-auto text-gray-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
                     <p className="text-gray-400 text-sm mb-1">{t('projects.noSubmissionsYet') || 'No submissions yet'}</p>
@@ -599,7 +599,7 @@ export default function ProjectCard({
                         <div
                           key={submission.id}
                           onClick={() => setExpandedSubmissionId(expandedSubmissionId === submission.submissionId ? null : submission.submissionId)}
-                          className="p-4 bg-gray-800/50 rounded-lg border border-gray-700/50 hover:border-gray-600 cursor-pointer transition-all"
+                          className="p-4 bg-navy-900/50 rounded-lg border border-navy-800/60 hover:border-navy-700/80 cursor-pointer transition-all"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -629,7 +629,7 @@ export default function ProjectCard({
                                     setReviewingSubmissionId(submission.submissionId);
                                     setReviewingSubmission(submission);
                                   }}
-                                  className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs rounded-lg transition-colors"
+                                  className="px-3 py-1 bg-emerald-500/90 hover:bg-emerald-500 text-white text-xs rounded-lg transition-colors"
                                 >
                                   Review
                                 </button>
@@ -642,12 +642,12 @@ export default function ProjectCard({
 
                           {/* Expanded Submission Details */}
                           {expandedSubmissionId === submission.submissionId && (
-                            <div className="mt-4 pt-4 border-t border-gray-700/50 space-y-3">
+                            <div className="mt-4 pt-4 border-t border-navy-800/60 space-y-3">
                               {/* Platform Links */}
                               {Object.keys(platformLinks).length > 0 && (
                                 <div className="space-y-2">
                                   {Object.entries(platformLinks).map(([platform, link]) => (
-                                    <div key={platform} className="flex items-center gap-3 p-2 bg-gray-900/50 rounded-lg">
+                                    <div key={platform} className="flex items-center gap-3 p-2 bg-navy-900/60 rounded-lg">
                                       <span className={`text-sm font-medium ${PLATFORM_CONFIG[platform.toLowerCase()]?.color || 'text-gray-400'}`}>
                                         {PLATFORM_CONFIG[platform.toLowerCase()]?.name || platform}
                                       </span>

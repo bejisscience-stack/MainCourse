@@ -144,9 +144,9 @@ export default function EnrollmentStepReferral({
       </div>
 
       {/* Referral Code Input */}
-      <div className="bg-gray-50 dark:bg-navy-700/50 rounded-lg p-5 md:p-6 border-2 border-emerald-200 dark:border-emerald-700/50">
-        <label className="block text-base md:text-lg font-medium text-gray-700 dark:text-gray-300 mb-3">
-          {t('payment.referralCode')} <span className="text-gray-500 dark:text-gray-400 font-normal">({t('common.optional')})</span>
+      <div className="bg-white/50 dark:bg-navy-800/50 rounded-2xl p-6 md:p-8 border border-charcoal-100/50 dark:border-navy-700/50 shadow-soft">
+        <label className="block text-base font-semibold text-charcoal-950 dark:text-white mb-3">
+          {t('payment.referralCode')} <span className="text-charcoal-500 dark:text-gray-400 font-normal text-sm ml-1">({t('common.optional')})</span>
         </label>
         <div className="relative">
           <input
@@ -154,14 +154,14 @@ export default function EnrollmentStepReferral({
             value={data.referralCode}
             onChange={handleReferralCodeChange}
             placeholder={t('payment.referralCodePlaceholder') || 'Enter referral code (optional)'}
-            className={`w-full px-5 py-3 text-base bg-white dark:bg-navy-800 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 ${
-              data.referralCode ? 'pr-20' : 'pr-5'
+            className={`w-full px-5 py-4 text-lg bg-white dark:bg-navy-900 border rounded-xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all duration-200 text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500 ${
+              data.referralCode ? 'pr-24' : 'pr-5'
             } ${
               validationState === 'valid'
-                ? 'border-emerald-500 dark:border-emerald-400 focus:ring-emerald-500 dark:focus:ring-emerald-400'
+                ? 'border-emerald-500 dark:border-emerald-400'
                 : validationState === 'invalid'
-                ? 'border-red-500 dark:border-red-400 focus:ring-red-500 dark:focus:ring-red-400'
-                : 'border-charcoal-200 dark:border-navy-600 focus:ring-emerald-500 dark:focus:ring-emerald-400'
+                ? 'border-red-500 dark:border-red-400'
+                : 'border-charcoal-200 dark:border-navy-600 focus:border-emerald-500 dark:focus:border-emerald-400'
             }`}
             maxLength={20}
           />
@@ -232,26 +232,28 @@ export default function EnrollmentStepReferral({
       </div>
 
       {/* Info Box */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-5">
+      <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50 rounded-2xl p-5">
         <div className="flex items-start space-x-3">
-          <svg
-            className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
+          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg shrink-0">
+            <svg
+              className="w-5 h-5 text-blue-600 dark:text-blue-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
           <div>
-            <p className="text-base font-semibold text-blue-800 dark:text-blue-300">
+            <p className="text-base font-bold text-charcoal-950 dark:text-white">
               {t('enrollment.referralInfoTitle')}
             </p>
-            <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+            <p className="text-sm text-charcoal-600 dark:text-gray-400 mt-1 leading-relaxed">
               {t('enrollment.referralInfoDescription')}
             </p>
           </div>

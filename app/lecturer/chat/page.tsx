@@ -9,9 +9,7 @@ import CourseCreationModal from '@/components/CourseCreationModal';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useLecturerCourses } from '@/hooks/useLecturerCourses';
-import { normalizeProfileUsername } from '@/lib/username';
 import type { Server, Channel } from '@/types/server';
-import type { Member } from '@/types/member';
 import type { Message as MessageType } from '@/types/message';
 import type { User } from '@supabase/supabase-js';
 
@@ -20,7 +18,6 @@ export default function LecturerChatPage() {
   const { user, role: userRole, isLoading: userLoading } = useUser();
   const { courses, isLoading: coursesLoading, mutate: mutateCourses } = useLecturerCourses(user?.id || null);
   const [servers, setServers] = useState<Server[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showCourseModal, setShowCourseModal] = useState(false);
 
@@ -48,7 +45,6 @@ export default function LecturerChatPage() {
       // Handle case when there are no courses
       if (!courses || courses.length === 0) {
         setServers([]);
-        setMembers([]);
         return;
       }
 
@@ -178,43 +174,6 @@ export default function LecturerChatPage() {
 
       setServers(serversData);
 
-      // Fetch members (enrolled students)
-      try {
-        const courseIds = courses.map((c) => c.id);
-        if (courseIds.length > 0) {
-          const { data: enrollments, error: enrollmentsError } = await supabase
-            .from('enrollments')
-            .select('user_id, courses(id, title)')
-            .in('course_id', courseIds);
-
-          if (!enrollmentsError && enrollments && enrollments.length > 0) {
-            const userIds = [...new Set(enrollments.map((e) => e.user_id))];
-            if (userIds.length > 0) {
-              const { data: profiles } = await supabase
-                .from('profiles')
-                .select('id, username, email')
-                .in('id', userIds);
-
-              const membersData: Member[] =
-                profiles?.map((profile) => {
-                  const username = normalizeProfileUsername(profile);
-                  return {
-                    id: profile.id,
-                    username,
-                    avatarUrl: '',
-                    status: 'online' as const,
-                  };
-                }) || [];
-
-              setMembers(membersData);
-            }
-          }
-        }
-      } catch (membersErr) {
-        // Members loading is not critical, continue
-        console.warn('Error loading members:', membersErr);
-        setMembers([]);
-      }
     } catch (err: any) {
       console.error('Error loading chat data:', err);
       setError(err.message || 'Failed to load chat. Please try again.');
@@ -409,7 +368,6 @@ export default function LecturerChatPage() {
           <LayoutContainer
             servers={servers}
             currentUserId={user.id}
-            initialMembers={members}
             isLecturer={true}
             onAddCourse={handleAddCourse}
             onSendMessage={handleSendMessage}

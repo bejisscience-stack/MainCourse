@@ -297,7 +297,7 @@ export default function VideoSubmissionDialog({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-navy-950/80 z-50 flex items-center justify-center p-4"
       onClick={(e) => {
         // Close modal when clicking outside
         if (e.target === e.currentTarget) {
@@ -306,13 +306,13 @@ export default function VideoSubmissionDialog({
       }}
     >
       <div 
-        className="relative w-full max-w-lg bg-gray-800 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-lg bg-navy-950/90 border border-navy-800/60 rounded-2xl shadow-soft-xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center text-gray-300 transition-colors"
+          className="absolute top-4 right-4 z-10 w-8 h-8 bg-navy-800/70 hover:bg-navy-700 rounded-full flex items-center justify-center text-gray-300 transition-colors"
           aria-label={t('videoSubmission.closeDialog')}
         >
           <svg
@@ -330,7 +330,7 @@ export default function VideoSubmissionDialog({
           </svg>
         </button>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto chat-scrollbar flex-1 min-h-0">
           {/* Header */}
           <div>
             <h2 className="text-2xl font-bold text-white mb-2">{t('videoSubmission.submitYourVideo')}</h2>
@@ -339,7 +339,7 @@ export default function VideoSubmissionDialog({
 
           {/* Success Message */}
           {submitSuccess && (
-            <div className="bg-green-900/50 border border-green-700 text-green-200 px-4 py-3 rounded-lg">
+            <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 px-4 py-3 rounded-xl">
               <div className="flex items-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -351,7 +351,7 @@ export default function VideoSubmissionDialog({
 
           {/* Submit Error */}
           {errors.submit && (
-            <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg">
+            <div className="bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-3 rounded-xl">
               {errors.submit}
             </div>
           )}
@@ -376,7 +376,7 @@ export default function VideoSubmissionDialog({
                       value={platformLinks[platform] || ''}
                       onChange={(e) => handlePlatformLinkChange(platform, e.target.value)}
                       placeholder={`https://${platform.toLowerCase()}.com/your-video`}
-                      className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      className="w-full px-4 py-2.5 bg-navy-900/60 text-white rounded-xl border border-navy-800/60 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-transparent"
                     />
                     {errors[`platform_${platform}`] && (
                       <p className="mt-1 text-sm text-red-400">{errors[`platform_${platform}`]}</p>
@@ -400,24 +400,24 @@ export default function VideoSubmissionDialog({
               onChange={(e) => setMessage(e.target.value)}
               placeholder={t('videoSubmission.addNotes')}
               rows={3}
-              className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-2.5 bg-navy-900/60 text-white rounded-xl border border-navy-800/60 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-transparent resize-none"
             />
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-700">
+          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-navy-800/60">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-6 py-2 text-sm font-semibold text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 text-sm font-semibold text-gray-300 bg-navy-900/60 border border-navy-800/60 rounded-lg hover:bg-navy-800/70 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={isSubmitting || submitSuccess}
-              className="px-6 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="px-6 py-2 text-sm font-semibold text-white bg-emerald-500/90 rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {isSubmitting ? (
                 <>

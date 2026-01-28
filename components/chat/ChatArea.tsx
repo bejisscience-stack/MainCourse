@@ -510,8 +510,8 @@ export default function ChatArea({
 
   if (!channel) {
     return (
-      <div className="flex-1 bg-navy-950/20 backdrop-blur-[0.5px] flex items-center justify-center">
-        <div className="text-center text-gray-400">
+      <div className="flex-1 bg-navy-950/30 backdrop-blur-sm flex items-center justify-center">
+        <div className="text-center text-gray-500">
           <svg
             className="w-16 h-16 mx-auto mb-4 opacity-50"
             fill="none"
@@ -525,7 +525,7 @@ export default function ChatArea({
               d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
             />
           </svg>
-          <p className="text-lg font-medium">{t('chat.selectChannel')}</p>
+          <p className="text-lg font-semibold text-gray-200">{t('chat.selectChannel')}</p>
         </div>
       </div>
     );
@@ -547,46 +547,46 @@ export default function ChatArea({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-navy-950/20 backdrop-blur-[0.5px] relative">
+    <div className="flex-1 flex flex-col bg-navy-950/30 backdrop-blur-sm relative">
       {/* Channel header */}
-      <div className="h-12 px-4 border-b border-navy-700/30 flex items-center shadow-sm flex-shrink-0 bg-navy-950/30 backdrop-blur-[1px] z-10">
+      <div className="h-12 px-4 border-b border-navy-800/60 flex items-center shadow-soft flex-shrink-0 bg-navy-950/60 backdrop-blur-md z-10">
         <div className="flex items-center gap-2">
-          <span className="text-emerald-400 text-xl">#</span>
-          <h2 className="text-white font-semibold text-sm">{channel.name}</h2>
+          <span className="text-emerald-300 text-lg">#</span>
+          <h2 className="text-gray-100 font-semibold text-sm">{channel.name}</h2>
           {!isConnected && (
-            <span className="flex items-center gap-1 text-yellow-500 text-xs">
-              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+            <span className="flex items-center gap-1 text-amber-400 text-xs">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
               {t('chat.connecting')}
             </span>
           )}
         </div>
         {channel.description && (
-          <span className="ml-4 text-gray-400 text-xs hidden md:block">{channel.description}</span>
+          <span className="ml-4 text-gray-500 text-xs hidden md:block">{channel.description}</span>
         )}
       </div>
 
       {/* Messages container */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden"
+        className="flex-1 overflow-y-auto overflow-x-hidden chat-scrollbar"
         style={{ 
           scrollBehavior: 'auto',
           overscrollBehavior: 'contain',
         }}
       >
-        <div className="min-h-full flex flex-col justify-end py-4">
+        <div className="min-h-full flex flex-col justify-end py-5">
           {isLoading && messages.length === 0 && channel?.id ? (
             // Fast loading skeleton - minimal DOM for speed
             <div className="space-y-4 px-4">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex gap-4 animate-pulse pt-3">
-                  <div className="w-10 h-10 rounded-full bg-navy-800/50 flex-shrink-0" />
+                  <div className="w-10 h-10 rounded-full bg-navy-900/60 flex-shrink-0" />
                   <div className="flex-1 space-y-2 py-1">
                     <div className="flex items-center gap-2">
-                      <div className="h-4 bg-navy-800/50 rounded w-24" />
-                      <div className="h-3 bg-navy-800/30 rounded w-16" />
+                      <div className="h-4 bg-navy-900/60 rounded w-24" />
+                      <div className="h-3 bg-navy-900/40 rounded w-16" />
                     </div>
-                    <div className="h-4 bg-navy-800/40 rounded w-3/4" />
+                    <div className="h-4 bg-navy-900/50 rounded w-3/4" />
                   </div>
                 </div>
               ))}
@@ -595,13 +595,13 @@ export default function ChatArea({
             // Error state
             <div className="flex items-center justify-center flex-1 px-4">
               <div className="text-center text-gray-400 max-w-md">
-                <div className="bg-red-900/50 border border-red-700 text-red-200 px-6 py-4 rounded-lg mb-4">
-                  <p className="font-semibold mb-2">Error loading messages</p>
+                <div className="bg-red-500/10 border border-red-500/30 text-red-200 px-6 py-4 rounded-xl mb-4">
+                  <p className="font-semibold mb-1 text-red-100">Error loading messages</p>
                   <p className="text-sm">{error}</p>
                 </div>
                 <button
                   onClick={() => refetch()}
-                  className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors"
+                  className="bg-emerald-500/90 text-white px-6 py-2 rounded-lg hover:bg-emerald-500 transition-colors shadow-soft"
                 >
                   Try Again
                 </button>
@@ -611,7 +611,7 @@ export default function ChatArea({
             // Empty state
             <div className="flex items-center justify-center flex-1 px-4 text-gray-400">
               <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-navy-800/50 flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-navy-900/60 flex items-center justify-center border border-navy-800/60">
                   <svg
                     className="w-8 h-8 text-gray-500"
                     fill="none"
@@ -626,8 +626,8 @@ export default function ChatArea({
                     />
                   </svg>
                 </div>
-                <p className="text-base font-medium text-gray-300 mb-1">No messages yet</p>
-                <p className="text-sm text-gray-500">Be the first to start the conversation!</p>
+                <p className="text-base font-semibold text-gray-200 mb-1">No messages yet</p>
+                <p className="text-sm text-gray-500">Be the first to start the conversation.</p>
               </div>
             </div>
           ) : (
@@ -638,7 +638,7 @@ export default function ChatArea({
                   <button
                     onClick={loadMore}
                     disabled={isLoading}
-                    className="text-sm text-emerald-400 hover:text-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-lg hover:bg-navy-800 transition-colors"
+                    className="text-sm text-emerald-300 hover:text-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-lg bg-navy-900/40 border border-navy-800/60 hover:bg-navy-800/60 transition-colors shadow-soft"
                   >
                     {isLoading ? (
                       <span className="flex items-center gap-2">
@@ -720,7 +720,7 @@ export default function ChatArea({
       {userScrolledUpRef.current && messages.length > 10 && (
         <button
           onClick={handleScrollToBottom}
-          className="absolute bottom-24 right-6 bg-navy-800 hover:bg-navy-700 text-white p-2 rounded-full shadow-lg transition-all transform hover:scale-105 z-20 will-change-transform"
+          className="absolute bottom-28 sm:bottom-24 right-4 sm:right-6 h-10 w-10 flex items-center justify-center bg-navy-900/85 border border-navy-800/70 text-gray-100 rounded-full shadow-soft hover:shadow-soft-lg hover:bg-navy-800/80 transition-all transform hover:scale-105 z-20 will-change-transform"
           style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
           title="Scroll to bottom"
         >
@@ -732,11 +732,11 @@ export default function ChatArea({
 
       {/* Typing indicator */}
       {typingUsers.length > 0 && (
-        <div className="px-4 py-2 text-sm text-gray-400 italic flex items-center gap-2 bg-navy-950 border-t border-navy-800">
+        <div className="px-4 py-2 text-sm text-gray-400 italic flex items-center gap-2 bg-navy-950/70 border-t border-navy-800/60">
           <div className="flex gap-1">
-            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+            <span className="w-2 h-2 bg-emerald-400/80 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+            <span className="w-2 h-2 bg-emerald-400/80 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+            <span className="w-2 h-2 bg-emerald-400/80 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
           </div>
           {typingUsers.length === 1 ? (
             <span><strong>{typingUsers[0].username}</strong> is typing...</span>
@@ -762,10 +762,10 @@ export default function ChatArea({
         if (isProjectsChannel) {
           if (isLecturer) {
             return (
-              <div className="px-4 py-3 border-t border-gray-700 bg-gray-900">
+              <div className="px-4 py-3 border-t border-navy-800/60 bg-navy-950/70">
                 <button
                   onClick={() => setShowVideoUploadDialog(true)}
-                  className="w-12 h-12 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-full transition-colors shadow-lg hover:shadow-xl hover:scale-105 will-change-transform"
+                  className="w-12 h-12 flex items-center justify-center bg-emerald-500/90 hover:bg-emerald-500 text-white rounded-full transition-colors shadow-soft hover:shadow-soft-lg hover:scale-105 will-change-transform"
                   style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
                   title={t('projects.createVideoProject')}
                 >
@@ -778,8 +778,8 @@ export default function ChatArea({
           } else {
             // For non-lecturers, show a message indicating they can't create projects
             return (
-              <div className="px-4 py-3 border-t border-gray-700 bg-gray-900">
-                <div className="text-center text-gray-400 text-sm">
+              <div className="px-4 py-3 border-t border-navy-800/60 bg-navy-950/70">
+                <div className="text-center text-gray-500 text-sm">
                   {t('chat.onlyLecturerCanCreateProjects')}
                 </div>
               </div>

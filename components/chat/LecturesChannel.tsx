@@ -62,11 +62,11 @@ export default function LecturesChannel({
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-gray-900 to-gray-950">
+      <div className="flex-1 flex items-center justify-center bg-navy-950/40">
         <div className="text-center">
           <div className="relative w-16 h-16 mx-auto mb-4">
-            <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-500 animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-500/20"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-emerald-400 animate-spin"></div>
           </div>
               <p className="text-gray-400 font-medium">{t('common.loading')}</p>
         </div>
@@ -75,12 +75,12 @@ export default function LecturesChannel({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gradient-to-b from-gray-900 to-gray-950 min-h-0">
+    <div className="flex-1 flex flex-col bg-navy-950/30 min-h-0">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-800/50 bg-gray-900/50 backdrop-blur-sm">
+      <div className="px-6 py-4 border-b border-navy-800/60 bg-navy-950/70 backdrop-blur-md">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center shadow-soft">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
@@ -93,7 +93,7 @@ export default function LecturesChannel({
         {isLecturer && (
           <button
             onClick={() => setShowUploadModal(true)}
-              className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold rounded-xl hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg shadow-indigo-500/25 flex items-center gap-2 group"
+              className="px-4 py-2.5 bg-emerald-500/90 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl transition-all shadow-soft hover:shadow-soft-lg flex items-center gap-2 group"
             >
               <svg className="w-5 h-5 transition-transform group-hover:scale-110 will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -105,11 +105,11 @@ export default function LecturesChannel({
       </div>
 
       {/* Videos Grid */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 chat-scrollbar">
         {videos.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-16">
-            <div className="w-24 h-24 rounded-full bg-gray-800/50 flex items-center justify-center mb-6">
-              <svg className="w-12 h-12 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-24 h-24 rounded-full bg-navy-900/60 border border-navy-800/60 flex items-center justify-center mb-6">
+              <svg className="w-12 h-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
             </div>
@@ -122,14 +122,14 @@ export default function LecturesChannel({
             {isLecturer && (
               <button
                 onClick={() => setShowUploadModal(true)}
-                className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg shadow-indigo-500/25"
+                className="px-6 py-3 bg-emerald-500/90 text-white font-semibold rounded-xl hover:bg-emerald-500 transition-all shadow-soft"
               >
                 {t('lectures.uploadFirstVideo')}
               </button>
             )}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {videos.map((video, index) => {
               const unlocked = isVideoUnlocked(index);
               const progress = getProgressPercentage(video);
@@ -262,15 +262,15 @@ function VideoCard({
 
   return (
     <div
-      className={`group relative flex gap-4 p-4 rounded-2xl transition-all duration-300 ${
+      className={`group relative flex flex-col sm:flex-row gap-4 p-4 rounded-2xl transition-all duration-300 ${
         unlocked
-          ? 'bg-gray-800/40 hover:bg-gray-800/70 cursor-pointer border border-gray-700/50 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/5'
-          : 'bg-gray-800/20 border border-gray-800/50 opacity-60'
+          ? 'bg-navy-900/60 hover:bg-navy-900/80 cursor-pointer border border-navy-800/60 hover:border-emerald-400/40 hover:shadow-soft-lg'
+          : 'bg-navy-900/30 border border-navy-800/50 opacity-60'
       }`}
       onClick={() => !showMenu && onPlay()}
                 >
                   {/* Thumbnail */}
-      <div className="relative w-48 h-28 flex-shrink-0 rounded-xl overflow-hidden bg-gray-900">
+      <div className="relative w-full sm:w-56 h-40 sm:h-32 flex-shrink-0 rounded-xl overflow-hidden bg-navy-950/70 border border-navy-800/60">
                     {video.thumbnailUrl ? (
                       <img
                         src={video.thumbnailUrl}
@@ -279,8 +279,8 @@ function VideoCard({
                         loading="lazy"
                       />
                     ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-            <svg className="w-12 h-12 text-gray-700" fill="currentColor" viewBox="0 0 24 24">
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-navy-900 to-navy-950">
+            <svg className="w-12 h-12 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z" />
                         </svg>
                       </div>
@@ -288,9 +288,9 @@ function VideoCard({
 
         {/* Play overlay */}
         {unlocked && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute inset-0 flex items-center justify-center bg-navy-950/50 opacity-0 group-hover:opacity-100 transition-opacity">
             <div className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}>
-              <svg className="w-6 h-6 text-gray-900 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 text-navy-950 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
                           </svg>
                         </div>
@@ -300,7 +300,7 @@ function VideoCard({
         {/* Lock overlay */}
         {!unlocked && (
           <div
-            className="absolute inset-0 flex items-center justify-center bg-black/60 group/lock"
+            className="absolute inset-0 flex items-center justify-center bg-navy-950/70 group/lock"
             title={t('enrollment.videoLockedTooltip')}
             aria-label={t('enrollment.videoLockedTooltip')}
           >
@@ -309,7 +309,7 @@ function VideoCard({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                           </svg>
               {/* Tooltip on hover */}
-              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 border border-gray-700 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover/lock:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg" role="tooltip">
+              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-navy-950 border border-navy-700/70 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/lock:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg" role="tooltip">
                 {t('enrollment.videoLockedTooltip')}
               </div>
                         </div>
@@ -325,9 +325,9 @@ function VideoCard({
 
                     {/* Progress bar */}
         {progress > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-900/80">
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-navy-950/70">
                         <div
-              className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all"
+              className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all"
                           style={{ width: `${progress}%` }}
             />
                       </div>
@@ -339,7 +339,7 @@ function VideoCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 text-xs font-bold">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/15 text-emerald-300 text-xs font-bold">
                 {index + 1}
               </span>
               <h3 className="text-white font-semibold truncate">{video.title}</h3>
@@ -349,7 +349,7 @@ function VideoCard({
             )}
             <div className="flex items-center gap-4 text-xs">
               {video.progress?.isCompleted ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/20 text-green-400 font-medium">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 font-medium">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -373,7 +373,7 @@ function VideoCard({
               <button
                 onClick={handleMarkAsSeen}
                 disabled={isMarkingAsSeen}
-                className="mt-2 px-3 py-1.5 text-xs font-medium bg-indigo-600/20 text-indigo-400 rounded-lg hover:bg-indigo-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                className="mt-2 px-3 py-1.5 text-xs font-medium bg-emerald-500/15 text-emerald-300 rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
               >
                 {isMarkingAsSeen ? (
                   <>
@@ -399,7 +399,7 @@ function VideoCard({
             <div className="relative" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={() => setShowMenu(!showMenu)}
-                className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors"
+                className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-navy-800/60 transition-colors"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
@@ -409,13 +409,13 @@ function VideoCard({
               {showMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                  <div className="absolute right-0 top-full mt-1 w-44 bg-gray-800 rounded-xl shadow-xl border border-gray-700 py-1 z-20 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute right-0 top-full mt-1 w-44 bg-navy-950/95 rounded-xl shadow-xl border border-navy-700/70 py-1 z-20 animate-in fade-in slide-in-from-top-2 duration-200">
                     <button
                       onClick={() => {
                         setShowMenu(false);
                         onEdit();
                       }}
-                      className="w-full px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-gray-700/50 hover:text-white flex items-center gap-3 transition-colors"
+                      className="w-full px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-navy-800/70 hover:text-white flex items-center gap-3 transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -427,7 +427,7 @@ function VideoCard({
                         setShowMenu(false);
                         onDelete();
                       }}
-                      className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-3 transition-colors"
+                      className="w-full px-4 py-2.5 text-left text-sm text-red-300 hover:bg-red-500/10 hover:text-red-200 flex items-center gap-3 transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -623,7 +623,7 @@ function VideoPlayerModal({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-navy-950/90 z-50 flex items-center justify-center p-4"
       onClick={(e) => {
         // Close modal when clicking outside
         if (e.target === e.currentTarget) {
@@ -632,10 +632,10 @@ function VideoPlayerModal({
       }}
     >
       <div 
-        className="w-full max-w-6xl bg-gray-900 rounded-2xl overflow-hidden shadow-2xl"
+        className="w-full max-w-6xl bg-navy-950/90 border border-navy-800/60 rounded-2xl overflow-hidden shadow-soft-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-5 border-b border-gray-800 flex items-center justify-between">
+        <div className="p-5 border-b border-navy-800/60 flex items-center justify-between bg-navy-950/70">
           <div>
             <h3 className="text-white font-bold text-xl">{video.title}</h3>
             {video.description && (
@@ -644,7 +644,7 @@ function VideoPlayerModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-navy-800/70 transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -673,9 +673,9 @@ function VideoPlayerModal({
           
           {/* Progress indicator overlay */}
           {duration > 0 && (
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800/50">
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-navy-800/60">
               <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all"
+                className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all"
                 style={{ width: `${(currentTime / duration) * 100}%` }}
           />
         </div>
@@ -683,7 +683,7 @@ function VideoPlayerModal({
         </div>
         
         {/* Action Bar */}
-        <div className="p-4 border-t border-gray-800 flex items-center justify-between gap-4">
+        <div className="p-4 border-t border-navy-800/60 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 flex-1">
             {duration > 0 && (
               <div className="text-sm text-gray-400">
@@ -691,7 +691,7 @@ function VideoPlayerModal({
               </div>
             )}
             {isCompleted ? (
-            <div className="flex items-center gap-2 text-green-400">
+            <div className="flex items-center gap-2 text-emerald-300">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
@@ -701,7 +701,7 @@ function VideoPlayerModal({
               <button
                 onClick={() => markVideoAsSeen(true)}
                 disabled={isMarkingAsSeen}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg hover:from-indigo-500 hover:to-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+                className="px-4 py-2 bg-emerald-500/90 text-white font-semibold rounded-lg hover:bg-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-soft"
               >
                 {isMarkingAsSeen ? (
                   <>
@@ -731,9 +731,9 @@ function VideoPlayerModal({
         </div>
         
         {isCompleted && (
-          <div className="p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-t border-green-500/20">
-            <div className="flex items-center gap-3 text-green-400">
-              <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+          <div className="p-4 bg-emerald-500/10 border-t border-emerald-500/20">
+            <div className="flex items-center gap-3 text-emerald-300">
+              <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
@@ -815,7 +815,7 @@ function VideoEditModal({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-navy-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={(e) => {
         // Close modal when clicking outside
         if (e.target === e.currentTarget) {
@@ -824,20 +824,20 @@ function VideoEditModal({
       }}
     >
       <div 
-        className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-700"
+        className="bg-navy-950/90 rounded-2xl shadow-soft-xl w-full max-w-lg max-h-[90vh] border border-navy-800/60 overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-5 border-b border-gray-700 flex items-center justify-between">
+        <div className="p-5 border-b border-navy-800/60 flex items-center justify-between bg-navy-950/70">
           <h3 className="text-white font-bold text-lg">Edit Video</h3>
-          <button onClick={onClose} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors">
+          <button onClick={onClose} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-navy-800/70 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-5">
+        <form onSubmit={handleSubmit} className="p-5 space-y-5 overflow-y-auto chat-scrollbar flex-1 min-h-0">
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm">
+            <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm">
               {error}
             </div>
           )}
@@ -849,7 +849,7 @@ function VideoEditModal({
               required
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400/40 transition-all"
               disabled={isSubmitting}
             />
           </div>
@@ -860,7 +860,7 @@ function VideoEditModal({
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
-              className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
+              className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400/40 transition-all resize-none"
               disabled={isSubmitting}
             />
           </div>
@@ -871,7 +871,7 @@ function VideoEditModal({
               type="file"
               accept="image/*"
               onChange={(e) => setThumbnailFile(e.target.files?.[0] || null)}
-              className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white file:font-medium file:cursor-pointer"
+              className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-emerald-500 file:text-white file:font-medium file:cursor-pointer hover:file:bg-emerald-400"
               disabled={isSubmitting}
             />
             {video.thumbnailUrl && !thumbnailFile && (
@@ -887,7 +887,7 @@ function VideoEditModal({
                 min="0"
                 value={formData.displayOrder}
                 onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
-                className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400/40 transition-all"
                 disabled={isSubmitting}
               />
             </div>
@@ -896,7 +896,7 @@ function VideoEditModal({
               <select
                 value={formData.isPublished ? 'published' : 'draft'}
                 onChange={(e) => setFormData({ ...formData, isPublished: e.target.value === 'published' })}
-                className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400/40 transition-all"
                 disabled={isSubmitting}
               >
                 <option value="published">Published</option>
@@ -909,7 +909,7 @@ function VideoEditModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold px-6 py-3 rounded-xl hover:from-indigo-500 hover:to-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-emerald-500/90 text-white font-semibold px-6 py-3 rounded-xl hover:bg-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Saving...' : 'Save Changes'}
             </button>
@@ -917,7 +917,7 @@ function VideoEditModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="flex-1 bg-gray-700 text-gray-300 font-semibold px-6 py-3 rounded-xl hover:bg-gray-600 transition-colors disabled:opacity-50"
+              className="flex-1 bg-navy-800/80 text-gray-300 font-semibold px-6 py-3 rounded-xl hover:bg-navy-700 transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
@@ -1085,7 +1085,7 @@ function VideoUploadModal({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-navy-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={(e) => {
         // Close modal when clicking outside
         if (e.target === e.currentTarget) {
@@ -1094,23 +1094,23 @@ function VideoUploadModal({
       }}
     >
       <div 
-        className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xl border border-gray-700"
+        className="bg-navy-950/90 rounded-2xl shadow-soft-xl w-full max-w-xl max-h-[90vh] border border-navy-800/60 overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-5 border-b border-gray-700 flex items-center justify-between">
+        <div className="p-5 border-b border-navy-800/60 flex items-center justify-between bg-navy-950/70">
           <div>
             <h3 className="text-white font-bold text-lg">{t('lectures.uploadVideoLecture')}</h3>
             <p className="text-gray-500 text-sm mt-0.5">{t('lectures.addNewVideoToCourse')}</p>
         </div>
-          <button onClick={onClose} disabled={isUploading} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors disabled:opacity-50">
+          <button onClick={onClose} disabled={isUploading} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-navy-800/70 transition-colors disabled:opacity-50">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-5">
+        <form onSubmit={handleSubmit} className="p-5 space-y-5 overflow-y-auto chat-scrollbar flex-1 min-h-0">
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+            <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
               <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -1125,7 +1125,7 @@ function VideoUploadModal({
               required
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-gray-500"
+              className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400/40 transition-all placeholder:text-gray-500"
               placeholder={t('lectures.videoTitlePlaceholder')}
               disabled={isUploading}
             />
@@ -1137,7 +1137,7 @@ function VideoUploadModal({
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={2}
-              className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-gray-500 resize-none"
+              className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400/40 transition-all placeholder:text-gray-500 resize-none"
               placeholder={t('lectures.descriptionPlaceholder')}
               disabled={isUploading}
             />
@@ -1151,13 +1151,13 @@ function VideoUploadModal({
               accept="video/*"
               required
               onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
-                className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white file:font-medium file:cursor-pointer hover:file:bg-indigo-500"
+                className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-emerald-500 file:text-white file:font-medium file:cursor-pointer hover:file:bg-emerald-400"
                 disabled={isUploading}
               />
             </div>
             {videoFile && (
-              <div className="mt-2 px-3 py-2 bg-gray-900/30 rounded-lg flex items-center gap-2 text-sm">
-                <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="mt-2 px-3 py-2 bg-navy-900/50 border border-navy-800/60 rounded-lg flex items-center gap-2 text-sm">
+                <svg className="w-4 h-4 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
                 <span className="text-gray-300 truncate flex-1">{videoFile.name}</span>
@@ -1172,7 +1172,7 @@ function VideoUploadModal({
               type="file"
               accept="image/*"
               onChange={(e) => setThumbnailFile(e.target.files?.[0] || null)}
-              className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-gray-600 file:text-white file:font-medium file:cursor-pointer hover:file:bg-gray-500"
+              className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-navy-700 file:text-white file:font-medium file:cursor-pointer hover:file:bg-navy-600"
               disabled={isUploading}
             />
           </div>
@@ -1184,21 +1184,21 @@ function VideoUploadModal({
               min="0"
               value={formData.displayOrder}
               onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
-              className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400/40 transition-all"
               disabled={isUploading}
             />
           </div>
 
           {/* Upload Progress */}
           {isUploading && (
-            <div className="space-y-3 p-4 bg-gray-900/30 rounded-xl">
+            <div className="space-y-3 p-4 bg-navy-900/50 border border-navy-800/60 rounded-xl">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-300 font-medium">{getStageText()}</span>
-                {uploadStage !== 'saving' && <span className="text-indigo-400">{uploadProgress}%</span>}
+                {uploadStage !== 'saving' && <span className="text-emerald-300">{uploadProgress}%</span>}
               </div>
-              <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-navy-800 rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full transition-all duration-300"
+                  className="bg-gradient-to-r from-emerald-400 to-emerald-500 h-full rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
@@ -1214,7 +1214,7 @@ function VideoUploadModal({
             <button
               type="submit"
               disabled={isUploading}
-              className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold px-6 py-3 rounded-xl hover:from-indigo-500 hover:to-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
+              className="flex-1 bg-emerald-500/90 text-white font-semibold px-6 py-3 rounded-xl hover:bg-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-soft"
             >
               {isUploading ? getStageText() : t('lectures.uploadVideo')}
             </button>
@@ -1222,7 +1222,7 @@ function VideoUploadModal({
               type="button"
               onClick={onClose}
               disabled={isUploading}
-              className="px-6 py-3 bg-gray-700 text-gray-300 font-semibold rounded-xl hover:bg-gray-600 transition-colors disabled:opacity-50"
+              className="px-6 py-3 bg-navy-800/80 text-gray-300 font-semibold rounded-xl hover:bg-navy-700 transition-colors disabled:opacity-50"
             >
               {t('common.cancel')}
             </button>

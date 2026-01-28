@@ -162,9 +162,9 @@ function CourseCard({
 
   return (
     <>
-      <div className="h-full flex flex-col bg-white dark:bg-navy-800 rounded-3xl overflow-hidden shadow-soft hover:shadow-soft-lg dark:hover:shadow-glow-dark transition-all duration-200 border border-charcoal-100/50 dark:border-navy-700/50 hover:scale-[1.01] hover:-translate-y-0.5 will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}>
+      <div className="h-full flex flex-col bg-gradient-to-br from-white to-gray-50 dark:from-navy-800 dark:to-navy-900 rounded-3xl overflow-hidden shadow-soft hover:shadow-xl hover:shadow-emerald-500/10 dark:hover:shadow-emerald-500/20 transition-all duration-300 border border-charcoal-100/50 dark:border-navy-700/50 hover:scale-[1.02] hover:-translate-y-1 will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}>
         {/* Thumbnail Section */}
-        <div className="relative w-full h-28 bg-gradient-to-br from-emerald-50 via-white to-charcoal-50/30 dark:from-emerald-500/10 dark:via-navy-800 dark:to-navy-700/30 overflow-hidden cursor-pointer group">
+        <div className="relative w-full h-32 bg-gradient-to-br from-emerald-50 via-white to-charcoal-50/30 dark:from-emerald-500/10 dark:via-navy-800 dark:to-navy-700/30 overflow-hidden cursor-pointer group">
           {course.thumbnail_url ? (
             // Display actual thumbnail image
             <>

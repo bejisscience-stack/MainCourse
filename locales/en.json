@@ -171,6 +171,7 @@
     "paymentInstructionsTitle": "Payment Instructions:",
     "step1": "Step 1: Enter Account Number",
     "step2": "Step 2: Complete Payment Details",
+    "chooseFiles": "Choose files",
     "uploadScreenshots": "Upload Transaction Screenshot(s)",
     "uploadMultipleImages": "You can upload multiple images. Maximum 5MB per image.",
     "referralCode": "Referral Code",

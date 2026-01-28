@@ -144,15 +144,15 @@ function ProjectCard({ project, onClick }: ProjectCardProps) {
   return (
     <div
       onClick={handleClick}
-      className={`h-full flex flex-col bg-white dark:bg-navy-800 rounded-2xl overflow-hidden shadow-soft transition-all duration-200 border border-charcoal-100/50 dark:border-navy-700/50 ${
+      className={`h-full flex flex-col bg-gradient-to-br from-white to-gray-50 dark:from-navy-800 dark:to-navy-900 rounded-2xl overflow-hidden shadow-soft transition-all duration-300 border border-charcoal-100/50 dark:border-navy-700/50 ${
         isExpired
           ? 'opacity-60 grayscale cursor-not-allowed'
-          : 'hover:shadow-soft-lg dark:hover:shadow-glow-dark hover:scale-[1.01] hover:-translate-y-0.5 cursor-pointer'
+          : 'hover:shadow-xl hover:shadow-emerald-500/10 dark:hover:shadow-emerald-500/20 hover:scale-[1.02] hover:-translate-y-1 cursor-pointer'
       }`}
       style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
     >
       {/* Header Section with Thumbnail */}
-      <div className="relative w-full h-24 bg-gradient-to-br from-emerald-50 via-white to-charcoal-50/30 dark:from-emerald-500/10 dark:via-navy-800 dark:to-navy-700/30 overflow-hidden">
+      <div className="relative w-full h-28 bg-gradient-to-br from-emerald-50 via-white to-charcoal-50/30 dark:from-emerald-500/10 dark:via-navy-800 dark:to-navy-700/30 overflow-hidden">
         {project.course_thumbnail_url ? (
           <img
             src={project.course_thumbnail_url}

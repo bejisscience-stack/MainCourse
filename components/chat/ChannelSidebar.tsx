@@ -27,7 +27,7 @@ const ChannelIcon = ({ type, name }: { type: string; name: string }) => {
   if (type === 'voice') {
     return <span className="text-base">🔊</span>;
   }
-  return <span className="text-gray-400 text-lg font-medium">#</span>;
+  return <span className="text-gray-500 text-lg font-medium">#</span>;
 };
 
 export default function ChannelSidebar({
@@ -117,20 +117,20 @@ export default function ChannelSidebar({
   }
 
   return (
-    <div className="w-full h-full bg-navy-900 flex flex-col relative overflow-hidden">
+    <div className="w-full h-full bg-navy-950/70 border-r border-navy-800/60 flex flex-col relative overflow-hidden">
       {/* Server header */}
-      <div className="h-12 px-4 border-b border-navy-700 flex items-center justify-between shadow-lg flex-shrink-0">
-        <h2 className="text-white font-semibold text-sm truncate flex-1">{server.name}</h2>
+      <div className="h-12 px-4 border-b border-navy-800/60 bg-navy-950/60 flex items-center justify-between shadow-soft flex-shrink-0">
+        <h2 className="text-gray-100 font-semibold text-sm truncate flex-1">{server.name}</h2>
         <div className="flex items-center gap-1">
           {totalUnread > 0 && (
-            <span className="bg-emerald-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+            <span className="bg-emerald-500/90 text-white text-[11px] font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-soft">
               {totalUnread > 99 ? '99+' : totalUnread}
             </span>
           )}
           {onCollapse && (
             <button
               onClick={onCollapse}
-              className="text-gray-400 hover:text-emerald-400 transition-colors p-1"
+              className="text-gray-400 hover:text-emerald-300 transition-colors p-1 rounded-md hover:bg-navy-800/60"
               title="Collapse channels"
             >
               <svg
@@ -151,7 +151,7 @@ export default function ChannelSidebar({
           {isLecturer && (
             <button
               onClick={() => setShowChannelManagement(true)}
-              className="text-gray-400 hover:text-emerald-400 p-1 rounded hover:bg-navy-700 transition-colors"
+              className="text-gray-400 hover:text-emerald-300 p-1 rounded-md hover:bg-navy-800/60 transition-colors"
               title="Manage Channels"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -164,7 +164,7 @@ export default function ChannelSidebar({
       </div>
 
       {/* Channels list */}
-      <div className="flex-1 overflow-y-auto px-2 py-2 scrollbar-thin scrollbar-thumb-navy-700 scrollbar-track-transparent">
+      <div className="flex-1 overflow-y-auto px-2.5 py-3 chat-scrollbar">
         {server.channels.map((category: ChannelCategory) => {
           const isCollapsed = collapsedCategories.has(category.id);
           const categoryChannels = sortChannels(category.channels);
@@ -173,7 +173,7 @@ export default function ChannelSidebar({
           return (
             <div key={category.id} className="mb-3">
               {/* Category header */}
-              <div className="w-full flex items-center justify-between px-1 py-1.5 text-gray-400 hover:text-emerald-400 text-xs font-semibold uppercase tracking-wide group cursor-pointer">
+              <div className="w-full flex items-center justify-between px-1 py-1.5 text-gray-500 hover:text-emerald-300 text-[11px] font-semibold uppercase tracking-wider group cursor-pointer">
                 <button
                   onClick={() => toggleCategory(category.id)}
                   className="flex-1 flex items-center gap-1 text-left"
@@ -191,7 +191,7 @@ export default function ChannelSidebar({
                   </svg>
                   <span className="truncate">{category.name}</span>
                   {isCollapsed && categoryUnread > 0 && (
-                    <span className="bg-emerald-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full min-w-[18px] text-center ml-auto">
+                    <span className="bg-emerald-500/90 text-white text-[11px] font-semibold px-1.5 py-0.5 rounded-full min-w-[18px] text-center ml-auto shadow-soft">
                       {categoryUnread}
                     </span>
                   )}
@@ -202,7 +202,7 @@ export default function ChannelSidebar({
                       e.stopPropagation();
                       setShowChannelManagement(true);
                     }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-emerald-400 p-0.5 rounded hover:bg-navy-700"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-emerald-300 p-0.5 rounded-md hover:bg-navy-800/60"
                     title="Create Channel"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,27 +224,27 @@ export default function ChannelSidebar({
                       <button
                         key={channel.id}
                         onClick={() => handleChannelClick(channel.id)}
-                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-all group/channel ${
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all group/channel border border-transparent ${
                           isActive
-                            ? 'bg-emerald-500/20 text-emerald-300'
+                            ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/40 shadow-soft'
                             : hasUnread
-                            ? 'text-white font-medium hover:bg-navy-700/70'
-                            : 'text-gray-400 hover:bg-navy-700/50 hover:text-gray-300'
-                        }`}
+                            ? 'text-gray-100 font-medium hover:bg-navy-800/50 hover:border-navy-700/60'
+                            : 'text-gray-400 hover:bg-navy-800/40 hover:text-gray-200 hover:border-navy-700/50'
+                        } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/40`}
                       >
                         <ChannelIcon type={channel.type} name={channel.name} />
                         <span className="flex-1 text-left truncate">{channel.name}</span>
                         
                         {/* Unread badge */}
                         {hasUnread && !isActive && (
-                          <span className="bg-emerald-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center animate-in fade-in duration-200">
+                          <span className="bg-emerald-500/90 text-white text-[11px] font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center animate-in fade-in duration-200 shadow-soft">
                             {unreadCount > 99 ? '99+' : unreadCount}
                           </span>
                         )}
                         
                         {/* Active indicator */}
                         {isActive && (
-                          <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+                          <div className="w-1 h-4 bg-emerald-400 rounded-full" />
                         )}
                       </button>
                     );
@@ -258,15 +258,23 @@ export default function ChannelSidebar({
 
       {/* Channel Management Modal */}
       {showChannelManagement && server && onChannelCreate && onChannelUpdate && onChannelDelete && (
-        <div className="absolute inset-0 bg-navy-950 z-50 flex flex-col">
-          <ChannelManagement
-            courseId={server.id}
-            channels={allChannels}
-            onChannelCreate={onChannelCreate}
-            onChannelUpdate={onChannelUpdate}
-            onChannelDelete={onChannelDelete}
-            onClose={() => setShowChannelManagement(false)}
-          />
+        <div
+          className="fixed inset-0 bg-navy-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowChannelManagement(false)}
+        >
+          <div
+            className="w-full max-w-3xl max-h-[90vh] bg-navy-950/90 border border-navy-800/60 rounded-2xl shadow-soft-xl overflow-hidden"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <ChannelManagement
+              courseId={server.id}
+              channels={allChannels}
+              onChannelCreate={onChannelCreate}
+              onChannelUpdate={onChannelUpdate}
+              onChannelDelete={onChannelDelete}
+              onClose={() => setShowChannelManagement(false)}
+            />
+          </div>
         </div>
       )}
     </div>

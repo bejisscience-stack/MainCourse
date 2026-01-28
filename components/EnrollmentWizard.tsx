@@ -376,13 +376,13 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
     >
       <div 
         ref={dialogRef}
-        className="relative w-full min-h-full bg-white dark:bg-navy-800 flex flex-col"
+        className="relative w-full min-h-full bg-gradient-to-br from-white to-gray-50 dark:from-navy-800 dark:to-navy-900 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
         <button
           onClick={handleClose}
-          className="fixed top-4 right-4 z-50 w-10 h-10 bg-gray-100 dark:bg-navy-700 hover:bg-gray-200 dark:hover:bg-navy-600 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 transition-colors shadow-lg"
+          className="fixed top-4 right-4 z-50 w-10 h-10 bg-white/80 dark:bg-navy-700/80 hover:bg-white dark:hover:bg-navy-600 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 transition-colors shadow-soft backdrop-blur-sm border border-gray-100 dark:border-navy-600"
           aria-label={t('common.close')}
         >
           <svg
@@ -412,49 +412,53 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
           </div>
 
           {/* Progress Indicator */}
-          <div className="w-full">
-            <div className="flex items-center justify-between mb-4">
+          <div className="w-full relative px-2 md:px-6">
+            {/* Connecting Line - Background */}
+            <div className="absolute top-5 left-6 right-6 h-0.5 bg-gray-200 dark:bg-navy-700 -z-10 rounded-full" />
+            
+            {/* Connecting Line - Active Progress */}
+            <div 
+              className="absolute top-5 left-6 h-0.5 bg-emerald-500 -z-10 transition-all duration-500 ease-out rounded-full" 
+              style={{ width: `calc(${((currentStep - 1) / (TOTAL_STEPS - 1)) * 100}% - 3rem)` }}
+            />
+
+            <div className="flex justify-between items-start">
               {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((step) => (
-                <div key={step} className="flex items-center flex-1">
-                  <div className="flex flex-col items-center flex-1">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300 ${
-                        step < currentStep
-                          ? 'bg-emerald-500 text-white'
-                          : step === currentStep
-                          ? 'bg-charcoal-950 dark:bg-emerald-500 text-white ring-4 ring-emerald-500/20'
-                          : 'bg-gray-200 dark:bg-navy-700 text-gray-500 dark:text-gray-400'
-                      }`}
-                    >
-                      {step < currentStep ? (
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      ) : (
-                        step
-                      )}
-                    </div>
-                    <span className={`text-xs mt-2 text-center transition-colors ${
-                      step <= currentStep
-                        ? 'text-charcoal-950 dark:text-white font-medium'
-                        : 'text-gray-400 dark:text-gray-500'
-                    }`}>
-                      {step === 1 && t('enrollment.stepOverview')}
-                      {step === 2 && t('enrollment.stepPayment')}
-                      {step === 3 && t('enrollment.stepReferral')}
-                      {step === 4 && t('enrollment.stepUpload')}
-                      {step === 5 && t('enrollment.stepReview')}
-                    </span>
+                <div key={step} className="flex flex-col items-center relative z-10 group cursor-default">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 border-2 ${
+                      step < currentStep
+                        ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20'
+                        : step === currentStep
+                        ? 'bg-charcoal-950 dark:bg-emerald-500 text-white border-charcoal-950 dark:border-emerald-500 ring-4 ring-emerald-500/20 shadow-lg shadow-emerald-500/20 scale-110'
+                        : 'bg-white dark:bg-navy-800 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-navy-600'
+                    }`}
+                  >
+                    {step < currentStep ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      step
+                    )}
                   </div>
-                  {step < TOTAL_STEPS && (
-                    <div className={`flex-1 h-0.5 mx-2 transition-all duration-300 ${
-                      step < currentStep ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-navy-700'
-                    }`} />
-                  )}
+                  <span className={`text-xs mt-3 text-center font-semibold transition-colors duration-300 absolute top-full left-1/2 -translate-x-1/2 w-max ${
+                    step <= currentStep
+                      ? 'text-charcoal-950 dark:text-white'
+                      : 'text-gray-400 dark:text-gray-500'
+                  }`}>
+                    {step === 1 && t('enrollment.stepOverview')}
+                    {step === 2 && t('enrollment.stepPayment')}
+                    {step === 3 && t('enrollment.stepReferral')}
+                    {step === 4 && t('enrollment.stepUpload')}
+                    {step === 5 && t('enrollment.stepReview')}
+                  </span>
                 </div>
               ))}
             </div>
-            <div className="text-center text-sm text-charcoal-600 dark:text-gray-400">
+            
+            {/* Step Counter */}
+            <div className="text-center text-sm text-charcoal-500 dark:text-gray-400 mt-12 font-medium">
               {t('enrollment.stepProgress', { current: currentStep, total: TOTAL_STEPS })}
             </div>
           </div>
@@ -479,12 +483,12 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
 
           {/* Navigation Buttons - Hidden on review step (step 5) */}
           {currentStep < TOTAL_STEPS && (
-            <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-navy-700">
+            <div className="flex items-center justify-between pt-8 border-t border-gray-100 dark:border-navy-700/50">
               <div>
                 {currentStep > 1 && (
                   <button
                     onClick={handleBack}
-                    className="px-8 py-3 text-base font-semibold text-charcoal-600 dark:text-gray-300 bg-charcoal-100 dark:bg-navy-700 rounded-full hover:bg-charcoal-200 dark:hover:bg-navy-600 transition-colors flex items-center space-x-2"
+                    className="px-8 py-3 text-base font-semibold text-charcoal-600 dark:text-gray-300 bg-white dark:bg-navy-800 border border-gray-200 dark:border-navy-600 rounded-full hover:bg-gray-50 dark:hover:bg-navy-700 transition-all duration-200 shadow-sm hover:shadow-md flex items-center space-x-2"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -496,14 +500,14 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
               <div className="flex items-center space-x-4">
                 <button
                   onClick={handleClose}
-                  className="px-8 py-3 text-base font-semibold text-charcoal-600 dark:text-gray-300 bg-charcoal-100 dark:bg-navy-700 rounded-full hover:bg-charcoal-200 dark:hover:bg-navy-600 transition-colors"
+                  className="px-8 py-3 text-base font-semibold text-charcoal-600 dark:text-gray-300 bg-transparent hover:bg-gray-100 dark:hover:bg-navy-700 rounded-full transition-colors"
                 >
                   {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleNext}
                   disabled={!!stepErrors[currentStep] || isValidating}
-                  className="px-8 py-3 text-base font-semibold text-white bg-charcoal-950 dark:bg-emerald-500 rounded-full hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  className="px-8 py-3 text-base font-semibold text-white bg-gradient-to-r from-emerald-500 to-emerald-600 dark:from-emerald-500 dark:to-emerald-600 rounded-full hover:from-emerald-600 hover:to-emerald-700 dark:hover:from-emerald-600 dark:hover:to-emerald-700 transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:shadow-none flex items-center space-x-2"
                 >
                   {isValidating ? (
                     <>

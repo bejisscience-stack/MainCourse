@@ -6,20 +6,16 @@ import ServerSidebar from './ServerSidebar';
 import ChannelSidebar from './ChannelSidebar';
 import ChatArea from './ChatArea';
 import ChatErrorBoundary from './ChatErrorBoundary';
-import MemberSidebar from './MemberSidebar';
 import { useActiveServer } from '@/hooks/useActiveServer';
 import { useActiveChannel } from '@/hooks/useActiveChannel';
-import { useMembers } from '@/hooks/useMembers';
 import { useUser } from '@/hooks/useUser';
 import { supabase } from '@/lib/supabase';
 import type { Server, Channel } from '@/types/server';
-import type { Member } from '@/types/member';
 import type { EnrollmentInfo } from '@/hooks/useEnrollments';
 
 interface LayoutContainerProps {
   servers: Server[];
   currentUserId: string;
-  initialMembers?: Member[];
   isLecturer?: boolean;
   enrolledCourseIds?: Set<string>;
   onAddCourse?: () => void;
@@ -37,7 +33,6 @@ interface LayoutContainerProps {
 export default function LayoutContainer({
   servers,
   currentUserId,
-  initialMembers = [],
   isLecturer = false,
   enrolledCourseIds = new Set(),
   onAddCourse,
@@ -53,9 +48,7 @@ export default function LayoutContainer({
 }: LayoutContainerProps) {
   const [activeServerId, setActiveServerId] = useActiveServer();
   const [activeChannelId, setActiveChannelId] = useActiveChannel();
-  const [showMembers, setShowMembers] = useState(true);
   const [channelsCollapsed, setChannelsCollapsed] = useState(false);
-  const [membersCollapsed, setMembersCollapsed] = useState(false);
   const [userName, setUserName] = useState<string>('');
   const { user } = useUser();
   const { t } = useI18n();
@@ -70,11 +63,6 @@ export default function LayoutContainer({
   
   // Check if we're in DM mode (home)
   const isDMMode = activeServerId === 'home';
-
-  const { members, onlineMembers, offlineMembers } = useMembers(
-    activeServerId,
-    initialMembers
-  );
 
   // Load current user's username
   useEffect(() => {
@@ -162,7 +150,7 @@ export default function LayoutContainer({
   };
 
   return (
-    <div className="flex w-full h-full bg-navy-950/20 backdrop-blur-[0.5px] text-white overflow-hidden">
+    <div className="flex w-full h-full bg-navy-950/40 backdrop-blur-sm text-white overflow-hidden">
       {/* Server sidebar */}
       <ServerSidebar
         servers={servers}
@@ -174,18 +162,18 @@ export default function LayoutContainer({
         showDMButton={showDMButton}
       />
 
-      {/* Combined Sidebar Container - Channels and Members stacked vertically */}
+      {/* Channels Sidebar Container */}
       {!isDMMode && activeServer && (
-        <div className="w-60 bg-navy-900 flex flex-col">
+        <div className="w-60 bg-navy-950/70 border-r border-navy-800/60 flex flex-col">
           {/* Channels Section */}
-          <div className={`flex flex-col border-b border-navy-700 transition-all ${channelsCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0'}`}>
+          <div className={`flex flex-col transition-all ${channelsCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0'}`}>
             {/* Channels Header with Collapse Button - shown when collapsed */}
             {channelsCollapsed ? (
-              <div className="h-12 px-4 border-b border-navy-700 flex items-center justify-between bg-navy-900 flex-shrink-0">
-                <span className="text-gray-300 text-sm font-semibold">CHANNELS</span>
+              <div className="h-12 px-4 border-b border-navy-800/60 flex items-center justify-between bg-navy-950/60 flex-shrink-0">
+                <span className="text-gray-400 text-xs font-semibold tracking-wider">CHANNELS</span>
                 <button
                   onClick={() => setChannelsCollapsed(!channelsCollapsed)}
-                  className="text-gray-400 hover:text-emerald-400 transition-colors p-1"
+                  className="text-gray-400 hover:text-emerald-300 transition-colors p-1 rounded-md hover:bg-navy-800/60"
                   title="Expand channels"
                 >
                   <svg
@@ -219,63 +207,25 @@ export default function LayoutContainer({
             )}
           </div>
 
-          {/* Members Section */}
-          <div className={`flex flex-col transition-all ${membersCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0'}`}>
-            {/* Members Header with Collapse Button - shown when collapsed */}
-            {membersCollapsed ? (
-              <div className="h-12 px-4 border-b border-navy-700 flex items-center justify-between bg-navy-900 flex-shrink-0">
-                <span className="text-gray-300 text-sm font-semibold">MEMBERS</span>
-                <button
-                  onClick={() => setMembersCollapsed(!membersCollapsed)}
-                  className="text-gray-400 hover:text-emerald-400 transition-colors p-1"
-                  title="Expand members"
-                >
-                  <svg
-                    className="w-4 h-4 transition-transform"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
-              </div>
-            ) : (
-              <div className="flex-1 overflow-hidden min-h-0">
-                <MemberSidebar
-                  members={members}
-                  onlineMembers={onlineMembers}
-                  offlineMembers={offlineMembers}
-                  onCollapse={() => setMembersCollapsed(true)}
-                />
-              </div>
-            )}
-          </div>
-
           {/* User profile footer - at the very bottom */}
-          <div className="h-14 bg-navy-950 px-2 py-2 flex items-center gap-2 border-t border-navy-700 flex-shrink-0 mt-auto">
-            <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-semibold">
+          <div className="h-14 bg-navy-950/80 px-2 py-2 flex items-center gap-2 border-t border-navy-800/60 flex-shrink-0 mt-auto">
+            <div className="w-8 h-8 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold shadow-soft">
               {userName ? userName.charAt(0).toUpperCase() : 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-white text-sm font-medium truncate">{userName || 'User'}</div>
-              <div className="text-emerald-400 text-xs flex items-center gap-1">
+              <div className="text-gray-100 text-sm font-medium truncate">{userName || 'User'}</div>
+              <div className="text-emerald-300 text-xs flex items-center gap-1">
                 <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
                 {t('chat.online')}
               </div>
             </div>
             <div className="flex gap-0.5">
-              <button className="text-gray-400 hover:text-emerald-400 p-1.5 rounded hover:bg-navy-700 transition-colors">
+              <button className="h-9 w-9 inline-flex items-center justify-center text-gray-400 hover:text-emerald-200 rounded-lg border border-navy-800/60 bg-navy-900/50 hover:bg-navy-800/70 hover:border-emerald-400/40 transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                 </svg>
               </button>
-              <button className="text-gray-400 hover:text-emerald-400 p-1.5 rounded hover:bg-navy-700 transition-colors">
+              <button className="h-9 w-9 inline-flex items-center justify-center text-gray-400 hover:text-emerald-200 rounded-lg border border-navy-800/60 bg-navy-900/50 hover:bg-navy-800/70 hover:border-emerald-400/40 transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

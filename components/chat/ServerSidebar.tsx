@@ -159,21 +159,21 @@ export default function ServerSidebar({
 
   return (
     <>
-      <div className="w-16 bg-navy-950 flex flex-col items-center py-3 space-y-2 overflow-y-auto">
+      <div className="w-16 bg-navy-950/85 border-r border-navy-800/60 flex flex-col items-center py-4 gap-3 overflow-y-auto chat-scrollbar">
         {/* Home/Direct Messages button */}
         {showDMButton && (
           <>
             <button
-              className={`w-12 h-12 rounded-full bg-emerald-500 hover:bg-emerald-600 transition-all duration-200 flex items-center justify-center text-white font-bold text-lg ${
-                activeServerId === 'home' ? 'rounded-2xl' : ''
-              }`}
+              className={`w-12 h-12 rounded-2xl bg-emerald-500/90 hover:bg-emerald-500 transition-all duration-200 flex items-center justify-center text-white font-semibold text-sm shadow-soft ${
+                activeServerId === 'home' ? 'ring-2 ring-emerald-400/50 shadow-glow' : ''
+              } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70`}
               onClick={() => onServerSelect('home')}
               onMouseEnter={() => setHoveredServerId('home')}
               onMouseLeave={() => setHoveredServerId(null)}
             >
               <span>DM</span>
             </button>
-            <div className="w-8 h-0.5 bg-navy-700"></div>
+            <div className="w-8 h-px bg-navy-800/70"></div>
           </>
         )}
 
@@ -187,13 +187,13 @@ export default function ServerSidebar({
           return (
             <div key={server.id} className="relative group">
               <button
-                className={`w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center text-white font-semibold text-sm relative ${
+                className={`w-12 h-12 rounded-xl transition-all duration-200 flex items-center justify-center text-sm font-semibold relative border ${
                   isActive
-                    ? 'rounded-2xl bg-emerald-500'
+                    ? 'rounded-2xl bg-emerald-500/15 text-emerald-200 border-emerald-500/40 shadow-soft-lg'
                     : isLocked
-                    ? 'bg-navy-700/50 hover:bg-navy-700'
-                    : 'bg-navy-800 hover:bg-emerald-500'
-                }`}
+                    ? 'bg-navy-900/40 text-gray-500 border-navy-800/50'
+                    : 'bg-navy-900/70 text-gray-200 border-navy-800/60 hover:bg-navy-800/80 hover:border-navy-700/70 hover:text-white'
+                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/50`}
                 onClick={() => handleServerClick(server.id)}
                 onMouseEnter={() => setHoveredServerId(server.id)}
                 onMouseLeave={() => setHoveredServerId(null)}
@@ -203,7 +203,7 @@ export default function ServerSidebar({
               >
                 {isLocked ? (
                   <svg
-                    className="w-6 h-6 text-gray-400"
+                    className="w-6 h-6 text-gray-500"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -223,28 +223,28 @@ export default function ServerSidebar({
               {/* Tooltip for locked courses */}
               {isLocked && isHovered && (
                 <div
-                  className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-navy-900 border border-navy-700 text-white text-sm rounded whitespace-nowrap z-50 pointer-events-none shadow-lg"
+                  className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-navy-900/95 border border-navy-700/60 text-gray-200 text-sm rounded-lg whitespace-nowrap z-50 pointer-events-none shadow-xl"
                   role="tooltip"
                 >
                   <span>{t('enrollment.courseLockedTooltip')}</span>
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-navy-900"></div>
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-navy-900/95"></div>
                 </div>
               )}
 
               {/* Tooltip for enrolled courses */}
               {!isLocked && isHovered && (
                 <div
-                  className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-navy-900 border border-navy-700 text-white text-sm rounded whitespace-nowrap z-50 pointer-events-none shadow-lg"
+                  className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-navy-900/95 border border-navy-700/60 text-gray-200 text-sm rounded-lg whitespace-nowrap z-50 pointer-events-none shadow-xl"
                   role="tooltip"
                 >
                   {server.name}
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-navy-900"></div>
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-navy-900/95"></div>
                 </div>
               )}
 
               {/* Active indicator */}
               {isActive && (
-                <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-8 bg-emerald-500 rounded-r"></div>
+                <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-10 bg-emerald-400 rounded-full"></div>
               )}
             </div>
           );
@@ -253,7 +253,7 @@ export default function ServerSidebar({
         {/* Add Course button (lecturer only) */}
         {isLecturer && (
           <button
-            className="w-12 h-12 rounded-full bg-navy-800 hover:bg-emerald-500 transition-all duration-200 flex items-center justify-center text-emerald-400 hover:text-white text-2xl font-light"
+            className="w-12 h-12 rounded-xl bg-navy-900/70 border border-navy-800/60 hover:border-emerald-500/50 hover:bg-emerald-500/15 transition-all duration-200 flex items-center justify-center text-emerald-300 hover:text-emerald-200 text-2xl font-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/50"
             title={t('lecturerDashboard.createCourse')}
             onClick={() => router.push('/lecturer/dashboard?createCourse=true')}
           >

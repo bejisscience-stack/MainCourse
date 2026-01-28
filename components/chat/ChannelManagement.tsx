@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useI18n } from '@/contexts/I18nContext';
 import type { Channel } from '@/types/server';
 
@@ -30,8 +30,31 @@ export default function ChannelManagement({
     description: '',
     categoryName: 'COURSE CHANNELS',
   });
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
+  const filteredChannels = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return channels;
+    return channels.filter((channel) => {
+      const nameMatch = channel.name.toLowerCase().includes(query);
+      const descMatch = channel.description?.toLowerCase().includes(query);
+      const categoryMatch = channel.categoryName?.toLowerCase().includes(query);
+      return nameMatch || descMatch || categoryMatch;
+    });
+  }, [channels, searchQuery]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,10 +122,10 @@ export default function ChannelManagement({
   };
 
   return (
-    <>
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-5 border-b border-navy-700/50 bg-gradient-to-r from-navy-800/50 to-navy-900/50">
-        <div className="flex items-center justify-between">
+      <div className="p-5 border-b border-navy-800/60 bg-navy-950/60 backdrop-blur-md">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,10 +134,10 @@ export default function ChannelManagement({
             </div>
             <div>
               <h3 className="text-lg font-bold text-white">{t('channels.manageChannels')}</h3>
-              <p className="text-xs text-gray-400">{channels.length} {channels.length === 1 ? 'channel' : 'channels'}</p>
+              <p className="text-xs text-gray-400">{filteredChannels.length} {filteredChannels.length === 1 ? 'channel' : 'channels'}</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => {
                 setEditingChannel(null);
@@ -130,18 +153,37 @@ export default function ChannelManagement({
             </button>
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-navy-700/80 text-gray-300 text-sm font-medium rounded-xl hover:bg-navy-600 transition-all duration-200 border border-navy-600/50"
+              className="h-10 w-10 inline-flex items-center justify-center rounded-xl border border-navy-800/60 bg-navy-900/70 text-gray-300 hover:text-white hover:bg-navy-800/80 transition-colors"
+              title={t('common.close')}
             >
-              {t('common.close')}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
         </div>
       </div>
 
+      {/* Search */}
+      <div className="px-5 py-3 border-b border-navy-800/60 bg-navy-950/50">
+        <div className="relative">
+          <svg className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 105.5 5.5a7.5 7.5 0 0011.15 11.15z" />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('channels.searchPlaceholder') || 'Search channels'}
+            className="w-full pl-9 pr-3 py-2.5 bg-navy-900/70 border border-navy-800/60 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-400/30 transition-all placeholder-gray-500"
+          />
+        </div>
+      </div>
+
       {/* Channel List */}
-      <div className="p-4 space-y-3 max-h-[400px] overflow-y-auto">
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 chat-scrollbar">
         {error && (
-          <div className="bg-red-900/30 border border-red-700/50 text-red-300 px-4 py-3 rounded-xl text-sm flex items-start gap-3">
+          <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm flex items-start gap-3">
             <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -149,7 +191,7 @@ export default function ChannelManagement({
           </div>
         )}
 
-        {channels.map((channel) => (
+        {filteredChannels.map((channel) => (
           <div
             key={channel.id}
             className="group relative bg-gradient-to-br from-navy-800/90 to-navy-900/70 rounded-2xl p-4 border border-navy-700/40 hover:border-navy-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-navy-900/50"
@@ -242,14 +284,14 @@ export default function ChannelManagement({
           </div>
         ))}
 
-        {channels.length === 0 && (
+        {filteredChannels.length === 0 && (
           <div className="text-center py-12">
             <div className="w-16 h-16 rounded-2xl bg-navy-800/50 border border-navy-700/50 flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
             </div>
-            <p className="text-gray-400 text-sm">{t('channels.noChannelsYet')}</p>
+            <p className="text-gray-400 text-sm">{searchQuery.trim() ? 'No channels match your search.' : t('channels.noChannelsYet')}</p>
           </div>
         )}
       </div>
@@ -394,6 +436,6 @@ export default function ChannelManagement({
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

@@ -34,9 +34,9 @@ export default function EnrollmentStepOverview({
       </div>
 
       {/* Course Information Card */}
-      <div className="bg-charcoal-50/50 dark:bg-navy-700/50 rounded-2xl p-6 md:p-8 space-y-6 border-2 border-emerald-200 dark:border-emerald-700/50">
+      <div className="bg-white/50 dark:bg-navy-800/50 rounded-2xl p-6 md:p-8 space-y-6 border border-charcoal-100/50 dark:border-navy-700/50 shadow-soft">
         <div>
-          <h4 className="text-xl md:text-2xl font-semibold text-charcoal-950 dark:text-white mb-3">
+          <h4 className="text-xl md:text-2xl font-bold text-charcoal-950 dark:text-white mb-3">
             {course.title}
           </h4>
           {course.description && (
@@ -46,21 +46,24 @@ export default function EnrollmentStepOverview({
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-charcoal-200/50 dark:border-navy-600/50">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-charcoal-100/50 dark:border-navy-700/50">
           <div>
-            <p className="text-sm md:text-base text-charcoal-500 dark:text-gray-400 mb-2">
+            <p className="text-sm font-medium uppercase tracking-wide text-charcoal-500 dark:text-gray-400 mb-2">
               {t('payment.creator')}
             </p>
-            <p className="text-lg font-medium text-charcoal-950 dark:text-white">
+            <p className="text-lg font-semibold text-charcoal-950 dark:text-white flex items-center gap-2">
+              <span className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/30 dark:to-emerald-800/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-sm">
+                {course.creator.charAt(0)}
+              </span>
               {course.creator}
             </p>
           </div>
           <div>
-            <p className="text-sm md:text-base text-charcoal-500 dark:text-gray-400 mb-2">
+            <p className="text-sm font-medium uppercase tracking-wide text-charcoal-500 dark:text-gray-400 mb-2">
               {t('payment.price')}
             </p>
             <div className="flex items-baseline gap-2">
-              <p className="text-2xl md:text-3xl font-semibold text-charcoal-950 dark:text-white">
+              <p className="text-3xl font-bold text-charcoal-950 dark:text-white tracking-tight">
                 {formattedPrice}
               </p>
               {formattedOriginalPrice && (
@@ -73,8 +76,11 @@ export default function EnrollmentStepOverview({
         </div>
 
         {course.course_type && (
-          <div className="pt-4 border-t border-charcoal-200/50 dark:border-navy-600/50">
-            <span className="inline-block px-4 py-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-full text-sm font-semibold">
+          <div className="pt-6 border-t border-charcoal-100/50 dark:border-navy-700/50">
+            <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-charcoal-50 dark:bg-navy-700 border border-charcoal-100 dark:border-navy-600 text-charcoal-700 dark:text-gray-300 rounded-full text-sm font-semibold">
+              {course.course_type === 'Editing' && '🎬'}
+              {course.course_type === 'Content Creation' && '📱'}
+              {course.course_type === 'Website Creation' && '💻'}
               {course.course_type}
             </span>
           </div>
@@ -82,7 +88,7 @@ export default function EnrollmentStepOverview({
       </div>
 
       {/* Info Box */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-5">
+      <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50 rounded-2xl p-5">
         <div className="flex items-start space-x-3">
           <svg
             className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"

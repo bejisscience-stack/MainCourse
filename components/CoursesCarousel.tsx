@@ -108,6 +108,16 @@ export default function CoursesCarousel() {
     }
   }, [user, userRole, enrolledCourseIds, router, mutateEnrollments]);
 
+  const handleCardClick = useCallback((index: number) => {
+    if (courses.length >= 3) {
+      if (index === 0) handlePrevious();
+      if (index === 2) handleNext();
+    } else {
+      // For fewer courses, just set the index directly
+      setCurrentIndex(index);
+    }
+  }, [courses.length, handlePrevious, handleNext]);
+
   if (isLoading || !translationsReady) {
     return (
       <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
@@ -236,18 +246,19 @@ export default function CoursesCarousel() {
           <div className="flex items-center justify-center gap-6 md:gap-8 lg:gap-10 px-16 md:px-20 lg:px-24 overflow-hidden">
             {displayedCourses.map((course, index) => {
               // Middle course is always at index 1 if we have 3 courses
-              // If we have fewer courses, center the first one
-              const isMiddle = courses.length >= 3 ? index === 1 : courses.length === 1 ? index === 0 : index === Math.floor(courses.length / 2);
+              // If we have fewer courses, highlight the one matching currentIndex
+              const isMiddle = courses.length >= 3 ? index === 1 : index === currentIndex;
               const isEnrolled = enrolledCourseIds.has(course.id);
               const isEnrolling = enrollingCourseId === course.id;
 
               return (
                 <div
                   key={`${course.id}-${safeCurrentIndex}-${index}`}
-                  className={`transition-all duration-700 ease-out ${
+                  onClick={() => handleCardClick(index)}
+                  className={`transition-all duration-700 ease-out cursor-pointer ${
                     isMiddle
                       ? 'flex-1 max-w-lg scale-100 z-10 opacity-100'
-                      : 'flex-1 max-w-md scale-80 opacity-50 z-0 pointer-events-none'
+                      : 'flex-1 max-w-lg scale-95 opacity-70 z-0 hover:opacity-90'
                   }`}
                   style={{
                     transition: 'all 0.7s cubic-bezier(0.4, 0, 0.2, 1)',

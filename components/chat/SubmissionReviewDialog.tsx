@@ -246,7 +246,7 @@ export default function SubmissionReviewDialog({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-navy-950/80 z-50 flex items-center justify-center p-4"
       onClick={(e) => {
         // Close modal when clicking outside
         if (e.target === e.currentTarget) {
@@ -255,13 +255,13 @@ export default function SubmissionReviewDialog({
       }}
     >
       <div 
-        className="relative w-full max-w-3xl bg-gray-800 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-3xl bg-navy-950/90 border border-navy-800/60 rounded-2xl shadow-soft-xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center text-gray-300 transition-colors"
+          className="absolute top-4 right-4 z-10 w-8 h-8 bg-navy-800/70 hover:bg-navy-700 rounded-full flex items-center justify-center text-gray-300 transition-colors"
           aria-label="Close dialog"
         >
           <svg
@@ -279,7 +279,7 @@ export default function SubmissionReviewDialog({
           </svg>
         </button>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 overflow-y-auto chat-scrollbar flex-1 min-h-0">
           {/* Header */}
           <div>
             <h2 className="text-2xl font-bold text-white mb-2">Review Submission</h2>
@@ -292,14 +292,14 @@ export default function SubmissionReviewDialog({
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg">
+            <div className="bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-3 rounded-xl">
               {error}
             </div>
           )}
 
           {/* Platform Tabs (if multiple platforms) */}
           {hasMultiplePlatforms && (
-            <div className="border-b border-gray-700">
+            <div className="border-b border-navy-800/60">
               <div className="flex gap-2">
                 {platforms.map((platform) => (
                   <button
@@ -307,7 +307,7 @@ export default function SubmissionReviewDialog({
                     onClick={() => setSelectedPlatform(platform)}
                     className={`px-4 py-2 text-sm font-medium transition-colors ${
                       selectedPlatform === platform
-                        ? 'text-white border-b-2 border-indigo-500'
+                        ? 'text-white border-b-2 border-emerald-400'
                         : 'text-gray-400 hover:text-gray-300'
                     }`}
                   >
@@ -320,12 +320,12 @@ export default function SubmissionReviewDialog({
 
           {/* Current Platform Info */}
           {hasMultiplePlatforms && (
-            <div className="bg-indigo-900/20 border border-indigo-700 rounded-lg p-3">
-              <p className="text-sm text-indigo-300">
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
+              <p className="text-sm text-emerald-200">
                 Reviewing: <span className="font-semibold">{PLATFORM_NAMES[selectedPlatform.toLowerCase()] || selectedPlatform}</span>
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                Link: <a href={platformLinks[selectedPlatform]} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">
+                Link: <a href={platformLinks[selectedPlatform]} target="_blank" rel="noopener noreferrer" className="text-emerald-300 hover:underline">
                   {platformLinks[selectedPlatform]}
                 </a>
               </p>
@@ -355,8 +355,8 @@ export default function SubmissionReviewDialog({
                     }}
                     className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
                       currentSelectedCriteria.includes(criterion.id)
-                        ? 'bg-indigo-600/20 border-indigo-500'
-                        : 'bg-gray-700 border-gray-600 hover:border-gray-500'
+                        ? 'bg-emerald-500/15 border-emerald-500/40'
+                        : 'bg-navy-900/60 border-navy-800/60 hover:border-navy-700/70'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
@@ -369,14 +369,14 @@ export default function SubmissionReviewDialog({
                           handleCriteriaToggle(criterion.id, selectedPlatform);
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-4 h-4 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-indigo-500 focus:ring-2 cursor-pointer pointer-events-auto z-10 relative"
+                        className="w-4 h-4 text-emerald-500 bg-navy-900 border-navy-700 rounded focus:ring-emerald-400 focus:ring-2 cursor-pointer pointer-events-auto z-10 relative"
                       />
                       <span className="text-white text-sm">{criterion.text}</span>
                       {criterion.platform && (
-                        <span className="text-xs text-indigo-400">({PLATFORM_NAMES[criterion.platform.toLowerCase()] || criterion.platform})</span>
+                        <span className="text-xs text-emerald-300">({PLATFORM_NAMES[criterion.platform.toLowerCase()] || criterion.platform})</span>
                       )}
                     </div>
-                    <span className="text-indigo-400 text-sm font-semibold">
+                    <span className="text-emerald-300 text-sm font-semibold">
                       ${criterion.rpm.toFixed(2)} RPM
                     </span>
                   </label>
@@ -385,10 +385,10 @@ export default function SubmissionReviewDialog({
               </div>
             )}
             {currentSelectedCriteria.length > 0 && (
-              <div className="mt-3 p-3 bg-indigo-900/20 border border-indigo-700 rounded-lg">
+              <div className="mt-3 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
                 <p className="text-sm text-gray-300">
                   <span className="font-semibold">Total RPM:</span>{' '}
-                  <span className="text-indigo-400 font-bold">${currentPaymentAmount.toFixed(2)}</span>
+                  <span className="text-emerald-300 font-bold">${currentPaymentAmount.toFixed(2)}</span>
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
                   Based on {currentSelectedCriteria.length} matched criteria
@@ -411,18 +411,18 @@ export default function SubmissionReviewDialog({
               }}
               placeholder="Add your feedback or comments about this submission..."
               rows={4}
-              className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-2.5 bg-navy-900/60 text-white rounded-xl border border-navy-800/60 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-transparent resize-none"
             />
           </div>
 
           {/* Success Message */}
           {currentSaveSuccess && (
-            <div className="bg-green-900/20 border border-green-700 rounded-lg p-3">
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
               <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <p className="text-sm text-green-300 font-semibold">
+                <p className="text-sm text-emerald-200 font-semibold">
                   Review saved successfully for {PLATFORM_NAMES[selectedPlatform.toLowerCase()] || selectedPlatform}! Student will see this information.
                 </p>
               </div>
@@ -431,10 +431,10 @@ export default function SubmissionReviewDialog({
 
           {/* Saved RPM Display */}
           {currentLastSavedRPM > 0 && !currentSaveSuccess && (
-            <div className="bg-green-900/20 border border-green-700 rounded-lg p-3">
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
               <p className="text-sm text-gray-300">
                 <span className="font-semibold">Saved RPM:</span>{' '}
-                <span className="text-green-400 font-bold">${currentLastSavedRPM.toFixed(2)}</span>
+                <span className="text-emerald-300 font-bold">${currentLastSavedRPM.toFixed(2)}</span>
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 Student will see this amount based on selected criteria for {PLATFORM_NAMES[selectedPlatform.toLowerCase()] || selectedPlatform}
@@ -443,12 +443,12 @@ export default function SubmissionReviewDialog({
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-700">
+          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-navy-800/60">
             <button
               type="button"
               onClick={onClose}
               disabled={currentIsSaving}
-              className="px-6 py-2 text-sm font-semibold text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 text-sm font-semibold text-gray-300 bg-navy-900/60 border border-navy-800/60 rounded-lg hover:bg-navy-800/70 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Close
             </button>
@@ -458,7 +458,7 @@ export default function SubmissionReviewDialog({
                 await saveReviewForPlatform(selectedPlatform);
               }}
               disabled={currentIsSaving || currentSelectedCriteria.length === 0}
-              className="px-6 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-2 text-sm font-semibold text-white bg-emerald-500/90 rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {currentIsSaving ? (
                 <>
