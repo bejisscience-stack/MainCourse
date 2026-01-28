@@ -275,7 +275,6 @@ export default function StudentChatPage() {
           <LayoutContainer
             servers={servers}
             currentUserId={user.id}
-            initialMembers={members}
             isLecturer={false}
             enrolledCourseIds={enrolledCourseIds}
             onSendMessage={handleSendMessage}
