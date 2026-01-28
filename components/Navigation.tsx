@@ -81,7 +81,7 @@ function Navigation() {
           {/* Logo */}
           <Link href="/" className="flex items-center group">
             <img
-              src="/wavleba-logo.svg?v=2"
+              src="/wavleba-logo-new.png"
               alt="Wavleba"
               className="h-8 md:h-10 w-auto transition-all duration-200 group-hover:scale-105 will-change-transform"
               style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}

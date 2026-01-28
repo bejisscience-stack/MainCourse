@@ -15,7 +15,7 @@ export default function Footer() {
           <div>
             <Link href="/" className="flex items-center mb-4">
               <img
-                src="/wavleba-logo.svg?v=2"
+                src="/wavleba-logo-new.png"
                 alt="Wavleba"
                 className="h-10 w-auto"
               />
