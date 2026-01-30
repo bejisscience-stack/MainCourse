@@ -110,12 +110,11 @@ function NotificationDropdown({ isOpen, onClose, position, onUnreadCountChange }
     try {
       await markAllAsRead();
       await resetCount();
-      // Trigger refresh to ensure UI is updated
-      onUnreadCountChange?.();
+      // resetCount already sets count to 0, no need for additional refresh
     } catch (err) {
       console.error('Error marking all as read:', err);
     }
-  }, [markAllAsRead, resetCount, onUnreadCountChange]);
+  }, [markAllAsRead, resetCount]);
 
   if (!isOpen) return null;
 

@@ -56,8 +56,9 @@ export function useUnreadNotifications() {
   };
 
   const resetCount = async () => {
-    // Optimistically set count to 0, then revalidate to confirm with server
-    await mutate({ count: 0 }, { revalidate: true });
+    // Set count to 0 without immediate revalidation to avoid race conditions
+    // The periodic refresh (every 30 seconds) will sync with server
+    await mutate({ count: 0 }, { revalidate: false });
   };
 
   const refresh = async () => {

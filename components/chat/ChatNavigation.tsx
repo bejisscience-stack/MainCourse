@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser, signOut } from '@/lib/auth';
+import { useUser } from '@/hooks/useUser';
 import { supabase } from '@/lib/supabase';
 import { useI18n } from '@/contexts/I18nContext';
 import { languages } from '@/lib/i18n';
@@ -103,6 +104,7 @@ function ChatLanguageSelector() {
 export default function ChatNavigation() {
   const router = useRouter();
   const { t } = useI18n();
+  const { role } = useUser();
   const [user, setUser] = useState<User | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [userName, setUserName] = useState<string>('');
@@ -192,20 +194,22 @@ export default function ChatNavigation() {
           <span className="hidden sm:inline">{t('nav.dashboard')}</span>
         </Link>
 
-        <Link
-          href="/courses"
-          className="text-gray-300 hover:text-emerald-300 transition-colors text-sm font-medium flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-navy-800/50"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-            />
-          </svg>
-          <span className="hidden sm:inline">{t('nav.courses')}</span>
-        </Link>
+        {role !== 'lecturer' && (
+          <Link
+            href="/courses"
+            className="text-gray-300 hover:text-emerald-300 transition-colors text-sm font-medium flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-navy-800/50"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+              />
+            </svg>
+            <span className="hidden sm:inline">{t('nav.courses')}</span>
+          </Link>
+        )}
       </div>
 
       {/* Right side - Language selector and User profile */}
