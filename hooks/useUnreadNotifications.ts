@@ -56,9 +56,14 @@ export function useUnreadNotifications() {
   };
 
   const resetCount = async () => {
-    // Set count to 0 without immediate revalidation to avoid race conditions
-    // The periodic refresh (every 30 seconds) will sync with server
+    // Set count to 0 immediately for instant UI feedback
     await mutate({ count: 0 }, { revalidate: false });
+
+    // Schedule a delayed server sync to confirm the count is correct
+    // This gives the database time to commit the transaction
+    setTimeout(() => {
+      mutate();
+    }, 500);
   };
 
   const refresh = async () => {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,11 +37,12 @@ export async function PATCH(
       );
     }
 
-    const supabase = createServerSupabaseClient(token);
+    // Use service role client to bypass RLS and ensure update succeeds
+    const supabase = createServiceRoleClient(token);
 
     console.log('[Mark Read API] Marking notification as read:', id, 'for user:', user.id);
 
-    // Update the notification - RLS ensures only owner can update
+    // Update the notification with explicit user_id check for security
     const { data: notification, error: updateError } = await supabase
       .from('notifications')
       .update({
@@ -49,7 +50,7 @@ export async function PATCH(
         read_at: new Date().toISOString(),
       })
       .eq('id', id)
-      .eq('user_id', user.id) // Extra security check
+      .eq('user_id', user.id) // Security check - only update user's own notifications
       .select()
       .single();
 

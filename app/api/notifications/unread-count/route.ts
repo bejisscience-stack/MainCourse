@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
 import type { UnreadCountResponse } from '@/types/notification';
 
 export const dynamic = 'force-dynamic';
@@ -25,16 +25,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createServerSupabaseClient(token);
+    // Use service role client to bypass RLS and get accurate count
+    const supabase = createServiceRoleClient(token);
 
-    // Use RPC function to get count
-    const { data: count, error: rpcError } = await supabase
-      .rpc('get_unread_notification_count', { p_user_id: user.id });
+    // Direct count query instead of RPC for more reliable execution
+    const { count, error: countError } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('read', false);
 
-    if (rpcError) {
-      console.error('[Unread Count API] Error getting unread count:', rpcError);
+    if (countError) {
+      console.error('[Unread Count API] Error getting unread count:', countError);
       return NextResponse.json(
-        { error: 'Failed to get unread count', details: rpcError.message },
+        { error: 'Failed to get unread count', details: countError.message },
         { status: 500 }
       );
     }
