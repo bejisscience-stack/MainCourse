@@ -1,0 +1,6 @@
+fixed Deployment Issues
+
+- Added missing "chooseFiles" translation in ge.json
+- Removed invalid initialMembers prop in app/chat/page.tsx
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
