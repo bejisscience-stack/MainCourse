@@ -15,6 +15,7 @@ import { ScrollReveal } from './ScrollReveal';
 export default function CoursesCarousel() {
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [showAllMobile, setShowAllMobile] = useState(false);
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
   const { user, role: userRole } = useUser();
   const { courses, isLoading, error: coursesError } = useCourses('All');
@@ -197,7 +198,7 @@ export default function CoursesCarousel() {
         <div className="relative">
           {/* Mobile View: Vertical Stack of All Courses */}
           <div className="md:hidden flex flex-col gap-6 px-4">
-            {courses.map((course) => {
+            {courses.slice(0, showAllMobile ? undefined : 3).map((course) => {
               const isEnrolled = enrolledCourseIds.has(course.id);
               return (
                 <div key={course.id} className="w-full">
@@ -212,6 +213,32 @@ export default function CoursesCarousel() {
                 </div>
               );
             })}
+
+            {/* Show More / Show Less Button */}
+            {courses.length > 3 && (
+              <div className="flex justify-center mt-2">
+                <button
+                  onClick={() => setShowAllMobile(!showAllMobile)}
+                  className="px-6 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 bg-white dark:bg-navy-800 text-charcoal-600 dark:text-gray-300 border border-charcoal-200 dark:border-navy-700 hover:bg-gray-50 dark:hover:bg-navy-700 hover:text-charcoal-900 dark:hover:text-white shadow-sm flex items-center gap-2"
+                >
+                  {showAllMobile ? (
+                    <>
+                      <span>{translationsReady ? t('common.showLess') : 'Show Less'}</span>
+                      <svg className="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </>
+                  ) : (
+                    <>
+                      <span>{translationsReady ? t('common.showMore') : 'Show More'}</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Desktop View: Carousel (Original Implementation) */}
@@ -277,8 +304,8 @@ export default function CoursesCarousel() {
                     key={`${course.id}-${safeCurrentIndex}-${index}`}
                     onClick={() => handleCardClick(index)}
                     className={`transition-all duration-700 ease-out cursor-pointer ${isMiddle
-                        ? 'flex-1 max-w-lg scale-100 z-10 opacity-100'
-                        : 'flex-1 max-w-lg scale-95 opacity-70 z-0 hover:opacity-90'
+                      ? 'flex-1 max-w-lg scale-100 z-10 opacity-100'
+                      : 'flex-1 max-w-lg scale-95 opacity-70 z-0 hover:opacity-90'
                       }`}
                     style={{
                       transition: 'all 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
