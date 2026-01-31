@@ -370,11 +370,11 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
   };
 
   const dialogContent = (
-    <div 
+    <div
       className="fixed inset-0 bg-black/80 dark:bg-black/90 z-[9999] overflow-y-auto"
       onClick={handleClose}
     >
-      <div 
+      <div
         ref={dialogRef}
         className="relative w-full min-h-full bg-gradient-to-br from-white to-gray-50 dark:from-navy-800 dark:to-navy-900 flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -400,7 +400,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
           </svg>
         </button>
 
-        <div className="w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-6 py-20">
+        <div className="w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-6 py-10 md:py-20">
           {/* Header */}
           <div>
             <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white mb-3 tracking-tight">
@@ -415,10 +415,10 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
           <div className="w-full relative px-2 md:px-6">
             {/* Connecting Line - Background */}
             <div className="absolute top-5 left-6 right-6 h-0.5 bg-gray-200 dark:bg-navy-700 -z-10 rounded-full" />
-            
+
             {/* Connecting Line - Active Progress */}
-            <div 
-              className="absolute top-5 left-6 h-0.5 bg-emerald-500 -z-10 transition-all duration-500 ease-out rounded-full" 
+            <div
+              className="absolute top-5 left-6 h-0.5 bg-emerald-500 -z-10 transition-all duration-500 ease-out rounded-full"
               style={{ width: `calc(${((currentStep - 1) / (TOTAL_STEPS - 1)) * 100}% - 3rem)` }}
             />
 
@@ -426,13 +426,12 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
               {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((step) => (
                 <div key={step} className="flex flex-col items-center relative z-10 group cursor-default">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 border-2 ${
-                      step < currentStep
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 border-2 ${step < currentStep
                         ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20'
                         : step === currentStep
-                        ? 'bg-charcoal-950 dark:bg-emerald-500 text-white border-charcoal-950 dark:border-emerald-500 ring-4 ring-emerald-500/20 shadow-lg shadow-emerald-500/20 scale-110'
-                        : 'bg-white dark:bg-navy-800 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-navy-600'
-                    }`}
+                          ? 'bg-charcoal-950 dark:bg-emerald-500 text-white border-charcoal-950 dark:border-emerald-500 ring-4 ring-emerald-500/20 shadow-lg shadow-emerald-500/20 scale-110'
+                          : 'bg-white dark:bg-navy-800 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-navy-600'
+                      }`}
                   >
                     {step < currentStep ? (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -442,11 +441,10 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
                       step
                     )}
                   </div>
-                  <span className={`text-xs mt-3 text-center font-semibold transition-colors duration-300 absolute top-full left-1/2 -translate-x-1/2 w-max ${
-                    step <= currentStep
+                  <span className={`text-xs mt-3 text-center font-semibold transition-colors duration-300 absolute top-full left-1/2 -translate-x-1/2 w-max ${step <= currentStep
                       ? 'text-charcoal-950 dark:text-white'
                       : 'text-gray-400 dark:text-gray-500'
-                  }`}>
+                    }`}>
                     {step === 1 && t('enrollment.stepOverview')}
                     {step === 2 && t('enrollment.stepPayment')}
                     {step === 3 && t('enrollment.stepReferral')}
@@ -456,7 +454,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
                 </div>
               ))}
             </div>
-            
+
             {/* Step Counter */}
             <div className="text-center text-sm text-charcoal-500 dark:text-gray-400 mt-12 font-medium">
               {t('enrollment.stepProgress', { current: currentStep, total: TOTAL_STEPS })}
@@ -529,7 +527,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
               </div>
             </div>
           )}
-          
+
           {/* Cancel button on review step */}
           {currentStep === TOTAL_STEPS && (
             <div className="flex items-center justify-end pt-6 border-t border-gray-200 dark:border-navy-700">

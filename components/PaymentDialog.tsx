@@ -24,17 +24,17 @@ function generateCourseCode(courseId: string): string {
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash; // Convert to 32-bit integer
   }
-  
+
   // Use absolute value and convert to base 36, then take first 5 chars
   const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   let code = '';
   let num = Math.abs(hash);
-  
+
   for (let i = 0; i < 5; i++) {
     code += chars[num % chars.length];
     num = Math.floor(num / chars.length);
   }
-  
+
   return code;
 }
 
@@ -79,7 +79,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
     if (!files || files.length === 0) return;
 
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-    
+
     if (imageFiles.length === 0) {
       setUploadError(t('payment.imageFilesOnly'));
       return;
@@ -88,7 +88,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
     // Validate file sizes (5MB limit per image)
     const maxSize = 5 * 1024 * 1024;
     const oversizedFiles = imageFiles.filter(file => file.size > maxSize);
-    
+
     if (oversizedFiles.length > 0) {
       setUploadError(t('payment.fileSizeExceeded'));
       return;
@@ -103,7 +103,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
     }));
 
     setUploadedImages(prev => [...prev, ...newImages]);
-    
+
     // Reset input
     e.target.value = '';
   }, []);
@@ -219,11 +219,11 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
   if (!isOpen) return null;
 
   const dialogContent = (
-    <div 
+    <div
       className="fixed inset-0 bg-black/80 dark:bg-black/90 z-[9999] overflow-y-auto"
       onClick={handleClose}
     >
-      <div 
+      <div
         ref={dialogRef}
         className="relative w-full min-h-full bg-white dark:bg-navy-800 flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -249,7 +249,7 @@ export default function PaymentDialog({ course, isOpen, onClose, onEnroll }: Pay
           </svg>
         </button>
 
-        <div className="w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 py-20">
+        <div className="w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 py-10 md:py-20">
           {/* Header */}
           <div>
             <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white mb-3 tracking-tight">{t('payment.paymentInstructions')}</h2>

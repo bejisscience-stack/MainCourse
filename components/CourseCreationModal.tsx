@@ -52,7 +52,7 @@ export default function CourseCreationModal({
             .select('username')
             .eq('id', user.id)
             .single();
-          
+
           setFormData({
             title: '',
             description: '',
@@ -126,7 +126,7 @@ export default function CourseCreationModal({
 
     let progress = 0;
     let progressInterval: NodeJS.Timeout | null = null;
-    
+
     const startProgress = () => {
       progressInterval = setInterval(() => {
         progress += 5;
@@ -194,7 +194,7 @@ export default function CourseCreationModal({
     try {
       const url = await uploadFile(file, 'course-videos', 'video', setVideoUploadProgress);
       setFormData({ ...formData, intro_video_url: url });
-      
+
       setTimeout(() => {
         setVideoUploadProgress(0);
         setIsUploading(false);
@@ -228,7 +228,7 @@ export default function CourseCreationModal({
     try {
       const url = await uploadFile(file, 'course-thumbnails', 'thumbnail', setThumbnailUploadProgress);
       setFormData({ ...formData, thumbnail_url: url });
-      
+
       setTimeout(() => {
         setThumbnailUploadProgress(0);
         setIsUploading(false);
@@ -320,7 +320,7 @@ export default function CourseCreationModal({
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -328,7 +328,7 @@ export default function CourseCreationModal({
         }
       }}
     >
-      <div 
+      <div
         className="bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto relative"
         onClick={(e) => e.stopPropagation()}
       >
@@ -411,7 +411,7 @@ export default function CourseCreationModal({
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Price (₾) *
@@ -441,7 +441,7 @@ export default function CourseCreationModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Author *
@@ -484,11 +484,10 @@ export default function CourseCreationModal({
                     className="hidden"
                     disabled={isUploading}
                   />
-                  <div className={`w-full px-4 py-3 border-2 border-dashed rounded-lg text-center transition-colors ${
-                    isUploading && videoUploadProgress > 0
+                  <div className={`w-full px-4 py-3 border-2 border-dashed rounded-lg text-center transition-colors ${isUploading && videoUploadProgress > 0
                       ? 'border-indigo-500 bg-indigo-900/20'
                       : 'border-gray-600 hover:border-gray-500'
-                  }`}>
+                    }`}>
                     {isUploading && videoUploadProgress > 0 ? (
                       <>
                         <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500 mb-2"></div>
@@ -528,11 +527,10 @@ export default function CourseCreationModal({
                     className="hidden"
                     disabled={isUploading}
                   />
-                  <div className={`w-full px-4 py-3 border-2 border-dashed rounded-lg text-center transition-colors ${
-                    isUploading && thumbnailUploadProgress > 0
+                  <div className={`w-full px-4 py-3 border-2 border-dashed rounded-lg text-center transition-colors ${isUploading && thumbnailUploadProgress > 0
                       ? 'border-indigo-500 bg-indigo-900/20'
                       : 'border-gray-600 hover:border-gray-500'
-                  }`}>
+                    }`}>
                     {isUploading && thumbnailUploadProgress > 0 ? (
                       <>
                         <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500 mb-2"></div>

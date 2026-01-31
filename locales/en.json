@@ -16,7 +16,9 @@
     "previous": "Previous",
     "yes": "Yes",
     "no": "No",
-    "optional": "Optional"
+    "optional": "Optional",
+    "showMore": "Show More",
+    "showLess": "Show Less"
   },
   "nav": {
     "about": "About",
@@ -819,4 +821,3 @@
     "startsTomorrow": "Starts tomorrow"
   }
 }
-
