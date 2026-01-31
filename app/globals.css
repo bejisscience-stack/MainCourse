@@ -77,10 +77,6 @@ body {
   body {
     height: 100dvh;
     overscroll-behavior-y: none;
-    position: fixed;
-    /* Lock body on mobile */
-    overflow: hidden;
-    /* Handle scrolling in children */
   }
 }
 
