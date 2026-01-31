@@ -102,7 +102,7 @@ export default function CourseChatPage() {
       // Ensure required channels exist in database
       const hasLectures = channelsData.some((ch) => ch.name.toLowerCase() === 'lectures' && ch.type === 'lectures');
       const hasProjects = channelsData.some((ch) => ch.name.toLowerCase() === 'projects');
-      
+
       const channelsToCreate: any[] = [];
       if (!hasLectures) {
         channelsToCreate.push({
@@ -124,14 +124,14 @@ export default function CourseChatPage() {
           display_order: 1,
         });
       }
-      
+
       if (channelsToCreate.length > 0) {
         try {
           const { data: newChannels, error: createError } = await supabase
             .from('channels')
             .insert(channelsToCreate)
             .select();
-          
+
           if (!createError && newChannels) {
             channelsData.push(...newChannels);
           }
@@ -142,7 +142,7 @@ export default function CourseChatPage() {
 
       // Transform course into server/channels structure
       const courseChannels = channelsData || [];
-      
+
       // Group channels by category
       const channelsByCategory: { [key: string]: Channel[] } = {};
       courseChannels.forEach((ch) => {
@@ -184,7 +184,7 @@ export default function CourseChatPage() {
           .select('*')
           .eq('lecturer_id', courseData.lecturer_id)
           .order('created_at', { ascending: false });
-        
+
         if (lecturerCourses && lecturerCourses.length > 0) {
           allLecturerCourses = lecturerCourses;
         }
@@ -201,7 +201,7 @@ export default function CourseChatPage() {
       // Transform all courses into servers
       const serversData: Server[] = allLecturerCourses.map((course) => {
         const courseChannels = (allChannelsData || []).filter((ch) => ch.course_id === course.id);
-        
+
         const channelsByCategory: { [key: string]: Channel[] } = {};
         courseChannels.forEach((ch) => {
           const category = ch.category_name || 'COURSE CHANNELS';
@@ -244,7 +244,7 @@ export default function CourseChatPage() {
       });
 
       setServers(serversData);
-      
+
       // Set active server to this course
       setActiveServerId(courseId);
 
@@ -277,7 +277,7 @@ export default function CourseChatPage() {
       const lecturesChannel = allChannels.find(
         ch => ch.type === 'lectures' && ch.name.toLowerCase() === 'lectures'
       );
-      
+
       // Only auto-select if no channel is currently selected, or if the selected channel is not from this course
       const currentChannel = allChannels.find(ch => ch.id === activeChannelId);
       if (lecturesChannel && (!activeChannelId || !currentChannel)) {
@@ -371,7 +371,7 @@ export default function CourseChatPage() {
   const showExpirationOverlay = isExpired && userRole !== 'admin';
 
   return (
-    <div className="flex flex-col h-screen bg-navy-950/20 backdrop-blur-[0.5px]">
+    <div className="flex flex-col h-[100dvh] bg-navy-950/20 backdrop-blur-[0.5px] overscroll-none">
       <ChatNavigation />
       <div className="flex-1 overflow-hidden relative">
         {servers.length === 0 ? (

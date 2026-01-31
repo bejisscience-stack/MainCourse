@@ -63,6 +63,13 @@ body {
   position: relative;
 }
 
+@media (max-width: 768px) {
+  html, body {
+    height: 100dvh;
+    overscroll-behavior-y: none;
+  }
+}
+
 /* Prevent any element from causing horizontal scroll */
 * {
   max-width: 100%;
