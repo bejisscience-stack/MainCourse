@@ -15,6 +15,7 @@ interface LecturesChannelProps {
   isEnrollmentExpired?: boolean;
   enrollmentInfo?: EnrollmentInfo | null;
   onReEnrollRequest?: () => void;
+  onMobileMenuClick?: () => void;
 }
 
 export default function LecturesChannel({
@@ -25,6 +26,7 @@ export default function LecturesChannel({
   isEnrollmentExpired = false,
   enrollmentInfo = null,
   onReEnrollRequest,
+  onMobileMenuClick,
 }: LecturesChannelProps) {
   const { t } = useI18n();
   const { videos, isLoading: loading, mutate: mutateVideos } = useVideos(
@@ -68,7 +70,7 @@ export default function LecturesChannel({
             <div className="absolute inset-0 rounded-full border-4 border-emerald-500/20"></div>
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-emerald-400 animate-spin"></div>
           </div>
-              <p className="text-gray-400 font-medium">{t('common.loading')}</p>
+          <p className="text-gray-400 font-medium">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -80,6 +82,16 @@ export default function LecturesChannel({
       <div className="px-6 py-4 border-b border-navy-800/60 bg-navy-950/70 backdrop-blur-md">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={onMobileMenuClick}
+              className="md:hidden text-gray-400 hover:text-white mr-1"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+
             <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center shadow-soft">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -89,18 +101,18 @@ export default function LecturesChannel({
               <h2 className="text-white font-bold text-lg">{channel.name}</h2>
               <p className="text-gray-500 text-sm">{t('lectures.videos', { count: videos.length })}</p>
             </div>
-        </div>
-        {isLecturer && (
-          <button
-            onClick={() => setShowUploadModal(true)}
+          </div>
+          {isLecturer && (
+            <button
+              onClick={() => setShowUploadModal(true)}
               className="px-4 py-2.5 bg-emerald-500/90 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl transition-all shadow-soft hover:shadow-soft-lg flex items-center gap-2 group"
             >
               <svg className="w-5 h-5 transition-transform group-hover:scale-110 will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            {videos.length === 0 ? t('lectures.uploadFirstVideo') : t('lectures.uploadVideo')}
-          </button>
-        )}
+              </svg>
+              {videos.length === 0 ? t('lectures.uploadFirstVideo') : t('lectures.uploadVideo')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -111,11 +123,11 @@ export default function LecturesChannel({
             <div className="w-24 h-24 rounded-full bg-navy-900/60 border border-navy-800/60 flex items-center justify-center mb-6">
               <svg className="w-12 h-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
+              </svg>
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">{t('lectures.noVideosYet')}</h3>
             <p className="text-gray-500 max-w-sm mb-6">
-              {isLecturer 
+              {isLecturer
                 ? t('lectures.startBuildingCourse')
                 : t('lectures.instructorNoVideos')}
             </p>
@@ -234,7 +246,7 @@ function VideoCard({
   const handleMarkAsSeen = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!video.duration) return;
-    
+
     setIsMarkingAsSeen(true);
     try {
       const { error } = await supabase.from('video_progress').upsert(
@@ -262,29 +274,28 @@ function VideoCard({
 
   return (
     <div
-      className={`group relative flex flex-col sm:flex-row gap-4 p-4 rounded-2xl transition-all duration-300 ${
-        unlocked
+      className={`group relative flex flex-col sm:flex-row gap-4 p-4 rounded-2xl transition-all duration-300 ${unlocked
           ? 'bg-navy-900/60 hover:bg-navy-900/80 cursor-pointer border border-navy-800/60 hover:border-emerald-400/40 hover:shadow-soft-lg'
           : 'bg-navy-900/30 border border-navy-800/50 opacity-60'
-      }`}
+        }`}
       onClick={() => !showMenu && onPlay()}
-                >
-                  {/* Thumbnail */}
+    >
+      {/* Thumbnail */}
       <div className="relative w-full sm:w-56 h-40 sm:h-32 flex-shrink-0 rounded-xl overflow-hidden bg-navy-950/70 border border-navy-800/60">
-                    {video.thumbnailUrl ? (
-                      <img
-                        src={video.thumbnailUrl}
-                        alt={video.title}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
+        {video.thumbnailUrl ? (
+          <img
+            src={video.thumbnailUrl}
+            alt={video.title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-navy-900 to-navy-950">
             <svg className="w-12 h-12 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </div>
-                    )}
+            </svg>
+          </div>
+        )}
 
         {/* Play overlay */}
         {unlocked && (
@@ -292,10 +303,10 @@ function VideoCard({
             <div className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}>
               <svg className="w-6 h-6 text-navy-950 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
-                          </svg>
-                        </div>
-                      </div>
-                    )}
+              </svg>
+            </div>
+          </div>
+        )}
 
         {/* Lock overlay */}
         {!unlocked && (
@@ -307,32 +318,32 @@ function VideoCard({
             <div className="text-center relative">
               <svg className="w-8 h-8 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                          </svg>
+              </svg>
               {/* Tooltip on hover */}
               <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-navy-950 border border-navy-700/70 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/lock:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg" role="tooltip">
                 {t('enrollment.videoLockedTooltip')}
               </div>
-                        </div>
-                      </div>
-                    )}
+            </div>
+          </div>
+        )}
 
-                    {/* Duration badge */}
-                    {video.duration && (
+        {/* Duration badge */}
+        {video.duration && (
           <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/80 text-white text-xs font-medium rounded">
-                        {formatDuration(video.duration)}
-                      </div>
-                    )}
+            {formatDuration(video.duration)}
+          </div>
+        )}
 
-                    {/* Progress bar */}
+        {/* Progress bar */}
         {progress > 0 && (
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-navy-950/70">
-                        <div
+            <div
               className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all"
-                          style={{ width: `${progress}%` }}
+              style={{ width: `${progress}%` }}
             />
-                      </div>
-                    )}
-                  </div>
+          </div>
+        )}
+      </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0 py-1">
@@ -343,8 +354,8 @@ function VideoCard({
                 {index + 1}
               </span>
               <h3 className="text-white font-semibold truncate">{video.title}</h3>
-                    </div>
-                    {video.description && (
+            </div>
+            {video.description && (
               <p className="text-gray-400 text-sm line-clamp-2 mb-3">{video.description}</p>
             )}
             <div className="flex items-center gap-4 text-xs">
@@ -367,7 +378,7 @@ function VideoCard({
                 </span>
               )}
             </div>
-            
+
             {/* Mark as Seen button for students */}
             {!isLecturer && unlocked && !video.progress?.isCompleted && (
               <button
@@ -392,7 +403,7 @@ function VideoCard({
                 )}
               </button>
             )}
-      </div>
+          </div>
 
           {/* Lecturer Menu */}
           {isLecturer && (
@@ -405,7 +416,7 @@ function VideoCard({
                   <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
                 </svg>
               </button>
-              
+
               {showMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
@@ -471,12 +482,12 @@ function VideoPlayerModal({
 
   const markVideoAsSeen = useCallback(async (manual = false) => {
     if (!videoRef.current || !duration) return;
-    
+
     setIsMarkingAsSeen(true);
     try {
       const current = videoRef.current.currentTime;
       const total = duration;
-      
+
       const { error } = await supabase.from('video_progress').upsert(
         {
           user_id: currentUserId,
@@ -494,7 +505,7 @@ function VideoPlayerModal({
 
       setIsCompleted(true);
       onProgressUpdate();
-      
+
       if (manual) {
         // Show a brief success message
         const successMsg = document.createElement('div');
@@ -525,7 +536,7 @@ function VideoPlayerModal({
     setDuration(total);
 
     const progressPercentage = (current / total) * 100;
-    
+
     // Check if we've reached 90% and haven't marked as completed yet
     if (progressPercentage >= 90 && !isCompleted && progressPercentage > lastProgressPercentageRef.current) {
       // Clear any pending timeout
@@ -536,11 +547,11 @@ function VideoPlayerModal({
       // Mark as completed after a short delay to ensure we're really at 90%
       progressUpdateTimeoutRef.current = setTimeout(async () => {
         if (!videoRef.current) return;
-        
+
         const finalCurrent = videoRef.current.currentTime;
         const finalTotal = videoRef.current.duration;
         const finalPercentage = (finalCurrent / finalTotal) * 100;
-        
+
         if (finalPercentage >= 90 && !isCompleted) {
           try {
             const { error } = await supabase.from('video_progress').upsert(
@@ -580,33 +591,33 @@ function VideoPlayerModal({
 
       progressUpdateTimeoutRef.current = setTimeout(async () => {
         if (!videoRef.current || isCompleted) return;
-        
+
         const current = videoRef.current.currentTime;
         const total = videoRef.current.duration;
         const progressPercentage = (current / total) * 100;
 
         // Only update progress, not completion (completion is handled above)
         if (progressPercentage < 90) {
-        try {
-          const { error } = await supabase.from('video_progress').upsert(
-            {
-              user_id: currentUserId,
-              video_id: video.id,
-              course_id: courseId,
-              progress_seconds: Math.floor(current),
-              duration_seconds: Math.floor(total),
+          try {
+            const { error } = await supabase.from('video_progress').upsert(
+              {
+                user_id: currentUserId,
+                video_id: video.id,
+                course_id: courseId,
+                progress_seconds: Math.floor(current),
+                duration_seconds: Math.floor(total),
                 is_completed: false,
                 completed_at: null,
-            },
-            { onConflict: 'user_id,video_id' }
-          );
+              },
+              { onConflict: 'user_id,video_id' }
+            );
 
-          if (error) throw error;
-          lastUpdateTimeRef.current = Date.now();
-        } catch (err) {
-          console.error('Error updating progress:', err);
+            if (error) throw error;
+            lastUpdateTimeRef.current = Date.now();
+          } catch (err) {
+            console.error('Error updating progress:', err);
+          }
         }
-    }
       }, 1000);
     }
 
@@ -622,7 +633,7 @@ function VideoPlayerModal({
   }, []);
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-navy-950/90 z-50 flex items-center justify-center p-4"
       onClick={(e) => {
         // Close modal when clicking outside
@@ -631,7 +642,7 @@ function VideoPlayerModal({
         }
       }}
     >
-      <div 
+      <div
         className="w-full max-w-6xl bg-navy-950/90 border border-navy-800/60 rounded-2xl overflow-hidden shadow-soft-xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -670,18 +681,18 @@ function VideoPlayerModal({
               }
             }}
           />
-          
+
           {/* Progress indicator overlay */}
           {duration > 0 && (
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-navy-800/60">
               <div
                 className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all"
                 style={{ width: `${(currentTime / duration) * 100}%` }}
-          />
-        </div>
+              />
+            </div>
           )}
         </div>
-        
+
         {/* Action Bar */}
         <div className="p-4 border-t border-navy-800/60 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 flex-1">
@@ -691,12 +702,12 @@ function VideoPlayerModal({
               </div>
             )}
             {isCompleted ? (
-            <div className="flex items-center gap-2 text-emerald-300">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center gap-2 text-emerald-300">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+                </svg>
                 <span className="font-semibold">{t('lectures.completed')}</span>
-            </div>
+              </div>
             ) : (
               <button
                 onClick={() => markVideoAsSeen(true)}
@@ -729,7 +740,7 @@ function VideoPlayerModal({
             )}
           </div>
         </div>
-        
+
         {isCompleted && (
           <div className="p-4 bg-emerald-500/10 border-t border-emerald-500/20">
             <div className="flex items-center gap-3 text-emerald-300">
@@ -814,7 +825,7 @@ function VideoEditModal({
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-navy-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={(e) => {
         // Close modal when clicking outside
@@ -823,7 +834,7 @@ function VideoEditModal({
         }
       }}
     >
-      <div 
+      <div
         className="bg-navy-950/90 rounded-2xl shadow-soft-xl w-full max-w-lg max-h-[90vh] border border-navy-800/60 overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
@@ -965,7 +976,7 @@ function VideoUploadModal({
     try {
       setUploadStage('video');
       const videoUrl = await uploadFileWithProgress(videoFile, 'course-videos', 'video');
-      
+
       let thumbnailUrl = null;
       if (thumbnailFile) {
         setUploadStage('thumbnail');
@@ -975,7 +986,7 @@ function VideoUploadModal({
 
       setUploadStage('saving');
       setUploadProgress(100);
-      
+
       let videoDuration: number | null = null;
       try {
         videoDuration = await getVideoDuration(videoFile);
@@ -1048,7 +1059,7 @@ function VideoUploadModal({
 
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
-    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
+          const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
           if (!urlData?.publicUrl) {
             reject(new Error('Failed to get public URL'));
             return;
@@ -1084,7 +1095,7 @@ function VideoUploadModal({
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-navy-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={(e) => {
         // Close modal when clicking outside
@@ -1093,7 +1104,7 @@ function VideoUploadModal({
         }
       }}
     >
-      <div 
+      <div
         className="bg-navy-950/90 rounded-2xl shadow-soft-xl w-full max-w-xl max-h-[90vh] border border-navy-800/60 overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
@@ -1101,7 +1112,7 @@ function VideoUploadModal({
           <div>
             <h3 className="text-white font-bold text-lg">{t('lectures.uploadVideoLecture')}</h3>
             <p className="text-gray-500 text-sm mt-0.5">{t('lectures.addNewVideoToCourse')}</p>
-        </div>
+          </div>
           <button onClick={onClose} disabled={isUploading} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-navy-800/70 transition-colors disabled:opacity-50">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1146,11 +1157,11 @@ function VideoUploadModal({
           <div>
             <label className="block text-gray-300 text-sm font-medium mb-2">{t('lectures.videoFile')}</label>
             <div className="relative">
-            <input
-              type="file"
-              accept="video/*"
-              required
-              onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+              <input
+                type="file"
+                accept="video/*"
+                required
+                onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
                 className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-emerald-500 file:text-white file:font-medium file:cursor-pointer hover:file:bg-emerald-400"
                 disabled={isUploading}
               />

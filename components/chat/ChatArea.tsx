@@ -544,6 +544,7 @@ export default function ChatArea({
         isEnrollmentExpired={isEnrollmentExpired}
         enrollmentInfo={enrollmentInfo}
         onReEnrollRequest={onReEnrollRequest}
+        onMobileMenuClick={onMobileMenuClick}
       />
     );
   }
