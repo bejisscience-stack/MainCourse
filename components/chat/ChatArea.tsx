@@ -26,6 +26,7 @@ interface ChatAreaProps {
   isEnrollmentExpired?: boolean;
   enrollmentInfo?: EnrollmentInfo | null;
   onReEnrollRequest?: () => void;
+  onMobileMenuClick?: () => void;
 }
 
 export default function ChatArea({
@@ -38,6 +39,7 @@ export default function ChatArea({
   isEnrollmentExpired = false,
   enrollmentInfo = null,
   onReEnrollRequest,
+  onMobileMenuClick,
 }: ChatAreaProps) {
   const { t } = useI18n();
   const [replyTo, setReplyTo] = useState<{
@@ -121,7 +123,7 @@ export default function ChatArea({
   // Mark channel as read when opened or when new messages arrive
   useEffect(() => {
     if (!channel || !currentUserId) return;
-    
+
     // Mark as read after a short delay to ensure the channel is viewed
     const timeoutId = setTimeout(() => {
       markAsRead(channel.id);
@@ -137,7 +139,7 @@ export default function ChatArea({
     const container = messagesContainerRef.current;
     const { scrollTop, scrollHeight, clientHeight } = container;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    
+
     // User is considered "scrolled up" if more than 150px from bottom
     userScrolledUpRef.current = distanceFromBottom > 150;
 
@@ -152,7 +154,7 @@ export default function ChatArea({
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
     }
-    
+
     scrollTimeoutRef.current = setTimeout(() => {
       if (messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
@@ -224,9 +226,9 @@ export default function ChatArea({
 
     // Add optimistic message INSTANTLY with reply preview
     const tempId = addPendingMessage(
-      content || '', 
-      currentReplyTo?.id, 
-      session.user.id, 
+      content || '',
+      currentReplyTo?.id,
+      session.user.id,
       attachments,
       currentReplyTo ? {
         id: currentReplyTo.id,
@@ -305,11 +307,11 @@ export default function ChatArea({
       onSendMessage(channel.id, content);
     } catch (error: any) {
       console.error('Error sending message:', error);
-      
+
       // Handle muted error gracefully - don't throw, just show the message
       const errorMessage = error.message || 'Failed to send';
       const isMutedError = errorMessage.toLowerCase().includes('muted');
-      
+
       if (isMutedError) {
         // For muted users, remove the pending message and don't show failed state
         removePendingMessage(tempId);
@@ -317,7 +319,7 @@ export default function ChatArea({
         // For other errors, mark as failed so user can retry
         markMessageFailed(tempId, errorMessage);
       }
-      
+
       // Don't throw - this prevents the ugly runtime error popup
       // The error is already handled via markMessageFailed or removePendingMessage
     } finally {
@@ -393,12 +395,12 @@ export default function ChatArea({
     // Upload video file if provided
     let videoUrl = data.videoLink;
     let attachments: any[] = [];
-    
+
     if (data.videoFile) {
       if (!channel.courseId) {
         throw new Error('Channel course ID not found');
       }
-      
+
       const fileExt = data.videoFile.name.split('.').pop()?.toLowerCase() || 'mp4';
       const fileName = `project-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       // Storage path structure: {course_id}/{channel_id}/{user_id}/{filename}
@@ -551,6 +553,16 @@ export default function ChatArea({
       {/* Channel header */}
       <div className="h-12 px-4 border-b border-navy-800/60 flex items-center shadow-soft flex-shrink-0 bg-navy-950/60 backdrop-blur-md z-10">
         <div className="flex items-center gap-2">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={onMobileMenuClick}
+            className="md:hidden text-gray-400 hover:text-white mr-2"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+
           <span className="text-emerald-300 text-lg">#</span>
           <h2 className="text-gray-100 font-semibold text-sm">{channel.name}</h2>
           {!isConnected && (
@@ -569,7 +581,7 @@ export default function ChatArea({
       <div
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto overflow-x-hidden chat-scrollbar"
-        style={{ 
+        style={{
           scrollBehavior: 'auto',
           overscrollBehavior: 'contain',
         }}
@@ -669,7 +681,7 @@ export default function ChatArea({
                     }
                     return true;
                   });
-                  
+
                   return filteredMessages.map((message, index) => {
                     const prevMessage = index > 0 ? filteredMessages[index - 1] : null;
                     const showAvatar: boolean =
@@ -685,29 +697,29 @@ export default function ChatArea({
                     const tempId = 'tempId' in message ? message.tempId : undefined;
                     const messageWithRetry = isFailed
                       ? {
-                          ...message,
-                          onRetry: () => handleRetry(tempId || ''),
-                        }
+                        ...message,
+                        onRetry: () => handleRetry(tempId || ''),
+                      }
                       : message;
 
                     if (!message || !('id' in message) || !('user' in message)) {
                       return null;
                     }
 
-                  return (
-                    <Message
-                      key={message.id}
-                      message={messageWithRetry}
-                      currentUserId={currentUserId}
-                      onReply={handleReply}
-                      onReaction={handleReaction}
-                      isLecturer={isLecturer}
-                      channelId={channel.id}
-                      showAvatar={showAvatar}
-                      isEnrollmentExpired={isEnrollmentExpired}
-                    />
-                  );
-                });
+                    return (
+                      <Message
+                        key={message.id}
+                        message={messageWithRetry}
+                        currentUserId={currentUserId}
+                        onReply={handleReply}
+                        onReaction={handleReaction}
+                        isLecturer={isLecturer}
+                        channelId={channel.id}
+                        showAvatar={showAvatar}
+                        isEnrollmentExpired={isEnrollmentExpired}
+                      />
+                    );
+                  });
                 })()}
               </div>
               <div ref={messagesEndRef} className="h-1" />

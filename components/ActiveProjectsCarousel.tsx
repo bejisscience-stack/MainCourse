@@ -198,7 +198,7 @@ export default function ActiveProjectsCarousel() {
             )}
 
             {/* Projects Container */}
-            <div className="flex items-center justify-center gap-6 md:gap-8 lg:gap-10 px-16 md:px-20 lg:px-24 overflow-hidden">
+            <div className="flex items-center justify-center gap-6 md:gap-8 lg:gap-10 px-4 md:px-20 lg:px-24 overflow-hidden">
               {displayedProjects.map((project, index) => {
                 // Middle project is always at index 1 if we have 3 projects
                 // If we have fewer projects, highlight the one matching currentIndex
@@ -208,11 +208,10 @@ export default function ActiveProjectsCarousel() {
                   <div
                     key={`${project.id}-${safeCurrentIndex}-${index}`}
                     onClick={() => !isMiddle && handleCardClick(index)}
-                    className={`transition-all duration-700 ease-out ${
-                      isMiddle
+                    className={`transition-all duration-700 ease-out ${isMiddle
                         ? 'flex-1 max-w-lg scale-100 z-10 opacity-100'
                         : 'flex-1 max-w-lg scale-95 opacity-70 z-0 cursor-pointer hover:opacity-90'
-                    }`}
+                      }`}
                     style={{
                       transition: 'all 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
                     }}
