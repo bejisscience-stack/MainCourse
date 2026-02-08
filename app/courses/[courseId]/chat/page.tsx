@@ -416,10 +416,9 @@ export default function CourseChatPage() {
                 onReEnrollRequest={mutateEnrollments}
               />
             </div>
-            {showExpirationOverlay && (
+            {showExpirationOverlay && course && (
               <ExpiredEnrollmentOverlay
-                courseId={courseId}
-                courseName={course?.title || 'Course'}
+                course={course}
                 expiresAt={enrollmentInfo?.expiresAt || null}
                 onReEnrollRequest={mutateEnrollments}
               />
