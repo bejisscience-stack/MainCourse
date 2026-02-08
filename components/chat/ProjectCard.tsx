@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { normalizeProfileUsername } from '@/lib/username';
+import { formatPriceInGel } from '@/lib/currency';
 import VideoSubmissionDialog from './VideoSubmissionDialog';
 import SubmissionReviewDialog from './SubmissionReviewDialog';
 import { useI18n } from '@/contexts/I18nContext';
@@ -69,6 +70,8 @@ export default function ProjectCard({
   const [reviewingSubmission, setReviewingSubmission] = useState<any | null>(null);
   const [projectDbId, setProjectDbId] = useState<string | null>(null);
   const [expandedSubmissionId, setExpandedSubmissionId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const countdown = useProjectCountdown(project.startDate, project.endDate);
   const budget = useProjectBudget(projectDbId || '', project.budget);
@@ -88,9 +91,13 @@ export default function ProjectCard({
     return `${start} - ${end}`;
   }, [project.startDate, project.endDate]);
 
-  const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', {
-    style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0
-  }).format(amount);
+  // Use formatPriceInGel for consistent GEL formatting
+  const formatBudget = (amount: number) => {
+    // Format without decimals for budget display
+    const formatted = formatPriceInGel(amount);
+    // Remove decimal part if it's .00
+    return formatted.replace(/\.00$/, '').replace(/,00$/, '');
+  };
 
   const formatViews = (num: number) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
@@ -264,6 +271,29 @@ export default function ProjectCard({
     onSubmission?.();
   }, [loadSubmissions, onSubmission]);
 
+  const handleDeleteProject = useCallback(async () => {
+    if (!projectDbId) return;
+
+    setIsDeleting(true);
+    try {
+      // Delete the project - CASCADE will delete the associated message
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectDbId);
+
+      if (error) throw error;
+
+      // Trigger a refresh by calling onSubmission (which typically refreshes the chat)
+      onSubmission?.();
+    } catch (error) {
+      console.error('Error deleting project:', error);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  }, [projectDbId, onSubmission]);
+
   const isProjectOwner = project.submittedBy.id === currentUserId;
 
   // Enhanced canSubmit validation
@@ -346,20 +376,38 @@ export default function ProjectCard({
               </p>
             </div>
 
-            {/* Expand Button */}
-            <button
-              onClick={handleExpand}
-              disabled={isProjectExpired && !isLecturer}
-              className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center transition-all border ${
-                isProjectExpired && !isLecturer
-                  ? 'bg-navy-900/60 text-gray-600 border-navy-800/60 cursor-not-allowed'
-                  : 'bg-navy-900/60 text-gray-300 border-navy-800/60 hover:bg-emerald-500/15 hover:text-emerald-300 hover:border-emerald-500/30'
-              }`}
-            >
-              <svg className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Delete Button (only for lecturers on expired projects they own) */}
+              {isLecturer && isProjectOwner && isProjectExpired && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteConfirm(true);
+                  }}
+                  className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center transition-all border bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20 hover:text-red-300"
+                  title={t('projects.deleteProject') || 'Delete Project'}
+                >
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Expand Button */}
+              <button
+                onClick={handleExpand}
+                disabled={isProjectExpired && !isLecturer}
+                className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center transition-all border ${
+                  isProjectExpired && !isLecturer
+                    ? 'bg-navy-900/60 text-gray-600 border-navy-800/60 cursor-not-allowed'
+                    : 'bg-navy-900/60 text-gray-300 border-navy-800/60 hover:bg-emerald-500/15 hover:text-emerald-300 hover:border-emerald-500/30'
+                }`}
+              >
+                <svg className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Quick Stats Grid */}
@@ -368,11 +416,11 @@ export default function ProjectCard({
             <div className="bg-navy-900/60 rounded-lg p-2 sm:p-3 border border-navy-800/60">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-emerald-500/20 flex items-center justify-center">
-                  <span className="text-emerald-400 text-[10px] sm:text-xs">$</span>
+                  <span className="text-emerald-400 text-[10px] sm:text-xs">₾</span>
                 </div>
                 <span className="text-[10px] sm:text-xs text-gray-400 font-medium">{t('activeProjects.budget') || 'Budget'}</span>
               </div>
-              <p className="text-base sm:text-lg font-bold text-white">{formatCurrency(project.budget)}</p>
+              <p className="text-base sm:text-lg font-bold text-white">{formatBudget(project.budget)}</p>
               {projectDbId && !budget.isLoading && (
                 <div className="mt-2">
                   <div className="flex justify-between text-xs mb-1">
@@ -382,7 +430,7 @@ export default function ProjectCard({
                       budget.status === 'critical' ? 'text-red-400' :
                       budget.status === 'low' ? 'text-amber-400' :
                       'text-emerald-400'
-                    }`}>{formatCurrency(budget.remainingBudget)}</span>
+                    }`}>{formatBudget(budget.remainingBudget)}</span>
                   </div>
                   <div className="w-full h-1.5 bg-navy-800/70 rounded-full overflow-hidden">
                     <div
@@ -449,7 +497,7 @@ export default function ProjectCard({
                 </div>
                 <span className="text-[10px] sm:text-xs text-gray-400 font-medium truncate">{t('activeProjects.potentialRPM') || 'RPM'}</span>
               </div>
-              <p className="text-base sm:text-lg font-bold text-white">{formatCurrency(totalPotentialRPM)}</p>
+              <p className="text-base sm:text-lg font-bold text-white">{formatPriceInGel(totalPotentialRPM)}</p>
               <p className="text-[10px] sm:text-xs text-gray-500">{projectCriteria.length} criteria</p>
             </div>
           </div>
@@ -548,7 +596,7 @@ export default function ProjectCard({
                             <span className="px-2 py-0.5 text-xs rounded bg-navy-800/70 text-gray-400">{PLATFORM_CONFIG[criterion.platform.toLowerCase()]?.name || criterion.platform}</span>
                           )}
                         </div>
-                        <span className="text-sm font-bold text-emerald-400">${criterion.rpm.toFixed(2)}</span>
+                        <span className="text-sm font-bold text-emerald-400">{formatPriceInGel(criterion.rpm)}</span>
                       </div>
                     ))}
                   </div>
@@ -630,7 +678,7 @@ export default function ProjectCard({
                             <div className="flex items-center gap-2">
                               {hasReview && totalRPM > 0 && (
                                 <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                  ${totalRPM.toFixed(2)} RPM
+                                  {formatPriceInGel(totalRPM)} RPM
                                 </span>
                               )}
                               {hasReview && (
@@ -682,13 +730,21 @@ export default function ProjectCard({
                                 </a>
                               )}
 
+                              {/* Submission Comment (visible to lecturers) */}
+                              {isLecturer && submissionData.message && (
+                                <div className="p-3 bg-navy-900/60 rounded-lg border border-navy-800/60">
+                                  <p className="text-xs text-gray-500 mb-1.5 font-medium">{t('projects.studentComment') || 'Student Comment'}:</p>
+                                  <p className="text-sm text-gray-300 whitespace-pre-wrap">{submissionData.message}</p>
+                                </div>
+                              )}
+
                               {/* Review Details */}
                               {hasReview && (isOwnSubmission || isLecturer) && (
                                 <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
-                                  <p className="text-xs text-emerald-400 font-semibold mb-2">Earned RPM: ${totalRPM.toFixed(2)}</p>
+                                  <p className="text-xs text-emerald-400 font-semibold mb-2">Earned RPM: {formatPriceInGel(totalRPM)}</p>
                                   {Object.entries(reviewsByPlatform).map(([platform, review]: [string, any]) => (
                                     <div key={platform} className="text-xs text-gray-400">
-                                      {PLATFORM_CONFIG[platform.toLowerCase()]?.name || platform}: ${review.paymentAmount?.toFixed(2) || '0.00'}
+                                      {PLATFORM_CONFIG[platform.toLowerCase()]?.name || platform}: {formatPriceInGel(review.paymentAmount || 0)}
                                       {review.comment && <p className="mt-1 text-gray-500 italic">"{review.comment}"</p>}
                                     </div>
                                   ))}
@@ -736,6 +792,59 @@ export default function ProjectCard({
           criteria={projectCriteria}
           submission={reviewingSubmission}
         />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 bg-navy-950/80 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowDeleteConfirm(false)}
+        >
+          <div
+            className="relative w-full max-w-md bg-navy-900/95 border border-navy-800/60 rounded-2xl shadow-soft-xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-white">{t('projects.deleteProject') || 'Delete Project'}</h3>
+            </div>
+
+            <p className="text-gray-300 text-sm mb-6">
+              {t('projects.deleteProjectConfirm') || 'Are you sure you want to delete this project? This action cannot be undone.'}
+            </p>
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-medium text-gray-300 bg-navy-800/70 border border-navy-700/70 rounded-lg hover:bg-navy-700 transition-colors disabled:opacity-50"
+              >
+                {t('common.cancel') || 'Cancel'}
+              </button>
+              <button
+                onClick={handleDeleteProject}
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    {t('common.deleting') || 'Deleting...'}
+                  </>
+                ) : (
+                  t('common.delete') || 'Delete'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

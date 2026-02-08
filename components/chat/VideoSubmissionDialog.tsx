@@ -148,9 +148,10 @@ export default function VideoSubmissionDialog({
       // Use the first link as the primary video URL for backward compatibility
       const primaryVideoUrl = Object.values(videoLinks)[0] || null;
 
-      // Message is optional - use default if not provided
-      // The API requires non-empty content, so we use a default that will be filtered out in chat
-      const messageContent = message.trim() || 'Submission';
+      // Always use 'Submission' as the message content to keep comments private
+      // The actual comment is stored separately in project_submissions.message
+      // and is visible to lecturers in the submission details
+      const messageContent = 'Submission';
 
       console.log('Creating message:', { content: messageContent, replyTo: projectId });
 

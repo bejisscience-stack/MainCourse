@@ -7,6 +7,7 @@ import { useI18n } from '@/contexts/I18nContext';
 import { useUser } from '@/hooks/useUser';
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { supabase } from '@/lib/supabase';
+import { formatPriceInGel } from '@/lib/currency';
 import EnrollmentWizard from './EnrollmentWizard';
 import type { ActiveProject } from '@/hooks/useActiveProjects';
 import type { Course } from './CourseCard';
@@ -82,15 +83,12 @@ export default function ProjectDetailsModal({ project, isOpen, onClose }: Projec
     return enrolledCourseIds.has(project.course_id);
   }, [project, enrolledCourseIds]);
 
-  // Format budget as currency
+  // Format budget as currency (GEL)
   const formattedBudget = useMemo(() => {
     if (!project) return '';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(project.budget);
+    const formatted = formatPriceInGel(project.budget);
+    // Remove decimal part for cleaner display
+    return formatted.replace(/\.00$/, '').replace(/,00$/, '');
   }, [project?.budget]);
 
   // Format view range
@@ -408,7 +406,7 @@ export default function ProjectDetailsModal({ project, isOpen, onClose }: Projec
                   </svg>
                   <span className="text-xs font-medium uppercase">{t('activeProjects.potentialRPM') || 'Potential RPM'}</span>
                 </div>
-                <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">${totalPotentialRPM.toFixed(2)}</div>
+                <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{formatPriceInGel(totalPotentialRPM)}</div>
               </div>
             )}
           </div>
@@ -461,7 +459,7 @@ export default function ProjectDetailsModal({ project, isOpen, onClose }: Projec
                             {c.criteria_text}
                           </span>
                           <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 ml-4 whitespace-nowrap bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-lg">
-                            ${c.rpm.toFixed(2)}
+                            {formatPriceInGel(c.rpm)}
                           </span>
                         </div>
                       ))}

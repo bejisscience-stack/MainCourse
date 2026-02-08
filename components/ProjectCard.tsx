@@ -2,6 +2,7 @@
 
 import { memo, useMemo } from 'react';
 import { useI18n } from '@/contexts/I18nContext';
+import { formatPriceInGel } from '@/lib/currency';
 import type { ActiveProject } from '@/hooks/useActiveProjects';
 import { useProjectCountdown } from '@/hooks/useProjectCountdown';
 import { useProjectBudget } from '@/hooks/useProjectBudget';
@@ -65,24 +66,18 @@ function ProjectCard({ project, onClick }: ProjectCardProps) {
     return `${start} - ${end}`;
   }, [project.start_date, project.end_date, t]);
 
-  // Format budget as currency
+  // Format budget as currency (GEL)
   const formattedBudget = useMemo(() => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(project.budget);
+    const formatted = formatPriceInGel(project.budget);
+    // Remove decimal part for cleaner display
+    return formatted.replace(/\.00$/, '').replace(/,00$/, '');
   }, [project.budget]);
 
-  // Format remaining budget
+  // Format remaining budget (GEL)
   const formattedRemainingBudget = useMemo(() => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(budget.remainingBudget);
+    const formatted = formatPriceInGel(budget.remainingBudget);
+    // Remove decimal part for cleaner display
+    return formatted.replace(/\.00$/, '').replace(/,00$/, '');
   }, [budget.remainingBudget]);
 
   // Format view range
