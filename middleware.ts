@@ -1,7 +1,53 @@
-import { type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
+// Secret access key for team members
+const TEAM_ACCESS_KEY = 'richniggers';
+const TEAM_ACCESS_COOKIE = 'team_access';
+
+// Routes that should bypass the coming soon check
+const BYPASS_ROUTES = [
+  '/coming-soon',
+  '/api/',
+  '/_next/',
+  '/favicon.ico',
+];
+
 export async function middleware(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
+
+  // Check if route should bypass coming soon
+  const shouldBypass = BYPASS_ROUTES.some(route => pathname.startsWith(route));
+
+  if (!shouldBypass) {
+    // Check for access query parameter
+    const accessParam = searchParams.get('access');
+
+    if (accessParam === TEAM_ACCESS_KEY) {
+      // Set cookie and redirect to clean URL (remove query param)
+      const cleanUrl = new URL(pathname, request.url);
+      const response = NextResponse.redirect(cleanUrl);
+      response.cookies.set(TEAM_ACCESS_COOKIE, 'true', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+        path: '/',
+      });
+      return response;
+    }
+
+    // Check for existing team access cookie
+    const hasTeamAccess = request.cookies.get(TEAM_ACCESS_COOKIE)?.value === 'true';
+
+    if (!hasTeamAccess) {
+      // Redirect to coming soon page
+      const comingSoonUrl = new URL('/coming-soon', request.url);
+      return NextResponse.redirect(comingSoonUrl);
+    }
+  }
+
+  // Continue with session update for authenticated routes
   return await updateSession(request)
 }
 
