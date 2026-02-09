@@ -2,24 +2,24 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-// Calculate launch date (21 days from initial deployment)
+// Calculate launch date (30 days from initial deployment)
 const LAUNCH_DATE = new Date();
-LAUNCH_DATE.setDate(LAUNCH_DATE.getDate() + 21);
+LAUNCH_DATE.setDate(LAUNCH_DATE.getDate() + 30);
 LAUNCH_DATE.setHours(0, 0, 0, 0);
 
 // Store the launch date in localStorage to persist across refreshes
 const getLaunchDate = (): Date => {
   if (typeof window === 'undefined') return LAUNCH_DATE;
 
-  const stored = localStorage.getItem('swavleba_launch_date');
+  const stored = localStorage.getItem('swavleba_launch_date_v2');
   if (stored) {
     return new Date(stored);
   }
 
   const launchDate = new Date();
-  launchDate.setDate(launchDate.getDate() + 21);
+  launchDate.setDate(launchDate.getDate() + 30);
   launchDate.setHours(0, 0, 0, 0);
-  localStorage.setItem('swavleba_launch_date', launchDate.toISOString());
+  localStorage.setItem('swavleba_launch_date_v2', launchDate.toISOString());
   return launchDate;
 };
 
@@ -52,7 +52,7 @@ export default function ComingSoonPage() {
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [launchDate, setLaunchDate] = useState<Date | null>(null);
-  const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 21, hours: 0, minutes: 0, seconds: 0 });
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 30, hours: 0, minutes: 0, seconds: 0 });
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Initialize launch date on client side
@@ -94,7 +94,7 @@ export default function ComingSoonPage() {
 
     if (!email || !email.includes('@')) {
       setSubmitStatus('error');
-      setErrorMessage('Please enter a valid email address');
+      setErrorMessage('გთხოვთ შეიყვანოთ სწორი ელ-ფოსტის მისამართი');
       return;
     }
 
@@ -112,14 +112,14 @@ export default function ComingSoonPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to subscribe');
+        throw new Error(data.error || 'გამოწერა ვერ მოხერხდა');
       }
 
       setSubmitStatus('success');
       setEmail('');
     } catch (error) {
       setSubmitStatus('error');
-      setErrorMessage(error instanceof Error ? error.message : 'Something went wrong');
+      setErrorMessage(error instanceof Error ? error.message : 'დაფიქსირდა შეცდომა');
     } finally {
       setIsSubmitting(false);
     }
@@ -153,19 +153,101 @@ export default function ComingSoonPage() {
             swavleba<span className="text-emerald-400">.ge</span>
           </h1>
           <p className="text-navy-300 text-lg md:text-xl">
-            Something amazing is coming
+            რაღაც განსაკუთრებული მოდის
           </p>
         </div>
 
         {/* Countdown Timer */}
         <div className="flex gap-3 md:gap-6">
-          <TimeBlock value={timeLeft.days} label="Days" />
-          <TimeBlock value={timeLeft.hours} label="Hours" />
-          <TimeBlock value={timeLeft.minutes} label="Minutes" />
-          <TimeBlock value={timeLeft.seconds} label="Seconds" />
+          <TimeBlock value={timeLeft.days} label="დღე" />
+          <TimeBlock value={timeLeft.hours} label="საათი" />
+          <TimeBlock value={timeLeft.minutes} label="წუთი" />
+          <TimeBlock value={timeLeft.seconds} label="წამი" />
         </div>
 
-        {/* Video Section - Bigger version */}
+        {/* Email Subscription Form - Prominent Section */}
+        <div className="w-full max-w-2xl">
+          <div className="relative">
+            {/* Glowing border effect */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/40 via-emerald-400/20 to-emerald-500/40 rounded-3xl blur-lg"></div>
+            <div className="relative bg-navy-900/80 backdrop-blur-xl border border-emerald-500/30 rounded-3xl p-8 md:p-10">
+              <div className="flex flex-col items-center">
+                {/* Mail icon */}
+                <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                  </svg>
+                </div>
+
+                <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-2">
+                  შეგვატყობინე გაშვებისას
+                </h2>
+                <p className="text-navy-300 text-center mb-8 text-base md:text-lg max-w-md">
+                  იყავი პირველი, ვინც გაიგებს swavleba.ge-ს გაშვების შესახებ
+                </p>
+
+                {submitStatus === 'success' ? (
+                  <div className="text-center py-4">
+                    <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+                      <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <p className="text-emerald-400 font-semibold text-xl">გმადლობთ გამოწერისთვის!</p>
+                    <p className="text-navy-400 text-sm mt-2">ჩვენ შეგატყობინებთ გაშვებისას.</p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="w-full space-y-4">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1 relative">
+                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                          <svg className="w-5 h-5 text-navy-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                          </svg>
+                        </div>
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="შეიყვანეთ ელ-ფოსტა"
+                          className="w-full pl-12 pr-4 py-4 bg-navy-800/60 border-2 border-navy-600/50 rounded-2xl text-white text-lg placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="px-8 py-4 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50 text-white font-bold text-lg rounded-2xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:transform-none shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 whitespace-nowrap"
+                      >
+                        {isSubmitting ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            იგზავნება...
+                          </span>
+                        ) : (
+                          'შემატყობინე'
+                        )}
+                      </button>
+                    </div>
+
+                    {submitStatus === 'error' && (
+                      <p className="text-red-400 text-sm text-center">{errorMessage}</p>
+                    )}
+
+                    <p className="text-navy-500 text-xs text-center">
+                      სპამს არ გამოგიგზავნით. მხოლოდ გაშვების შეტყობინება.
+                    </p>
+                  </form>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Video Section */}
         <div className="w-full max-w-5xl">
           <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-navy-700/30 bg-navy-950">
             {/* Gradient halo */}
@@ -189,7 +271,7 @@ export default function ComingSoonPage() {
                 <button
                   onClick={handlePlay}
                   className="absolute inset-0 flex items-center justify-center group"
-                  aria-label="Play video"
+                  aria-label="ვიდეოს დაკვრა"
                 >
                   <div className="w-20 h-20 md:w-28 md:h-28 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-2xl border border-white/20 transform transition-all duration-300 group-hover:scale-110 group-active:scale-95">
                     <svg
@@ -203,65 +285,6 @@ export default function ComingSoonPage() {
                 </button>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* Email Subscription Form */}
-        <div className="w-full max-w-md">
-          <div className="bg-navy-900/60 backdrop-blur-md border border-navy-700/50 rounded-2xl p-6 md:p-8">
-            <h2 className="text-xl md:text-2xl font-semibold text-white text-center mb-2">
-              Get notified when we launch
-            </h2>
-            <p className="text-navy-300 text-center mb-6 text-sm md:text-base">
-              Be the first to know when swavleba.ge goes live
-            </p>
-
-            {submitStatus === 'success' ? (
-              <div className="text-center py-4">
-                <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <p className="text-emerald-400 font-medium">Thank you for subscribing!</p>
-                <p className="text-navy-400 text-sm mt-1">We&apos;ll notify you when we launch.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="w-full px-4 py-3 bg-navy-800/50 border border-navy-600/50 rounded-xl text-white placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                {submitStatus === 'error' && (
-                  <p className="text-red-400 text-sm">{errorMessage}</p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-3 px-4 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Subscribing...
-                    </span>
-                  ) : (
-                    'Notify Me'
-                  )}
-                </button>
-              </form>
-            )}
           </div>
         </div>
       </div>
