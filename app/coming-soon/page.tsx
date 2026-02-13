@@ -2,26 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-// Calculate launch date (30 days from initial deployment)
-const LAUNCH_DATE = new Date();
-LAUNCH_DATE.setDate(LAUNCH_DATE.getDate() + 30);
-LAUNCH_DATE.setHours(0, 0, 0, 0);
-
-// Store the launch date in localStorage to persist across refreshes
-const getLaunchDate = (): Date => {
-  if (typeof window === 'undefined') return LAUNCH_DATE;
-
-  const stored = localStorage.getItem('swavleba_launch_date_v2');
-  if (stored) {
-    return new Date(stored);
-  }
-
-  const launchDate = new Date();
-  launchDate.setDate(launchDate.getDate() + 30);
-  launchDate.setHours(0, 0, 0, 0);
-  localStorage.setItem('swavleba_launch_date_v2', launchDate.toISOString());
-  return launchDate;
-};
+// Fixed launch date - March 11, 2026 at midnight
+const LAUNCH_DATE = new Date('2026-03-11T00:00:00');
 
 interface TimeLeft {
   days: number;
@@ -51,27 +33,17 @@ export default function ComingSoonPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
-  const [launchDate, setLaunchDate] = useState<Date | null>(null);
-  const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 30, hours: 0, minutes: 0, seconds: 0 });
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => calculateTimeLeft(LAUNCH_DATE));
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  // Initialize launch date on client side
-  useEffect(() => {
-    const date = getLaunchDate();
-    setLaunchDate(date);
-    setTimeLeft(calculateTimeLeft(date));
-  }, []);
 
   // Countdown timer
   useEffect(() => {
-    if (!launchDate) return;
-
     const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft(launchDate));
+      setTimeLeft(calculateTimeLeft(LAUNCH_DATE));
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [launchDate]);
+  }, []);
 
   const handlePlay = () => {
     setIsPlaying(true);
