@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-// Fixed launch date - March 11, 2026 at midnight
-const LAUNCH_DATE = new Date('2026-03-11T00:00:00');
+// Launch date - March 11, 2026 at midnight Georgia time (GMT+4)
+const LAUNCH_DATE = new Date('2026-03-11T00:00:00+04:00');
 
 interface TimeLeft {
   days: number;
