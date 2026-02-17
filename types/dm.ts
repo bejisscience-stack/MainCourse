@@ -5,7 +5,6 @@ export interface DMConversation {
   friendId: string;
   friendUsername: string;
   friendAvatarUrl: string;
-  lastMessage?: string;
   lastMessageAt: string | null;
   createdAt: string;
 }

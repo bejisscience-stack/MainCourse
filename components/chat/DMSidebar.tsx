@@ -241,11 +241,6 @@ export default function DMSidebar({
                           </span>
                         )}
                       </div>
-                      {convo.lastMessage && (
-                        <p className="text-xs text-gray-500 truncate">
-                          {convo.lastMessage}
-                        </p>
-                      )}
                     </div>
 
                     {/* Active indicator */}

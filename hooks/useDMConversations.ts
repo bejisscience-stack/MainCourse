@@ -8,12 +8,12 @@ async function fetchDMConversations(userId: string): Promise<DMConversation[]> {
   const [asUser1, asUser2] = await Promise.all([
     supabase
       .from('dm_conversations')
-      .select('id, user1_id, user2_id, last_message, last_message_at, created_at, friend:profiles!dm_conversations_user2_id_fkey(id, username, avatar_url)')
+      .select('id, user1_id, user2_id, last_message_at, created_at, friend:profiles!dm_conversations_user2_id_fkey(id, username, avatar_url)')
       .eq('user1_id', userId)
       .order('last_message_at', { ascending: false, nullsFirst: false }),
     supabase
       .from('dm_conversations')
-      .select('id, user1_id, user2_id, last_message, last_message_at, created_at, friend:profiles!dm_conversations_user1_id_fkey(id, username, avatar_url)')
+      .select('id, user1_id, user2_id, last_message_at, created_at, friend:profiles!dm_conversations_user1_id_fkey(id, username, avatar_url)')
       .eq('user2_id', userId)
       .order('last_message_at', { ascending: false, nullsFirst: false }),
   ]);
@@ -29,7 +29,6 @@ async function fetchDMConversations(userId: string): Promise<DMConversation[]> {
       friendId: row.user2_id,
       friendUsername: row.friend?.username || 'User',
       friendAvatarUrl: row.friend?.avatar_url || '',
-      lastMessage: row.last_message || undefined,
       lastMessageAt: row.last_message_at,
       createdAt: row.created_at,
     });
@@ -41,7 +40,6 @@ async function fetchDMConversations(userId: string): Promise<DMConversation[]> {
       friendId: row.user1_id,
       friendUsername: row.friend?.username || 'User',
       friendAvatarUrl: row.friend?.avatar_url || '',
-      lastMessage: row.last_message || undefined,
       lastMessageAt: row.last_message_at,
       createdAt: row.created_at,
     });
@@ -83,7 +81,7 @@ export function useDMConversations(userId: string | null) {
       // Check if conversation already exists
       const { data: existing, error: fetchError } = await supabase
         .from('dm_conversations')
-        .select('id, user1_id, user2_id, last_message, last_message_at, created_at')
+        .select('id, user1_id, user2_id, last_message_at, created_at')
         .eq('user1_id', user1Id)
         .eq('user2_id', user2Id)
         .maybeSingle();
@@ -104,7 +102,6 @@ export function useDMConversations(userId: string | null) {
           friendId,
           friendUsername: friendProfile?.username || 'User',
           friendAvatarUrl: friendProfile?.avatar_url || '',
-          lastMessage: existing.last_message || undefined,
           lastMessageAt: existing.last_message_at,
           createdAt: existing.created_at,
         };
@@ -114,7 +111,7 @@ export function useDMConversations(userId: string | null) {
       const { data: newConvo, error: insertError } = await supabase
         .from('dm_conversations')
         .insert({ user1_id: user1Id, user2_id: user2Id })
-        .select('id, user1_id, user2_id, last_message, last_message_at, created_at')
+        .select('id, user1_id, user2_id, last_message_at, created_at')
         .single();
 
       if (insertError) throw insertError;
@@ -132,7 +129,6 @@ export function useDMConversations(userId: string | null) {
         friendId,
         friendUsername: friendProfile?.username || 'User',
         friendAvatarUrl: friendProfile?.avatar_url || '',
-        lastMessage: undefined,
         lastMessageAt: newConvo.last_message_at,
         createdAt: newConvo.created_at,
       };

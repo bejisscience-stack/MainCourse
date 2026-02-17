@@ -206,6 +206,24 @@ CREATE TRIGGER delete_friendship_on_reject
   FOR EACH ROW
   EXECUTE FUNCTION public.delete_friendship_on_reject();
 
+-- 4f. Clean up friend_requests when a friendship is deleted (enables re-friending)
+CREATE OR REPLACE FUNCTION public.cleanup_friend_request_on_unfriend()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Delete the friend_requests row(s) between these two users so they can re-friend
+  DELETE FROM public.friend_requests
+  WHERE (sender_id = OLD.user1_id AND receiver_id = OLD.user2_id)
+     OR (sender_id = OLD.user2_id AND receiver_id = OLD.user1_id);
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS cleanup_friend_request_on_unfriend ON public.friendships;
+CREATE TRIGGER cleanup_friend_request_on_unfriend
+  AFTER DELETE ON public.friendships
+  FOR EACH ROW
+  EXECUTE FUNCTION public.cleanup_friend_request_on_unfriend();
+
 -- ============================================================
 -- 5. PROFILES RLS — allow all authenticated users to view basic info
 -- ============================================================

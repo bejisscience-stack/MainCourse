@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { prefetchProfiles, getCachedUsername } from './useRealtimeMessages';
+import { normalizeProfileUsername } from '@/lib/username';
 import type { Message } from '@/types/message';
 
 interface UseRealtimeDMMessagesOptions {
@@ -24,7 +25,7 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
       .single();
 
     if (profile && !error) {
-      const username = profile.username?.trim() || profile.email?.split('@')[0] || 'User';
+      const username = normalizeProfileUsername(profile);
       // Prefetch to populate the cache
       await prefetchProfiles([userId]);
       return username;

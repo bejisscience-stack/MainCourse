@@ -142,6 +142,26 @@ CREATE TRIGGER on_dm_message_sent
   FOR EACH ROW
   EXECUTE FUNCTION public.update_dm_conversation_last_message();
 
+-- Prevent column tampering on dm_messages UPDATE (only content and edited_at can change)
+CREATE OR REPLACE FUNCTION public.restrict_dm_message_update()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.conversation_id != OLD.conversation_id
+     OR NEW.user_id != OLD.user_id
+     OR NEW.reply_to_id IS DISTINCT FROM OLD.reply_to_id
+     OR NEW.created_at != OLD.created_at THEN
+    RAISE EXCEPTION 'Only content and edited_at can be modified';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS restrict_dm_message_update ON public.dm_messages;
+CREATE TRIGGER restrict_dm_message_update
+  BEFORE UPDATE ON public.dm_messages
+  FOR EACH ROW
+  EXECUTE FUNCTION public.restrict_dm_message_update();
+
 -- ============================================================
 -- 5. ENABLE REALTIME
 -- ============================================================

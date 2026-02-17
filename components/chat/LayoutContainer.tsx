@@ -111,10 +111,15 @@ export default function LayoutContainer({
     loadUserName();
   }, [user]);
 
-  // Auto-select first server and channel if none selected (but not if DM is selected)
+  // Auto-select first server and channel if none selected
+  // If no servers available, default to DM mode ('home')
   useEffect(() => {
-    if (!activeServerId && servers.length > 0) {
-      setActiveServerId(servers[0].id);
+    if (!activeServerId) {
+      if (servers.length > 0) {
+        setActiveServerId(servers[0].id);
+      } else {
+        setActiveServerId('home');
+      }
     }
   }, [activeServerId, servers, setActiveServerId]);
 

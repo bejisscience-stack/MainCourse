@@ -35,7 +35,10 @@ export default function AddFriendDialog({ isOpen, onClose, currentUserId }: AddF
 
   useEffect(() => {
     setMounted(true);
-    return () => setMounted(false);
+    return () => {
+      setMounted(false);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, []);
 
   // Load existing friends
