@@ -14,6 +14,7 @@ interface ChannelSidebarProps {
   onChannelDelete?: (channelId: string) => Promise<void>;
   isLecturer?: boolean;
   onCollapse?: () => void;
+  bottomSection?: React.ReactNode;
 }
 
 // Channel icon component
@@ -39,6 +40,7 @@ export default function ChannelSidebar({
   onChannelDelete,
   isLecturer = false,
   onCollapse,
+  bottomSection,
 }: ChannelSidebarProps) {
   const [showChannelManagement, setShowChannelManagement] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(() => {
@@ -234,14 +236,14 @@ export default function ChannelSidebar({
                       >
                         <ChannelIcon type={channel.type} name={channel.name} />
                         <span className="flex-1 text-left truncate">{channel.name}</span>
-                        
+
                         {/* Unread badge */}
                         {hasUnread && !isActive && (
                           <span className="bg-emerald-500/90 text-white text-[11px] font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center animate-in fade-in duration-200 shadow-soft">
                             {unreadCount > 99 ? '99+' : unreadCount}
                           </span>
                         )}
-                        
+
                         {/* Active indicator */}
                         {isActive && (
                           <div className="w-1 h-4 bg-emerald-400 rounded-full" />
@@ -254,6 +256,14 @@ export default function ChannelSidebar({
             </div>
           );
         })}
+
+        {/* Bottom section (e.g., Friends & DMs) */}
+        {bottomSection && (
+          <>
+            <div className="border-t border-navy-800/60 my-2" />
+            {bottomSection}
+          </>
+        )}
       </div>
 
       {/* Channel Management Modal */}

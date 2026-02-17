@@ -7,6 +7,7 @@ import ChannelSidebar from './ChannelSidebar';
 import ChatArea from './ChatArea';
 import DMSidebar from './DMSidebar';
 import DMChatArea from './DMChatArea';
+import FriendsSection from './FriendsSection';
 import AddFriendDialog from './AddFriendDialog';
 import ChatErrorBoundary from './ChatErrorBoundary';
 import { useActiveServer } from '@/hooks/useActiveServer';
@@ -57,6 +58,7 @@ export default function LayoutContainer({
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [activeFriendUsername, setActiveFriendUsername] = useState<string>('');
   const [showAddFriendDialog, setShowAddFriendDialog] = useState(false);
+  const [viewingDMInCourse, setViewingDMInCourse] = useState(false);
   const { user } = useUser();
   const { t } = useI18n();
 
@@ -146,6 +148,7 @@ export default function LayoutContainer({
     if (serverId !== 'home') {
       setActiveConversationId(null);
       setActiveFriendUsername('');
+      setViewingDMInCourse(false);
     }
 
     // Try to find a matching channel in the new server before clearing
@@ -167,8 +170,16 @@ export default function LayoutContainer({
 
   const handleChannelSelect = (channelId: string) => {
     setActiveChannelId(channelId);
-    // Close mobile menu on component selection usually handled by parent or self
-    // We can close it here to be safe
+    setViewingDMInCourse(false);
+    if (window.innerWidth < 768) {
+      setMobileMenuOpen(false);
+    }
+  };
+
+  const handleDMFromCourseSidebar = (conversationId: string, friendUsername: string) => {
+    setActiveConversationId(conversationId);
+    setActiveFriendUsername(friendUsername);
+    setViewingDMInCourse(true);
     if (window.innerWidth < 768) {
       setMobileMenuOpen(false);
     }
@@ -268,17 +279,37 @@ export default function LayoutContainer({
                 <div className="flex-1 overflow-hidden min-h-0">
                   <ChannelSidebar
                     server={activeServer}
-                    activeChannelId={activeChannelId}
+                    activeChannelId={viewingDMInCourse ? null : activeChannelId}
                     onChannelSelect={handleChannelSelect}
                     onChannelCreate={onChannelCreate}
                     onChannelUpdate={onChannelUpdate}
                     onChannelDelete={onChannelDelete}
                     isLecturer={isLecturer}
                     onCollapse={() => setChannelsCollapsed(true)}
+                    bottomSection={
+                      <FriendsSection
+                        currentUserId={currentUserId}
+                        activeConversationId={viewingDMInCourse ? activeConversationId : null}
+                        onConversationSelect={handleDMFromCourseSidebar}
+                        onAddFriend={() => setShowAddFriendDialog(true)}
+                      />
+                    }
                   />
                 </div>
               )}
             </div>
+
+            {/* Friends section when channels are collapsed */}
+            {channelsCollapsed && (
+              <div className="flex-1 overflow-y-auto px-2.5 py-3 chat-scrollbar min-h-0">
+                <FriendsSection
+                  currentUserId={currentUserId}
+                  activeConversationId={viewingDMInCourse ? activeConversationId : null}
+                  onConversationSelect={handleDMFromCourseSidebar}
+                  onAddFriend={() => setShowAddFriendDialog(true)}
+                />
+              </div>
+            )}
 
             {/* User profile footer - at the very bottom */}
             <div className="h-14 bg-navy-950/80 px-2 py-2 flex items-center gap-2 border-t border-navy-800/60 flex-shrink-0 mt-auto">
@@ -312,7 +343,7 @@ export default function LayoutContainer({
 
       {/* Chat area */}
       <ChatErrorBoundary>
-        {isDMMode ? (
+        {(isDMMode || viewingDMInCourse) ? (
           <DMChatArea
             conversationId={activeConversationId}
             currentUserId={currentUserId}
