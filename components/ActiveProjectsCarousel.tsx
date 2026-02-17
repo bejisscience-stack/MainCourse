@@ -69,14 +69,14 @@ export default function ActiveProjectsCarousel() {
     }
   }, [projects.length, handlePrevious, handleNext]);
 
-  // Don't render anything while loading or if no projects
-  if (isLoading || !translationsReady) {
+  // Show loading only when we have no data yet - don't block content
+  if (isLoading && projects.length === 0) {
     return (
       <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
         <div className="max-w-7xl mx-auto">
           <ScrollReveal delay={0} duration={600}>
             <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white text-center mb-12 tracking-tight">
-              {translationsReady ? t('activeProjects.title') : 'Active Projects'}
+              {t('activeProjects.title')}
             </h2>
           </ScrollReveal>
           <ScrollReveal delay={100} duration={600}>

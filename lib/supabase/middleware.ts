@@ -31,7 +31,12 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  await supabase.auth.getUser()
+  try {
+    await supabase.auth.getUser()
+  } catch (e) {
+    // Invalid/expired refresh tokens should not block the site - continue with response
+    // Supabase will clear invalid cookies via setAll if needed
+  }
 
   return supabaseResponse
 }

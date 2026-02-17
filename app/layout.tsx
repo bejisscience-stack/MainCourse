@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { cookies } from "next/headers";
+import { Suspense } from "react";
 import "./globals.css";
 import { I18nProvider } from "@/contexts/I18nContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { BackgroundProvider } from "@/contexts/BackgroundContext";
-import { Language, defaultLanguage, LANGUAGE_COOKIE_NAME } from "@/lib/i18n";
+import { Language, defaultLanguage } from "@/lib/i18n";
 import dynamic from "next/dynamic";
 import ScrollPrevention from "@/components/ScrollPrevention";
 import { Toaster } from "sonner";
@@ -68,18 +68,13 @@ export const viewport = {
   themeColor: '#22c55e',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Read language from cookie on server to prevent hydration mismatch
-  const cookieStore = cookies();
-  const languageCookie = cookieStore.get(LANGUAGE_COOKIE_NAME);
-  const initialLanguage: Language =
-    (languageCookie?.value === 'en' || languageCookie?.value === 'ge')
-      ? languageCookie.value
-      : defaultLanguage;
+  // Use static default - cookies() can block/hang during dev. I18nProvider syncs from client on hydration.
+  const initialLanguage: Language = defaultLanguage;
 
   return (
       <html lang={initialLanguage} className={`${inter.variable} dark`} suppressHydrationWarning>
@@ -105,7 +100,9 @@ export default function RootLayout({
             <I18nProvider initialLanguage={initialLanguage}>
               <ScrollPrevention />
               <GlobalBackgroundManager />
-              <ReferralCapture />
+              <Suspense fallback={null}>
+                <ReferralCapture />
+              </Suspense>
               <div className="min-h-full w-full overflow-x-hidden">
                 {children}
               </div>

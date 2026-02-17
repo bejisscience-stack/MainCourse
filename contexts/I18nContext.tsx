@@ -29,7 +29,8 @@ interface I18nProviderProps {
 export function I18nProvider({ children, initialLanguage }: I18nProviderProps) {
   // Use initialLanguage from server to prevent hydration mismatch
   const [language, setLanguageState] = useState<Language>(initialLanguage);
-  const [isReady, setIsReady] = useState(false);
+  // Start ready so components never block - sync happens in useEffect
+  const [isReady, setIsReady] = useState(true);
 
   useEffect(() => {
     // After hydration, sync with cookie if user changed language in another tab
@@ -37,8 +38,6 @@ export function I18nProvider({ children, initialLanguage }: I18nProviderProps) {
     if (storedLang !== language) {
       setLanguageState(storedLang);
     }
-    // Mark as ready after first render to ensure correct language is loaded
-    setIsReady(true);
   }, []);
 
   useEffect(() => {

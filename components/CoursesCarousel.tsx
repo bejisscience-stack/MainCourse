@@ -119,18 +119,19 @@ export default function CoursesCarousel() {
     }
   }, [courses.length, handlePrevious, handleNext]);
 
-  if (isLoading || !translationsReady) {
+  // Show loading state only briefly - never block content for long
+  if (isLoading && courses.length === 0) {
     return (
       <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
         <div className="max-w-7xl mx-auto">
           <ScrollReveal delay={0} duration={600}>
             <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white text-center mb-12 tracking-tight">
-              {translationsReady ? t('home.ourCourses') : 'Our Courses'}
+              {t('home.ourCourses')}
             </h2>
           </ScrollReveal>
           <ScrollReveal delay={100} duration={600}>
-            <div className="flex items-center justify-center">
-              <div className="text-charcoal-500 dark:text-gray-400">{translationsReady ? t('home.loadingCourses') : 'Loading courses...'}</div>
+            <div className="flex items-center justify-center py-12">
+              <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500" />
             </div>
           </ScrollReveal>
         </div>

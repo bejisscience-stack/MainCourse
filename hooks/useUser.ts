@@ -52,7 +52,11 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
 // Combined fetcher for user and profile with improved error resilience
 async function fetchUserData(): Promise<UserData> {
   try {
-    const user = await fetchUserSession();
+    // Timeout getSession - it can hang indefinitely if Supabase is unreachable
+    const user = await Promise.race([
+      fetchUserSession(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
+    ]);
 
     if (!user) {
       return { user: null, profile: null, role: null };
