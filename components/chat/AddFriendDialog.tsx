@@ -82,17 +82,29 @@ export default function AddFriendDialog({ isOpen, onClose, currentUserId }: AddF
 
     setIsSearching(true);
     try {
-      const column = searchMode === 'email' ? 'email' : 'username';
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, username, email, avatar_url')
-        .ilike(column, `%${query}%`)
-        .neq('id', currentUserId)
-        .limit(10);
+      if (searchMode === 'email') {
+        // Use RPC to search by email — joins auth.users for reliable results
+        const { data, error } = await supabase.rpc('search_users_by_email', {
+          search_query: query,
+          exclude_user_id: currentUserId,
+          result_limit: 10,
+        });
 
-      if (error) throw error;
-      setResults(data || []);
-    } catch {
+        if (error) throw error;
+        setResults(data || []);
+      } else {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, username, email, avatar_url')
+          .ilike('username', `%${query}%`)
+          .neq('id', currentUserId)
+          .limit(10);
+
+        if (error) throw error;
+        setResults(data || []);
+      }
+    } catch (err) {
+      console.error('Search error:', err);
       setResults([]);
     } finally {
       setIsSearching(false);
