@@ -535,7 +535,17 @@ const Message = memo(function Message({
         {/* Avatar */}
         <div className="flex-shrink-0 w-10">
           {showAvatar ? (
-            <div className="w-10 h-10 rounded-full bg-navy-900/70 border border-navy-800/70 flex items-center justify-center text-emerald-200 font-semibold text-sm overflow-hidden shadow-soft">
+            <div
+              className={`w-10 h-10 rounded-full bg-navy-900/70 border border-navy-800/70 flex items-center justify-center text-emerald-200 font-semibold text-sm overflow-hidden shadow-soft ${
+                isNotSelf ? 'cursor-pointer hover:ring-2 hover:ring-emerald-500/40 transition-all' : ''
+              }`}
+              onClick={() => {
+                if (isNotSelf) {
+                  setShowUserMenu(!showUserMenu);
+                  setFriendActionError(null);
+                }
+              }}
+            >
               {message.user.avatarUrl ? (
                   <img
                     src={message.user.avatarUrl}

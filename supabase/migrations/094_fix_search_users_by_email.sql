@@ -1,6 +1,6 @@
--- Migration: Create search_users_by_email RPC function
--- Description: Server-side function to search users by email.
---              Uses auth.users as the primary source so users without a profile row are still found.
+-- Migration: Fix search_users_by_email to use auth.users as primary source
+-- Description: Users without a profile row or with null profile email were not found.
+--              Now queries auth.users first and left joins profiles for username/avatar.
 
 CREATE OR REPLACE FUNCTION public.search_users_by_email(
   search_query TEXT,
@@ -32,6 +32,3 @@ BEGIN
   LIMIT result_limit;
 END;
 $$;
-
--- Grant execute to authenticated users
-GRANT EXECUTE ON FUNCTION public.search_users_by_email(TEXT, UUID, INT) TO authenticated;
