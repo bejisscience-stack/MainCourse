@@ -366,7 +366,7 @@ function AdminAnalytics() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number, name: string) => [value, name]}
+                  formatter={(value: number | undefined, name: string) => [value ?? 0, name]}
                   contentStyle={{ borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}
                 />
                 <Legend
