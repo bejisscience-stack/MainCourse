@@ -76,7 +76,18 @@ export function useFriendRequests(userId: string | null) {
         .from('friend_requests')
         .insert({ sender_id: userId, receiver_id: receiverId });
 
-      if (error) throw error;
+      if (error) {
+        const msg = error.message || '';
+        const code = error.code || '';
+        if (msg.includes('already exists between these users') || msg.includes('already exists')) {
+          throw new Error('A friend request already exists with this user.');
+        } else if (code === '23505' || msg.includes('duplicate')) {
+          throw new Error('You have already sent a friend request to this user.');
+        } else if (msg.includes('same user') || msg.includes('check constraint')) {
+          throw new Error('You cannot send a friend request to yourself.');
+        }
+        throw error;
+      }
       await mutate();
     } finally {
       setIsSubmitting(false);

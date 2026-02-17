@@ -5,6 +5,7 @@ import Message from './Message';
 import MessageInput from './MessageInput';
 import type { Message as MessageType, MessageAttachment } from '@/types/message';
 import { useDMMessages } from '@/hooks/useDMMessages';
+import { FriendStatusProvider } from '@/contexts/FriendStatusContext';
 import { supabase } from '@/lib/supabase';
 import { edgeFunctionUrl } from '@/lib/api-client';
 
@@ -380,6 +381,7 @@ export default function DMChatArea({
               )}
 
               {/* Messages */}
+              <FriendStatusProvider currentUserId={currentUserId}>
               <div className="space-y-0">
                 {messages.map((message, index) => {
                   const prevMessage = index > 0 ? messages[index - 1] : null;
@@ -416,6 +418,7 @@ export default function DMChatArea({
                   );
                 })}
               </div>
+              </FriendStatusProvider>
               <div ref={messagesEndRef} className="h-1" />
             </>
           )}
