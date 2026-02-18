@@ -481,13 +481,7 @@ const Message = memo(function Message({
   );
 
   // If it's a project message, render ProjectCard instead
-  // But hide expired projects for non-lecturers (students)
   if (projectData && !isLoadingProject) {
-    // Filter: Hide expired projects for students
-    if (projectCountdown.isExpired && !isLecturer) {
-      return null; // Don't render expired projects for students
-    }
-
     return (
       <div
         ref={messageRef}

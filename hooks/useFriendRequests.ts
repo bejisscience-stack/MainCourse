@@ -10,8 +10,8 @@ interface FriendRequestRow {
   status: string;
   created_at: string;
   updated_at: string;
-  sender: { username: string; avatar_url: string } | null;
-  receiver: { username: string; avatar_url: string } | null;
+  sender: { username: string } | null;
+  receiver: { username: string } | null;
 }
 
 function transformRow(row: FriendRequestRow): FriendRequest {
@@ -21,9 +21,7 @@ function transformRow(row: FriendRequestRow): FriendRequest {
     receiverId: row.receiver_id,
     status: row.status as FriendRequest['status'],
     senderUsername: row.sender?.username || undefined,
-    senderAvatarUrl: row.sender?.avatar_url || undefined,
     receiverUsername: row.receiver?.username || undefined,
-    receiverAvatarUrl: row.receiver?.avatar_url || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -33,12 +31,12 @@ async function fetchFriendRequests(userId: string): Promise<{ sent: FriendReques
   const [sentResult, receivedResult] = await Promise.all([
     supabase
       .from('friend_requests')
-      .select('id, sender_id, receiver_id, status, created_at, updated_at, sender:profiles!friend_requests_sender_id_fkey(username, avatar_url), receiver:profiles!friend_requests_receiver_id_fkey(username, avatar_url)')
+      .select('id, sender_id, receiver_id, status, created_at, updated_at, sender:profiles!friend_requests_sender_id_fkey(username), receiver:profiles!friend_requests_receiver_id_fkey(username)')
       .eq('sender_id', userId)
       .eq('status', 'pending'),
     supabase
       .from('friend_requests')
-      .select('id, sender_id, receiver_id, status, created_at, updated_at, sender:profiles!friend_requests_sender_id_fkey(username, avatar_url), receiver:profiles!friend_requests_receiver_id_fkey(username, avatar_url)')
+      .select('id, sender_id, receiver_id, status, created_at, updated_at, sender:profiles!friend_requests_sender_id_fkey(username), receiver:profiles!friend_requests_receiver_id_fkey(username)')
       .eq('receiver_id', userId)
       .eq('status', 'pending'),
   ]);
