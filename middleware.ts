@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
-// Secret access key for team members
 const TEAM_ACCESS_KEY = 'richniggers';
 const TEAM_ACCESS_COOKIE = 'team_session_access';
 
@@ -32,7 +31,7 @@ export async function middleware(request: NextRequest) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        // No maxAge — session cookie, expires when browser closes
+        maxAge: 15 * 60, // 15 minutes — must re-enter access code after expiry
       });
       // Delete the old persistent cookie so it doesn't grant access
       response.cookies.delete('team_access');
