@@ -15,6 +15,10 @@ interface EmailTemplateData {
   courseName?: string;
   amount?: number;
   reason?: string;
+  titleEn?: string;
+  titleGe?: string;
+  messageEn?: string;
+  messageGe?: string;
 }
 
 interface EmailTemplate {
@@ -213,5 +217,20 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       </p>
     `),
     text: (data) => `Your bundle enrollment request for ${data.courseName || 'the course bundle'} was not approved.${data.reason ? ` Reason: ${data.reason}` : ''} Contact support if you have questions.`,
+  },
+
+  adminNotification: {
+    subject: {
+      en: 'Notification from Wavleba',
+      ge: 'შეტყობინება Wavleba-დან',
+    },
+    html: (data) => emailWrapper(`
+      <h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">${data.titleEn || ''}</h1>
+      <p style="color: #333; font-size: 16px; line-height: 1.6;">${data.messageEn || ''}</p>
+      <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 24px 0;" />
+      <h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">${data.titleGe || ''}</h1>
+      <p style="color: #333; font-size: 16px; line-height: 1.6;">${data.messageGe || ''}</p>
+    `),
+    text: (data) => `${data.titleEn}\n${data.messageEn}\n\n---\n\n${data.titleGe}\n${data.messageGe}`,
   },
 };

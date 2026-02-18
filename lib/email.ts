@@ -1,5 +1,6 @@
 import { resend } from './resend';
 import { emailTemplates, EmailLanguage } from './email-templates';
+import type { MultilingualText } from '@/types/notification';
 
 export interface SendEmailParams {
   to: string | string[];
@@ -157,5 +158,23 @@ export async function sendBundleEnrollmentRejectedEmail(
     subject: template.subject[lang],
     html: template.html({ courseName: bundleName, reason }),
     text: template.text({ courseName: bundleName, reason }),
+  });
+}
+
+/**
+ * Send admin notification email (bilingual EN+GE)
+ */
+export async function sendAdminNotificationEmail(
+  to: string | string[],
+  title: MultilingualText,
+  message: MultilingualText
+): Promise<string> {
+  const template = emailTemplates.adminNotification;
+  const subject = `${title.en} | ${title.ge}`;
+  return sendEmail({
+    to,
+    subject,
+    html: template.html({ titleEn: title.en, titleGe: title.ge, messageEn: message.en, messageGe: message.ge }),
+    text: template.text({ titleEn: title.en, titleGe: title.ge, messageEn: message.en, messageGe: message.ge }),
   });
 }

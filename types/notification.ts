@@ -63,6 +63,9 @@ export interface AdminNotificationPayload {
   target_user_ids?: string[];
   title: MultilingualText;
   message: MultilingualText;
+  channel: 'in_app' | 'email' | 'both';
+  email_target?: 'profiles' | 'coming_soon' | 'both' | 'specific';
+  target_emails?: string[];
 }
 
 export interface NotificationsResponse {
