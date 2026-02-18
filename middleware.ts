@@ -3,7 +3,7 @@ import { updateSession } from '@/lib/supabase/middleware'
 
 // Secret access key for team members
 const TEAM_ACCESS_KEY = 'richniggers';
-const TEAM_ACCESS_COOKIE = 'team_access';
+const TEAM_ACCESS_COOKIE = 'team_session_access';
 
 // Routes that should bypass the coming soon check
 const BYPASS_ROUTES = [
@@ -31,9 +31,11 @@ export async function middleware(request: NextRequest) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30, // 30 days
         path: '/',
+        // No maxAge — session cookie, expires when browser closes
       });
+      // Delete the old persistent cookie so it doesn't grant access
+      response.cookies.delete('team_access');
       return response;
     }
 
