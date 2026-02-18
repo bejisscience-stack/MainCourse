@@ -58,6 +58,20 @@ const nextConfig = {
         ],
       },
       {
+        // Prevent browsers/CDN from caching HTML pages so middleware always runs
+        source: '/((?!_next/static|_next/image|.*\\.(?:jpg|jpeg|png|gif|webp|avif|svg|ico|js|css)).*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
+          },
+        ],
+      },
+      {
         source: '/:path*\\.(jpg|jpeg|png|gif|webp|avif|svg|ico)',
         headers: [
           {

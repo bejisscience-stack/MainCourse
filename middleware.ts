@@ -44,12 +44,18 @@ export async function middleware(request: NextRequest) {
     if (!hasTeamAccess) {
       // Redirect to coming soon page
       const comingSoonUrl = new URL('/coming-soon', request.url);
-      return NextResponse.redirect(comingSoonUrl);
+      const response = NextResponse.redirect(comingSoonUrl);
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      response.headers.set('Pragma', 'no-cache');
+      return response;
     }
   }
 
   // Continue with session update for authenticated routes
-  return await updateSession(request)
+  const response = await updateSession(request)
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  return response;
 }
 
 export const config = {
