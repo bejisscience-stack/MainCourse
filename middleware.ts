@@ -20,34 +20,30 @@ export async function middleware(request: NextRequest) {
   const shouldBypass = BYPASS_ROUTES.some(route => pathname.startsWith(route));
 
   if (!shouldBypass) {
-    // Local dev: skip coming-soon gate so you can see the full site
-    const isLocalDev = request.nextUrl.hostname === 'localhost' || request.nextUrl.hostname === '127.0.0.1';
-    if (!isLocalDev) {
-      // Check for access query parameter
-      const accessParam = searchParams.get('access');
+    // Check for access query parameter
+    const accessParam = searchParams.get('access');
 
-      if (accessParam === TEAM_ACCESS_KEY) {
-        // Set cookie and redirect to clean URL (remove query param)
-        const cleanUrl = new URL(pathname, request.url);
-        const response = NextResponse.redirect(cleanUrl);
-        response.cookies.set(TEAM_ACCESS_COOKIE, 'true', {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 30, // 30 days
-          path: '/',
-        });
-        return response;
-      }
+    if (accessParam === TEAM_ACCESS_KEY) {
+      // Set cookie and redirect to clean URL (remove query param)
+      const cleanUrl = new URL(pathname, request.url);
+      const response = NextResponse.redirect(cleanUrl);
+      response.cookies.set(TEAM_ACCESS_COOKIE, 'true', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+        path: '/',
+      });
+      return response;
+    }
 
-      // Check for existing team access cookie
-      const hasTeamAccess = request.cookies.get(TEAM_ACCESS_COOKIE)?.value === 'true';
+    // Check for existing team access cookie
+    const hasTeamAccess = request.cookies.get(TEAM_ACCESS_COOKIE)?.value === 'true';
 
-      if (!hasTeamAccess) {
-        // Redirect to coming soon page
-        const comingSoonUrl = new URL('/coming-soon', request.url);
-        return NextResponse.redirect(comingSoonUrl);
-      }
+    if (!hasTeamAccess) {
+      // Redirect to coming soon page
+      const comingSoonUrl = new URL('/coming-soon', request.url);
+      return NextResponse.redirect(comingSoonUrl);
     }
   }
 
