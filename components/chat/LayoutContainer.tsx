@@ -5,10 +5,6 @@ import { useI18n } from '@/contexts/I18nContext';
 import ServerSidebar from './ServerSidebar';
 import ChannelSidebar from './ChannelSidebar';
 import ChatArea from './ChatArea';
-import DMSidebar from './DMSidebar';
-import DMChatArea from './DMChatArea';
-import FriendsSection from './FriendsSection';
-import AddFriendDialog from './AddFriendDialog';
 import ChatErrorBoundary from './ChatErrorBoundary';
 import { useActiveServer } from '@/hooks/useActiveServer';
 import { useActiveChannel } from '@/hooks/useActiveChannel';
@@ -55,10 +51,6 @@ export default function LayoutContainer({
   const [channelsCollapsed, setChannelsCollapsed] = useState(false);
   const [userName, setUserName] = useState<string>('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Mobile menu state
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [activeFriendUsername, setActiveFriendUsername] = useState<string>('');
-  const [showAddFriendDialog, setShowAddFriendDialog] = useState(false);
-  const [viewingDMInCourse, setViewingDMInCourse] = useState(false);
   const { user } = useUser();
   const { t } = useI18n();
 
@@ -113,15 +105,10 @@ export default function LayoutContainer({
     loadUserName();
   }, [user]);
 
-  // Auto-select first server and channel if none selected
-  // If no servers available, default to DM mode ('home')
+  // Auto-select first server and channel if none selected (but not if DM is selected)
   useEffect(() => {
-    if (!activeServerId) {
-      if (servers.length > 0) {
-        setActiveServerId(servers[0].id);
-      } else {
-        setActiveServerId('home');
-      }
+    if (!activeServerId && servers.length > 0) {
+      setActiveServerId(servers[0].id);
     }
   }, [activeServerId, servers, setActiveServerId]);
 
@@ -144,13 +131,6 @@ export default function LayoutContainer({
     const newServer = servers.find((s) => s.id === serverId);
     setActiveServerId(serverId);
 
-    // Clear DM state when leaving DM mode
-    if (serverId !== 'home') {
-      setActiveConversationId(null);
-      setActiveFriendUsername('');
-      setViewingDMInCourse(false);
-    }
-
     // Try to find a matching channel in the new server before clearing
     if (newServer && activeChannelId) {
       const allChannels = newServer.channels.flatMap((cat) => cat.channels);
@@ -163,23 +143,13 @@ export default function LayoutContainer({
 
     // Reset channel selection only if no matching channel found
     // The useEffect below will auto-select a channel
-    if (serverId !== 'home') {
-      setActiveChannelId(null);
-    }
+    setActiveChannelId(null);
   };
 
   const handleChannelSelect = (channelId: string) => {
     setActiveChannelId(channelId);
-    setViewingDMInCourse(false);
-    if (window.innerWidth < 768) {
-      setMobileMenuOpen(false);
-    }
-  };
-
-  const handleDMFromCourseSidebar = (conversationId: string, friendUsername: string) => {
-    setActiveConversationId(conversationId);
-    setActiveFriendUsername(friendUsername);
-    setViewingDMInCourse(true);
+    // Close mobile menu on component selection usually handled by parent or self
+    // We can close it here to be safe
     if (window.innerWidth < 768) {
       setMobileMenuOpen(false);
     }
@@ -211,40 +181,6 @@ export default function LayoutContainer({
           enrolledCourseIds={enrolledCourseIds}
           showDMButton={showDMButton}
         />
-
-        {/* DM Sidebar Container */}
-        {isDMMode && (
-          <div className="w-60 bg-navy-950/95 md:bg-navy-950/70 border-r border-navy-800/60 flex flex-col h-full shadow-2xl md:shadow-none">
-            <div className="flex-1 overflow-hidden min-h-0">
-              <DMSidebar
-                currentUserId={currentUserId}
-                activeConversationId={activeConversationId}
-                onConversationSelect={(convoId, friendName) => {
-                  setActiveConversationId(convoId);
-                  setActiveFriendUsername(friendName);
-                  if (window.innerWidth < 768) {
-                    setMobileMenuOpen(false);
-                  }
-                }}
-                onAddFriend={() => setShowAddFriendDialog(true)}
-              />
-            </div>
-
-            {/* User profile footer */}
-            <div className="h-14 bg-navy-950/80 px-2 py-2 flex items-center gap-2 border-t border-navy-800/60 flex-shrink-0 mt-auto">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold shadow-soft">
-                {userName ? userName.charAt(0).toUpperCase() : 'U'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-gray-100 text-sm font-medium truncate">{userName || 'User'}</div>
-                <div className="text-emerald-300 text-xs flex items-center gap-1">
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
-                  {t('chat.online')}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Channels Sidebar Container */}
         {!isDMMode && activeServer && (
@@ -279,37 +215,17 @@ export default function LayoutContainer({
                 <div className="flex-1 overflow-hidden min-h-0">
                   <ChannelSidebar
                     server={activeServer}
-                    activeChannelId={viewingDMInCourse ? null : activeChannelId}
+                    activeChannelId={activeChannelId}
                     onChannelSelect={handleChannelSelect}
                     onChannelCreate={onChannelCreate}
                     onChannelUpdate={onChannelUpdate}
                     onChannelDelete={onChannelDelete}
                     isLecturer={isLecturer}
                     onCollapse={() => setChannelsCollapsed(true)}
-                    bottomSection={
-                      <FriendsSection
-                        currentUserId={currentUserId}
-                        activeConversationId={viewingDMInCourse ? activeConversationId : null}
-                        onConversationSelect={handleDMFromCourseSidebar}
-                        onAddFriend={() => setShowAddFriendDialog(true)}
-                      />
-                    }
                   />
                 </div>
               )}
             </div>
-
-            {/* Friends section when channels are collapsed */}
-            {channelsCollapsed && (
-              <div className="flex-1 overflow-y-auto px-2.5 py-3 chat-scrollbar min-h-0">
-                <FriendsSection
-                  currentUserId={currentUserId}
-                  activeConversationId={viewingDMInCourse ? activeConversationId : null}
-                  onConversationSelect={handleDMFromCourseSidebar}
-                  onAddFriend={() => setShowAddFriendDialog(true)}
-                />
-              </div>
-            )}
 
             {/* User profile footer - at the very bottom */}
             <div className="h-14 bg-navy-950/80 px-2 py-2 flex items-center gap-2 border-t border-navy-800/60 flex-shrink-0 mt-auto">
@@ -343,34 +259,18 @@ export default function LayoutContainer({
 
       {/* Chat area */}
       <ChatErrorBoundary>
-        {(isDMMode || viewingDMInCourse) ? (
-          <DMChatArea
-            conversationId={activeConversationId}
-            currentUserId={currentUserId}
-            friendUsername={activeFriendUsername}
-            onMobileMenuClick={() => setMobileMenuOpen(true)}
-          />
-        ) : (
-          <ChatArea
-            channel={activeChannel}
-            currentUserId={currentUserId}
-            isLecturer={isLecturer}
-            onSendMessage={onSendMessage || (() => { })}
-            onReaction={onReaction}
-            isEnrollmentExpired={isEnrollmentExpired}
-            enrollmentInfo={enrollmentInfo}
-            onReEnrollRequest={onReEnrollRequest}
-            onMobileMenuClick={() => setMobileMenuOpen(true)}
-          />
-        )}
+        <ChatArea
+          channel={activeChannel}
+          currentUserId={currentUserId}
+          isLecturer={isLecturer}
+          onSendMessage={onSendMessage || (() => { })}
+          onReaction={onReaction}
+          isEnrollmentExpired={isEnrollmentExpired}
+          enrollmentInfo={enrollmentInfo}
+          onReEnrollRequest={onReEnrollRequest}
+          onMobileMenuClick={() => setMobileMenuOpen(true)}
+        />
       </ChatErrorBoundary>
-
-      {/* Add Friend Dialog */}
-      <AddFriendDialog
-        isOpen={showAddFriendDialog}
-        onClose={() => setShowAddFriendDialog(false)}
-        currentUserId={currentUserId}
-      />
     </div>
   );
 }

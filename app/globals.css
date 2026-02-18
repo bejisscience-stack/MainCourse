@@ -80,8 +80,8 @@ body {
   }
 }
 
-/* Prevent media from causing horizontal scroll */
-img, video, iframe, embed, object {
+/* Prevent any element from causing horizontal scroll */
+* {
   max-width: 100%;
 }
 

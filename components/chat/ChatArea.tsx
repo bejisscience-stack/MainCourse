@@ -11,7 +11,6 @@ import { useChatMessages } from '@/hooks/useChatMessages';
 import { useRealtimeTyping } from '@/hooks/useRealtimeTyping';
 import { useMuteStatus } from '@/hooks/useMuteStatus';
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
-import { FriendStatusProvider } from '@/contexts/FriendStatusContext';
 import { supabase } from '@/lib/supabase';
 import { edgeFunctionUrl } from '@/lib/api-client';
 import { useI18n } from '@/contexts/I18nContext';
@@ -670,7 +669,6 @@ export default function ChatArea({
               )}
 
               {/* Messages */}
-              <FriendStatusProvider currentUserId={currentUserId}>
               <div className="space-y-0">
                 {(() => {
                   // Filter out "Video submission" and "Submission" messages (submission messages without user content)
@@ -725,7 +723,6 @@ export default function ChatArea({
                   });
                 })()}
               </div>
-              </FriendStatusProvider>
               <div ref={messagesEndRef} className="h-1" />
             </>
           )}

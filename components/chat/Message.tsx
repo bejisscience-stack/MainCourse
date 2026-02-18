@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase';
 import { edgeFunctionUrl } from '@/lib/api-client';
 import { useUserMuteStatus } from '@/hooks/useMuteStatus';
 import { useProjectCountdown } from '@/hooks/useProjectCountdown';
-import { useFriendStatusContext } from '@/contexts/FriendStatusContext';
 import ProjectCard from './ProjectCard';
 import type { Message as MessageType, MessageAttachment } from '@/types/message';
 
@@ -224,11 +223,6 @@ const Message = memo(function Message({
     canMute ? channelId : null,
     canMute ? message.user.id : null
   );
-
-  const isNotSelf = message.user.id !== currentUserId;
-  const friendCtx = useFriendStatusContext();
-  const [friendActionError, setFriendActionError] = useState<string | null>(null);
-  const [friendRequestSent, setFriendRequestSent] = useState(false);
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -481,7 +475,13 @@ const Message = memo(function Message({
   );
 
   // If it's a project message, render ProjectCard instead
+  // But hide expired projects for non-lecturers (students)
   if (projectData && !isLoadingProject) {
+    // Filter: Hide expired projects for students
+    if (projectCountdown.isExpired && !isLecturer) {
+      return null; // Don't render expired projects for students
+    }
+
     return (
       <div
         ref={messageRef}
@@ -530,17 +530,7 @@ const Message = memo(function Message({
         {/* Avatar */}
         <div className="flex-shrink-0 w-10">
           {showAvatar ? (
-            <div
-              className={`w-10 h-10 rounded-full bg-navy-900/70 border border-navy-800/70 flex items-center justify-center text-emerald-200 font-semibold text-sm overflow-hidden shadow-soft ${
-                isNotSelf ? 'cursor-pointer hover:ring-2 hover:ring-emerald-500/40 transition-all' : ''
-              }`}
-              onClick={() => {
-                if (isNotSelf) {
-                  setShowUserMenu(!showUserMenu);
-                  setFriendActionError(null);
-                }
-              }}
-            >
+            <div className="w-10 h-10 rounded-full bg-navy-900/70 border border-navy-800/70 flex items-center justify-center text-emerald-200 font-semibold text-sm overflow-hidden shadow-soft">
               {message.user.avatarUrl ? (
                   <img
                     src={message.user.avatarUrl}
@@ -584,14 +574,13 @@ const Message = memo(function Message({
             <div className="flex items-center gap-2 mb-1">
               <div className="relative" ref={userMenuRef}>
                 <span
-                  className={`text-gray-100 font-semibold text-[15px] ${
-                    isNotSelf ? 'hover:underline cursor-pointer hover:text-emerald-300' : ''
+                  className={`text-gray-100 font-semibold text-[15px] hover:underline cursor-pointer ${
+                    canMute ? 'hover:text-emerald-300' : ''
                   }`}
                   onClick={(e) => {
                     e.preventDefault();
-                    if (isNotSelf) {
+                    if (canMute) {
                       setShowUserMenu(!showUserMenu);
-                      setFriendActionError(null);
                     }
                   }}
                   title={message.user?.username || 'User'}
@@ -600,136 +589,29 @@ const Message = memo(function Message({
                 </span>
 
                 {/* User context menu */}
-                {showUserMenu && isNotSelf && (
-                  <div className="absolute left-0 top-7 bg-navy-950/90 border border-navy-700/60 rounded-lg shadow-xl z-50 min-w-[180px] py-1 animate-in fade-in duration-100">
-                    {/* Friend actions */}
-                    {friendCtx && (() => {
-                      const status = friendCtx.getStatusForUser(message.user.id);
-                      const receivedRequestId = friendCtx.getReceivedRequestId(message.user.id);
-
-                      return (
-                        <>
-                          {status === 'none' && (
-                            friendRequestSent ? (
-                              <div className="px-4 py-2 text-sm text-emerald-300 flex items-center gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                                Request Sent!
-                              </div>
-                            ) : (
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    await friendCtx.sendFriendRequest(message.user.id);
-                                    setFriendRequestSent(true);
-                                    setTimeout(() => {
-                                      setShowUserMenu(false);
-                                      setShowMenu(false);
-                                      setFriendRequestSent(false);
-                                    }, 1200);
-                                  } catch (err: any) {
-                                    setFriendActionError(err.message || 'Failed to send request');
-                                  }
-                                }}
-                                disabled={friendCtx.isSubmitting}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-navy-800/70 transition-colors flex items-center gap-2 disabled:opacity-50"
-                              >
-                                <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                                </svg>
-                                Add Friend
-                              </button>
-                            )
-                          )}
-                          {status === 'friend' && (
-                            <div className="px-4 py-2 text-sm text-emerald-300 flex items-center gap-2">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              Friends
-                            </div>
-                          )}
-                          {status === 'pending_sent' && (
-                            <div className="px-4 py-2 text-sm text-amber-300 flex items-center gap-2">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              Request Pending
-                            </div>
-                          )}
-                          {status === 'pending_received' && receivedRequestId && (
-                            <div className="px-3 py-2 flex items-center gap-1.5">
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    await friendCtx.acceptFriendRequest(receivedRequestId);
-                                    setShowUserMenu(false);
-                                    setShowMenu(false);
-                                  } catch (err: any) {
-                                    setFriendActionError(err.message || 'Failed');
-                                  }
-                                }}
-                                disabled={friendCtx.isSubmitting}
-                                className="flex-1 text-xs font-medium px-2.5 py-1.5 text-emerald-200 bg-emerald-500/15 border border-emerald-500/40 rounded-md hover:bg-emerald-500/25 transition-colors disabled:opacity-50"
-                              >
-                                Accept
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    await friendCtx.rejectFriendRequest(receivedRequestId);
-                                    setShowUserMenu(false);
-                                    setShowMenu(false);
-                                  } catch (err: any) {
-                                    setFriendActionError(err.message || 'Failed');
-                                  }
-                                }}
-                                disabled={friendCtx.isSubmitting}
-                                className="flex-1 text-xs font-medium px-2.5 py-1.5 text-red-200 bg-red-500/15 border border-red-500/40 rounded-md hover:bg-red-500/25 transition-colors disabled:opacity-50"
-                              >
-                                Decline
-                              </button>
-                            </div>
-                          )}
-                          {friendActionError && (
-                            <div className="px-4 py-1.5 text-xs text-red-300">
-                              {friendActionError}
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
-
-                    {/* Divider between friend actions and mute (when both exist) */}
-                    {canMute && friendCtx && (
-                      <div className="my-1 border-t border-navy-700/60" />
-                    )}
-
-                    {/* Mute/unmute for lecturers */}
-                    {canMute && (
-                      isMuted ? (
-                        <button
-                          onClick={handleUnmute}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-navy-800/70 transition-colors flex items-center gap-2"
-                        >
-                          <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                          </svg>
-                          Unmute user
-                        </button>
-                      ) : (
-                        <button
-                          onClick={handleMute}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-navy-800/70 transition-colors flex items-center gap-2"
-                        >
-                          <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                          </svg>
-                          Mute user
-                        </button>
-                      )
+                {showUserMenu && canMute && (
+                  <div className="absolute left-0 top-7 bg-navy-950/90 border border-navy-700/60 rounded-lg shadow-xl z-50 min-w-[160px] py-1 animate-in fade-in duration-100">
+                    {isMuted ? (
+                      <button
+                        onClick={handleUnmute}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-navy-800/70 transition-colors flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        </svg>
+                        Unmute user
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleMute}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-navy-800/70 transition-colors flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                        </svg>
+                        Mute user
+                      </button>
                     )}
                   </div>
                 )}
