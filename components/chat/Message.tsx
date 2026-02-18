@@ -228,6 +228,7 @@ const Message = memo(function Message({
   const isNotSelf = message.user.id !== currentUserId;
   const friendCtx = useFriendStatusContext();
   const [friendActionError, setFriendActionError] = useState<string | null>(null);
+  const [friendRequestSent, setFriendRequestSent] = useState(false);
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -615,24 +616,37 @@ const Message = memo(function Message({
                       return (
                         <>
                           {status === 'none' && (
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await friendCtx.sendFriendRequest(message.user.id);
-                                  setShowUserMenu(false);
-                                  setShowMenu(false);
-                                } catch (err: any) {
-                                  setFriendActionError(err.message || 'Failed to send request');
-                                }
-                              }}
-                              disabled={friendCtx.isSubmitting}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-navy-800/70 transition-colors flex items-center gap-2 disabled:opacity-50"
-                            >
-                              <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                              </svg>
-                              Add Friend
-                            </button>
+                            friendRequestSent ? (
+                              <div className="px-4 py-2 text-sm text-emerald-300 flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Request Sent!
+                              </div>
+                            ) : (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await friendCtx.sendFriendRequest(message.user.id);
+                                    setFriendRequestSent(true);
+                                    setTimeout(() => {
+                                      setShowUserMenu(false);
+                                      setShowMenu(false);
+                                      setFriendRequestSent(false);
+                                    }, 1200);
+                                  } catch (err: any) {
+                                    setFriendActionError(err.message || 'Failed to send request');
+                                  }
+                                }}
+                                disabled={friendCtx.isSubmitting}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-navy-800/70 transition-colors flex items-center gap-2 disabled:opacity-50"
+                              >
+                                <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                </svg>
+                                Add Friend
+                              </button>
+                            )
                           )}
                           {status === 'friend' && (
                             <div className="px-4 py-2 text-sm text-emerald-300 flex items-center gap-2">

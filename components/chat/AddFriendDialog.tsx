@@ -18,8 +18,6 @@ interface SearchResult {
   avatar_url: string | null;
 }
 
-type SearchMode = 'username' | 'email';
-
 export default function AddFriendDialog({ isOpen, onClose, currentUserId }: AddFriendDialogProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -27,7 +25,6 @@ export default function AddFriendDialog({ isOpen, onClose, currentUserId }: AddF
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [searchMode, setSearchMode] = useState<SearchMode>('username');
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -82,34 +79,21 @@ export default function AddFriendDialog({ isOpen, onClose, currentUserId }: AddF
 
     setIsSearching(true);
     try {
-      if (searchMode === 'email') {
-        // Use RPC to search by email — joins auth.users for reliable results
-        const { data, error } = await supabase.rpc('search_users_by_email', {
-          search_query: query,
-          exclude_user_id: currentUserId,
-          result_limit: 10,
-        });
+      const { data, error } = await supabase.rpc('search_users', {
+        search_query: query,
+        exclude_user_id: currentUserId,
+        result_limit: 10,
+      });
 
-        if (error) throw error;
-        setResults(data || []);
-      } else {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, username, email, avatar_url')
-          .ilike('username', `%${query}%`)
-          .neq('id', currentUserId)
-          .limit(10);
-
-        if (error) throw error;
-        setResults(data || []);
-      }
+      if (error) throw error;
+      setResults(data || []);
     } catch (err) {
       console.error('Search error:', err);
       setResults([]);
     } finally {
       setIsSearching(false);
     }
-  }, [currentUserId, searchMode]);
+  }, [currentUserId]);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -173,13 +157,6 @@ export default function AddFriendDialog({ isOpen, onClose, currentUserId }: AddF
     return 'available';
   };
 
-  // Re-trigger search when mode changes
-  useEffect(() => {
-    if (searchQuery.length >= 2) {
-      searchUsers(searchQuery);
-    }
-  }, [searchMode]);
-
   if (!isOpen || !mounted) return null;
 
   const dialog = (
@@ -204,32 +181,8 @@ export default function AddFriendDialog({ isOpen, onClose, currentUserId }: AddF
           </button>
         </div>
 
-        {/* Search mode toggle + input */}
+        {/* Search input */}
         <div className="px-6 py-4">
-          {/* Search mode toggle */}
-          <div className="flex gap-1 mb-3 p-1 bg-navy-900/60 rounded-lg">
-            <button
-              onClick={() => setSearchMode('username')}
-              className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                searchMode === 'username'
-                  ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/30'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              Username
-            </button>
-            <button
-              onClick={() => setSearchMode('email')}
-              className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                searchMode === 'email'
-                  ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/30'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              Email
-            </button>
-          </div>
-
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -239,7 +192,7 @@ export default function AddFriendDialog({ isOpen, onClose, currentUserId }: AddF
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder={searchMode === 'email' ? 'Search by email...' : 'Search by username...'}
+              placeholder="Search by username or email..."
               className="w-full pl-10 pr-4 py-2.5 bg-navy-900/70 border border-navy-800/60 rounded-xl text-gray-100 placeholder-gray-500 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors"
             />
           </div>
@@ -294,7 +247,7 @@ export default function AddFriendDialog({ isOpen, onClose, currentUserId }: AddF
                   <span className="text-gray-200 text-sm font-medium truncate block">
                     {user.username}
                   </span>
-                  {searchMode === 'email' && user.email && (
+                  {user.email && (
                     <span className="text-gray-500 text-xs truncate block">
                       {user.email}
                     </span>
