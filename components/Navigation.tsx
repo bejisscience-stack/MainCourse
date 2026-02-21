@@ -95,6 +95,9 @@ function Navigation() {
                 <Link href="/courses" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
                   {t('nav.courses')}
                 </Link>
+                <Link href="/projects" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
+                  {t('nav.projects')}
+                </Link>
                 {user && (
                   <Link href="/my-courses" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
                     {t('nav.myCourses')}
@@ -114,6 +117,9 @@ function Navigation() {
                 </Link>
                 <Link href="/courses" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
                   {t('nav.allCourses')}
+                </Link>
+                <Link href="/projects" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
+                  {t('nav.projects')}
                 </Link>
               </>
             )}
@@ -328,6 +334,13 @@ function Navigation() {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {t('nav.courses')}
+                  </Link>
+                  <Link
+                    href="/projects"
+                    className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {t('nav.projects')}
                   </Link>
                   {user && (
                     <Link

@@ -22,7 +22,7 @@ interface ComingSoonEmail {
 
 function AdminNotificationSender() {
   const [channel, setChannel] = useState<'in_app' | 'email' | 'both'>('in_app');
-  const [language, setLanguage] = useState<'en' | 'ge' | 'both'>('both');
+  const [notifLanguage, setNotifLanguage] = useState<'en' | 'ge' | 'both'>('both');
   const [targetType, setTargetType] = useState<'all' | 'role' | 'course' | 'specific'>('all');
   const [targetRole, setTargetRole] = useState<'student' | 'lecturer' | 'admin'>('student');
   const [targetCourseId, setTargetCourseId] = useState<string>('');
@@ -174,16 +174,16 @@ function AdminNotificationSender() {
   const showEmailTargeting = channel === 'email' || channel === 'both';
 
   const validateForm = (): string | null => {
-    if ((language === 'en' || language === 'both') && !titleEn.trim()) {
+    if ((notifLanguage === 'en' || notifLanguage === 'both') && !titleEn.trim()) {
       return 'English title is required';
     }
-    if ((language === 'ge' || language === 'both') && !titleGe.trim()) {
+    if ((notifLanguage === 'ge' || notifLanguage === 'both') && !titleGe.trim()) {
       return 'Georgian title is required';
     }
-    if ((language === 'en' || language === 'both') && !messageEn.trim()) {
+    if ((notifLanguage === 'en' || notifLanguage === 'both') && !messageEn.trim()) {
       return 'English message is required';
     }
-    if ((language === 'ge' || language === 'both') && !messageGe.trim()) {
+    if ((notifLanguage === 'ge' || notifLanguage === 'both') && !messageGe.trim()) {
       return 'Georgian message is required';
     }
     if (showInAppTargeting) {
@@ -245,14 +245,14 @@ function AdminNotificationSender() {
         ...(targetType === 'course' && { target_course_id: targetCourseId }),
         ...(targetType === 'specific' && { target_user_ids: selectedUserIds }),
         title: {
-          en: language === 'ge' ? '' : titleEn.trim(),
-          ge: language === 'en' ? '' : titleGe.trim(),
+          en: notifLanguage === 'ge' ? '' : titleEn.trim(),
+          ge: notifLanguage === 'en' ? '' : titleGe.trim(),
         },
         message: {
-          en: language === 'ge' ? '' : messageEn.trim(),
-          ge: language === 'en' ? '' : messageGe.trim(),
+          en: notifLanguage === 'ge' ? '' : messageEn.trim(),
+          ge: notifLanguage === 'en' ? '' : messageGe.trim(),
         },
-        language,
+        language: notifLanguage,
         channel,
         ...(showEmailTargeting && { email_target: emailTarget }),
         ...(resolvedTargetEmails && { target_emails: resolvedTargetEmails }),
@@ -364,7 +364,7 @@ function AdminNotificationSender() {
 
   const languageButtonClass = (value: string) =>
     `px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
-      language === value
+      notifLanguage === value
         ? 'border-navy-900 bg-navy-50 text-navy-900'
         : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
     }`;
@@ -428,21 +428,21 @@ function AdminNotificationSender() {
           <div className="grid grid-cols-3 gap-3">
             <button
               type="button"
-              onClick={() => setLanguage('en')}
+              onClick={() => setNotifLanguage('en')}
               className={languageButtonClass('en')}
             >
               English Only
             </button>
             <button
               type="button"
-              onClick={() => setLanguage('ge')}
+              onClick={() => setNotifLanguage('ge')}
               className={languageButtonClass('ge')}
             >
               Georgian Only
             </button>
             <button
               type="button"
-              onClick={() => setLanguage('both')}
+              onClick={() => setNotifLanguage('both')}
               className={languageButtonClass('both')}
             >
               Both
@@ -909,8 +909,8 @@ function AdminNotificationSender() {
           <h3 className="text-lg font-semibold text-gray-900">Notification Content</h3>
 
           {/* Title */}
-          <div className={`grid gap-4 ${language === 'both' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-            {(language === 'en' || language === 'both') && (
+          <div className={`grid gap-4 ${notifLanguage === 'both' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+            {(notifLanguage === 'en' || notifLanguage === 'both') && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Title (English) *
@@ -924,7 +924,7 @@ function AdminNotificationSender() {
                 />
               </div>
             )}
-            {(language === 'ge' || language === 'both') && (
+            {(notifLanguage === 'ge' || notifLanguage === 'both') && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Title (Georgian) *
@@ -941,8 +941,8 @@ function AdminNotificationSender() {
           </div>
 
           {/* Message */}
-          <div className={`grid gap-4 ${language === 'both' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-            {(language === 'en' || language === 'both') && (
+          <div className={`grid gap-4 ${notifLanguage === 'both' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+            {(notifLanguage === 'en' || notifLanguage === 'both') && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Message (English) *
@@ -956,7 +956,7 @@ function AdminNotificationSender() {
                 />
               </div>
             )}
-            {(language === 'ge' || language === 'both') && (
+            {(notifLanguage === 'ge' || notifLanguage === 'both') && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Message (Georgian) *
@@ -986,15 +986,15 @@ function AdminNotificationSender() {
           {showPreview && (
             <div className="bg-gray-50 rounded-lg p-4 space-y-4">
               <h4 className="font-semibold text-gray-900">Preview</h4>
-              <div className={`grid gap-4 ${language === 'both' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-                {(language === 'en' || language === 'both') && (
+              <div className={`grid gap-4 ${notifLanguage === 'both' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                {(notifLanguage === 'en' || notifLanguage === 'both') && (
                   <div className="bg-white rounded-lg p-4 border border-gray-200">
                     <p className="text-xs text-gray-500 mb-1">English</p>
                     <p className="font-semibold text-gray-900">{titleEn || '(No title)'}</p>
                     <p className="text-sm text-gray-600 mt-1">{messageEn || '(No message)'}</p>
                   </div>
                 )}
-                {(language === 'ge' || language === 'both') && (
+                {(notifLanguage === 'ge' || notifLanguage === 'both') && (
                   <div className="bg-white rounded-lg p-4 border border-gray-200">
                     <p className="text-xs text-gray-500 mb-1">Georgian</p>
                     <p className="font-semibold text-gray-900">{titleGe || '(სათაური არ არის)'}</p>
@@ -1010,7 +1010,7 @@ function AdminNotificationSender() {
                   </p>
                   <p className="text-sm text-blue-800 mt-1">
                     <span className="font-medium">Language:</span>{' '}
-                    {language === 'en' ? 'English Only' : language === 'ge' ? 'Georgian Only' : 'Both (EN + GE)'}
+                    {notifLanguage === 'en' ? 'English Only' : notifLanguage === 'ge' ? 'Georgian Only' : 'Both (EN + GE)'}
                   </p>
                 </div>
                 {showInAppTargeting && (

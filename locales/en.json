@@ -39,7 +39,8 @@
     "admin": "Admin",
     "userMenu": "User menu",
     "toggleMenu": "Toggle menu",
-    "settings": "Settings"
+    "settings": "Settings",
+    "projects": "Projects"
   },
   "home": {
     "title": "Learn To Earn Online",
@@ -819,5 +820,13 @@
     "minutesLeft": "minutes left",
     "endingSoon": "Ending soon",
     "startsTomorrow": "Starts tomorrow"
+  },
+  "projectsPage": {
+    "title": "Active Projects",
+    "subtitle": "Browse and join active projects from our courses",
+    "noProjects": "No active projects at the moment",
+    "noProjectsDescription": "Check back later for new projects from our courses",
+    "projectCount": "{{count}} project",
+    "projectsCount": "{{count}} projects"
   }
 }
