@@ -299,7 +299,7 @@ export function useRealtimeMessages({
               user: {
                 id: messageData.user_id,
                 username: cachedUsername,
-                avatarUrl: profile.avatar_url || '',
+                avatarUrl: getCachedAvatarUrl(messageData.user_id),
               },
             };
 
@@ -357,7 +357,7 @@ export function useRealtimeMessages({
               user: {
                 id: messageData.user_id,
                 username,
-                avatarUrl: profile.avatar_url || '',
+                avatarUrl: getCachedAvatarUrl(messageData.user_id),
               },
             };
 
