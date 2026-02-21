@@ -145,7 +145,7 @@ export default function StudentChatPage() {
           if (userIds.size > 0) {
             const { data: profiles } = await supabase
               .from('profiles')
-              .select('id, username, email, role')
+              .select('id, username, email, role, avatar_url')
               .in('id', Array.from(userIds));
 
             const membersData: Member[] =
@@ -154,7 +154,7 @@ export default function StudentChatPage() {
                 return {
                   id: profile.id,
                   username,
-                  avatarUrl: '',
+                  avatarUrl: profile.avatar_url || '',
                   status: 'online' as const,
                   role: profile.role || 'student',
                 };

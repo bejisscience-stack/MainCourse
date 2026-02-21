@@ -465,6 +465,7 @@ const Message = memo(function Message({
     checkProject();
   }, [message.id, channelId, supabase]);
 
+  const isAuthorLecturer = message.user.role === 'lecturer';
   const isPending = message.pending;
   const isFailed = message.failed;
 
@@ -530,7 +531,11 @@ const Message = memo(function Message({
         {/* Avatar */}
         <div className="flex-shrink-0 w-10">
           {showAvatar ? (
-            <div className="w-10 h-10 rounded-full bg-navy-900/70 border border-navy-800/70 flex items-center justify-center text-emerald-200 font-semibold text-sm overflow-hidden shadow-soft">
+            <div className={`w-10 h-10 rounded-full bg-navy-900/70 flex items-center justify-center font-semibold text-sm overflow-hidden shadow-soft ${
+              isAuthorLecturer
+                ? 'ring-2 ring-amber-400/60 border border-amber-500/30 text-amber-200'
+                : 'border border-navy-800/70 text-emerald-200'
+            }`}>
               {message.user.avatarUrl ? (
                   <img
                     src={message.user.avatarUrl}
@@ -574,9 +579,9 @@ const Message = memo(function Message({
             <div className="flex items-center gap-2 mb-1">
               <div className="relative" ref={userMenuRef}>
                 <span
-                  className={`text-gray-100 font-semibold text-[15px] hover:underline cursor-pointer ${
-                    canMute ? 'hover:text-emerald-300' : ''
-                  }`}
+                  className={`font-semibold text-[15px] hover:underline cursor-pointer ${
+                    isAuthorLecturer ? 'text-amber-300 hover:text-amber-200' : 'text-gray-100'
+                  } ${canMute ? 'hover:text-emerald-300' : ''}`}
                   onClick={(e) => {
                     e.preventDefault();
                     if (canMute) {
@@ -616,6 +621,12 @@ const Message = memo(function Message({
                   </div>
                 )}
               </div>
+
+              {isAuthorLecturer && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  Lecturer
+                </span>
+              )}
 
               <span className="text-gray-500 text-xs font-normal">{formatTimestamp(message.timestamp)}</span>
               {message.edited && (

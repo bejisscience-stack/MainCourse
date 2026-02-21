@@ -140,9 +140,13 @@ function Navigation() {
                   className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:ring-offset-2 rounded-full p-1 hover:bg-charcoal-100/50 dark:hover:bg-navy-800/50 transition-all duration-200"
                   aria-label={t('nav.userMenu')}
                 >
-                  <div className="w-9 h-9 bg-charcoal-950 dark:bg-emerald-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
-                    {(profile?.username || user.email || 'U').charAt(0).toUpperCase()}
-                  </div>
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt={profile.username || ''} className="w-9 h-9 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-9 h-9 bg-charcoal-950 dark:bg-emerald-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                      {(profile?.username || user.email || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   <svg
                     className={`w-3.5 h-3.5 text-charcoal-500 dark:text-gray-400 transition-transform duration-200 ${isProfileMenuOpen ? 'rotate-180' : ''}`}
                     fill="none"
@@ -373,9 +377,13 @@ function Navigation() {
                   <div className="space-y-2">
                     {/* Mobile Profile Section */}
                     <div className="flex items-center space-x-3 px-3 py-3 bg-charcoal-50/50 dark:bg-navy-800/50 rounded-xl mb-2">
-                      <div className="w-10 h-10 bg-charcoal-950 dark:bg-emerald-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
-                        {(profile?.username || user.email || 'U').charAt(0).toUpperCase()}
-                      </div>
+                      {profile?.avatar_url ? (
+                        <img src={profile.avatar_url} alt={profile.username || ''} className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 bg-charcoal-950 dark:bg-emerald-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                          {(profile?.username || user.email || 'U').charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-charcoal-950 dark:text-white truncate">
                           {profile?.username || t('nav.user')}

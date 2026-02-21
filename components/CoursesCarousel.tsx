@@ -19,7 +19,7 @@ export default function CoursesCarousel() {
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
   const { user, role: userRole } = useUser();
   const { courses, isLoading, error: coursesError } = useCourses('All');
-  const { enrolledCourseIds, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
+  const { enrolledCourseIds, getEnrollmentInfo, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
   const { t, isReady: translationsReady } = useI18n();
 
   // Reset currentIndex when courses change
@@ -201,6 +201,7 @@ export default function CoursesCarousel() {
           <div className="md:hidden flex flex-col gap-6 px-4">
             {courses.slice(0, showAllMobile ? undefined : 3).map((course) => {
               const isEnrolled = enrolledCourseIds.has(course.id);
+              const enrollmentInfo = getEnrollmentInfo(course.id);
               return (
                 <div key={course.id} className="w-full">
                   <CourseEnrollmentCard
@@ -210,6 +211,9 @@ export default function CoursesCarousel() {
                     onEnroll={undefined}
                     showEnrollButton={true}
                     userId={user?.id || null}
+                    isExpired={enrollmentInfo?.isExpired}
+                    expiresAt={enrollmentInfo?.expiresAt}
+                    daysRemaining={enrollmentInfo?.daysRemaining}
                   />
                 </div>
               );
@@ -299,6 +303,7 @@ export default function CoursesCarousel() {
                 const isMiddle = courses.length >= 3 ? index === 1 : index === currentIndex;
                 const isEnrolled = enrolledCourseIds.has(course.id);
                 const isEnrolling = enrollingCourseId === course.id;
+                const enrollmentInfo = getEnrollmentInfo(course.id);
 
                 return (
                   <div
@@ -319,6 +324,9 @@ export default function CoursesCarousel() {
                       onEnroll={undefined}
                       showEnrollButton={true}
                       userId={user?.id || null}
+                      isExpired={enrollmentInfo?.isExpired}
+                      expiresAt={enrollmentInfo?.expiresAt}
+                      daysRemaining={enrollmentInfo?.daysRemaining}
                     />
                   </div>
                 );

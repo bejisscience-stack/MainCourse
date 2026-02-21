@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { edgeFunctionUrl } from '@/lib/api-client';
 import type { Message, MessageAttachment } from '@/types/message';
-import { useRealtimeMessages, prefetchProfiles, getCachedUsername } from './useRealtimeMessages';
+import { useRealtimeMessages, prefetchProfiles, getCachedUsername, getCachedAvatarUrl } from './useRealtimeMessages';
 
 interface UseChatMessagesOptions {
   channelId: string | null;
@@ -348,7 +348,7 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
       user: {
         id: userId || '',
         username: getCachedUsername(userId || '') || 'You',
-        avatarUrl: '',
+        avatarUrl: getCachedAvatarUrl(userId || ''),
       },
     };
 

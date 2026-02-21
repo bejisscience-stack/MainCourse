@@ -37,7 +37,7 @@ export async function prefetchProfiles(userIds: string[]) {
   try {
     const { data: profiles, error } = await supabase
       .from('profiles')
-      .select('id, username, email')
+      .select('id, username, email, avatar_url')
       .in('id', uncachedIds);
 
     // Store profiles in a variable to avoid type narrowing issues
@@ -66,7 +66,7 @@ export async function prefetchProfiles(userIds: string[]) {
         profileCache.set(profile.id, {
           username,
           email: profile.email,
-          avatarUrl: '',
+          avatarUrl: profile.avatar_url || '',
           timestamp: now,
         });
       });
@@ -99,6 +99,14 @@ export function getCachedUsername(userId: string): string {
   return 'User';
 }
 
+export function getCachedAvatarUrl(userId: string): string {
+  const cached = profileCache.get(userId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.avatarUrl || '';
+  }
+  return '';
+}
+
 // Fetch and cache a single profile
 async function fetchAndCacheProfile(userId: string): Promise<string> {
   const cached = profileCache.get(userId);
@@ -109,7 +117,7 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
   try {
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('id, username, email')
+      .select('id, username, email, avatar_url')
       .eq('id', userId)
       .single();
 
@@ -142,7 +150,7 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
       profileCache.set(userId, {
         username,
         email: profile.email,
-        avatarUrl: '',
+        avatarUrl: profile.avatar_url || '',
         timestamp: Date.now(),
       });
       return username;
@@ -291,7 +299,7 @@ export function useRealtimeMessages({
               user: {
                 id: messageData.user_id,
                 username: cachedUsername,
-                avatarUrl: '',
+                avatarUrl: profile.avatar_url || '',
               },
             };
 
@@ -349,7 +357,7 @@ export function useRealtimeMessages({
               user: {
                 id: messageData.user_id,
                 username,
-                avatarUrl: '',
+                avatarUrl: profile.avatar_url || '',
               },
             };
 

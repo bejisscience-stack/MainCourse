@@ -32,11 +32,13 @@ Deno.serve(async (req: Request) => {
 
       const isAdmin = await checkIsAdmin(supabase, user.id)
 
+      // Fetch course to check lecturer and permissions
+      const { data: course } = await supabase
+        .from('courses').select('lecturer_id').eq('id', channel.course_id).single()
+
       if (!isAdmin) {
         const { data: enrollment } = await supabase
           .from('enrollments').select('id').eq('user_id', user.id).eq('course_id', channel.course_id).single()
-        const { data: course } = await supabase
-          .from('courses').select('lecturer_id').eq('id', channel.course_id).single()
 
         if (!enrollment && course?.lecturer_id !== user.id) {
           return errorResponse('Forbidden: You do not have access to this channel', 403)
@@ -84,9 +86,16 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      const isMessageAuthorLecturer = course?.lecturer_id === user.id
+
       const formattedMessage = {
         id: message.id,
-        user: { id: message.user_id, username: profile?.username || 'User', avatarUrl: '' },
+        user: {
+          id: message.user_id,
+          username: profile?.username || 'User',
+          avatarUrl: '',
+          ...(isMessageAuthorLecturer && { role: 'lecturer' }),
+        },
         content: message.content,
         timestamp: new Date(message.created_at).getTime(),
         edited: false,
@@ -118,18 +127,20 @@ Deno.serve(async (req: Request) => {
 
     const isAdmin = await checkIsAdmin(supabase, user.id)
 
+    // Fetch course to check permissions and identify lecturer
+    const { data: courseData } = await supabase
+      .from('courses').select('lecturer_id').eq('id', channel.course_id).single()
+
     if (!isAdmin) {
       const { data: enrollment } = await supabase
         .from('enrollments').select('id').eq('user_id', user.id).eq('course_id', channel.course_id).single()
 
-      const { data: course } = await supabase
-        .from('courses').select('lecturer_id').eq('id', channel.course_id).single()
-
-      if (!enrollment && course?.lecturer_id !== user.id) {
+      if (!enrollment && courseData?.lecturer_id !== user.id) {
         return errorResponse('Forbidden: You do not have access to this channel', 403)
       }
     }
 
+    const lecturerId = courseData?.lecturer_id
     const before = url.searchParams.get('before')
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 100)
 
@@ -189,7 +200,12 @@ Deno.serve(async (req: Request) => {
       const profile = profileMap.get(msg.user_id)
       return {
         id: msg.id,
-        user: { id: msg.user_id, username: profile?.username || 'User', avatarUrl: '' },
+        user: {
+          id: msg.user_id,
+          username: profile?.username || 'User',
+          avatarUrl: '',
+          ...(lecturerId === msg.user_id && { role: 'lecturer' }),
+        },
         content: msg.content,
         timestamp: new Date(msg.created_at).getTime(),
         edited: !!msg.edited_at,

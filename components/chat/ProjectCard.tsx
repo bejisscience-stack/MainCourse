@@ -203,7 +203,7 @@ export default function ProjectCard({
       const userIds = [...new Set(submissionRecords.map((sub: any) => sub.messages?.user_id).filter(Boolean))];
       const profilesMap = new Map();
       if (userIds.length > 0) {
-        const { data: profiles } = await supabase.from('profiles').select('id, username, email').in('id', userIds);
+        const { data: profiles } = await supabase.from('profiles').select('id, username, email, avatar_url').in('id', userIds);
         profiles?.forEach((p: any) => profilesMap.set(p.id, p));
       }
 
@@ -236,7 +236,7 @@ export default function ProjectCard({
           submissionId: sub.id,
           content: msg.content,
           timestamp: new Date(msg.created_at).getTime(),
-          user: { id: msg.user_id, username, avatarUrl: '' },
+          user: { id: msg.user_id, username, avatarUrl: profile?.avatar_url || '' },
           attachments: attachmentsMap.get(msg.id) || [],
           submissionData: { videoUrl: sub.video_url, message: sub.message, platformLinks: sub.platform_links },
           review,

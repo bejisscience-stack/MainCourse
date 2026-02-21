@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 export default function SettingsPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const { user, isLoading: userLoading } = useUser();
+  const { user, profile: userProfile, isLoading: userLoading, mutate: mutateUser } = useUser();
   const [referralCode, setReferralCode] = useState<string>('');
   const [loadingReferralCode, setLoadingReferralCode] = useState(true);
   
@@ -90,6 +90,15 @@ export default function SettingsPage() {
   const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
   const [showTransactionHistory, setShowTransactionHistory] = useState(false);
   
+  // Profile update state
+  const [profileUsername, setProfileUsername] = useState('');
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSuccess, setProfileSuccess] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Password update state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -101,6 +110,18 @@ export default function SettingsPage() {
   const [copied, setCopied] = useState(false);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   
+  // Initialize profile fields when data loads
+  useEffect(() => {
+    if (userProfile) {
+      if (userProfile.username && !profileUsername) {
+        setProfileUsername(userProfile.username);
+      }
+      if (userProfile.avatar_url !== undefined) {
+        setProfileAvatarUrl(userProfile.avatar_url || null);
+      }
+    }
+  }, [userProfile]);
+
   // Initialize bank account input when data loads
   useEffect(() => {
     if (bankAccountNumber && !bankAccountInput) {
@@ -159,6 +180,141 @@ export default function SettingsPage() {
     const baseUrl = window.location.origin;
     return `${baseUrl}/signup?ref=${referralCode}`;
   }, [referralCode]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setProfileError('Image must be less than 2MB');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    setProfileError(null);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/avatar.${fileExt}`;
+
+      // Remove old avatar if exists
+      await supabase.storage.from('avatars').remove([filePath]);
+
+      // Upload new avatar
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Add cache-bust to URL
+      const avatarUrl = `${publicUrl}?t=${Date.now()}`;
+
+      // Update profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfileAvatarUrl(avatarUrl);
+      mutateUser();
+    } catch (err: any) {
+      console.error('Error uploading avatar:', err);
+      setProfileError(err.message || 'Failed to upload image');
+    } finally {
+      setIsUploadingAvatar(false);
+      // Reset file input
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!user) return;
+    setIsUploadingAvatar(true);
+    setProfileError(null);
+
+    try {
+      // List and remove all files in user's avatar folder
+      const { data: files } = await supabase.storage.from('avatars').list(user.id);
+      if (files && files.length > 0) {
+        const filePaths = files.map(f => `${user.id}/${f.name}`);
+        await supabase.storage.from('avatars').remove(filePaths);
+      }
+
+      // Update profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: null, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfileAvatarUrl(null);
+      mutateUser();
+    } catch (err: any) {
+      console.error('Error removing avatar:', err);
+      setProfileError(err.message || 'Failed to remove image');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setProfileError(null);
+    setProfileSuccess(false);
+
+    // Validate username
+    const trimmed = profileUsername.trim();
+    if (!trimmed || trimmed.length < 3 || trimmed.length > 30 || !/^[a-zA-Z0-9_]+$/.test(trimmed)) {
+      setProfileError(t('settings.invalidUsername'));
+      return;
+    }
+
+    // Skip if nothing changed
+    if (trimmed === userProfile?.username) {
+      setProfileSuccess(true);
+      setTimeout(() => setProfileSuccess(false), 3000);
+      return;
+    }
+
+    setIsUpdatingProfile(true);
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ username: trimmed, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+
+      if (error) {
+        if (error.message?.includes('duplicate') || error.message?.includes('unique') || error.code === '23505') {
+          setProfileError(t('settings.usernameAlreadyTaken'));
+        } else {
+          throw error;
+        }
+        return;
+      }
+
+      setProfileSuccess(true);
+      mutateUser();
+      setTimeout(() => setProfileSuccess(false), 3000);
+    } catch (err: any) {
+      console.error('Error updating profile:', err);
+      setProfileError(err.message || t('settings.failedToUpdateProfile'));
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
 
   const handleBankAccountUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -370,6 +526,113 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-6">
+            {/* Profile Section */}
+            <div className="bg-white dark:bg-navy-800 border border-charcoal-100/50 dark:border-navy-700/50 rounded-3xl p-6 shadow-soft">
+              <h2 className="text-xl font-semibold text-charcoal-950 dark:text-white mb-4">{t('settings.profile')}</h2>
+              <p className="text-sm text-charcoal-600 dark:text-gray-400 mb-6">{t('settings.profileDescription')}</p>
+
+              <div className="flex flex-col sm:flex-row gap-6">
+                {/* Avatar */}
+                <div className="flex flex-col items-center gap-3">
+                  <div className="relative group">
+                    {profileAvatarUrl ? (
+                      <img
+                        src={profileAvatarUrl}
+                        alt={profileUsername}
+                        className="w-24 h-24 rounded-full object-cover border-2 border-charcoal-200 dark:border-navy-600"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 bg-charcoal-950 dark:bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold text-3xl border-2 border-charcoal-200 dark:border-navy-600">
+                        {(profileUsername || user?.email || 'U').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingAvatar}
+                      className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      {isUploadingAvatar ? (
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                      ) : (
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingAvatar}
+                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline disabled:opacity-50"
+                    >
+                      {t('settings.changeImage')}
+                    </button>
+                    {profileAvatarUrl && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveAvatar}
+                        disabled={isUploadingAvatar}
+                        className="text-xs text-red-500 dark:text-red-400 hover:underline disabled:opacity-50"
+                      >
+                        {t('settings.removeImage')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Username form */}
+                <form onSubmit={handleProfileUpdate} className="flex-1 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
+                      {t('settings.username')}
+                    </label>
+                    <input
+                      type="text"
+                      value={profileUsername}
+                      onChange={(e) => setProfileUsername(e.target.value)}
+                      placeholder={t('settings.usernamePlaceholder')}
+                      className="w-full px-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent text-charcoal-950 dark:text-white placeholder-charcoal-400 dark:placeholder-gray-500"
+                      disabled={isUpdatingProfile}
+                      minLength={3}
+                      maxLength={30}
+                    />
+                    <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">{t('settings.usernameHint')}</p>
+                  </div>
+
+                  {profileError && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl text-sm">
+                      {profileError}
+                    </div>
+                  )}
+
+                  {profileSuccess && (
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded-xl text-sm">
+                      {t('settings.profileUpdated')}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isUpdatingProfile || profileUsername.trim() === (userProfile?.username || '')}
+                    className="px-6 py-3 bg-charcoal-950 dark:bg-emerald-500 text-white font-semibold rounded-xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUpdatingProfile ? (t('settings.saving') || 'Saving...') : (t('settings.saveProfile') || 'Save Profile')}
+                  </button>
+                </form>
+              </div>
+            </div>
+
             {/* Referral Code Section */}
             <div className="bg-white dark:bg-navy-800 border border-charcoal-100/50 dark:border-navy-700/50 rounded-3xl p-6 shadow-soft">
               <h2 className="text-xl font-semibold text-charcoal-950 dark:text-white mb-4">{t('settings.referralCode')}</h2>
