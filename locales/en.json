@@ -441,7 +441,8 @@
     "reEnrollmentPending": "Re-enrollment Request Pending",
     "reEnrollmentInfo": "Re-enrollment requires admin approval and payment.",
     "expiresIn": "Expires in {{days}} days",
-    "expired": "Expired"
+    "expired": "Expired",
+    "daysLeft": "{{days}} days left"
   },
   "lecturerDashboard": {
     "title": "Lecturer Dashboard",

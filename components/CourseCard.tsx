@@ -30,15 +30,19 @@ interface CourseCardProps {
   onEnroll?: (courseId: string) => void;
   showEnrollButton?: boolean;
   customAction?: React.ReactNode;
+  daysRemaining?: number | null;
+  isExpired?: boolean;
 }
 
-function CourseCard({ 
-  course, 
-  isEnrolled = false, 
+function CourseCard({
+  course,
+  isEnrolled = false,
   isEnrolling = false,
   onEnroll,
   showEnrollButton = true,
-  customAction
+  customAction,
+  daysRemaining = null,
+  isExpired = false,
 }: CourseCardProps) {
   const { t } = useI18n();
   const router = useRouter();
@@ -250,6 +254,19 @@ function CourseCard({
             </span>
             <span className={`${courseTypeConfig.textColor} text-xs font-semibold`}>{course.course_type}</span>
           </div>
+
+          {/* Days Remaining Badge - Top left */}
+          {isEnrolled && daysRemaining !== null && (
+            <div className={`absolute top-2 left-2 backdrop-blur-sm px-2.5 py-1.5 rounded-lg z-20 shadow-md text-xs font-semibold ${
+              isExpired
+                ? 'bg-red-100/90 dark:bg-red-500/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/40'
+                : daysRemaining <= 7
+                  ? 'bg-amber-100/90 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/40'
+                  : 'bg-emerald-100/90 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/40'
+            }`}>
+              {isExpired ? t('enrollment.expired') : t('enrollment.daysLeft', { days: daysRemaining })}
+            </div>
+          )}
         </div>
 
         {/* Course Info Section - Tighter spacing */}

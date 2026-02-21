@@ -70,7 +70,7 @@ function CoursesPageContent() {
     }
   }, [searchParams, user]);
   const { courses, isLoading: coursesLoading, mutate: mutateCourses } = useCourses(filter);
-  const { enrolledCourseIds, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
+  const { enrolledCourseIds, getEnrollmentInfo, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
   const [bundles, setBundles] = useState<any[]>([]);
   const [enrolledBundleIds, setEnrolledBundleIds] = useState<Set<string>>(new Set());
 
@@ -411,6 +411,7 @@ function CoursesPageContent() {
                 {enrolledCourses.map((course) => {
                   const isOwnCourse = lecturerCourseIds.has(course.id);
                   const shouldShowEnroll = !isOwnCourse && userRole !== 'lecturer';
+                  const enrollmentInfo = getEnrollmentInfo(course.id);
 
                   return (
                     <CourseEnrollmentCard
@@ -422,6 +423,9 @@ function CoursesPageContent() {
                       showEnrollButton={shouldShowEnroll}
                       userId={user?.id || null}
                       onEnrollmentApproved={mutateEnrollments}
+                      isExpired={enrollmentInfo?.isExpired}
+                      expiresAt={enrollmentInfo?.expiresAt}
+                      daysRemaining={enrollmentInfo?.daysRemaining}
                     />
                   );
                 })}

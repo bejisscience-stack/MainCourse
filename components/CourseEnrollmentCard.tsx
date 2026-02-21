@@ -380,10 +380,11 @@ function CourseEnrollmentCard({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           courseId,
           paymentScreenshots: screenshotUrls,
-          referralCode: referralCode || undefined
+          referralCode: referralCode || undefined,
+          isReEnrollment: isExpired || undefined,
         }),
       });
 
@@ -425,7 +426,7 @@ function CourseEnrollmentCard({
       toast.error(errorMessage, { duration: 5000 });
       // Don't close dialog on error so user can retry
     }
-  }, [userId, mutate]);
+  }, [userId, isExpired, mutate]);
 
   return (
     <>
@@ -435,6 +436,8 @@ function CourseEnrollmentCard({
         isEnrolling={isEnrolling}
         showEnrollButton={false}
         customAction={customAction}
+        daysRemaining={daysRemaining}
+        isExpired={isExpired}
       />
       <EnrollmentWizard
         course={course}
