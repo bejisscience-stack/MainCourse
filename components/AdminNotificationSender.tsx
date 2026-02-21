@@ -48,6 +48,7 @@ function AdminNotificationSender() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isPartialSuccess, setIsPartialSuccess] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
   // Fetch courses for course-specific targeting
@@ -212,6 +213,7 @@ function AdminNotificationSender() {
 
     setError(null);
     setSuccessMessage(null);
+    setIsPartialSuccess(false);
     setIsSending(true);
 
     try {
@@ -261,7 +263,18 @@ function AdminNotificationSender() {
       if (data.in_app_count > 0) parts.push(`${data.in_app_count} in-app notification(s)`);
       if (data.email_count > 0) parts.push(`${data.email_count} email(s)`);
       if (data.email_failed_count > 0) parts.push(`${data.email_failed_count} email(s) failed`);
-      setSuccessMessage(`Successfully sent: ${parts.join(', ') || 'No notifications sent'}`);
+
+      if (data.email_failed_count > 0 && data.email_count === 0 && data.in_app_count === 0) {
+        throw new Error(`All emails failed to send. Error: ${data.email_error || 'Unknown error'}`);
+      }
+
+      if (data.email_failed_count > 0) {
+        setIsPartialSuccess(true);
+        setSuccessMessage(`Partially sent: ${parts.join(', ')}. Error: ${data.email_error || 'Unknown'}`);
+      } else {
+        setIsPartialSuccess(false);
+        setSuccessMessage(`Successfully sent: ${parts.join(', ') || 'No notifications sent'}`);
+      }
 
       // Reset form
       setTitleEn('');
@@ -350,7 +363,7 @@ function AdminNotificationSender() {
         </div>
       )}
       {successMessage && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+        <div className={`px-4 py-3 rounded-lg ${isPartialSuccess ? 'bg-amber-50 border border-amber-200 text-amber-700' : 'bg-green-50 border border-green-200 text-green-700'}`}>
           {successMessage}
         </div>
       )}

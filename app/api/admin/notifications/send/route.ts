@@ -212,6 +212,7 @@ export async function POST(request: NextRequest) {
     let inAppCount = 0;
     let emailSent = 0;
     let emailFailed = 0;
+    let lastEmailError = '';
 
     // ===== IN-APP NOTIFICATIONS =====
     if (sendInApp) {
@@ -279,8 +280,9 @@ export async function POST(request: NextRequest) {
           try {
             await sendAdminNotificationEmail(email, title, message);
             emailSent++;
-          } catch (err) {
+          } catch (err: any) {
             emailFailed++;
+            lastEmailError = err.message || String(err);
             console.error('[Admin Notifications API] Email failed for:', email, err);
           }
         }
@@ -289,11 +291,14 @@ export async function POST(request: NextRequest) {
 
     console.log('[Admin Notifications API] Results:', { inAppCount, emailSent, emailFailed });
 
+    const allFailed = emailFailed > 0 && emailSent === 0 && inAppCount === 0;
+
     return NextResponse.json({
-      success: true,
+      success: !allFailed,
       in_app_count: inAppCount,
       email_count: emailSent,
       email_failed_count: emailFailed,
+      email_error: emailFailed > 0 ? (lastEmailError || 'Unknown email error') : undefined,
       message: `Sent ${inAppCount} in-app notification(s), ${emailSent} email(s)${emailFailed > 0 ? `, ${emailFailed} email(s) failed` : ''}`,
     });
   } catch (error: any) {
