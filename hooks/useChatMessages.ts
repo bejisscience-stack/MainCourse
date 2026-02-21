@@ -256,13 +256,75 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
   }, []);
 
   // Real-time subscription
-  const { isConnected } = useRealtimeMessages({
+  const { isConnected, channelRef } = useRealtimeMessages({
     channelId,
     enabled,
     onNewMessage: handleNewMessage,
     onMessageUpdate: handleMessageUpdate,
     onMessageDelete: handleMessageDelete,
   });
+
+  // Broadcast a message to other clients via Supabase Broadcast (instant, bypasses RLS)
+  const broadcastMessage = useCallback((message: Message) => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'new_message',
+        payload: message,
+      });
+    }
+  }, [channelRef]);
+
+  // Sync latest messages (catch-up after tab hidden or as periodic safety net)
+  const syncLatestMessages = useCallback(async () => {
+    if (!channelId) return;
+    try {
+      const result = await fetchMessages(channelId);
+      if (!result) return;
+      const fetched: Message[] = result.messages || [];
+      if (fetched.length === 0) return;
+
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const missing = fetched.filter((m) => !existingIds.has(m.id));
+        if (missing.length === 0) return prev;
+
+        missing.forEach((m) => messageIdsRef.current.add(m.id));
+        // Merge and sort by timestamp
+        const merged = [...prev, ...missing].sort((a, b) => a.timestamp - b.timestamp);
+        return merged;
+      });
+    } catch {
+      // Silent fail — this is a best-effort sync
+    }
+  }, [channelId, fetchMessages]);
+
+  // Visibility change: catch up on missed messages when tab becomes visible
+  useEffect(() => {
+    if (!enabled || !channelId) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncLatestMessages();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [enabled, channelId, syncLatestMessages]);
+
+  // Periodic sync every 30s as a safety net (only when tab is visible)
+  useEffect(() => {
+    if (!enabled || !channelId) return;
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        syncLatestMessages();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [enabled, channelId, syncLatestMessages]);
 
   // Add optimistic message
   const addPendingMessage = useCallback((
@@ -446,5 +508,6 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
     updateMessage,
     addReaction,
     refetch,
+    broadcastMessage,
   };
 }

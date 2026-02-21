@@ -90,6 +90,7 @@ export default function ChatArea({
     loadMore,
     addReaction,
     refetch,
+    broadcastMessage,
   } = useChatMessages({
     channelId: channel?.id || null,
     enabled: !!channel,
@@ -285,6 +286,9 @@ export default function ChatArea({
         };
 
         replacePendingMessage(tempId, transformedMessage);
+
+        // Broadcast to other clients for instant delivery (bypasses RLS)
+        broadcastMessage(transformedMessage);
       }
 
       // Fallback timeout to cleanup stuck pending messages

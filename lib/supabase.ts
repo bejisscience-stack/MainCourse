@@ -13,3 +13,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // Browser client singleton using @supabase/ssr for cookie-based auth
 export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)
+
+// Propagate auth token to Realtime WebSocket so RLS-filtered postgres_changes work
+if (typeof window !== 'undefined') {
+  // Set auth from existing session immediately
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session?.access_token) {
+      supabase.realtime.setAuth(session.access_token)
+    }
+  })
+
+  // Update on every auth state change (login, token refresh, logout)
+  supabase.auth.onAuthStateChange((_event, session) => {
+    if (session?.access_token) {
+      supabase.realtime.setAuth(session.access_token)
+    }
+  })
+}
