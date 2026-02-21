@@ -5,7 +5,6 @@ import type { AdminNotificationPayload } from '@/types/notification';
 
 export const dynamic = 'force-dynamic';
 
-const EMAIL_BATCH_SIZE = 50;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Helper function to check if user is admin using RPC function (bypasses RLS)
@@ -275,19 +274,14 @@ export async function POST(request: NextRequest) {
           );
         }
       } else {
-        // Batch emails in chunks
-        const chunks: string[][] = [];
-        for (let i = 0; i < emails.length; i += EMAIL_BATCH_SIZE) {
-          chunks.push(emails.slice(i, i + EMAIL_BATCH_SIZE));
-        }
-
-        for (const chunk of chunks) {
+        // Send individual emails per recipient for reliable delivery
+        for (const email of emails) {
           try {
-            await sendAdminNotificationEmail(chunk, title, message);
-            emailSent += chunk.length;
+            await sendAdminNotificationEmail(email, title, message);
+            emailSent++;
           } catch (err) {
-            emailFailed += chunk.length;
-            console.error('[Admin Notifications API] Email batch failed:', err);
+            emailFailed++;
+            console.error('[Admin Notifications API] Email failed for:', email, err);
           }
         }
       }

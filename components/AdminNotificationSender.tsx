@@ -434,7 +434,7 @@ function AdminNotificationSender() {
             <select
               value={targetRole}
               onChange={(e) => setTargetRole(e.target.value as 'student' | 'lecturer' | 'admin')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
             >
               <option value="student">Students</option>
               <option value="lecturer">Lecturers</option>
@@ -452,7 +452,7 @@ function AdminNotificationSender() {
             <select
               value={targetCourseId}
               onChange={(e) => setTargetCourseId(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
             >
               <option value="">-- Select a course --</option>
               {courses.map(course => (
@@ -477,7 +477,7 @@ function AdminNotificationSender() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by email or username..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
                 />
                 <button
                   type="button"
@@ -606,7 +606,7 @@ function AdminNotificationSender() {
                     <select
                       value={targetRole}
                       onChange={(e) => setTargetRole(e.target.value as 'student' | 'lecturer' | 'admin')}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
                     >
                       <option value="student">Students</option>
                       <option value="lecturer">Lecturers</option>
@@ -621,7 +621,7 @@ function AdminNotificationSender() {
                     <select
                       value={targetCourseId}
                       onChange={(e) => setTargetCourseId(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
                     >
                       <option value="">-- Select a course --</option>
                       {courses.map(course => (
@@ -641,7 +641,7 @@ function AdminNotificationSender() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search by email or username..."
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
                     />
                     <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
                       {filteredUsers.map(user => (
@@ -716,7 +716,7 @@ function AdminNotificationSender() {
                     <select
                       value={targetRole}
                       onChange={(e) => setTargetRole(e.target.value as 'student' | 'lecturer' | 'admin')}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
                     >
                       <option value="student">Students</option>
                       <option value="lecturer">Lecturers</option>
@@ -730,7 +730,7 @@ function AdminNotificationSender() {
                     <select
                       value={targetCourseId}
                       onChange={(e) => setTargetCourseId(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
                     >
                       <option value="">-- Select a course --</option>
                       {courses.map(course => (
@@ -769,7 +769,7 @@ function AdminNotificationSender() {
                     onChange={(e) => setManualEmails(e.target.value)}
                     placeholder="Enter email addresses, separated by commas or new lines..."
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 resize-none"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900 resize-none"
                   />
                 </div>
 
@@ -784,7 +784,7 @@ function AdminNotificationSender() {
                       value={emailSearchQuery}
                       onChange={(e) => setEmailSearchQuery(e.target.value)}
                       placeholder="Search emails..."
-                      className="w-full px-4 py-2 mb-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500"
+                      className="w-full px-4 py-2 mb-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
                     />
                     <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
                       {/* Profile emails */}
@@ -855,7 +855,7 @@ function AdminNotificationSender() {
                 value={titleEn}
                 onChange={(e) => setTitleEn(e.target.value)}
                 placeholder="Enter notification title in English"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
               />
             </div>
             <div>
@@ -867,7 +867,7 @@ function AdminNotificationSender() {
                 value={titleGe}
                 onChange={(e) => setTitleGe(e.target.value)}
                 placeholder="შეიყვანეთ შეტყობინების სათაური ქართულად"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
               />
             </div>
           </div>
@@ -883,7 +883,7 @@ function AdminNotificationSender() {
                 onChange={(e) => setMessageEn(e.target.value)}
                 placeholder="Enter notification message in English"
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 resize-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900 resize-none"
               />
             </div>
             <div>
@@ -895,7 +895,7 @@ function AdminNotificationSender() {
                 onChange={(e) => setMessageGe(e.target.value)}
                 placeholder="შეიყვანეთ შეტყობინების ტექსტი ქართულად"
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 resize-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900 resize-none"
               />
             </div>
           </div>
