@@ -162,19 +162,32 @@ export async function sendBundleEnrollmentRejectedEmail(
 }
 
 /**
- * Send admin notification email (bilingual EN+GE)
+ * Send admin notification email (supports EN only, GE only, or both)
  */
 export async function sendAdminNotificationEmail(
   to: string | string[],
   title: MultilingualText,
-  message: MultilingualText
+  message: MultilingualText,
+  language: 'en' | 'ge' | 'both' = 'both'
 ): Promise<string> {
   const template = emailTemplates.adminNotification;
-  const subject = `${title.en} | ${title.ge}`;
+  const subject = language === 'en' ? title.en
+    : language === 'ge' ? title.ge
+    : `${title.en} | ${title.ge}`;
   return sendEmail({
     to,
     subject,
-    html: template.html({ titleEn: title.en, titleGe: title.ge, messageEn: message.en, messageGe: message.ge }),
-    text: template.text({ titleEn: title.en, titleGe: title.ge, messageEn: message.en, messageGe: message.ge }),
+    html: template.html({
+      titleEn: language === 'ge' ? '' : title.en,
+      titleGe: language === 'en' ? '' : title.ge,
+      messageEn: language === 'ge' ? '' : message.en,
+      messageGe: language === 'en' ? '' : message.ge,
+    }),
+    text: template.text({
+      titleEn: language === 'ge' ? '' : title.en,
+      titleGe: language === 'en' ? '' : title.ge,
+      messageEn: language === 'ge' ? '' : message.en,
+      messageGe: language === 'en' ? '' : message.ge,
+    }),
   });
 }

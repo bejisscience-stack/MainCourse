@@ -160,19 +160,33 @@ export async function POST(request: NextRequest) {
     }
 
     const body: AdminNotificationPayload = await request.json();
-    const { target_type, target_role, target_course_id, target_user_ids, title, message, channel = 'in_app', email_target, target_emails } = body;
+    const { target_type, target_role, target_course_id, target_user_ids, title, message, channel = 'in_app', language = 'both', email_target, target_emails } = body;
 
-    // Validate payload
-    if (!title?.en || !title?.ge) {
+    // Validate payload based on language selection
+    if ((language === 'en' || language === 'both') && !title?.en) {
       return NextResponse.json(
-        { error: 'Title in both English and Georgian is required' },
+        { error: 'English title is required' },
         { status: 400 }
       );
     }
 
-    if (!message?.en || !message?.ge) {
+    if ((language === 'ge' || language === 'both') && !title?.ge) {
       return NextResponse.json(
-        { error: 'Message in both English and Georgian is required' },
+        { error: 'Georgian title is required' },
+        { status: 400 }
+      );
+    }
+
+    if ((language === 'en' || language === 'both') && !message?.en) {
+      return NextResponse.json(
+        { error: 'English message is required' },
+        { status: 400 }
+      );
+    }
+
+    if ((language === 'ge' || language === 'both') && !message?.ge) {
+      return NextResponse.json(
+        { error: 'Georgian message is required' },
         { status: 400 }
       );
     }
@@ -200,6 +214,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[Admin Notifications API] Sending notifications:', {
       channel,
+      language,
       target_type,
       target_role,
       target_course_id,
@@ -237,10 +252,10 @@ export async function POST(request: NextRequest) {
           .rpc('send_bulk_notifications', {
             p_user_ids: userIds,
             p_type: 'admin_message',
-            p_title_en: title.en,
-            p_title_ge: title.ge,
-            p_message_en: message.en,
-            p_message_ge: message.ge,
+            p_title_en: title.en || '',
+            p_title_ge: title.ge || '',
+            p_message_en: message.en || '',
+            p_message_ge: message.ge || '',
             p_metadata: {},
             p_created_by: user.id,
           });
@@ -278,7 +293,7 @@ export async function POST(request: NextRequest) {
         // Send individual emails per recipient for reliable delivery
         for (const email of emails) {
           try {
-            await sendAdminNotificationEmail(email, title, message);
+            await sendAdminNotificationEmail(email, title, message, language);
             emailSent++;
           } catch (err: any) {
             emailFailed++;

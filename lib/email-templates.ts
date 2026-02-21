@@ -221,16 +221,19 @@ export const emailTemplates: Record<string, EmailTemplate> = {
 
   adminNotification: {
     subject: {
-      en: 'Notification from Wavleba',
-      ge: 'შეტყობინება Wavleba-დან',
+      en: 'Notification from Swavleba',
+      ge: 'შეტყობინება Swavleba-დან',
     },
     html: (data) => emailWrapper(`
-      <h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">${data.titleEn || ''}</h1>
-      <p style="color: #333; font-size: 16px; line-height: 1.6;">${data.messageEn || ''}</p>
-      <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 24px 0;" />
-      <h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">${data.titleGe || ''}</h1>
-      <p style="color: #333; font-size: 16px; line-height: 1.6;">${data.messageGe || ''}</p>
+      ${data.titleEn ? `<h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">${data.titleEn}</h1>
+      <p style="color: #333; font-size: 16px; line-height: 1.6;">${data.messageEn || ''}</p>` : ''}
+      ${data.titleEn && data.titleGe ? '<hr style="border: none; border-top: 1px solid #e0e0e0; margin: 24px 0;" />' : ''}
+      ${data.titleGe ? `<h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">${data.titleGe}</h1>
+      <p style="color: #333; font-size: 16px; line-height: 1.6;">${data.messageGe || ''}</p>` : ''}
     `),
-    text: (data) => `${data.titleEn}\n${data.messageEn}\n\n---\n\n${data.titleGe}\n${data.messageGe}`,
+    text: (data) => [
+      data.titleEn ? `${data.titleEn}\n${data.messageEn || ''}` : '',
+      data.titleGe ? `${data.titleGe}\n${data.messageGe || ''}` : '',
+    ].filter(Boolean).join('\n\n---\n\n'),
   },
 };

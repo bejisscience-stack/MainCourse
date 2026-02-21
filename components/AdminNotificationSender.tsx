@@ -22,6 +22,7 @@ interface ComingSoonEmail {
 
 function AdminNotificationSender() {
   const [channel, setChannel] = useState<'in_app' | 'email' | 'both'>('in_app');
+  const [language, setLanguage] = useState<'en' | 'ge' | 'both'>('both');
   const [targetType, setTargetType] = useState<'all' | 'role' | 'course' | 'specific'>('all');
   const [targetRole, setTargetRole] = useState<'student' | 'lecturer' | 'admin'>('student');
   const [targetCourseId, setTargetCourseId] = useState<string>('');
@@ -173,11 +174,17 @@ function AdminNotificationSender() {
   const showEmailTargeting = channel === 'email' || channel === 'both';
 
   const validateForm = (): string | null => {
-    if (!titleEn.trim() || !titleGe.trim()) {
-      return 'Title is required in both English and Georgian';
+    if ((language === 'en' || language === 'both') && !titleEn.trim()) {
+      return 'English title is required';
     }
-    if (!messageEn.trim() || !messageGe.trim()) {
-      return 'Message is required in both English and Georgian';
+    if ((language === 'ge' || language === 'both') && !titleGe.trim()) {
+      return 'Georgian title is required';
+    }
+    if ((language === 'en' || language === 'both') && !messageEn.trim()) {
+      return 'English message is required';
+    }
+    if ((language === 'ge' || language === 'both') && !messageGe.trim()) {
+      return 'Georgian message is required';
     }
     if (showInAppTargeting) {
       if (targetType === 'course' && !targetCourseId) {
@@ -237,8 +244,15 @@ function AdminNotificationSender() {
         ...(targetType === 'role' && { target_role: targetRole }),
         ...(targetType === 'course' && { target_course_id: targetCourseId }),
         ...(targetType === 'specific' && { target_user_ids: selectedUserIds }),
-        title: { en: titleEn.trim(), ge: titleGe.trim() },
-        message: { en: messageEn.trim(), ge: messageGe.trim() },
+        title: {
+          en: language === 'ge' ? '' : titleEn.trim(),
+          ge: language === 'en' ? '' : titleGe.trim(),
+        },
+        message: {
+          en: language === 'ge' ? '' : messageEn.trim(),
+          ge: language === 'en' ? '' : messageGe.trim(),
+        },
+        language,
         channel,
         ...(showEmailTargeting && { email_target: emailTarget }),
         ...(resolvedTargetEmails && { target_emails: resolvedTargetEmails }),
@@ -348,6 +362,13 @@ function AdminNotificationSender() {
         : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
     }`;
 
+  const languageButtonClass = (value: string) =>
+    `px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+      language === value
+        ? 'border-navy-900 bg-navy-50 text-navy-900'
+        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+    }`;
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -393,6 +414,36 @@ function AdminNotificationSender() {
               type="button"
               onClick={() => setChannel('both')}
               className={channelButtonClass('both')}
+            >
+              Both
+            </button>
+          </div>
+        </div>
+
+        {/* Language Selector */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-900 mb-3">
+            Language
+          </label>
+          <div className="grid grid-cols-3 gap-3">
+            <button
+              type="button"
+              onClick={() => setLanguage('en')}
+              className={languageButtonClass('en')}
+            >
+              English Only
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage('ge')}
+              className={languageButtonClass('ge')}
+            >
+              Georgian Only
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage('both')}
+              className={languageButtonClass('both')}
             >
               Both
             </button>
@@ -858,59 +909,67 @@ function AdminNotificationSender() {
           <h3 className="text-lg font-semibold text-gray-900">Notification Content</h3>
 
           {/* Title */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Title (English) *
-              </label>
-              <input
-                type="text"
-                value={titleEn}
-                onChange={(e) => setTitleEn(e.target.value)}
-                placeholder="Enter notification title in English"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Title (Georgian) *
-              </label>
-              <input
-                type="text"
-                value={titleGe}
-                onChange={(e) => setTitleGe(e.target.value)}
-                placeholder="შეიყვანეთ შეტყობინების სათაური ქართულად"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
-              />
-            </div>
+          <div className={`grid gap-4 ${language === 'both' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+            {(language === 'en' || language === 'both') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Title (English) *
+                </label>
+                <input
+                  type="text"
+                  value={titleEn}
+                  onChange={(e) => setTitleEn(e.target.value)}
+                  placeholder="Enter notification title in English"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+                />
+              </div>
+            )}
+            {(language === 'ge' || language === 'both') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Title (Georgian) *
+                </label>
+                <input
+                  type="text"
+                  value={titleGe}
+                  onChange={(e) => setTitleGe(e.target.value)}
+                  placeholder="შეიყვანეთ შეტყობინების სათაური ქართულად"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+                />
+              </div>
+            )}
           </div>
 
           {/* Message */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Message (English) *
-              </label>
-              <textarea
-                value={messageEn}
-                onChange={(e) => setMessageEn(e.target.value)}
-                placeholder="Enter notification message in English"
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900 resize-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Message (Georgian) *
-              </label>
-              <textarea
-                value={messageGe}
-                onChange={(e) => setMessageGe(e.target.value)}
-                placeholder="შეიყვანეთ შეტყობინების ტექსტი ქართულად"
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900 resize-none"
-              />
-            </div>
+          <div className={`grid gap-4 ${language === 'both' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+            {(language === 'en' || language === 'both') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Message (English) *
+                </label>
+                <textarea
+                  value={messageEn}
+                  onChange={(e) => setMessageEn(e.target.value)}
+                  placeholder="Enter notification message in English"
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900 resize-none"
+                />
+              </div>
+            )}
+            {(language === 'ge' || language === 'both') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Message (Georgian) *
+                </label>
+                <textarea
+                  value={messageGe}
+                  onChange={(e) => setMessageGe(e.target.value)}
+                  placeholder="შეიყვანეთ შეტყობინების ტექსტი ქართულად"
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900 resize-none"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -927,23 +986,31 @@ function AdminNotificationSender() {
           {showPreview && (
             <div className="bg-gray-50 rounded-lg p-4 space-y-4">
               <h4 className="font-semibold text-gray-900">Preview</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
-                  <p className="text-xs text-gray-500 mb-1">English</p>
-                  <p className="font-semibold text-gray-900">{titleEn || '(No title)'}</p>
-                  <p className="text-sm text-gray-600 mt-1">{messageEn || '(No message)'}</p>
-                </div>
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
-                  <p className="text-xs text-gray-500 mb-1">Georgian</p>
-                  <p className="font-semibold text-gray-900">{titleGe || '(სათაური არ არის)'}</p>
-                  <p className="text-sm text-gray-600 mt-1">{messageGe || '(ტექსტი არ არის)'}</p>
-                </div>
+              <div className={`grid gap-4 ${language === 'both' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                {(language === 'en' || language === 'both') && (
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">English</p>
+                    <p className="font-semibold text-gray-900">{titleEn || '(No title)'}</p>
+                    <p className="text-sm text-gray-600 mt-1">{messageEn || '(No message)'}</p>
+                  </div>
+                )}
+                {(language === 'ge' || language === 'both') && (
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">Georgian</p>
+                    <p className="font-semibold text-gray-900">{titleGe || '(სათაური არ არის)'}</p>
+                    <p className="text-sm text-gray-600 mt-1">{messageGe || '(ტექსტი არ არის)'}</p>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <div className="bg-blue-50 rounded-lg p-3">
                   <p className="text-sm text-blue-800">
                     <span className="font-medium">Channel:</span>{' '}
                     {channel === 'in_app' ? 'In-App Only' : channel === 'email' ? 'Email Only' : 'Both (In-App + Email)'}
+                  </p>
+                  <p className="text-sm text-blue-800 mt-1">
+                    <span className="font-medium">Language:</span>{' '}
+                    {language === 'en' ? 'English Only' : language === 'ge' ? 'Georgian Only' : 'Both (EN + GE)'}
                   </p>
                 </div>
                 {showInAppTargeting && (

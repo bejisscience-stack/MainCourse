@@ -64,6 +64,7 @@ export interface AdminNotificationPayload {
   title: MultilingualText;
   message: MultilingualText;
   channel: 'in_app' | 'email' | 'both';
+  language: 'en' | 'ge' | 'both';
   email_target?: 'profiles' | 'coming_soon' | 'both' | 'specific';
   target_emails?: string[];
 }
