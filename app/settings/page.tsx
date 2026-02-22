@@ -181,6 +181,22 @@ export default function SettingsPage() {
     return `${baseUrl}/signup?ref=${referralCode}`;
   }, [referralCode]);
 
+  const updateProfileRpc = async (data: { username?: string; avatar_url?: string | null }) => {
+    const { data: result, error } = await supabase.rpc('update_own_profile', {
+      new_username: data.username ?? null,
+      new_avatar_url: data.avatar_url === null ? '__REMOVE__' : (data.avatar_url ?? null),
+    });
+
+    if (error) {
+      if (error.message?.includes('username_taken')) {
+        throw { code: 'username_taken', message: t('settings.usernameAlreadyTaken') };
+      }
+      throw new Error(error.message || 'Failed to update profile');
+    }
+
+    return result;
+  };
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
@@ -216,15 +232,10 @@ export default function SettingsPage() {
       // Add cache-bust to URL
       const avatarUrl = `${publicUrl}?t=${Date.now()}`;
 
-      // Update profile
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
-        .eq('id', user.id);
+      // Update profile via RPC function
+      const result = await updateProfileRpc({ avatar_url: avatarUrl });
 
-      if (updateError) throw updateError;
-
-      setProfileAvatarUrl(avatarUrl);
+      setProfileAvatarUrl(result.avatar_url);
       mutateUser();
     } catch (err: any) {
       console.error('Error uploading avatar:', err);
@@ -249,13 +260,8 @@ export default function SettingsPage() {
         await supabase.storage.from('avatars').remove(filePaths);
       }
 
-      // Update profile
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: null, updated_at: new Date().toISOString() })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
+      // Update profile via RPC function
+      await updateProfileRpc({ avatar_url: null });
 
       setProfileAvatarUrl(null);
       mutateUser();
@@ -291,20 +297,9 @@ export default function SettingsPage() {
     setIsUpdatingProfile(true);
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ username: trimmed, updated_at: new Date().toISOString() })
-        .eq('id', user.id);
+      const result = await updateProfileRpc({ username: trimmed });
 
-      if (error) {
-        if (error.message?.includes('duplicate') || error.message?.includes('unique') || error.code === '23505') {
-          setProfileError(t('settings.usernameAlreadyTaken'));
-        } else {
-          throw error;
-        }
-        return;
-      }
-
+      setProfileUsername(result.username);
       setProfileSuccess(true);
       mutateUser();
       setTimeout(() => setProfileSuccess(false), 3000);

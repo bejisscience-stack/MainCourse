@@ -108,6 +108,7 @@ export default function ChatNavigation() {
   const [user, setUser] = useState<User | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [userName, setUserName] = useState<string>('');
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadUser();
@@ -122,7 +123,7 @@ export default function ChatNavigation() {
         // Get user name from profile
         const { data: profile } = await supabase
           .from('profiles')
-          .select('username')
+          .select('username, avatar_url')
           .eq('id', currentUser.id)
           .single();
         
@@ -130,6 +131,8 @@ export default function ChatNavigation() {
         // Fallback to metadata/email only if profile doesn't exist (shouldn't happen)
         const profileUsername = profile?.username?.trim();
         
+        setUserAvatarUrl(profile?.avatar_url || null);
+
         if (profileUsername && profileUsername.length > 0) {
           setUserName(profileUsername);
         } else {
@@ -222,9 +225,13 @@ export default function ChatNavigation() {
           onClick={() => setProfileMenuOpen(!profileMenuOpen)}
           className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-transparent hover:border-navy-800/60 hover:bg-navy-800/60 transition-colors"
         >
-          <div className="w-8 h-8 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold shadow-soft">
-            {userName.charAt(0).toUpperCase()}
-          </div>
+          {userAvatarUrl ? (
+            <img src={userAvatarUrl} alt={userName} className="w-8 h-8 rounded-full object-cover shadow-soft" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold shadow-soft">
+              {userName.charAt(0).toUpperCase()}
+            </div>
+          )}
           <div className="hidden md:block text-left max-w-[140px]">
             <div className="text-gray-100 text-sm font-medium truncate">{userName}</div>
             <div className="text-emerald-300 text-xs flex items-center gap-1">

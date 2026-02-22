@@ -179,12 +179,13 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
               setMessages(prev => {
                 let hasUpdates = false;
                 const updated = prev.map(m => {
-                  if (!m.user.username || m.user.username === 'User') {
-                    const cached = getCachedUsername(m.user.id);
-                    if (cached && cached !== 'User') {
-                      hasUpdates = true;
-                      return { ...m, user: { ...m.user, username: cached } };
-                    }
+                  const cached = getCachedUsername(m.user.id);
+                  const cachedAvatar = getCachedAvatarUrl(m.user.id);
+                  const needsUsername = !m.user.username || m.user.username === 'User';
+                  const needsAvatar = !m.user.avatarUrl && cachedAvatar;
+                  if ((needsUsername && cached && cached !== 'User') || needsAvatar) {
+                    hasUpdates = true;
+                    return { ...m, user: { ...m.user, username: needsUsername ? cached : m.user.username, avatarUrl: cachedAvatar || m.user.avatarUrl } };
                   }
                   return m;
                 });

@@ -50,6 +50,7 @@ export default function LayoutContainer({
   const [activeChannelId, setActiveChannelId] = useActiveChannel();
   const [channelsCollapsed, setChannelsCollapsed] = useState(false);
   const [userName, setUserName] = useState<string>('');
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Mobile menu state
   const { user } = useUser();
   const { t } = useI18n();
@@ -73,13 +74,15 @@ export default function LayoutContainer({
       try {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('username')
+          .select('username, avatar_url')
           .eq('id', user.id)
           .single();
 
         // Always use profiles.username (required field in database)
         // Fallback to metadata/email only if profile doesn't exist (shouldn't happen)
         const profileUsername = profile?.username?.trim();
+
+        setUserAvatarUrl(profile?.avatar_url || null);
 
         if (profileUsername && profileUsername.length > 0) {
           setUserName(profileUsername);
@@ -229,9 +232,13 @@ export default function LayoutContainer({
 
             {/* User profile footer - at the very bottom */}
             <div className="h-14 bg-navy-950/80 px-2 py-2 flex items-center gap-2 border-t border-navy-800/60 flex-shrink-0 mt-auto">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold shadow-soft">
-                {userName ? userName.charAt(0).toUpperCase() : 'U'}
-              </div>
+              {userAvatarUrl ? (
+                <img src={userAvatarUrl} alt={userName} className="w-8 h-8 rounded-full object-cover shadow-soft" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold shadow-soft">
+                  {userName ? userName.charAt(0).toUpperCase() : 'U'}
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="text-gray-100 text-sm font-medium truncate">{userName || 'User'}</div>
                 <div className="text-emerald-300 text-xs flex items-center gap-1">

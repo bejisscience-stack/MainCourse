@@ -667,9 +667,13 @@ export default function ProjectCard({
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white text-sm font-semibold">
-                                {submission.user.username.charAt(0).toUpperCase()}
-                              </div>
+                              {submission.user.avatarUrl ? (
+                                <img src={submission.user.avatarUrl} alt={submission.user.username} className="w-8 h-8 rounded-full object-cover" />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white text-sm font-semibold">
+                                  {submission.user.username.charAt(0).toUpperCase()}
+                                </div>
+                              )}
                               <div>
                                 <p className="text-sm font-medium text-white">{submission.user.username}</p>
                                 <p className="text-xs text-gray-500">{new Date(submission.timestamp).toLocaleString()}</p>
