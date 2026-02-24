@@ -173,12 +173,23 @@ function Navigation() {
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="px-4 py-3 border-b border-charcoal-200 dark:border-navy-600/60 bg-charcoal-50/30 dark:bg-navy-600/20">
-                        <p className="text-sm font-semibold text-charcoal-950 dark:text-white">
-                          {profile?.username || t('nav.user')}
-                        </p>
-                        <p className="text-xs text-charcoal-500 dark:text-gray-300 truncate mt-0.5">
-                          {user.email}
-                        </p>
+                        <div className="flex items-center space-x-3">
+                          {profile?.avatar_url ? (
+                            <img src={profile.avatar_url} alt={profile.username || ''} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                          ) : (
+                            <div className="w-10 h-10 bg-charcoal-950 dark:bg-emerald-500 rounded-full flex items-center justify-center text-white font-medium text-sm flex-shrink-0">
+                              {(profile?.username || user.email || 'U').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-charcoal-950 dark:text-white truncate">
+                              {profile?.username || t('nav.user')}
+                            </p>
+                            <p className="text-xs text-charcoal-500 dark:text-gray-300 truncate mt-0.5">
+                              {user.email}
+                            </p>
+                          </div>
+                        </div>
                         {userRole === 'lecturer' && (
                           <span className="inline-block mt-2 px-2 py-0.5 text-xs font-medium bg-emerald-50 dark:bg-emerald-500/30 text-emerald-700 dark:text-emerald-200 rounded-md border border-emerald-200 dark:border-emerald-500/30">
                             {t('nav.lecturer')}
