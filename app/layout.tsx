@@ -9,6 +9,12 @@ import { Language, defaultLanguage } from "@/lib/i18n";
 import dynamic from "next/dynamic";
 import ScrollPrevention from "@/components/ScrollPrevention";
 import { Toaster } from "sonner";
+import { PostHogProvider } from "@/contexts/PostHogContext";
+
+const PostHogPageView = dynamic(() => import("@/components/PostHogPageView"), {
+  ssr: false,
+  loading: () => null,
+});
 
 const GlobalBackgroundManager = dynamic(() => import("@/components/GlobalBackgroundManager"), {
   ssr: false,
@@ -95,28 +101,33 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${inter.className} overflow-x-hidden`}>
-        <ThemeProvider>
-          <BackgroundProvider>
-            <I18nProvider initialLanguage={initialLanguage}>
-              <ScrollPrevention />
-              <GlobalBackgroundManager />
-              <Suspense fallback={null}>
-                <ReferralCapture />
-              </Suspense>
-              <div className="min-h-full w-full overflow-x-hidden">
-                {children}
-              </div>
-              <Toaster
-                position="top-right"
-                richColors
-                closeButton
-                toastOptions={{
-                  className: 'dark:bg-navy-800 dark:border-navy-700',
-                }}
-              />
-            </I18nProvider>
-          </BackgroundProvider>
-        </ThemeProvider>
+        <PostHogProvider>
+          <ThemeProvider>
+            <BackgroundProvider>
+              <I18nProvider initialLanguage={initialLanguage}>
+                <Suspense fallback={null}>
+                  <PostHogPageView />
+                </Suspense>
+                <ScrollPrevention />
+                <GlobalBackgroundManager />
+                <Suspense fallback={null}>
+                  <ReferralCapture />
+                </Suspense>
+                <div className="min-h-full w-full overflow-x-hidden">
+                  {children}
+                </div>
+                <Toaster
+                  position="top-right"
+                  richColors
+                  closeButton
+                  toastOptions={{
+                    className: 'dark:bg-navy-800 dark:border-navy-700',
+                  }}
+                />
+              </I18nProvider>
+            </BackgroundProvider>
+          </ThemeProvider>
+        </PostHogProvider>
       </body>
     </html>
   );
