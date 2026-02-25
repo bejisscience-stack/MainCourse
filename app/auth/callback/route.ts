@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
   if (token_hash && type) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash,
-      type: type as 'signup' | 'email',
+      type: type as 'signup' | 'email' | 'recovery',
     });
 
     if (error) {
@@ -57,15 +57,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // For password recovery, skip profile/role logic and go straight to reset page
+    if (type === 'recovery') {
+      return NextResponse.redirect(new URL(next, baseUrl));
+    }
+
     // Successfully verified - get user and redirect
     const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, username')
+        .select('role, username, profile_completed')
         .eq('id', user.id)
         .single();
+
+      // Redirect OAuth users who haven't completed their profile
+      if (profile?.profile_completed === false) {
+        return NextResponse.redirect(new URL('/complete-profile', baseUrl));
+      }
 
       const role = profile?.role || user.user_metadata?.role;
       const username = profile?.username || user.user_metadata?.username;
@@ -100,12 +110,26 @@ export async function GET(request: NextRequest) {
     if (!error) {
       const { data: { user } } = await supabase.auth.getUser();
 
+      // Detect password recovery: check type param, next param, or recent recovery_sent_at
+      const isRecovery = type === 'recovery'
+        || next === '/reset-password'
+        || (user?.recovery_sent_at && (Date.now() - new Date(user.recovery_sent_at).getTime()) < 60 * 60 * 1000);
+
+      if (isRecovery) {
+        return NextResponse.redirect(new URL('/reset-password', baseUrl));
+      }
+
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role, username')
+          .select('role, username, profile_completed')
           .eq('id', user.id)
           .single();
+
+        // Redirect OAuth users who haven't completed their profile
+        if (profile?.profile_completed === false) {
+          return NextResponse.redirect(new URL('/complete-profile', baseUrl));
+        }
 
         const role = profile?.role || user.user_metadata?.role;
         const username = profile?.username || user.user_metadata?.username;
