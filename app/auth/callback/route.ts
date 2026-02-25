@@ -48,13 +48,18 @@ export async function GET(request: NextRequest) {
   if (token_hash && type) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash,
-      type: type as 'signup' | 'email',
+      type: type as 'signup' | 'email' | 'recovery',
     });
 
     if (error) {
       return NextResponse.redirect(
         new URL(`/login?error=${encodeURIComponent(error.message)}`, baseUrl)
       );
+    }
+
+    // For password recovery, skip profile/role logic and go straight to reset page
+    if (type === 'recovery') {
+      return NextResponse.redirect(new URL(next, baseUrl));
     }
 
     // Successfully verified - get user and redirect
@@ -103,6 +108,11 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      // For password recovery, skip profile/role logic and go straight to next
+      if (type === 'recovery' || next === '/reset-password') {
+        return NextResponse.redirect(new URL(next, baseUrl));
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {

@@ -135,6 +135,25 @@ export async function signOut() {
   // Note: @supabase/ssr handles cookie cleanup automatically
 }
 
+export async function resetPasswordForEmail(email: string) {
+  const PRODUCTION_URL = 'https://swavleba.ge';
+
+  const getRedirectUrl = () => {
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      return `${window.location.origin}/auth/callback?next=/reset-password`;
+    }
+    return `${PRODUCTION_URL}/auth/callback?next=/reset-password`;
+  };
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: getRedirectUrl(),
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Failed to send reset email.');
+  }
+}
+
 export async function signInWithGoogle() {
   const PRODUCTION_URL = 'https://swavleba.ge';
 
