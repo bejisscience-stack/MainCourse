@@ -63,9 +63,14 @@ export async function GET(request: NextRequest) {
     if (user) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, username')
+        .select('role, username, profile_completed')
         .eq('id', user.id)
         .single();
+
+      // Redirect OAuth users who haven't completed their profile
+      if (profile?.profile_completed === false) {
+        return NextResponse.redirect(new URL('/complete-profile', baseUrl));
+      }
 
       const role = profile?.role || user.user_metadata?.role;
       const username = profile?.username || user.user_metadata?.username;
@@ -103,9 +108,14 @@ export async function GET(request: NextRequest) {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role, username')
+          .select('role, username, profile_completed')
           .eq('id', user.id)
           .single();
+
+        // Redirect OAuth users who haven't completed their profile
+        if (profile?.profile_completed === false) {
+          return NextResponse.redirect(new URL('/complete-profile', baseUrl));
+        }
 
         const role = profile?.role || user.user_metadata?.role;
         const username = profile?.username || user.user_metadata?.username;

@@ -84,7 +84,18 @@
     "accountCreated": "Account created successfully! Redirecting...",
     "failedToCreateAccount": "Failed to create account. Please try again.",
     "failedToSignOut": "Failed to sign out. Please try again.",
-    "referralLinkDetected": "You've been referred by someone! Referral code: {{code}}"
+    "referralLinkDetected": "You've been referred by someone! Referral code: {{code}}",
+    "orContinueWith": "or continue with",
+    "continueWithGoogle": "Continue with Google",
+    "googleSignInFailed": "Failed to sign in with Google. Please try again.",
+    "completeProfile": "Complete your profile",
+    "completeProfileSubtitle": "Choose a username and role to get started",
+    "chooseUsername": "Choose a username",
+    "chooseRole": "Choose your role",
+    "completeSetup": "Complete setup",
+    "completingSetup": "Completing setup...",
+    "profileCompleted": "Profile completed! Redirecting...",
+    "usernameTaken": "This username is already taken. Please choose another."
   },
   "courses": {
     "ourCourses": "Our Courses",

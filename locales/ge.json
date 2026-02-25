@@ -84,7 +84,18 @@
     "accountCreated": "ანგარიში წარმატებით შეიქმნა! გადამისამართება...",
     "failedToCreateAccount": "ანგარიშის შექმნა ვერ მოხერხდა. გთხოვთ სცადოთ ხელახლა.",
     "failedToSignOut": "გასვლა ვერ მოხერხდა. გთხოვთ სცადოთ ხელახლა.",
-    "referralLinkDetected": "თქვენ გირჩია ვინმემ! რეფერალური კოდი: {{code}}"
+    "referralLinkDetected": "თქვენ გირჩია ვინმემ! რეფერალური კოდი: {{code}}",
+    "orContinueWith": "ან გააგრძელეთ",
+    "continueWithGoogle": "გააგრძელეთ Google-ით",
+    "googleSignInFailed": "Google-ით შესვლა ვერ მოხერხდა. გთხოვთ სცადოთ ხელახლა.",
+    "completeProfile": "შეავსეთ თქვენი პროფილი",
+    "completeProfileSubtitle": "აირჩიეთ მომხმარებლის სახელი და როლი დასაწყებად",
+    "chooseUsername": "აირჩიეთ მომხმარებლის სახელი",
+    "chooseRole": "აირჩიეთ თქვენი როლი",
+    "completeSetup": "დასრულება",
+    "completingSetup": "დასრულება...",
+    "profileCompleted": "პროფილი შევსებულია! გადამისამართება...",
+    "usernameTaken": "ეს მომხმარებლის სახელი უკვე დაკავებულია. გთხოვთ აირჩიოთ სხვა."
   },
   "courses": {
     "ourCourses": "ჩვენი კურსები",

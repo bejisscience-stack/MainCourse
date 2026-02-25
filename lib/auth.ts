@@ -135,6 +135,30 @@ export async function signOut() {
   // Note: @supabase/ssr handles cookie cleanup automatically
 }
 
+export async function signInWithGoogle() {
+  const PRODUCTION_URL = 'https://swavleba.ge';
+
+  const getRedirectUrl = () => {
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      return `${window.location.origin}/auth/callback`;
+    }
+    return `${PRODUCTION_URL}/auth/callback`;
+  };
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: getRedirectUrl(),
+    },
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Failed to sign in with Google');
+  }
+
+  return data;
+}
+
 export async function getCurrentUser() {
   // First check session from cookies (faster)
   const { data: { session } } = await supabase.auth.getSession();
