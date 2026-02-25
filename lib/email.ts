@@ -1,4 +1,4 @@
-import { resend } from './resend';
+import { getResend } from './resend';
 import { emailTemplates, EmailLanguage } from './email-templates';
 import type { MultilingualText } from '@/types/notification';
 
@@ -19,7 +19,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams): P
   const from = process.env.EMAIL_FROM || 'Swavleba <no-reply@swavleba.ge>';
   const replyTo = process.env.EMAIL_REPLY_TO;
 
-  const { data, error } = await resend.emails.send({
+  const { data, error } = await getResend().emails.send({
     from,
     to,
     subject,

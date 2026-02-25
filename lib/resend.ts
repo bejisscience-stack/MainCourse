@@ -1,12 +1,17 @@
 import { Resend } from 'resend';
 
-const resendApiKey = process.env.RESEND_API_KEY;
+let _resend: Resend | null = null;
 
-if (!resendApiKey) {
-  throw new Error(
-    'Missing RESEND_API_KEY environment variable. ' +
-    'Please add it to your .env.local file.'
-  );
+export function getResend(): Resend {
+  if (!_resend) {
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (!resendApiKey) {
+      throw new Error(
+        'Missing RESEND_API_KEY environment variable. ' +
+        'Please add it to your .env.local file.'
+      );
+    }
+    _resend = new Resend(resendApiKey);
+  }
+  return _resend;
 }
-
-export const resend = new Resend(resendApiKey);
