@@ -49,8 +49,9 @@ supabase/functions/  # 31 Edge Functions
 - Production branch: `main` | Supabase: nbecbsbuerdtakxkrduw
 
 ## Self-Improvement
-After every mistake I correct, update this file before moving on.
+After every mistake I correct, add it to Gotchas before moving on.
 Format: `[Symptom]: [Root cause] — [Resolution]`
+After every correction end with: "Update CLAUDE.md so you don't make this mistake again."
 
 ## Gotchas and Solved Problems
 <!-- Claude appends here after each hard-won fix -->
