@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useI18n } from '@/contexts/I18nContext';
 
 function ResetPasswordForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -17,17 +18,37 @@ function ResetPasswordForm() {
   const { t } = useI18n();
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setHasSession(false);
-      } else {
+    const tokenHash = searchParams.get('token_hash');
+    const type = searchParams.get('type');
+
+    const verifyAndEstablishSession = async () => {
+      // If token_hash is in the URL, verify it client-side.
+      // This prevents email prefetchers from consuming the OTP token.
+      if (tokenHash && type === 'recovery') {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: 'recovery',
+        });
+
+        if (verifyError) {
+          setHasSession(false);
+          setSessionChecked(true);
+          return;
+        }
+
         setHasSession(true);
+        setSessionChecked(true);
+        return;
       }
+
+      // Fallback: check for existing session (e.g. from old email links via /auth/callback)
+      const { data: { session } } = await supabase.auth.getSession();
+      setHasSession(!!session);
       setSessionChecked(true);
     };
-    checkSession();
-  }, []);
+
+    verifyAndEstablishSession();
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
