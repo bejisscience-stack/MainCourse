@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import VideoPlayer from '@/components/VideoPlayer';
 
 // Launch date - March 11, 2026 at midnight Georgia time (GMT+4)
 const LAUNCH_DATE = new Date('2026-03-11T00:00:00+04:00');
@@ -27,14 +28,14 @@ function calculateTimeLeft(launchDate: Date): TimeLeft {
   };
 }
 
+const VIDEO_SRC = "https://nbecbsbuerdtakxkrduw.supabase.co/storage/v1/object/public/course-videos/intro-video.mp4";
+
 export default function ComingSoonPage() {
-  const [isPlaying, setIsPlaying] = useState(false);
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => calculateTimeLeft(LAUNCH_DATE));
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Countdown timer
   useEffect(() => {
@@ -44,22 +45,6 @@ export default function ComingSoonPage() {
 
     return () => clearInterval(timer);
   }, []);
-
-  const handlePlay = () => {
-    setIsPlaying(true);
-    if (videoRef.current) {
-      videoRef.current.muted = false;
-      videoRef.current.play();
-    }
-  };
-
-  const handleEnded = () => {
-    setIsPlaying(false);
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.muted = true;
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,43 +206,7 @@ export default function ComingSoonPage() {
 
         {/* Video Section */}
         <div className="w-full max-w-5xl">
-          <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-navy-700/30 bg-navy-950">
-            {/* Gradient halo */}
-            <div className="absolute -inset-1 rounded-3xl blur-xl -z-10 bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-emerald-500/20"></div>
-
-            <div className="relative aspect-video">
-              <video
-                ref={videoRef}
-                src="https://nbecbsbuerdtakxkrduw.supabase.co/storage/v1/object/public/course-videos/intro-video.mp4"
-                muted
-                playsInline
-                controls={isPlaying}
-                className="absolute inset-0 w-full h-full object-cover"
-                onEnded={handleEnded}
-              >
-                Your browser does not support the video tag.
-              </video>
-
-              {/* Play Button Overlay */}
-              {!isPlaying && (
-                <button
-                  onClick={handlePlay}
-                  className="absolute inset-0 flex items-center justify-center group"
-                  aria-label="ვიდეოს დაკვრა"
-                >
-                  <div className="w-20 h-20 md:w-28 md:h-28 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-2xl border border-white/20 transform transition-all duration-300 group-hover:scale-110 group-active:scale-95">
-                    <svg
-                      className="w-8 h-8 md:w-12 md:h-12 text-emerald-500 ml-1"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </div>
-                </button>
-              )}
-            </div>
-          </div>
+          <VideoPlayer src={VIDEO_SRC} />
         </div>
       </div>
     </div>
