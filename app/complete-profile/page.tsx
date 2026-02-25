@@ -40,7 +40,7 @@ export default function CompleteProfilePage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        throw new Error('No active session');
+        throw new Error(t('auth.noActiveSession'));
       }
 
       const response = await fetch('/api/complete-profile', {
@@ -58,7 +58,7 @@ export default function CompleteProfilePage() {
         if (response.status === 409 || result.error === 'username_taken') {
           throw new Error(t('auth.usernameTaken'));
         }
-        throw new Error(result.error || 'Failed to complete profile');
+        throw new Error(result.error || t('auth.failedToCompleteProfile'));
       }
 
       setSuccess(true);
@@ -69,7 +69,7 @@ export default function CompleteProfilePage() {
         window.location.href = destination;
       }, 1500);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(err.message || t('auth.somethingWentWrong'));
       setLoading(false);
     }
   };

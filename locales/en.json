@@ -95,7 +95,10 @@
     "completeSetup": "Complete setup",
     "completingSetup": "Completing setup...",
     "profileCompleted": "Profile completed! Redirecting...",
-    "usernameTaken": "This username is already taken. Please choose another."
+    "usernameTaken": "This username is already taken. Please choose another.",
+    "noActiveSession": "No active session. Please sign in again.",
+    "failedToCompleteProfile": "Failed to complete profile. Please try again.",
+    "somethingWentWrong": "Something went wrong. Please try again."
   },
   "courses": {
     "ourCourses": "Our Courses",
