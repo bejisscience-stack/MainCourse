@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     // For password recovery, skip profile/role logic and go straight to reset page
     if (type === 'recovery') {
-      return NextResponse.redirect(new URL(next, baseUrl));
+      return NextResponse.redirect(new URL('/reset-password', baseUrl));
     }
 
     // Successfully verified - get user and redirect
