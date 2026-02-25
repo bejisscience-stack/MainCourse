@@ -140,9 +140,9 @@ export async function resetPasswordForEmail(email: string) {
 
   const getRedirectUrl = () => {
     if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      return `${window.location.origin}/auth/callback?next=/reset-password`;
+      return `${window.location.origin}/auth/callback`;
     }
-    return `${PRODUCTION_URL}/auth/callback?next=/reset-password`;
+    return `${PRODUCTION_URL}/auth/callback`;
   };
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {

@@ -108,12 +108,16 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // For password recovery, skip profile/role logic and go straight to next
-      if (type === 'recovery' || next === '/reset-password') {
-        return NextResponse.redirect(new URL(next, baseUrl));
-      }
-
       const { data: { user } } = await supabase.auth.getUser();
+
+      // Detect password recovery: check type param, next param, or recent recovery_sent_at
+      const isRecovery = type === 'recovery'
+        || next === '/reset-password'
+        || (user?.recovery_sent_at && (Date.now() - new Date(user.recovery_sent_at).getTime()) < 60 * 60 * 1000);
+
+      if (isRecovery) {
+        return NextResponse.redirect(new URL('/reset-password', baseUrl));
+      }
 
       if (user) {
         const { data: profile } = await supabase
