@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import ProjectCard from '@/components/ProjectCard';
 import ProjectDetailsModal from '@/components/ProjectDetailsModal';
 import { useActiveProjects, type ActiveProject } from '@/hooks/useActiveProjects';
@@ -9,6 +9,8 @@ import { ScrollReveal } from './ScrollReveal';
 
 export default function ActiveProjectsCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [showAllMobile, setShowAllMobile] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ActiveProject | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { projects, isLoading, error: projectsError } = useActiveProjects();
@@ -21,24 +23,16 @@ export default function ActiveProjectsCarousel() {
     }
   }, [projects.length, currentIndex]);
 
-  // Get 3 projects to display (previous, current, next)
-  const displayedProjects = useMemo(() => {
-    if (projects.length === 0) return [];
-
-    // If we have less than 3 projects, just show what we have
-    if (projects.length < 3) {
-      return projects;
-    }
-
-    const prevIndex = currentIndex > 0 ? currentIndex - 1 : projects.length - 1;
-    const nextIndex = currentIndex < projects.length - 1 ? currentIndex + 1 : 0;
-
-    return [
-      projects[prevIndex],
-      projects[currentIndex],
-      projects[nextIndex],
-    ];
-  }, [projects, currentIndex]);
+  // Auto-rotation every 4 seconds when not hovered
+  useEffect(() => {
+    if (projects.length < 2) return;
+    const interval = setInterval(() => {
+      if (!isHovered) {
+        setCurrentIndex(prev => (prev + 1) % projects.length);
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isHovered, projects.length]);
 
   const handlePrevious = useCallback(() => {
     if (projects.length === 0) return;
@@ -59,15 +53,6 @@ export default function ActiveProjectsCarousel() {
     setIsModalOpen(false);
     setSelectedProject(null);
   }, []);
-
-  const handleCardClick = useCallback((index: number) => {
-    if (projects.length >= 3) {
-      if (index === 0) handlePrevious();
-      if (index === 2) handleNext();
-    } else {
-      setCurrentIndex(index);
-    }
-  }, [projects.length, handlePrevious, handleNext]);
 
   // Show loading only when we have no data yet - don't block content
   if (isLoading && projects.length === 0) {
@@ -128,11 +113,13 @@ export default function ActiveProjectsCarousel() {
     return null;
   }
 
-  // Ensure currentIndex is within bounds
   const safeCurrentIndex = Math.min(currentIndex, Math.max(0, projects.length - 1));
+  const showArrows = projects.length >= 2;
 
-  // Show arrows if we have 3+ projects (so we can navigate through them)
-  const showArrows = projects.length >= 3;
+  // 3D ring calculations
+  const anglePerItem = 360 / projects.length;
+  const ringRotation = -safeCurrentIndex * anglePerItem;
+  const radius = Math.max(420, Math.round((300 * projects.length) / (2 * Math.PI)) + 60);
 
   return (
     <>
@@ -150,79 +137,142 @@ export default function ActiveProjectsCarousel() {
           </ScrollReveal>
 
           <div className="relative">
-            {/* Navigation Arrows - Show when we have 3+ projects */}
-            {showArrows && (
-              <>
-                <button
-                  onClick={handlePrevious}
-                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 md:-translate-x-10 z-30 w-14 h-14 md:w-16 md:h-16 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl dark:shadow-glow-dark flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-charcoal-100/50 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 group will-change-transform"
-                  style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
-                  aria-label="Previous project"
+            {/* Mobile View: Vertical Stack — unchanged layout */}
+            <div className="md:hidden flex flex-col gap-6 px-4">
+              {projects.slice(0, showAllMobile ? undefined : 3).map((project) => (
+                <div key={project.id} className="w-full">
+                  <ProjectCard
+                    project={project}
+                    onClick={() => handleProjectClick(project)}
+                  />
+                </div>
+              ))}
+
+              {projects.length > 3 && (
+                <div className="flex justify-center mt-2">
+                  <button
+                    onClick={() => setShowAllMobile(!showAllMobile)}
+                    className="px-6 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 bg-white dark:bg-navy-800 text-charcoal-600 dark:text-gray-300 border border-charcoal-200 dark:border-navy-700 hover:bg-gray-50 dark:hover:bg-navy-700 hover:text-charcoal-900 dark:hover:text-white shadow-sm flex items-center gap-2"
+                  >
+                    {showAllMobile ? (
+                      <>
+                        <span>{translationsReady ? t('common.showLess') : 'Show Less'}</span>
+                        <svg className="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </>
+                    ) : (
+                      <>
+                        <span>{translationsReady ? t('common.showMore') : 'Show More'}</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop View: 3D Circular Gallery */}
+            <div className="hidden md:block relative">
+              {/* Navigation Arrows */}
+              {showArrows && (
+                <>
+                  <button
+                    onClick={handlePrevious}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 md:-translate-x-10 z-30 w-14 h-14 md:w-16 md:h-16 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl dark:shadow-glow-dark flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-charcoal-100/50 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 group will-change-transform"
+                    style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+                    aria-label="Previous project"
+                  >
+                    <svg
+                      className="w-6 h-6 md:w-7 md:h-7 text-charcoal-950 dark:text-white group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors duration-300"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+
+                  <button
+                    onClick={handleNext}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 md:translate-x-10 z-30 w-14 h-14 md:w-16 md:h-16 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl dark:shadow-glow-dark flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-charcoal-100/50 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 group will-change-transform"
+                    style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+                    aria-label="Next project"
+                  >
+                    <svg
+                      className="w-6 h-6 md:w-7 md:h-7 text-charcoal-950 dark:text-white group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors duration-300"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </>
+              )}
+
+              {/* 3D Ring — perspective container */}
+              <div
+                style={{ perspective: '2000px', height: '520px', position: 'relative' }}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+              >
+                {/* Rotating ring */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    width: '100%',
+                    height: '100%',
+                    transformStyle: 'preserve-3d',
+                    transform: `rotateY(${ringRotation}deg)`,
+                    transition: 'transform 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}
                 >
-                  <svg
-                    className="w-6 h-6 md:w-7 md:h-7 text-charcoal-950 dark:text-white group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors duration-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
-                </button>
+                  {projects.map((project, i) => {
+                    // Angular distance from the front face (0° = front)
+                    const cardAngle = ((i * anglePerItem) + ringRotation + 360) % 360;
+                    const normalizedAngle = cardAngle > 180 ? 360 - cardAngle : cardAngle;
+                    // Front half (<90°) fully visible; 90–120° fade out; back half (>120°) hidden
+                    const opacity =
+                      normalizedAngle < 90 ? 1 :
+                      normalizedAngle > 120 ? 0 :
+                      (120 - normalizedAngle) / 30;
 
-                <button
-                  onClick={handleNext}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 md:translate-x-10 z-30 w-14 h-14 md:w-16 md:h-16 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl dark:shadow-glow-dark flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-charcoal-100/50 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 group will-change-transform"
-                  style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
-                  aria-label="Next project"
-                >
-                  <svg
-                    className="w-6 h-6 md:w-7 md:h-7 text-charcoal-950 dark:text-white group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors duration-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </button>
-              </>
-            )}
+                    const isFront = i === safeCurrentIndex;
 
-            {/* Projects Container */}
-            <div className="flex items-center justify-center gap-6 md:gap-8 lg:gap-10 px-4 md:px-20 lg:px-24 overflow-hidden">
-              {displayedProjects.map((project, index) => {
-                // Middle project is always at index 1 if we have 3 projects
-                // If we have fewer projects, highlight the one matching currentIndex
-                const isMiddle = projects.length >= 3 ? index === 1 : index === currentIndex;
-
-                return (
-                  <div
-                    key={`${project.id}-${safeCurrentIndex}-${index}`}
-                    onClick={() => !isMiddle && handleCardClick(index)}
-                    className={`transition-all duration-700 ease-out ${isMiddle
-                        ? 'flex-1 max-w-lg scale-100 z-10 opacity-100'
-                        : 'flex-1 max-w-lg scale-95 opacity-70 z-0 cursor-pointer hover:opacity-90'
-                      }`}
-                    style={{
-                      transition: 'all 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
-                    }}
-                  >
-                    <ProjectCard
-                      project={project}
-                      onClick={() => isMiddle && handleProjectClick(project)}
-                    />
-                  </div>
-                );
-              })}
+                    return (
+                      <div
+                        key={project.id}
+                        style={{
+                          position: 'absolute',
+                          width: '300px',
+                          left: '50%',
+                          top: '50%',
+                          marginLeft: '-150px',
+                          marginTop: '-210px',
+                          transform: `rotateY(${i * anglePerItem}deg) translateZ(${radius}px)`,
+                          opacity,
+                          pointerEvents: opacity > 0.1 ? 'auto' : 'none',
+                          transition: 'opacity 0.3s ease',
+                          cursor: isFront ? 'pointer' : opacity > 0.1 ? 'pointer' : 'default',
+                        }}
+                        onClick={() => {
+                          if (isFront) {
+                            handleProjectClick(project);
+                          } else if (opacity > 0.1) {
+                            setCurrentIndex(i);
+                          }
+                        }}
+                      >
+                        {/* Pass undefined onClick — click handled by wrapper div above */}
+                        <ProjectCard project={project} onClick={undefined} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>
