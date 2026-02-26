@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import CourseCard, { type Course } from '@/components/CourseCard';
 import CourseEnrollmentCard from '@/components/CourseEnrollmentCard';
 import { useCourses } from '@/hooks/useCourses';
 import { useEnrollments } from '@/hooks/useEnrollments';
@@ -16,6 +15,7 @@ export default function CoursesCarousel() {
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAllMobile, setShowAllMobile] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
   const { user, role: userRole } = useUser();
   const { courses, isLoading, error: coursesError } = useCourses('All');
@@ -29,24 +29,16 @@ export default function CoursesCarousel() {
     }
   }, [courses.length, currentIndex]);
 
-  // Get 3 courses to display (previous, current, next)
-  const displayedCourses = useMemo(() => {
-    if (courses.length === 0) return [];
-
-    // If we have less than 3 courses, just show what we have
-    if (courses.length < 3) {
-      return courses;
-    }
-
-    const prevIndex = currentIndex > 0 ? currentIndex - 1 : courses.length - 1;
-    const nextIndex = currentIndex < courses.length - 1 ? currentIndex + 1 : 0;
-
-    return [
-      courses[prevIndex],
-      courses[currentIndex],
-      courses[nextIndex],
-    ];
-  }, [courses, currentIndex]);
+  // Auto-rotation every 4 seconds when not hovered
+  useEffect(() => {
+    if (courses.length < 2) return;
+    const interval = setInterval(() => {
+      if (!isHovered) {
+        setCurrentIndex(prev => (prev + 1) % courses.length);
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isHovered, courses.length]);
 
   const handlePrevious = useCallback(() => {
     if (courses.length === 0) return;
@@ -68,7 +60,6 @@ export default function CoursesCarousel() {
       return;
     }
 
-    // Prevent duplicate enrollment attempts
     if (enrolledCourseIds.has(courseId)) {
       return;
     }
@@ -76,13 +67,11 @@ export default function CoursesCarousel() {
     setEnrollingCourseId(courseId);
 
     try {
-      // Get access token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         throw new Error('Not authenticated');
       }
 
-      // Create enrollment request via API
       const response = await fetch('/api/enrollment-requests', {
         method: 'POST',
         headers: {
@@ -98,26 +87,14 @@ export default function CoursesCarousel() {
         throw new Error(result.error || 'Failed to create enrollment request');
       }
 
-      // Success - refresh page to show updated state
       router.refresh();
     } catch (err: any) {
       console.error('Error requesting enrollment:', err);
-      // Revalidate to get correct state
       await mutateEnrollments();
     } finally {
       setEnrollingCourseId(null);
     }
   }, [user, userRole, enrolledCourseIds, router, mutateEnrollments]);
-
-  const handleCardClick = useCallback((index: number) => {
-    if (courses.length >= 3) {
-      if (index === 0) handlePrevious();
-      if (index === 2) handleNext();
-    } else {
-      // For fewer courses, just set the index directly
-      setCurrentIndex(index);
-    }
-  }, [courses.length, handlePrevious, handleNext]);
 
   // Show loading state only briefly - never block content for long
   if (isLoading && courses.length === 0) {
@@ -173,11 +150,13 @@ export default function CoursesCarousel() {
     return null;
   }
 
-  // Ensure currentIndex is within bounds
   const safeCurrentIndex = Math.min(currentIndex, Math.max(0, courses.length - 1));
+  const showArrows = courses.length >= 2;
 
-  // Show arrows if we have 3+ courses (so we can navigate through them)
-  const showArrows = courses.length >= 3;
+  // 3D ring calculations
+  const anglePerItem = 360 / courses.length;
+  const ringRotation = -safeCurrentIndex * anglePerItem;
+  const radius = Math.max(420, Math.round((300 * courses.length) / (2 * Math.PI)) + 60);
 
   return (
     <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
@@ -197,7 +176,7 @@ export default function CoursesCarousel() {
         </ScrollReveal>
 
         <div className="relative">
-          {/* Mobile View: Vertical Stack of All Courses */}
+          {/* Mobile View: Vertical Stack of All Courses — unchanged */}
           <div className="md:hidden flex flex-col gap-6 px-4">
             {courses.slice(0, showAllMobile ? undefined : 3).map((course) => {
               const isEnrolled = enrolledCourseIds.has(course.id);
@@ -207,7 +186,7 @@ export default function CoursesCarousel() {
                   <CourseEnrollmentCard
                     course={course}
                     isEnrolled={isEnrolled}
-                    isEnrolling={false} // Mobile view doesn't need to track single enveloping loading state as strictly for UI position
+                    isEnrolling={false}
                     onEnroll={undefined}
                     showEnrollButton={true}
                     userId={user?.id || null}
@@ -219,7 +198,6 @@ export default function CoursesCarousel() {
               );
             })}
 
-            {/* Show More / Show Less Button */}
             {courses.length > 3 && (
               <div className="flex justify-center mt-2">
                 <button
@@ -246,9 +224,9 @@ export default function CoursesCarousel() {
             )}
           </div>
 
-          {/* Desktop View: Carousel (Original Implementation) */}
+          {/* Desktop View: 3D Circular Gallery */}
           <div className="hidden md:block relative">
-            {/* Navigation Arrows - Show when we have 3+ courses */}
+            {/* Navigation Arrows */}
             {showArrows && (
               <>
                 <button
@@ -263,12 +241,7 @@ export default function CoursesCarousel() {
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M15 19l-7-7 7-7"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
 
@@ -284,53 +257,80 @@ export default function CoursesCarousel() {
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M9 5l7 7-7 7"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
               </>
             )}
 
-            {/* Courses Container */}
-            <div className="flex items-center justify-center gap-6 md:gap-8 lg:gap-10 px-16 md:px-20 lg:px-24 overflow-hidden">
-              {displayedCourses.map((course, index) => {
-                // Middle course is always at index 1 if we have 3 courses
-                // If we have fewer courses, highlight the one matching currentIndex
-                const isMiddle = courses.length >= 3 ? index === 1 : index === currentIndex;
-                const isEnrolled = enrolledCourseIds.has(course.id);
-                const isEnrolling = enrollingCourseId === course.id;
-                const enrollmentInfo = getEnrollmentInfo(course.id);
+            {/* 3D Ring — perspective container */}
+            <div
+              style={{ perspective: '2000px', height: '520px', position: 'relative' }}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+            >
+              {/* Rotating ring */}
+              <div
+                style={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  transformStyle: 'preserve-3d',
+                  transform: `rotateY(${ringRotation}deg)`,
+                  transition: 'transform 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
+                {courses.map((course, i) => {
+                  const isEnrolled = enrolledCourseIds.has(course.id);
+                  const isEnrolling = enrollingCourseId === course.id;
+                  const enrollmentInfo = getEnrollmentInfo(course.id);
 
-                return (
-                  <div
-                    key={`${course.id}-${safeCurrentIndex}-${index}`}
-                    onClick={() => handleCardClick(index)}
-                    className={`transition-all duration-700 ease-out cursor-pointer ${isMiddle
-                      ? 'flex-1 max-w-lg scale-100 z-10 opacity-100'
-                      : 'flex-1 max-w-lg scale-95 opacity-70 z-0 hover:opacity-90'
-                      }`}
-                    style={{
-                      transition: 'all 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
-                    }}
-                  >
-                    <CourseEnrollmentCard
-                      course={course}
-                      isEnrolled={isEnrolled}
-                      isEnrolling={false}
-                      onEnroll={undefined}
-                      showEnrollButton={true}
-                      userId={user?.id || null}
-                      isExpired={enrollmentInfo?.isExpired}
-                      expiresAt={enrollmentInfo?.expiresAt}
-                      daysRemaining={enrollmentInfo?.daysRemaining}
-                    />
-                  </div>
-                );
-              })}
+                  // Angular distance from the front face (0° = front)
+                  const cardAngle = ((i * anglePerItem) + ringRotation + 360) % 360;
+                  const normalizedAngle = cardAngle > 180 ? 360 - cardAngle : cardAngle;
+                  // Front half (<90°) fully visible; 90–120° fade out; back half (>120°) hidden
+                  const opacity =
+                    normalizedAngle < 90 ? 1 :
+                    normalizedAngle > 120 ? 0 :
+                    (120 - normalizedAngle) / 30;
+
+                  return (
+                    <div
+                      key={course.id}
+                      style={{
+                        position: 'absolute',
+                        width: '300px',
+                        left: '50%',
+                        top: '50%',
+                        marginLeft: '-150px',
+                        marginTop: '-210px',
+                        transform: `rotateY(${i * anglePerItem}deg) translateZ(${radius}px)`,
+                        opacity,
+                        pointerEvents: opacity > 0.1 ? 'auto' : 'none',
+                        transition: 'opacity 0.3s ease',
+                        cursor: i !== safeCurrentIndex ? 'pointer' : 'default',
+                      }}
+                      onClick={() => {
+                        if (i !== safeCurrentIndex && opacity > 0.1) {
+                          setCurrentIndex(i);
+                        }
+                      }}
+                    >
+                      <CourseEnrollmentCard
+                        course={course}
+                        isEnrolled={isEnrolled}
+                        isEnrolling={isEnrolling}
+                        onEnroll={undefined}
+                        showEnrollButton={true}
+                        userId={user?.id || null}
+                        isExpired={enrollmentInfo?.isExpired}
+                        expiresAt={enrollmentInfo?.expiresAt}
+                        daysRemaining={enrollmentInfo?.daysRemaining}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -338,4 +338,3 @@ export default function CoursesCarousel() {
     </section>
   );
 }
-
