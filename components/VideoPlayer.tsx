@@ -48,6 +48,7 @@ const CustomSlider = ({
 const VideoPlayer = ({ src }: { src: string }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hideControlsTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
   const [progress, setProgress] = useState(0);
@@ -153,6 +154,12 @@ const VideoPlayer = ({ src }: { src: string }) => {
     }
   }, [isFullscreen, isCssFullscreen]);
 
+  const showControlsTemporarily = useCallback(() => {
+    setShowControls(true);
+    if (hideControlsTimerRef.current) clearTimeout(hideControlsTimerRef.current);
+    hideControlsTimerRef.current = setTimeout(() => setShowControls(false), 3000);
+  }, []);
+
   useEffect(() => {
     const handleFullscreenChange = () => {
       const fsActive = !!document.fullscreenElement;
@@ -163,6 +170,7 @@ const VideoPlayer = ({ src }: { src: string }) => {
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      if (hideControlsTimerRef.current) clearTimeout(hideControlsTimerRef.current);
     };
   }, []);
 
@@ -183,6 +191,7 @@ const VideoPlayer = ({ src }: { src: string }) => {
         )}
         onMouseEnter={() => setShowControls(true)}
         onMouseLeave={() => setShowControls(false)}
+        onTouchStart={showControlsTemporarily}
       >
       <video
         ref={videoRef}
@@ -226,7 +235,7 @@ const VideoPlayer = ({ src }: { src: string }) => {
       <AnimatePresence>
         {showControls && (
           <motion.div
-            className="absolute bottom-0 mx-auto max-w-xl left-0 right-0 p-4 m-2 bg-[#11111198] backdrop-blur-md rounded-2xl"
+            className="absolute bottom-0 mx-auto max-w-xl left-0 right-0 p-2 md:p-4 m-2 bg-[#11111198] backdrop-blur-md rounded-2xl"
             initial={{ y: 20, opacity: 0, filter: "blur(10px)" }}
             animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
             exit={{ y: 20, opacity: 0, filter: "blur(10px)" }}
@@ -245,7 +254,7 @@ const VideoPlayer = ({ src }: { src: string }) => {
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 md:gap-4">
                 <motion.div
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
@@ -284,7 +293,7 @@ const VideoPlayer = ({ src }: { src: string }) => {
                     </Button>
                   </motion.div>
 
-                  <div className="w-24">
+                  <div className="hidden md:block w-24">
                     <CustomSlider
                       value={volume * 100}
                       onChange={handleVolumeChange}
@@ -293,7 +302,7 @@ const VideoPlayer = ({ src }: { src: string }) => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 md:gap-2">
                 {[0.5, 1, 1.5, 2].map((speed) => (
                   <motion.div
                     whileHover={{ scale: 1.1 }}
