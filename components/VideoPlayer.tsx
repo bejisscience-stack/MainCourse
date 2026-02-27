@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Volume2, Volume1, VolumeX } from "lucide-react";
+import { Play, Pause, Volume2, Volume1, VolumeX, Maximize, Minimize } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +47,7 @@ const CustomSlider = ({
 
 const VideoPlayer = ({ src }: { src: string }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
   const [progress, setProgress] = useState(0);
@@ -55,6 +56,8 @@ const VideoPlayer = ({ src }: { src: string }) => {
   const [showControls, setShowControls] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isCssFullscreen, setIsCssFullscreen] = useState(false);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -125,18 +128,68 @@ const VideoPlayer = ({ src }: { src: string }) => {
     }
   };
 
+  const toggleFullscreen = useCallback(async () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (isFullscreen || isCssFullscreen) {
+      // Exit fullscreen
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        // CSS fallback exit
+        setIsCssFullscreen(false);
+        setIsFullscreen(false);
+      }
+    } else {
+      // Enter fullscreen
+      try {
+        await container.requestFullscreen();
+      } catch {
+        // iOS Safari fallback: use CSS-based fullscreen
+        setIsCssFullscreen(true);
+        setIsFullscreen(true);
+      }
+    }
+  }, [isFullscreen, isCssFullscreen]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const fsActive = !!document.fullscreenElement;
+      setIsFullscreen(fsActive);
+      if (!fsActive) setIsCssFullscreen(false);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
   return (
     <motion.div
-      className="relative w-full max-w-4xl mx-auto rounded-xl overflow-hidden bg-[#11111198] shadow-[0_0_20px_rgba(0,0,0,0.2)] backdrop-blur-sm"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => setShowControls(false)}
     >
+      <div
+        ref={containerRef}
+        className={cn(
+          "relative bg-[#11111198] shadow-[0_0_20px_rgba(0,0,0,0.2)] backdrop-blur-sm",
+          isFullscreen || isCssFullscreen
+            ? "w-screen h-screen bg-black rounded-none"
+            : "overflow-hidden w-full max-w-4xl mx-auto rounded-xl",
+          isCssFullscreen && "fixed inset-0 z-[9999]"
+        )}
+        onMouseEnter={() => setShowControls(true)}
+        onMouseLeave={() => setShowControls(false)}
+      >
       <video
         ref={videoRef}
-        className="w-full"
+        className={cn(
+          "w-full",
+          (isFullscreen || isCssFullscreen) && "h-full object-contain"
+        )}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         src={src}
@@ -260,11 +313,30 @@ const VideoPlayer = ({ src }: { src: string }) => {
                     </Button>
                   </motion.div>
                 ))}
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <Button
+                    onClick={toggleFullscreen}
+                    variant="ghost"
+                    size="icon"
+                    className="text-white hover:bg-[#111111d1] hover:text-white"
+                    aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                  >
+                    {isFullscreen || isCssFullscreen ? (
+                      <Minimize className="h-5 w-5" />
+                    ) : (
+                      <Maximize className="h-5 w-5" />
+                    )}
+                  </Button>
+                </motion.div>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </motion.div>
   );
 };
