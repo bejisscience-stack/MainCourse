@@ -54,11 +54,8 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
 // Combined fetcher for user and profile with improved error resilience
 async function fetchUserData(): Promise<UserData> {
   try {
-    // Timeout getSession - it can hang indefinitely if Supabase is unreachable
-    const user = await Promise.race([
-      fetchUserSession(),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
-    ]);
+    // getSession() reads from localStorage/cookies - no network call, no timeout needed
+    const user = await fetchUserSession();
 
     if (!user) {
       return { user: null, profile: null, role: null };
@@ -70,8 +67,8 @@ async function fetchUserData(): Promise<UserData> {
     try {
       profile = await Promise.race([
         fetchProfile(user.id),
-        // Timeout after 3 seconds to prevent hanging
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+        // Timeout after 10 seconds to survive DigitalOcean/Supabase cold starts
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 10000)),
       ]);
     } catch {
       // Profile fetch failed, continue with user data only
@@ -105,7 +102,7 @@ export function useUser() {
     'user-data',
     fetchUserData,
     {
-      revalidateOnFocus: false, // Disable to prevent flickering - only revalidate on reconnect
+      revalidateOnFocus: true, // Re-fetch when tab regains focus to recover from timeout
       revalidateOnReconnect: true,
       dedupingInterval: 5000, // Increase deduping interval to reduce unnecessary re-renders
       fallbackData: { user: null, profile: null, role: null },
@@ -130,22 +127,35 @@ export function useUser() {
     if (typeof window === 'undefined') return;
 
     let debounceTimer: NodeJS.Timeout | null = null;
+    let isMounted = true;
 
     // Set up auth state change listener with debouncing to prevent rapid re-renders
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       // Debounce mutations to prevent flickering
       if (debounceTimer) {
         clearTimeout(debounceTimer);
       }
-      debounceTimer = setTimeout(() => {
-        mutate();
+      debounceTimer = setTimeout(async () => {
+        if (!isMounted) return;
+
+        if (session?.user) {
+          // Fetch profile directly with the valid session to avoid race conditions
+          // where the initial SWR fetch runs before auth token is fully initialized
+          const profile = await fetchProfile(session.user.id);
+          if (!isMounted) return;
+          const role = profile?.role || session.user.user_metadata?.role || null;
+          mutate({ user: session.user, profile, role }, { revalidate: false });
+        } else {
+          mutate({ user: null, profile: null, role: null }, { revalidate: false });
+        }
       }, 100); // Small delay to batch rapid changes
     });
 
     // Cleanup subscription on unmount
     return () => {
+      isMounted = false;
       if (debounceTimer) {
         clearTimeout(debounceTimer);
       }
