@@ -272,14 +272,16 @@ export default function StudentChatPage() {
             </div>
           </div>
         ) : (
-          <LayoutContainer
-            servers={servers}
-            currentUserId={user.id}
-            isLecturer={false}
-            enrolledCourseIds={enrolledCourseIds}
-            onSendMessage={handleSendMessage}
-            onReaction={handleReaction}
-          />
+          user && (
+            <LayoutContainer
+              servers={servers}
+              currentUserId={user.id}
+              isLecturer={false}
+              enrolledCourseIds={enrolledCourseIds}
+              onSendMessage={handleSendMessage}
+              onReaction={handleReaction}
+            />
+          )
         )}
       </div>
     </div>
