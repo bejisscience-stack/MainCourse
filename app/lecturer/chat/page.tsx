@@ -365,17 +365,19 @@ export default function LecturerChatPage() {
             </div>
           </div>
         ) : (
-          <LayoutContainer
-            servers={servers}
-            currentUserId={user.id}
-            isLecturer={true}
-            onAddCourse={handleAddCourse}
-            onSendMessage={handleSendMessage}
-            onReaction={handleReaction}
-            onChannelCreate={handleChannelCreate}
-            onChannelUpdate={handleChannelUpdate}
-            onChannelDelete={handleChannelDelete}
-          />
+          user && (
+            <LayoutContainer
+              servers={servers}
+              currentUserId={user.id}
+              isLecturer={true}
+              onAddCourse={handleAddCourse}
+              onSendMessage={handleSendMessage}
+              onReaction={handleReaction}
+              onChannelCreate={handleChannelCreate}
+              onChannelUpdate={handleChannelUpdate}
+              onChannelDelete={handleChannelDelete}
+            />
+          )
         )}
       </div>
     </div>

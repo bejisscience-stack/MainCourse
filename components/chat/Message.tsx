@@ -468,6 +468,7 @@ const Message = memo(function Message({
   const isAuthorLecturer = message.user.role === 'lecturer';
   const isPending = message.pending;
   const isFailed = message.failed;
+  const isOwn = message.user.id === currentUserId;
 
   // Check if project is expired using countdown hook
   const projectCountdown = useProjectCountdown(
@@ -527,10 +528,13 @@ const Message = memo(function Message({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div className="flex gap-4">
+      <div className={`flex gap-4 ${isOwn ? 'flex-row-reverse' : ''}`}>
         {/* Avatar */}
         <div className="flex-shrink-0 w-10">
-          {showAvatar ? (
+          {isOwn ? (
+            // empty spacer — no avatar for own messages (Messenger style)
+            <div className="w-10" />
+          ) : showAvatar ? (
             <div className={`w-10 h-10 rounded-full bg-navy-900/70 flex items-center justify-center font-semibold text-sm overflow-hidden shadow-soft ${
               isAuthorLecturer
                 ? 'ring-2 ring-amber-400/60 border border-amber-500/30 text-amber-200'
@@ -556,7 +560,7 @@ const Message = memo(function Message({
         </div>
 
         {/* Message content */}
-        <div className="flex-1 min-w-0">
+        <div className={`flex-1 min-w-0 ${isOwn ? 'flex flex-col items-end' : ''}`}>
           {/* Reply preview */}
           {message.replyPreview && (
             <div
@@ -574,8 +578,8 @@ const Message = memo(function Message({
             </div>
           )}
 
-          {/* Header - only show if showAvatar is true */}
-          {showAvatar && (
+          {/* Header - only show if showAvatar is true and not own message */}
+          {showAvatar && !isOwn && (
             <div className="flex items-center gap-2 mb-1">
               <div className="relative" ref={userMenuRef}>
                 <span
@@ -646,9 +650,11 @@ const Message = memo(function Message({
 
           {/* Message text */}
           {message.content && (
-            <div className={`text-gray-100 text-[15px] whitespace-pre-wrap break-words leading-6 ${
-              isPending ? 'opacity-50' : isFailed ? 'opacity-70' : ''
-            }`}>
+            <div className={
+              isOwn
+                ? `bg-emerald-600/80 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[75%] inline-block text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? 'opacity-50' : isFailed ? 'opacity-70' : ''}`
+                : `text-gray-100 text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? 'opacity-50' : isFailed ? 'opacity-70' : ''}`
+            }>
               {message.content}
             </div>
           )}
@@ -717,7 +723,7 @@ const Message = memo(function Message({
 
         {/* Hover action menu */}
         {showMenu && !isPending && !isFailed && (
-          <div className="absolute right-4 -top-5 flex items-center gap-1 bg-navy-950/90 backdrop-blur-xl border border-navy-700/60 rounded-xl shadow-soft-xl px-1.5 py-1.5 z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className={`absolute ${isOwn ? 'left-4' : 'right-4'} -top-5 flex items-center gap-1 bg-navy-950/90 backdrop-blur-xl border border-navy-700/60 rounded-xl shadow-soft-xl px-1.5 py-1.5 z-20 animate-in fade-in slide-in-from-bottom-2 duration-200`}>
             {/* Reaction picker trigger */}
             <div className="relative">
               <button

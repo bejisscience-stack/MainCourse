@@ -402,20 +402,22 @@ export default function CourseChatPage() {
           </div>
         ) : (
           <>
-            <div className={`h-full w-full ${showExpirationOverlay ? 'filter blur-sm pointer-events-none' : ''}`}>
-              <LayoutContainer
-                servers={servers}
-                currentUserId={user.id}
-                isLecturer={false}
-                enrolledCourseIds={enrolledCourseIds}
-                onSendMessage={handleSendMessage}
-                onReaction={handleReaction}
-                showDMButton={false}
-                isEnrollmentExpired={showExpirationOverlay}
-                enrollmentInfo={enrollmentInfo}
-                onReEnrollRequest={mutateEnrollments}
-              />
-            </div>
+            {user && (
+              <div className={`h-full w-full ${showExpirationOverlay ? 'filter blur-sm pointer-events-none' : ''}`}>
+                <LayoutContainer
+                  servers={servers}
+                  currentUserId={user.id}
+                  isLecturer={false}
+                  enrolledCourseIds={enrolledCourseIds}
+                  onSendMessage={handleSendMessage}
+                  onReaction={handleReaction}
+                  showDMButton={false}
+                  isEnrollmentExpired={showExpirationOverlay}
+                  enrollmentInfo={enrollmentInfo}
+                  onReEnrollRequest={mutateEnrollments}
+                />
+              </div>
+            )}
             {showExpirationOverlay && course && (
               <ExpiredEnrollmentOverlay
                 course={course}
