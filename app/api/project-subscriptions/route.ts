@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createServerSupabaseClient();
+    const supabase = createServerSupabaseClient(token);
 
     // Check for existing pending subscription
     const { data: existing, error: existingError } = await supabase
