@@ -6,9 +6,11 @@ import { normalizeProfileUsername } from '@/lib/username';
 import { formatPriceInGel } from '@/lib/currency';
 import VideoSubmissionDialog from './VideoSubmissionDialog';
 import SubmissionReviewDialog from './SubmissionReviewDialog';
+import ProjectSubscriptionModal from '../ProjectSubscriptionModal';
 import { useI18n } from '@/contexts/I18nContext';
 import { useProjectCountdown } from '@/hooks/useProjectCountdown';
 import { useProjectBudget } from '@/hooks/useProjectBudget';
+import { useProjectAccess } from '@/hooks/useProjectAccess';
 
 export interface ProjectCriteria {
   id: string;
@@ -41,8 +43,9 @@ interface ProjectCardProps {
   currentUserId: string;
   isLecturer: boolean;
   channelId: string;
+  courseId: string;
   onSubmission?: () => void;
-  isEnrollmentExpired?: boolean;
+  isEnrolledInCourse?: boolean;
 }
 
 const PLATFORM_CONFIG: Record<string, { name: string; icon: string; color: string; bg: string }> = {
@@ -57,8 +60,9 @@ export default function ProjectCard({
   currentUserId,
   isLecturer,
   channelId,
+  courseId,
   onSubmission,
-  isEnrollmentExpired = false,
+  isEnrolledInCourse = false,
 }: ProjectCardProps) {
   const { t } = useI18n();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -72,6 +76,9 @@ export default function ProjectCard({
   const [expandedSubmissionId, setExpandedSubmissionId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+
+  const { hasProjectAccess } = useProjectAccess(currentUserId);
 
   const countdown = useProjectCountdown(project.startDate, project.endDate);
   const budget = useProjectBudget(projectDbId || '', project.budget);
@@ -299,13 +306,22 @@ export default function ProjectCard({
   // Enhanced canSubmit validation
   const hasProjectStarted = countdown.isStarted;
   const hasBudgetAvailable = !projectDbId || budget.isLoading || budget.remainingBudget > 0;
-  const canSubmit = !isLecturer && !isProjectOwner && !isProjectExpired && hasProjectStarted && hasBudgetAvailable && !isEnrollmentExpired;
+  const canSubmit =
+    !isLecturer
+    && !isProjectOwner
+    && !isProjectExpired
+    && hasProjectStarted
+    && hasBudgetAvailable
+    && (isEnrolledInCourse && hasProjectAccess || !isEnrolledInCourse && hasProjectAccess);
+
+  const showLockIcon = !isEnrolledInCourse && !hasProjectAccess;
 
   // Determine why submission is disabled (for tooltip)
   const getSubmitDisabledReason = (): string | null => {
     if (isLecturer) return 'Lecturers cannot submit videos';
     if (isProjectOwner) return 'You cannot submit to your own project';
-    if (isEnrollmentExpired) return 'Your enrollment has expired';
+    if (!hasProjectAccess && !isEnrolledInCourse) return 'Subscribe to projects to submit';
+    if (!hasProjectAccess && isEnrolledInCourse) return 'Your project access has expired';
     if (isProjectExpired) return 'This project has expired';
     if (!hasProjectStarted) return countdown.formattedTime || 'Project has not started yet';
     if (projectDbId && !budget.isLoading && budget.remainingBudget <= 0) return 'Budget has been depleted';
@@ -511,21 +527,35 @@ export default function ProjectCard({
           {!isExpanded && !isLecturer && !isProjectOwner && !isProjectExpired && (
             <div className="mt-3 sm:mt-4 relative group/submit">
               <button
-                onClick={() => canSubmit && setShowSubmissionDialog(true)}
-                disabled={!canSubmit}
+                onClick={() => {
+                  if (showLockIcon) {
+                    setShowSubscriptionModal(true);
+                  } else if (canSubmit) {
+                    setShowSubmissionDialog(true);
+                  }
+                }}
+                disabled={!canSubmit && !showLockIcon}
                 className={`w-full py-2 sm:py-2.5 px-3 sm:px-4 text-sm sm:text-base font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 ${
-                  canSubmit
+                  showLockIcon
+                    ? 'bg-navy-800/70 text-gray-400 hover:bg-navy-800 cursor-pointer border border-navy-700/50'
+                    : canSubmit
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white cursor-pointer'
                     : 'bg-navy-800/70 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                {t('projects.submitVideo') || 'Submit Video'}
+                {showLockIcon ? (
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 1C6.48 1 2 5.48 2 11v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-10c0-5.52-4.48-10-10-10zm0 2c4.41 0 8 3.59 8 8v10H4v-10c0-4.41 3.59-8 8-8zm3.5 9c.83 0 1.5-.67 1.5-1.5S16.33 9 15.5 9 14 9.67 14 10.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 9 8.5 9 7 9.67 7 10.5 7.67 12 8.5 12z" />
+                  </svg>
+                ) : (
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                )}
+                {showLockIcon ? (t('subscribe') || 'Subscribe') : (t('projects.submitVideo') || 'Submit Video')}
               </button>
               {/* Tooltip for disabled state */}
-              {!canSubmit && submitDisabledReason && (
+              {!canSubmit && !showLockIcon && submitDisabledReason && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-navy-950/90 text-gray-300 text-xs rounded-lg opacity-0 group-hover/submit:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 border border-navy-800/60">
                   {submitDisabledReason}
                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-navy-950"></div>
@@ -615,18 +645,26 @@ export default function ProjectCard({
                   {!isLecturer && !isProjectOwner && !isProjectExpired && (
                     <div className="relative group/expandsubmit">
                       <button
-                        onClick={() => canSubmit && setShowSubmissionDialog(true)}
-                        disabled={!canSubmit}
+                        onClick={() => {
+                          if (showLockIcon) {
+                            setShowSubscriptionModal(true);
+                          } else if (canSubmit) {
+                            setShowSubmissionDialog(true);
+                          }
+                        }}
+                        disabled={!canSubmit && !showLockIcon}
                         className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                          canSubmit
+                          showLockIcon
+                            ? 'bg-navy-800/70 text-gray-400 hover:bg-navy-800 cursor-pointer border border-navy-700/50'
+                            : canSubmit
                             ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white cursor-pointer'
                             : 'bg-navy-800/70 text-gray-400 cursor-not-allowed'
                         }`}
                       >
-                        {t('projects.submitVideo') || 'Submit Video'}
+                        {showLockIcon ? (t('subscribe') || 'Subscribe') : (t('projects.submitVideo') || 'Submit Video')}
                       </button>
                       {/* Tooltip for disabled state */}
-                      {!canSubmit && submitDisabledReason && (
+                      {!canSubmit && !showLockIcon && submitDisabledReason && (
                         <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-navy-950/90 text-gray-300 text-xs rounded-lg opacity-0 group-hover/expandsubmit:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 border border-navy-800/60">
                           {submitDisabledReason}
                           <div className="absolute top-full right-4 border-4 border-transparent border-t-navy-950"></div>
@@ -850,6 +888,18 @@ export default function ProjectCard({
           </div>
         </div>
       )}
+
+      {/* Project Subscription Modal */}
+      <ProjectSubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        onSuccess={() => {
+          setShowSubscriptionModal(false);
+          // Refetch project access on successful subscription
+          window.location.reload();
+        }}
+        courseId={courseId}
+      />
     </>
   );
 }

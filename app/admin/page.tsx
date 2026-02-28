@@ -15,6 +15,7 @@ import { useAdminWithdrawalRequests } from '@/hooks/useAdminWithdrawalRequests';
 import { useRealtimeAdminEnrollmentRequests } from '@/hooks/useRealtimeAdminEnrollmentRequests';
 import { useRealtimeAdminBundleEnrollmentRequests } from '@/hooks/useRealtimeAdminBundleEnrollmentRequests';
 import { useRealtimeAdminWithdrawalRequests } from '@/hooks/useRealtimeAdminWithdrawalRequests';
+import { useAdminProjectSubscriptions } from '@/hooks/useAdminProjectSubscriptions';
 import { useCourses } from '@/hooks/useCourses';
 import { supabase } from '@/lib/supabase';
 import type { EnrollmentRequest } from '@/hooks/useEnrollmentRequests';
@@ -22,7 +23,7 @@ import type { BundleEnrollmentRequest } from '@/hooks/useAdminBundleEnrollmentRe
 import type { WithdrawalRequest } from '@/types/balance';
 import type { Course } from '@/components/CourseCard';
 
-type TabType = 'overview' | 'enrollment-requests' | 'withdrawals' | 'courses' | 'notifications' | 'analytics';
+type TabType = 'overview' | 'enrollment-requests' | 'withdrawals' | 'project-subscriptions' | 'courses' | 'notifications' | 'analytics';
 
 // Retry with exponential backoff utility
 async function retryWithBackoff<T>(
@@ -122,6 +123,16 @@ export default function AdminDashboard() {
   const withdrawalRequests = withdrawalStatusFilter && withdrawalStatusFilter !== 'all'
     ? allWithdrawalRequests.filter(r => r.status === withdrawalStatusFilter)
     : allWithdrawalRequests;
+
+  // Use project subscriptions hook
+  const {
+    pending: pendingSubscriptions,
+    active: activeSubscriptions,
+    rejected: rejectedSubscriptions,
+    all: allSubscriptions,
+    isLoading: subscriptionsLoading,
+    mutate: mutateSubscriptions,
+  } = useAdminProjectSubscriptions();
   
   // Debug logging
   useEffect(() => {
@@ -554,6 +565,21 @@ export default function AdminDashboard() {
               {pendingWithdrawalsCount > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-emerald-500 text-white text-xs rounded-full">
                   {pendingWithdrawalsCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('project-subscriptions')}
+              className={`px-6 py-3 font-semibold transition-colors border-b-2 relative ${
+                activeTab === 'project-subscriptions'
+                  ? 'text-navy-900 border-navy-900'
+                  : 'text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300'
+              }`}
+            >
+              Project Subscriptions
+              {pendingSubscriptions.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-amber-500 text-white text-xs rounded-full">
+                  {pendingSubscriptions.length}
                 </span>
               )}
             </button>
@@ -1123,6 +1149,125 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
+            </div>
+            </ErrorBoundary>
+          )}
+
+          {activeTab === 'project-subscriptions' && (
+            <ErrorBoundary
+              onError={(error) => console.error('[Admin Dashboard] Project Subscriptions error:', error)}
+            >
+            <div>
+              {subscriptionsLoading ? (
+                <div className="text-center py-8">Loading subscriptions...</div>
+              ) : (
+                <>
+                  {/* Status Filter Tabs */}
+                  <div className="flex gap-2 mb-6 border-b border-gray-300">
+                    {[
+                      { key: 'pending', label: `Pending (${pendingSubscriptions.length})`, count: pendingSubscriptions.length },
+                      { key: 'active', label: `Active (${activeSubscriptions.length})`, count: activeSubscriptions.length },
+                      { key: 'rejected', label: `Rejected (${rejectedSubscriptions.length})`, count: rejectedSubscriptions.length },
+                    ].map(tab => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setStatusFilter(tab.key as any)}
+                        className={`px-4 py-2 font-semibold transition-colors ${
+                          statusFilter === tab.key
+                            ? 'text-navy-900 border-b-2 border-navy-900'
+                            : 'text-navy-600 hover:text-navy-900'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Subscriptions Grid */}
+                  <div className="grid gap-4">
+                    {(statusFilter === 'pending' ? pendingSubscriptions :
+                      statusFilter === 'active' ? activeSubscriptions :
+                      rejectedSubscriptions).map(sub => (
+                      <div
+                        key={sub.id}
+                        className="bg-white border border-gray-300 rounded-lg p-6 flex justify-between items-center"
+                      >
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg">{sub.username}</h3>
+                          <p className="text-sm text-gray-600">₾{sub.price.toFixed(2)} - {sub.status.toUpperCase()}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Submitted: {new Date(sub.created_at).toLocaleDateString()}
+                          </p>
+                          {sub.payment_screenshot && (
+                            <a
+                              href={sub.payment_screenshot}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:underline mt-2 inline-block"
+                            >
+                              View Screenshot
+                            </a>
+                          )}
+                        </div>
+                        {statusFilter === 'pending' && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                setProcessingId(sub.id);
+                                try {
+                                  const response = await fetch(`/api/admin/project-subscriptions/${sub.id}/approve`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                  });
+                                  if (response.ok) {
+                                    setSuccessMessage(`✓ Subscription approved`);
+                                    mutateSubscriptions();
+                                  } else {
+                                    setError('Failed to approve subscription');
+                                  }
+                                } catch (err) {
+                                  setError('Error approving subscription');
+                                } finally {
+                                  setProcessingId(null);
+                                }
+                              }}
+                              disabled={processingId === sub.id}
+                              className="px-4 py-2 bg-emerald-600 text-white rounded font-semibold hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                              {processingId === sub.id ? 'Approving...' : 'Approve'}
+                            </button>
+                            <button
+                              onClick={async () => {
+                                setProcessingId(sub.id);
+                                try {
+                                  const response = await fetch(`/api/admin/project-subscriptions/${sub.id}/reject`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                  });
+                                  if (response.ok) {
+                                    setSuccessMessage(`✓ Subscription rejected`);
+                                    mutateSubscriptions();
+                                  } else {
+                                    setError('Failed to reject subscription');
+                                  }
+                                } catch (err) {
+                                  setError('Error rejecting subscription');
+                                } finally {
+                                  setProcessingId(null);
+                                }
+                              }}
+                              disabled={processingId === sub.id}
+                              className="px-4 py-2 bg-red-600 text-white rounded font-semibold hover:bg-red-700 disabled:opacity-50"
+                            >
+                              {processingId === sub.id ? 'Rejecting...' : 'Reject'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
             </ErrorBoundary>
           )}

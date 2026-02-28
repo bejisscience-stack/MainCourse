@@ -23,7 +23,7 @@ interface ChatAreaProps {
   onSendMessage: (channelId: string, content: string) => void;
   onReply?: (messageId: string) => void;
   onReaction?: (messageId: string, emoji: string) => void;
-  isEnrollmentExpired?: boolean;
+  isEnrolledInCourse?: boolean;
   enrollmentInfo?: EnrollmentInfo | null;
   onReEnrollRequest?: () => void;
   onMobileMenuClick?: () => void;
@@ -36,7 +36,7 @@ export default function ChatArea({
   onSendMessage,
   onReply,
   onReaction,
-  isEnrollmentExpired = false,
+  isEnrolledInCourse = false,
   enrollmentInfo = null,
   onReEnrollRequest,
   onMobileMenuClick,
@@ -720,8 +720,9 @@ export default function ChatArea({
                         onReaction={handleReaction}
                         isLecturer={isLecturer}
                         channelId={channel.id}
+                        courseId={channel.courseId}
                         showAvatar={showAvatar}
-                        isEnrollmentExpired={isEnrollmentExpired}
+                        isEnrolledInCourse={isEnrolledInCourse}
                       />
                     );
                   });

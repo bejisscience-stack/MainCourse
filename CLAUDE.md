@@ -48,6 +48,19 @@ supabase/functions/  # 31 Edge Functions
 - Staging branch: `staging` | Supabase: bvptqdmhuumjbyfnjxdt
 - Production branch: `main` | Supabase: nbecbsbuerdtakxkrduw
 
+### Pushing staging → main (safe merge procedure)
+When `main` has diverged from `staging` (non-fast-forward), **never force push**. Instead:
+```bash
+git stash                       # Save any uncommitted work
+git checkout main               # Switch to main
+git pull origin main            # Pull latest main
+git merge staging --no-edit     # Merge staging into main (standard merge)
+git push origin main            # Push merged main
+git checkout staging            # Switch back to staging
+git stash pop                   # Restore uncommitted work
+```
+This preserves all history on both branches, creates a merge commit, and avoids any destructive operations.
+
 ## Self-Improvement
 After every mistake I correct, add it to Gotchas before moving on.
 Format: `[Symptom]: [Root cause] — [Resolution]`

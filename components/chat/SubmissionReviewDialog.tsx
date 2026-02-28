@@ -43,6 +43,7 @@ export default function SubmissionReviewDialog({
   const [error, setError] = useState<string | null>(null);
   const [lastSavedRPM, setLastSavedRPM] = useState<Record<string, number>>({});
   const [saveSuccess, setSaveSuccess] = useState<Record<string, boolean>>({});
+  const [reviewStatus, setReviewStatus] = useState<Record<string, 'accepted' | 'rejected'>>({});
 
   // Get criteria for current platform (platform-specific + all-platform criteria)
   const getCriteriaForPlatform = useCallback((platform: string) => {
@@ -153,20 +154,22 @@ export default function SubmissionReviewDialog({
       let reviewData;
       let reviewError;
 
+      const currentStatus = reviewStatus[platform] || 'accepted';
+
       if (existingReview) {
         // Update existing review
         const { data, error } = await supabase
           .from('submission_reviews')
           .update({
-            status: 'accepted',
-            matched_criteria_ids: criteriaToSave.length > 0 ? criteriaToSave : [],
+            status: currentStatus,
+            matched_criteria_ids: currentStatus === 'rejected' ? [] : (criteriaToSave.length > 0 ? criteriaToSave : []),
             comment: (comments[platform] || '').trim() || null,
-            payment_amount: finalPaymentAmount,
+            payment_amount: currentStatus === 'rejected' ? 0 : finalPaymentAmount,
           })
           .eq('id', existingReview.id)
           .select()
           .single();
-        
+
         reviewData = data;
         reviewError = error;
       } else {
@@ -178,14 +181,14 @@ export default function SubmissionReviewDialog({
             project_id: projectId,
             lecturer_id: session.user.id,
             platform: platform, // Platform-specific review
-            status: 'accepted',
-            matched_criteria_ids: criteriaToSave.length > 0 ? criteriaToSave : [],
+            status: currentStatus,
+            matched_criteria_ids: currentStatus === 'rejected' ? [] : (criteriaToSave.length > 0 ? criteriaToSave : []),
             comment: (comments[platform] || '').trim() || null,
-            payment_amount: finalPaymentAmount,
+            payment_amount: currentStatus === 'rejected' ? 0 : finalPaymentAmount,
           })
           .select()
           .single();
-        
+
         reviewData = data;
         reviewError = error;
       }
@@ -332,7 +335,35 @@ export default function SubmissionReviewDialog({
             </div>
           )}
 
-          {/* Criteria Selection */}
+          {/* Review Status Toggle */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-3">Review Decision</label>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setReviewStatus(prev => ({ ...prev, [selectedPlatform]: 'accepted' }))}
+                className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${
+                  (reviewStatus[selectedPlatform] || 'accepted') === 'accepted'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-navy-800/70 text-gray-400 border border-navy-700/50 hover:bg-navy-800'
+                }`}
+              >
+                ✓ Accept
+              </button>
+              <button
+                onClick={() => setReviewStatus(prev => ({ ...prev, [selectedPlatform]: 'rejected' }))}
+                className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${
+                  (reviewStatus[selectedPlatform] || 'accepted') === 'rejected'
+                    ? 'bg-red-500 text-white'
+                    : 'bg-navy-800/70 text-gray-400 border border-navy-700/50 hover:bg-navy-800'
+                }`}
+              >
+                ✕ Reject
+              </button>
+            </div>
+          </div>
+
+          {/* Criteria Selection - Hidden if Rejected */}
+          {(reviewStatus[selectedPlatform] || 'accepted') !== 'rejected' && (
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-3">
               Select Matching Criteria {hasMultiplePlatforms && `for ${PLATFORM_NAMES[selectedPlatform.toLowerCase()] || selectedPlatform}`}
@@ -397,6 +428,7 @@ export default function SubmissionReviewDialog({
               </div>
             )}
           </div>
+          )}
 
           {/* Comment */}
           <div>

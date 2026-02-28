@@ -10,10 +10,12 @@ import { useUser } from '@/hooks/useUser';
 import { useCourses } from '@/hooks/useCourses';
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { useEnrollmentRequestStatus } from '@/hooks/useEnrollmentRequests';
+import { useRealtimeBundleEnrollmentRequests } from '@/hooks/useRealtimeBundleEnrollmentRequests';
 import useSWR from 'swr';
 import { useI18n } from '@/contexts/I18nContext';
 import BundleEnrollmentModal from '@/components/BundleEnrollmentModal';
 import { formatPriceInGel } from '@/lib/currency';
+import { toast } from 'sonner';
 
 type FilterType = 'All' | 'Editing' | 'Content Creation' | 'Website Creation';
 
@@ -141,6 +143,25 @@ function CoursesPageContent() {
   useEffect(() => {
     setEnrolledBundleIds(new Set(enrolledBundlesData.map(b => b.bundle_id)));
   }, [enrolledBundlesData]);
+
+  // Subscribe to realtime bundle enrollment updates
+  useRealtimeBundleEnrollmentRequests({
+    userId: user?.id || null,
+    onRequestApproved: (request) => {
+      const bundleName = bundles.find(b => b.id === request.bundle_id)?.title || 'Bundle';
+      toast.success(
+        t('enrollment.enrollmentApproved') || `Your enrollment for "${bundleName}" has been approved!`,
+        { duration: 5000 }
+      );
+    },
+    onRequestRejected: (request) => {
+      const bundleName = bundles.find(b => b.id === request.bundle_id)?.title || 'Bundle';
+      toast.error(
+        t('enrollment.enrollmentRejected') || `Your enrollment request for "${bundleName}" was rejected.`,
+        { duration: 5000 }
+      );
+    },
+  });
 
   // Redirect lecturers immediately (but not admins)
   useEffect(() => {

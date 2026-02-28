@@ -11,6 +11,7 @@ import { useUser } from '@/hooks/useUser';
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { useActiveChannel } from '@/hooks/useActiveChannel';
 import { useActiveServer } from '@/hooks/useActiveServer';
+import { useProjectAccess } from '@/hooks/useProjectAccess';
 import type { Server, Channel } from '@/types/server';
 import type { Message as MessageType } from '@/types/message';
 
@@ -370,6 +371,32 @@ export default function CourseChatPage() {
   const isExpired = isEnrolled && !isEnrollmentActive(courseId);
   const showExpirationOverlay = isExpired && userRole !== 'admin';
 
+  // Check project access (enrolled users always have it; non-enrolled need subscription)
+  const { hasProjectAccess } = useProjectAccess(user?.id);
+
+  // Gate access: allow if admin, OR enrolled, OR (not enrolled but has subscription)
+  const hasAccess =
+    userRole === 'admin' ||
+    isEnrolled ||
+    (!isEnrolled && hasProjectAccess);
+
+  if (!hasAccess && userRole !== 'admin') {
+    return (
+      <div className="flex flex-col h-[100dvh] bg-navy-950/20 backdrop-blur-[0.5px]">
+        <ChatNavigation />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-gray-400 max-w-md">
+            <p className="text-lg font-medium mb-4">No Access</p>
+            <p className="text-sm mb-6">You must be enrolled in this course or have an active project subscription.</p>
+            <Link href="/my-courses" className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg">
+              Back to My Courses
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-[100dvh] bg-navy-950/20 backdrop-blur-[0.5px] overscroll-none">
       <ChatNavigation />
@@ -412,7 +439,7 @@ export default function CourseChatPage() {
                   onSendMessage={handleSendMessage}
                   onReaction={handleReaction}
                   showDMButton={false}
-                  isEnrollmentExpired={showExpirationOverlay}
+                  isEnrolledInCourse={isEnrolled}
                   enrollmentInfo={enrollmentInfo}
                   onReEnrollRequest={mutateEnrollments}
                 />
