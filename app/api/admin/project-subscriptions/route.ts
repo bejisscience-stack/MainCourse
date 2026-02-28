@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
-import { verifyTokenAndGetUser } from '@/lib/supabase/server';
+import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -21,7 +20,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = createServerSupabaseClient();
 
     // Check admin status
     const { data: isAdmin, error: adminError } = await supabase.rpc('check_is_admin', {

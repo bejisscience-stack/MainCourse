@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
-import { verifyTokenAndGetUser } from '@/lib/supabase/server';
+import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -20,7 +19,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = createServerSupabaseClient();
     const { data, error } = await supabase
       .from('project_subscriptions')
       .select('*')
@@ -68,7 +67,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = createServerSupabaseClient();
 
     // Check for existing pending subscription
     const { data: existing, error: existingError } = await supabase

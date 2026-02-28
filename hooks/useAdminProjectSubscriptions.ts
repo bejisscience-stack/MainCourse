@@ -2,7 +2,7 @@
 
 import useSWR from 'swr';
 import { useEffect } from 'react';
-import { createBrowserClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase';
 
 export interface AdminSubscriptionData {
   id: string;
@@ -30,7 +30,6 @@ export interface AdminProjectSubscriptionsResult {
  * Provides realtime updates when subscriptions are created, approved, or rejected.
  */
 export function useAdminProjectSubscriptions(): AdminProjectSubscriptionsResult {
-  const supabase = createBrowserClient();
 
   const { data, isLoading, mutate } = useSWR(
     '/api/admin/project-subscriptions',

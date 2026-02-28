@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useI18n } from '@/contexts/I18nContext';
 import { useProjectAccess } from '@/hooks/useProjectAccess';
 import { useUser } from '@/hooks/useUser';
-import { createBrowserClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/contexts/ThemeContext';
 import { toast } from 'sonner';
 
@@ -42,7 +42,6 @@ export default function ProjectSubscriptionModal({
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const supabase = createBrowserClient();
 
   // Show status view if user has existing subscription
   if (subscription) {

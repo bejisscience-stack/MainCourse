@@ -1166,12 +1166,12 @@ export default function AdminDashboard() {
                   <div className="flex gap-2 mb-6 border-b border-gray-300">
                     {[
                       { key: 'pending', label: `Pending (${pendingSubscriptions.length})`, count: pendingSubscriptions.length },
-                      { key: 'active', label: `Active (${activeSubscriptions.length})`, count: activeSubscriptions.length },
+                      { key: 'approved', label: `Active (${activeSubscriptions.length})`, count: activeSubscriptions.length },
                       { key: 'rejected', label: `Rejected (${rejectedSubscriptions.length})`, count: rejectedSubscriptions.length },
                     ].map(tab => (
                       <button
                         key={tab.key}
-                        onClick={() => setStatusFilter(tab.key as any)}
+                        onClick={() => setStatusFilter(tab.key as 'pending' | 'approved' | 'rejected' | 'all')}
                         className={`px-4 py-2 font-semibold transition-colors ${
                           statusFilter === tab.key
                             ? 'text-navy-900 border-b-2 border-navy-900'
@@ -1186,8 +1186,9 @@ export default function AdminDashboard() {
                   {/* Subscriptions Grid */}
                   <div className="grid gap-4">
                     {(statusFilter === 'pending' ? pendingSubscriptions :
-                      statusFilter === 'active' ? activeSubscriptions :
-                      rejectedSubscriptions).map(sub => (
+                      statusFilter === 'approved' ? activeSubscriptions :
+                      statusFilter === 'rejected' ? rejectedSubscriptions :
+                      [...pendingSubscriptions, ...activeSubscriptions, ...rejectedSubscriptions]).map(sub => (
                       <div
                         key={sub.id}
                         className="bg-white border border-gray-300 rounded-lg p-6 flex justify-between items-center"

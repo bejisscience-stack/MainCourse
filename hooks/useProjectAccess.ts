@@ -2,7 +2,7 @@
 
 import useSWR from 'swr';
 import { useEffect, useState } from 'react';
-import { createBrowserClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase';
 
 export interface ProjectSubscription {
   id: string;
@@ -29,7 +29,6 @@ export interface ProjectAccessData {
  * 2. Active project subscription
  */
 export function useProjectAccess(userId?: string): ProjectAccessData {
-  const supabase = createBrowserClient();
   const [projectAccessExpiresAt, setProjectAccessExpiresAt] = useState<string | null>(null);
 
   // Fetch profile project_access_expires_at
