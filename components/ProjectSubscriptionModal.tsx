@@ -59,12 +59,12 @@ export default function ProjectSubscriptionModal({
         <div className="space-y-4">
           {subscription.status === 'pending' && (
             <div className={`p-4 rounded-lg border-2 ${
-              theme.isDark ? 'border-blue-500 bg-blue-500/10' : 'border-blue-400 bg-blue-50'
+              theme.theme === 'dark' ? 'border-blue-500 bg-blue-500/10' : 'border-blue-400 bg-blue-50'
             }`}>
-              <p className={`text-sm font-semibold ${theme.isDark ? 'text-blue-300' : 'text-blue-700'}`}>
+              <p className={`text-sm font-semibold ${theme.theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
                 {t('pendingApproval')}
               </p>
-              <p className={`text-xs ${theme.isDark ? 'text-blue-200' : 'text-blue-600'} mt-1`}>
+              <p className={`text-xs ${theme.theme === 'dark' ? 'text-blue-200' : 'text-blue-600'} mt-1`}>
                 {t('subscriptionPendingMessage')}
               </p>
             </div>
@@ -72,12 +72,12 @@ export default function ProjectSubscriptionModal({
 
           {subscription.status === 'active' && subscription.expires_at && (
             <div className={`p-4 rounded-lg border-2 ${
-              theme.isDark ? 'border-green-500 bg-green-500/10' : 'border-green-400 bg-green-50'
+              theme.theme === 'dark' ? 'border-green-500 bg-green-500/10' : 'border-green-400 bg-green-50'
             }`}>
-              <p className={`text-sm font-semibold ${theme.isDark ? 'text-green-300' : 'text-green-700'}`}>
+              <p className={`text-sm font-semibold ${theme.theme === 'dark' ? 'text-green-300' : 'text-green-700'}`}>
                 {t('subscriptionActive')}
               </p>
-              <p className={`text-xs ${theme.isDark ? 'text-green-200' : 'text-green-600'} mt-1`}>
+              <p className={`text-xs ${theme.theme === 'dark' ? 'text-green-200' : 'text-green-600'} mt-1`}>
                 {t('expiresOn')} {new Date(subscription.expires_at).toLocaleDateString()}
               </p>
             </div>
@@ -85,12 +85,12 @@ export default function ProjectSubscriptionModal({
 
           {subscription.status === 'rejected' && (
             <div className={`p-4 rounded-lg border-2 ${
-              theme.isDark ? 'border-red-500 bg-red-500/10' : 'border-red-400 bg-red-50'
+              theme.theme === 'dark' ? 'border-red-500 bg-red-500/10' : 'border-red-400 bg-red-50'
             }`}>
-              <p className={`text-sm font-semibold ${theme.isDark ? 'text-red-300' : 'text-red-700'}`}>
+              <p className={`text-sm font-semibold ${theme.theme === 'dark' ? 'text-red-300' : 'text-red-700'}`}>
                 {t('subscriptionRejected')}
               </p>
-              <p className={`text-xs ${theme.isDark ? 'text-red-200' : 'text-red-600'} mt-2`}>
+              <p className={`text-xs ${theme.theme === 'dark' ? 'text-red-200' : 'text-red-600'} mt-2`}>
                 {t('subscriptionRejectedMessage')}
               </p>
               <button
@@ -217,7 +217,7 @@ export default function ProjectSubscriptionModal({
         <h2 className="text-2xl font-bold text-white mb-6">{t('projectSubscription')}</h2>
       <div className="space-y-6">
         {/* Price Display */}
-        <div className={`text-center p-4 rounded-lg ${theme.isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+        <div className={`text-center p-4 rounded-lg ${theme.theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
             {t('subscriptionPrice')}
           </p>
@@ -232,7 +232,7 @@ export default function ProjectSubscriptionModal({
           </label>
           <div className="flex items-center gap-2">
             <code className={`flex-1 p-3 rounded font-mono text-sm ${
-              theme.isDark ? 'bg-gray-800 text-gray-100' : 'bg-gray-100 text-gray-900'
+              theme.theme === 'dark' ? 'bg-gray-800 text-gray-100' : 'bg-gray-100 text-gray-900'
             }`}>
               {BANK_ACCOUNT}
             </code>
@@ -242,7 +242,7 @@ export default function ProjectSubscriptionModal({
                 toast.success(t('copied'));
               }}
               className={`px-3 py-2 rounded font-semibold text-sm transition ${
-                theme.isDark
+                theme.theme === 'dark'
                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                   : 'bg-emerald-500 hover:bg-emerald-600 text-white'
               }`}
@@ -259,7 +259,7 @@ export default function ProjectSubscriptionModal({
           </label>
           <div className="flex items-center gap-2">
             <code className={`flex-1 p-3 rounded font-mono text-sm text-center tracking-widest font-bold ${
-              theme.isDark ? 'bg-gray-800 text-emerald-400' : 'bg-gray-100 text-emerald-600'
+              theme.theme === 'dark' ? 'bg-gray-800 text-emerald-400' : 'bg-gray-100 text-emerald-600'
             }`}>
               {generateReferenceCode()}
             </code>
@@ -269,7 +269,7 @@ export default function ProjectSubscriptionModal({
                 toast.success(t('copied'));
               }}
               className={`px-3 py-2 rounded font-semibold text-sm transition ${
-                theme.isDark
+                theme.theme === 'dark'
                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                   : 'bg-emerald-500 hover:bg-emerald-600 text-white'
               }`}
@@ -294,7 +294,7 @@ export default function ProjectSubscriptionModal({
                 src={screenshotPreview}
                 alt="Preview"
                 className={`w-full rounded-lg border-2 max-h-64 object-contain ${
-                  theme.isDark ? 'border-gray-700' : 'border-gray-300'
+                  theme.theme === 'dark' ? 'border-gray-700' : 'border-gray-300'
                 }`}
               />
               <button
@@ -309,7 +309,7 @@ export default function ProjectSubscriptionModal({
             </div>
           ) : (
             <label className={`block p-6 rounded-lg border-2 border-dashed cursor-pointer transition ${
-              theme.isDark
+              theme.theme === 'dark'
                 ? 'border-gray-700 hover:border-emerald-600 bg-gray-800/50 hover:bg-gray-800'
                 : 'border-gray-300 hover:border-emerald-500 bg-gray-50 hover:bg-gray-100'
             }`}>
@@ -332,7 +332,7 @@ export default function ProjectSubscriptionModal({
         {/* Error Message */}
         {error && (
           <div className={`p-3 rounded-lg border ${
-            theme.isDark
+            theme.theme === 'dark'
               ? 'border-red-500/50 bg-red-500/10 text-red-300'
               : 'border-red-400 bg-red-50 text-red-700'
           }`}>
