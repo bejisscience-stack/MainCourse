@@ -6,9 +6,7 @@ import { useProjectAccess } from '@/hooks/useProjectAccess';
 import { useUser } from '@/hooks/useUser';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { useTheme } from '@/contexts/ThemeContext';
-import Modal from './Modal';
-import Button from './Button';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface ProjectSubscriptionModalProps {
   isOpen: boolean;
@@ -48,8 +46,17 @@ export default function ProjectSubscriptionModal({
 
   // Show status view if user has existing subscription
   if (subscription) {
+    if (!isOpen) return null;
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title={t('projectSubscription')}>
+      <div className="fixed inset-0 bg-navy-950/80 z-50 flex items-center justify-center p-4">
+        <div className="relative w-full max-w-md bg-navy-900/95 border border-navy-800/60 rounded-2xl shadow-soft-xl p-6">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-200"
+          >
+            ✕
+          </button>
+          <h2 className="text-2xl font-bold text-white mb-4">{t('projectSubscription')}</h2>
         <div className="space-y-4">
           {subscription.status === 'pending' && (
             <div className={`p-4 rounded-lg border-2 ${
@@ -87,25 +94,25 @@ export default function ProjectSubscriptionModal({
               <p className={`text-xs ${theme.isDark ? 'text-red-200' : 'text-red-600'} mt-2`}>
                 {t('subscriptionRejectedMessage')}
               </p>
-              <Button
+              <button
                 onClick={() => {
                   setStep('payment');
                   setScreenshotFile(null);
                   setScreenshotPreview(null);
                 }}
-                className="mt-3 w-full"
-                variant="secondary"
+                className="mt-3 w-full px-4 py-2 bg-navy-800/70 text-gray-300 rounded-lg hover:bg-navy-700 font-semibold"
               >
                 {t('tryAgain')}
-              </Button>
+              </button>
             </div>
           )}
 
-          <Button onClick={onClose} variant="secondary" className="w-full">
+          <button onClick={onClose} className="w-full px-4 py-2 bg-navy-800/70 text-gray-300 rounded-lg hover:bg-navy-700 font-semibold">
             {t('close')}
-          </Button>
+          </button>
         </div>
-      </Modal>
+        </div>
+      </div>
     );
   }
 
@@ -197,8 +204,18 @@ export default function ProjectSubscriptionModal({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t('projectSubscription')}>
+    <div className="fixed inset-0 bg-navy-950/80 z-50 flex items-center justify-center p-4">
+      <div className="relative w-full max-w-md bg-navy-900/95 border border-navy-800/60 rounded-2xl shadow-soft-xl p-6 max-h-[90vh] overflow-y-auto">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-200"
+        >
+          ✕
+        </button>
+        <h2 className="text-2xl font-bold text-white mb-6">{t('projectSubscription')}</h2>
       <div className="space-y-6">
         {/* Price Display */}
         <div className={`text-center p-4 rounded-lg ${theme.isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
@@ -326,23 +343,23 @@ export default function ProjectSubscriptionModal({
 
         {/* Buttons */}
         <div className="flex gap-2">
-          <Button
+          <button
             onClick={onClose}
-            variant="secondary"
             disabled={isSubmitting}
-            className="flex-1"
+            className="flex-1 px-4 py-2 bg-navy-800/70 text-gray-300 rounded-lg hover:bg-navy-700 font-semibold disabled:opacity-50"
           >
             {t('cancel')}
-          </Button>
-          <Button
+          </button>
+          <button
             onClick={handleSubmit}
             disabled={!screenshotFile || isSubmitting}
-            className="flex-1"
+            className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold disabled:opacity-50"
           >
             {isSubmitting ? t('submitting') : t('submit')}
-          </Button>
+          </button>
         </div>
       </div>
-    </Modal>
+      </div>
+    </div>
   );
 }
