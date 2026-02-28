@@ -25,7 +25,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerSupabaseClient();
+    const supabase = createServerSupabaseClient(token);
 
     // Check admin status
     const { data: isAdmin, error: adminError } = await supabase.rpc('check_is_admin', {
