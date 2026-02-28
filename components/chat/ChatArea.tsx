@@ -42,6 +42,7 @@ export default function ChatArea({
   onMobileMenuClick,
 }: ChatAreaProps) {
   const { t } = useI18n();
+  const isEnrollmentExpired = !isEnrolledInCourse;
   const [replyTo, setReplyTo] = useState<{
     id: string;
     username: string;
