@@ -48,6 +48,46 @@ supabase/functions/  # 31 Edge Functions
 - Staging branch: `staging` | Supabase: bvptqdmhuumjbyfnjxdt
 - Production branch: `main` | Supabase: nbecbsbuerdtakxkrduw
 
+## Supabase Authentication & Migrations
+
+### Setup (One-time)
+Create `.env.supabase` file (NEVER commit — added to .gitignore):
+```bash
+SUPABASE_DB_PASSWORD=<password>     # Get from Supabase project settings
+SUPABASE_DB_HOST=db.bvptqdmhuumjbyfnjxdt.supabase.co
+SUPABASE_DB_PORT=5432
+SUPABASE_DB_USER=postgres
+SUPABASE_DB_NAME=postgres
+SUPABASE_PROJECT_ID=bvptqdmhuumjbyfnjxdt
+SUPABASE_URL=https://bvptqdmhuumjbyfnjxdt.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>  # From project settings
+```
+
+### Pushing Migrations to Staging
+**Option 1: Supabase Dashboard (Always works)**
+1. Go to: https://app.supabase.com/project/bvptqdmhuumjbyfnjxdt/sql
+2. Click "New Query"
+3. Copy migration SQL from `supabase/migrations/[number]_*.sql`
+4. Paste and Run
+
+**Option 2: CLI (after .env.supabase setup)**
+```bash
+source .env.supabase
+supabase db push --db-url "postgresql://$SUPABASE_DB_USER:$SUPABASE_DB_PASSWORD@db.$SUPABASE_PROJECT_ID.supabase.co:5432/$SUPABASE_DB_NAME"
+```
+
+**Option 3: Direct psql**
+```bash
+source .env.supabase
+PGPASSWORD="$SUPABASE_DB_PASSWORD" psql -h db.bvptqdmhuumjbyfnjxdt.supabase.co -U postgres -d postgres < supabase/migrations/100_*.sql
+```
+
+### Deploying Edge Functions
+```bash
+source .env.supabase
+supabase functions deploy <function-name>
+```
+
 ### Pushing staging → main (safe merge procedure)
 When `main` has diverged from `staging` (non-fast-forward), **never force push**. Instead:
 ```bash
@@ -67,4 +107,7 @@ Format: `[Symptom]: [Root cause] — [Resolution]`
 After every correction end with: "Update CLAUDE.md so you don't make this mistake again."
 
 ## Gotchas and Solved Problems
-<!-- Claude appends here after each hard-won fix -->
+
+**[Supabase CLI auth barrier]: Cannot push migrations without credentials** — Supabase CLI requires either personal access token or database password. The CLI doesn't work without authentication. — Solution: Store credentials in `.env.supabase` (in .gitignore) and source before running CLI commands, OR use the Supabase dashboard SQL editor for direct SQL execution.
+
+**[IPv6 connectivity to remote DB]: Direct psql connections to db.*.supabase.co fail with IPv6 dial errors** — The CLI tries to connect via IPv6 to the remote database, which may fail on some networks. Network restrictions may block direct PostgreSQL connections. — Solution: Use Supabase dashboard SQL editor instead (most reliable), or use the REST API with service role key.
