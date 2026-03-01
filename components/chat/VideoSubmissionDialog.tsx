@@ -127,10 +127,12 @@ export default function VideoSubmissionDialog({
     setErrors({});
 
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.user) {
-        throw new Error('Not authenticated. Please log in again.');
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        session = refreshed;
       }
+      if (!session?.access_token) throw new Error('Not authenticated. Please log in again.');
 
       console.log('Starting submission process:', { projectId, channelId, userId: session.user.id, platforms });
 
