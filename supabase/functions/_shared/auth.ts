@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from './supabase.ts'
 import { errorResponse } from './cors.ts'
-import type { User, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import type { User, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.98.0'
 
 export interface AuthResult {
   user: User
@@ -49,7 +49,7 @@ export async function getAuthenticatedUser(
   const supabase = createServerSupabaseClient(token)
 
   // Verify user
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
 
   if (authError || !user) {
     return {
