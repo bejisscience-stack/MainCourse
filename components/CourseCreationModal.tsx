@@ -210,11 +210,6 @@ export default function CourseCreationModal({
   const handleThumbnailUpload = async (file: File) => {
     if (!user) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Thumbnail image size must be less than 5MB');
-      return;
-    }
-
     if (!file.type.startsWith('image/')) {
       setError('Please upload an image file');
       return;
@@ -546,7 +541,7 @@ export default function CourseCreationModal({
                         <span className="text-sm text-gray-300 font-medium block truncate">
                           {thumbnailFile ? thumbnailFile.name : 'Upload Thumbnail Image'}
                         </span>
-                        <p className="text-xs text-gray-500 mt-1">Click to select image (max 5MB)</p>
+                        <p className="text-xs text-gray-500 mt-1">Click to select image</p>
                       </>
                     )}
                   </div>
