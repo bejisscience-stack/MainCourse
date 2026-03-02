@@ -31,46 +31,51 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Fetch subscriptions with profile info
-    const { data, error } = await supabase
+    // Fetch subscriptions (no profile join — FK goes to auth.users, not profiles)
+    const { data: subs, error: subsError } = await supabase
       .from('project_subscriptions')
-      .select(`
-        id,
-        user_id,
-        price,
-        status,
-        created_at,
-        payment_screenshot,
-        approved_at,
-        profiles (
-          username,
-          avatar_url
-        )
-      `)
+      .select('id, user_id, price, status, created_at, payment_screenshot, approved_at')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (subsError) {
+      return NextResponse.json({ error: subsError.message }, { status: 500 });
     }
 
-    // Transform to flatten profile data
-    const subscriptions = data?.map((sub: any) => ({
+    // Fetch profiles for all user_ids
+    const userIds = [...new Set((subs || []).map((s: any) => s.user_id))];
+    let profileMap: Record<string, { username: string; avatar_url: string | null }> = {};
+
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .in('id', userIds);
+
+      if (profiles) {
+        for (const p of profiles) {
+          profileMap[p.id] = { username: p.username || 'Unknown', avatar_url: p.avatar_url };
+        }
+      }
+    }
+
+    // Merge
+    const subscriptions = (subs || []).map((sub: any) => ({
       id: sub.id,
       user_id: sub.user_id,
-      username: sub.profiles?.username || 'Unknown',
-      avatar_url: sub.profiles?.avatar_url || null,
+      username: profileMap[sub.user_id]?.username || 'Unknown',
+      avatar_url: profileMap[sub.user_id]?.avatar_url || null,
       price: sub.price,
       status: sub.status,
       created_at: sub.created_at,
       payment_screenshot: sub.payment_screenshot,
       approved_at: sub.approved_at,
-    })) || [];
+    }));
 
     // Count by status
     const counts = {
-      pending: subscriptions.filter((s) => s.status === 'pending').length,
-      active: subscriptions.filter((s) => s.status === 'active').length,
-      rejected: subscriptions.filter((s) => s.status === 'rejected').length,
+      pending: subscriptions.filter((s: any) => s.status === 'pending').length,
+      active: subscriptions.filter((s: any) => s.status === 'active').length,
+      rejected: subscriptions.filter((s: any) => s.status === 'rejected').length,
     };
 
     return NextResponse.json({ subscriptions, counts });
