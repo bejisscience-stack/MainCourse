@@ -28,7 +28,7 @@ contexts/            # I18n, Theme, Background providers
 lib/supabase/        # client.ts (browser), server.ts (SSR), middleware.ts
 locales/             # en.json, ge.json
 supabase/migrations/ # 92+ migrations
-supabase/functions/  # 31 Edge Functions
+supabase/functions/  # 28 Edge Functions (shared code in _shared/)
 ```
 
 ## Conventions
@@ -39,6 +39,27 @@ supabase/functions/  # 31 Edge Functions
 - Components: PascalCase files, `'use client'` only when needed, `dynamic()` for heavy imports
 - Hooks: `useXxx` pattern, one per file in `hooks/`
 - No test framework configured
+
+## Edge Functions
+- **Shared modules** in `supabase/functions/_shared/`: `auth.ts`, `supabase.ts`, `cors.ts`, `email.ts`
+- **Auth pattern**: `getAuthenticatedUser(req)` extracts Bearer token and calls `getUser(token)` — always pass token explicitly since `persistSession: false`
+- **Dual auth**: Some functions (e.g. `view-scraper`) accept both `x-scraper-secret` header (scheduled runs) and Bearer JWT (manual/admin runs)
+- **Imports**: Pin `@supabase/supabase-js` to exact version (`@2.98.0`) in all edge function imports — unpinned `@2` via esm.sh resolves to latest patch which can break behavior
+- **Deploy via MCP**: Use `mcp__supabase__deploy_edge_function` — include all files the function imports from `_shared/`
+- **Deploy via CLI**: `source .env.supabase && supabase functions deploy <name>`
+
+## Client-Side Auth Pattern
+- Always use refresh fallback when getting session for API calls:
+  ```typescript
+  let { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+    session = refreshed;
+  }
+  if (!session?.access_token) throw new Error('Not authenticated');
+  const token = session.access_token;
+  ```
+- Never discard the result of `refreshSession()` — always assign it back to the `session` variable
 
 ## Deployment Rules
 - ALWAYS push to `staging` branch. Never push to `main` unless explicitly told.
@@ -111,3 +132,13 @@ After every correction end with: "Update CLAUDE.md so you don't make this mistak
 **[Supabase CLI auth barrier]: Cannot push migrations without credentials** — Supabase CLI requires either personal access token or database password. The CLI doesn't work without authentication. — Solution: Store credentials in `.env.supabase` (in .gitignore) and source before running CLI commands, OR use the Supabase dashboard SQL editor for direct SQL execution.
 
 **[IPv6 connectivity to remote DB]: Direct psql connections to db.*.supabase.co fail with IPv6 dial errors** — The CLI tries to connect via IPv6 to the remote database, which may fail on some networks. Network restrictions may block direct PostgreSQL connections. — Solution: Use Supabase dashboard SQL editor instead (most reliable), or use the REST API with service role key.
+
+**[Edge function 401 on all requests]: `getUser()` without token returns null when `persistSession: false`** — The Supabase client in edge functions is created with `persistSession: false`, so `getUser()` can't resolve the token from internal state. Must call `getUser(token)` explicitly. — Fix: `supabase/functions/_shared/auth.ts` line 52, pass the extracted Bearer token to `getUser(token)`.
+
+**[Unpinned esm.sh imports break edge functions]: `@supabase/supabase-js@2` resolves to latest v2 patch** — esm.sh resolves `@2` to whatever the latest 2.x.x release is. A new patch can silently change behavior (e.g. how `getUser()` infers tokens). — Fix: Pin to exact version like `@2.98.0` in all edge function imports and `import_map.json`.
+
+**[Token refresh result discarded]: `refreshSession()` called but refreshed session never used** — Code pattern where `refreshedSession` is obtained but the original expired `session` variable is still used for the token. — Fix: Use `let` for session, reassign `session = refreshed` after refresh, then use `session.access_token`.
+
+**[git commit hangs in VS Code environment]: `git commit` hangs indefinitely** — VS Code's built-in git extension spawns background `git status -z -uall` processes that conflict with CLI git operations. Killing git processes leaves stale `.git/index.lock` files, and VS Code respawns them immediately. — Workaround: Use low-level git commands: `git write-tree` → `git commit-tree <tree> -p <parent>` → `git update-ref`. These bypass the high-level commit machinery that gets stuck. Also use `GIT_OPTIONAL_LOCKS=0` for read-only git operations.
+
+**[Edge function 401 with verify_jwt: true]: `chat-messages` returns 401 while `chat-mute` works with same token** — When deploying edge functions via MCP with `verify_jwt: true`, Supabase's gateway-level JWT validation rejects tokens that the function's own `getUser(token)` would accept. Other functions deployed with `verify_jwt: false` work fine because they bypass the gateway check and handle auth internally. — Fix: Always deploy edge functions with `verify_jwt: false` when the function already uses `getAuthenticatedUser(req)` from `_shared/auth.ts`. The function-level auth is sufficient and more reliable.
