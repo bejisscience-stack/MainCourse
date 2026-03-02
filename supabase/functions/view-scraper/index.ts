@@ -19,6 +19,82 @@ function normalizeUrl(url: string): string {
   return url.toLowerCase().replace(/\/+$/, '').replace(/\?.*$/, '')
 }
 
+// --- Metric extraction helpers ---
+// Apify actors change their output schema across versions.
+// Try multiple known field paths so we survive format changes.
+
+interface ExtractedMetrics {
+  viewCount: number | null
+  likeCount: number | null
+  commentCount: number | null
+  shareCount: number | null
+  saveCount: number | null
+}
+
+function firstNumber(...values: unknown[]): number | null {
+  for (const v of values) {
+    if (typeof v === 'number' && !Number.isNaN(v)) return v
+  }
+  return null
+}
+
+function extractTikTokMetrics(result: any): ExtractedMetrics | null {
+  const viewCount = firstNumber(
+    result.playCount,
+    result.stats?.playCount,
+    result.statsV2?.playCount,
+    result.videoMeta?.playCount,
+    result.viewCount,
+  )
+  if (viewCount === null) return null
+
+  return {
+    viewCount,
+    likeCount: firstNumber(result.diggCount, result.likesCount, result.stats?.diggCount, result.statsV2?.diggCount),
+    commentCount: firstNumber(result.commentCount, result.stats?.commentCount, result.statsV2?.commentCount),
+    shareCount: firstNumber(result.shareCount, result.stats?.shareCount, result.statsV2?.shareCount),
+    saveCount: firstNumber(result.collectCount, result.stats?.collectCount, result.statsV2?.collectCount),
+  }
+}
+
+function extractInstagramMetrics(result: any): ExtractedMetrics | null {
+  const viewCount = firstNumber(
+    result.videoViewCount,
+    result.videoPlayCount,
+    result.playCount,
+    result.viewCount,
+    result.video_view_count,
+  )
+  if (viewCount === null) return null
+
+  return {
+    viewCount,
+    likeCount: firstNumber(result.likesCount, result.likes, result.likeCount),
+    commentCount: firstNumber(result.commentsCount, result.comments, result.commentCount),
+    shareCount: firstNumber(result.shareCount, result.sharesCount),
+    saveCount: firstNumber(result.saveCount, result.savesCount),
+  }
+}
+
+/** Build a URL lookup key from a result item, trying multiple known field names */
+function extractTikTokUrl(item: any): string {
+  const raw = item.webVideoUrl || item.url || item.videoUrl || item.input || item.submittedUrl || ''
+  return raw ? normalizeUrl(raw) : ''
+}
+
+function extractInstagramUrl(item: any): string {
+  const raw = item.url || (item.shortCode ? `https://www.instagram.com/reel/${item.shortCode}/` : '') || item.inputUrl || item.submittedUrl || ''
+  return raw ? normalizeUrl(raw) : ''
+}
+
+/** Summarize top-level keys of a result for debug logging */
+function debugKeys(result: any): string {
+  if (!result || typeof result !== 'object') return '(not an object)'
+  const keys = Object.keys(result)
+  if (keys.length > 30) return keys.slice(0, 30).join(', ') + `... (${keys.length} total)`
+  return keys.join(', ')
+}
+
 interface VideoEntry {
   submissionId: string
   projectId: string
@@ -241,19 +317,23 @@ Deno.serve(async (req: Request) => {
           )
           const results = await datasetResponse.json()
 
-          // Build lookup: normalized URL → result
+          // Build lookup: normalized URL → result (try multiple URL fields)
           const resultMap = new Map<string, any>()
           for (const item of results) {
-            const webUrl = item.webVideoUrl || item.url || ''
-            if (webUrl) {
-              resultMap.set(normalizeUrl(webUrl), item)
-            }
+            const key = extractTikTokUrl(item)
+            if (key) resultMap.set(key, item)
           }
+
+          // If only 1 URL submitted and 1 result returned, match directly
+          // (handles cases where the actor doesn't echo back the URL)
+          const singleMatch = tiktokEntries.length === 1 && results.length === 1
 
           // Match back to entries
           for (const entry of tiktokEntries) {
-            const result = resultMap.get(normalizeUrl(entry.originalUrl))
-            if (result && result.playCount !== undefined) {
+            const result = resultMap.get(normalizeUrl(entry.originalUrl)) || (singleMatch ? results[0] : null)
+            const metrics = result ? extractTikTokMetrics(result) : null
+
+            if (result && metrics) {
               await insertResult(adminClient, {
                 submissionId: entry.submissionId,
                 projectId: entry.projectId,
@@ -261,14 +341,17 @@ Deno.serve(async (req: Request) => {
                 scrapeRunId: runId,
                 platform: 'tiktok',
                 videoUrl: entry.originalUrl,
-                viewCount: result.playCount ?? null,
-                likeCount: result.diggCount ?? result.likesCount ?? null,
-                commentCount: result.commentCount ?? null,
-                shareCount: result.shareCount ?? null,
-                saveCount: result.collectCount ?? null,
+                viewCount: metrics.viewCount,
+                likeCount: metrics.likeCount,
+                commentCount: metrics.commentCount,
+                shareCount: metrics.shareCount,
+                saveCount: metrics.saveCount,
               })
               successCount++
             } else {
+              const errorMessage = result
+                ? `No view count in response. Available keys: ${debugKeys(result)}`
+                : `URL not found in results. Got ${results.length} result(s)`
               await insertResult(adminClient, {
                 submissionId: entry.submissionId,
                 projectId: entry.projectId,
@@ -276,8 +359,9 @@ Deno.serve(async (req: Request) => {
                 scrapeRunId: runId,
                 platform: 'tiktok',
                 videoUrl: entry.originalUrl,
-                errorMessage: result ? 'No view count in response' : 'URL not found in results',
+                errorMessage,
               })
+              errors.push(`TikTok [${entry.originalUrl}]: ${errorMessage}`)
               failCount++
             }
           }
@@ -329,15 +413,17 @@ Deno.serve(async (req: Request) => {
 
           const resultMap = new Map<string, any>()
           for (const item of results) {
-            const itemUrl = item.url || item.shortCode ? `https://www.instagram.com/reel/${item.shortCode}/` : ''
-            if (itemUrl) {
-              resultMap.set(normalizeUrl(itemUrl), item)
-            }
+            const key = extractInstagramUrl(item)
+            if (key) resultMap.set(key, item)
           }
 
+          const singleMatchIg = instagramEntries.length === 1 && results.length === 1
+
           for (const entry of instagramEntries) {
-            const result = resultMap.get(normalizeUrl(entry.originalUrl))
-            if (result && (result.videoViewCount !== undefined || result.videoPlayCount !== undefined)) {
+            const result = resultMap.get(normalizeUrl(entry.originalUrl)) || (singleMatchIg ? results[0] : null)
+            const metrics = result ? extractInstagramMetrics(result) : null
+
+            if (result && metrics) {
               await insertResult(adminClient, {
                 submissionId: entry.submissionId,
                 projectId: entry.projectId,
@@ -345,14 +431,17 @@ Deno.serve(async (req: Request) => {
                 scrapeRunId: runId,
                 platform: 'instagram',
                 videoUrl: entry.originalUrl,
-                viewCount: result.videoViewCount ?? result.videoPlayCount ?? null,
-                likeCount: result.likesCount ?? null,
-                commentCount: result.commentsCount ?? null,
-                shareCount: null,
-                saveCount: null,
+                viewCount: metrics.viewCount,
+                likeCount: metrics.likeCount,
+                commentCount: metrics.commentCount,
+                shareCount: metrics.shareCount,
+                saveCount: metrics.saveCount,
               })
               successCount++
             } else {
+              const errorMessage = result
+                ? `No view count in response. Available keys: ${debugKeys(result)}`
+                : `URL not found in results. Got ${results.length} result(s)`
               await insertResult(adminClient, {
                 submissionId: entry.submissionId,
                 projectId: entry.projectId,
@@ -360,8 +449,9 @@ Deno.serve(async (req: Request) => {
                 scrapeRunId: runId,
                 platform: 'instagram',
                 videoUrl: entry.originalUrl,
-                errorMessage: result ? 'No view count in response' : 'URL not found in results',
+                errorMessage,
               })
+              errors.push(`Instagram [${entry.originalUrl}]: ${errorMessage}`)
               failCount++
             }
           }
