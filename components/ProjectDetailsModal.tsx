@@ -6,11 +6,10 @@ import { useRouter } from 'next/navigation';
 import { useI18n } from '@/contexts/I18nContext';
 import { useUser } from '@/hooks/useUser';
 import { useEnrollments } from '@/hooks/useEnrollments';
-import { supabase } from '@/lib/supabase';
+import { useProjectAccess } from '@/hooks/useProjectAccess';
 import { formatPriceInGel } from '@/lib/currency';
-import EnrollmentWizard from './EnrollmentWizard';
+import ProjectSubscriptionModal from './ProjectSubscriptionModal';
 import type { ActiveProject } from '@/hooks/useActiveProjects';
-import type { Course } from './CourseCard';
 
 // Platform configuration with icons and colors
 const platformConfig: Record<string, { icon: React.ReactNode; bgColor: string; textColor: string; label: string }> = {
@@ -67,10 +66,9 @@ export default function ProjectDetailsModal({ project, isOpen, onClose }: Projec
   const router = useRouter();
   const { user } = useUser();
   const { enrolledCourseIds } = useEnrollments(user?.id || null);
+  const { hasProjectAccess } = useProjectAccess(user?.id);
   const [mounted, setMounted] = useState(false);
-  const [showEnrollmentWizard, setShowEnrollmentWizard] = useState(false);
-  const [courseData, setCourseData] = useState<Course | null>(null);
-  const [isLoadingCourse, setIsLoadingCourse] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -82,6 +80,9 @@ export default function ProjectDetailsModal({ project, isOpen, onClose }: Projec
     if (!project) return false;
     return enrolledCourseIds.has(project.course_id);
   }, [project, enrolledCourseIds]);
+
+  // User can access if enrolled OR has project access (free 1-month or subscription)
+  const canAccessProject = isEnrolled || hasProjectAccess;
 
   // Format budget as currency (GEL)
   const formattedBudget = useMemo(() => {
@@ -161,7 +162,7 @@ export default function ProjectDetailsModal({ project, isOpen, onClose }: Projec
   // Handle ESC key to close modal
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && !showEnrollmentWizard) {
+      if (e.key === 'Escape' && isOpen && !showSubscriptionModal) {
         onClose();
       }
     };
@@ -175,7 +176,7 @@ export default function ProjectDetailsModal({ project, isOpen, onClose }: Projec
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, showEnrollmentWizard, onClose]);
+  }, [isOpen, showSubscriptionModal, onClose]);
 
   // Handle Go to Project navigation
   const handleGoToProject = useCallback(() => {
@@ -184,100 +185,14 @@ export default function ProjectDetailsModal({ project, isOpen, onClose }: Projec
     onClose();
   }, [project, router, onClose]);
 
-  // Fetch course data and open enrollment wizard
-  const handleEnrollClick = useCallback(async () => {
+  // Handle subscribe click
+  const handleSubscribeClick = useCallback(() => {
     if (!user) {
-      router.push('/login?redirect=/');
+      router.push('/login?redirect=/projects');
       return;
     }
-
-    if (!project) return;
-
-    setIsLoadingCourse(true);
-
-    try {
-      // Fetch the course data
-      const { data: course, error } = await supabase
-        .from('courses')
-        .select('*')
-        .eq('id', project.course_id)
-        .single();
-
-      if (error) throw error;
-
-      if (course) {
-        setCourseData({
-          id: course.id,
-          title: course.title,
-          description: course.description,
-          course_type: course.course_type,
-          price: course.price,
-          original_price: course.original_price,
-          author: course.author,
-          creator: course.creator,
-          intro_video_url: course.intro_video_url,
-          thumbnail_url: course.thumbnail_url,
-          rating: course.rating || 0,
-          review_count: course.review_count || 0,
-          is_bestseller: course.is_bestseller || false,
-        });
-        setShowEnrollmentWizard(true);
-      }
-    } catch (err) {
-      console.error('Error fetching course:', err);
-    } finally {
-      setIsLoadingCourse(false);
-    }
-  }, [user, project, router]);
-
-  // Handle enrollment wizard close
-  const handleEnrollmentWizardClose = useCallback(() => {
-    setShowEnrollmentWizard(false);
-    setCourseData(null);
-  }, []);
-
-  // Handle enrollment submission
-  const handleEnrollmentSubmit = useCallback(async (courseId: string, screenshotUrls: string[], referralCode?: string) => {
-    if (!user?.id) {
-      alert(t('enrollment.pleaseLogin'));
-      return;
-    }
-
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError || !session?.access_token) {
-        throw new Error('Not authenticated. Please log in again.');
-      }
-
-      const response = await fetch('/api/enrollment-requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          courseId,
-          paymentScreenshots: screenshotUrls,
-          referralCode: referralCode || undefined
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result?.error || 'Failed to create enrollment request');
-      }
-
-      setShowEnrollmentWizard(false);
-      setCourseData(null);
-      alert(t('enrollment.enrollmentRequestSubmitted'));
-      window.location.reload();
-    } catch (err: any) {
-      console.error('Error requesting enrollment:', err);
-      alert(err.message || 'Failed to create enrollment request. Please try again.');
-    }
-  }, [user?.id, t]);
+    setShowSubscriptionModal(true);
+  }, [user, router]);
 
   if (!isOpen || !project) return null;
 
@@ -285,7 +200,7 @@ export default function ProjectDetailsModal({ project, isOpen, onClose }: Projec
     <div
       className="fixed inset-0 bg-charcoal-950/95 backdrop-blur-md z-[9998] flex items-center justify-center p-4 overflow-y-auto"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !showEnrollmentWizard) {
+        if (e.target === e.currentTarget && !showSubscriptionModal) {
           onClose();
         }
       }}
@@ -493,7 +408,7 @@ export default function ProjectDetailsModal({ project, isOpen, onClose }: Projec
 
         {/* Action Footer */}
         <div className="sticky bottom-0 p-6 md:p-8 pt-4 bg-gradient-to-t from-white via-white dark:from-navy-900 dark:via-navy-900 border-t border-charcoal-100 dark:border-navy-700">
-          {isEnrolled ? (
+          {canAccessProject ? (
             <button
               onClick={handleGoToProject}
               className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 text-base font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl hover:from-emerald-600 hover:to-teal-700 transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5"
@@ -505,40 +420,27 @@ export default function ProjectDetailsModal({ project, isOpen, onClose }: Projec
             </button>
           ) : (
             <button
-              onClick={handleEnrollClick}
-              disabled={isLoadingCourse}
-              className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 text-base font-semibold text-white bg-gradient-to-r from-charcoal-800 to-charcoal-900 dark:from-emerald-500 dark:to-teal-600 rounded-2xl hover:from-charcoal-700 hover:to-charcoal-800 dark:hover:from-emerald-600 dark:hover:to-teal-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+              onClick={handleSubscribeClick}
+              className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 text-base font-semibold text-white bg-gradient-to-r from-charcoal-800 to-charcoal-900 dark:from-emerald-500 dark:to-teal-600 rounded-2xl hover:from-charcoal-700 hover:to-charcoal-800 dark:hover:from-emerald-600 dark:hover:to-teal-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
             >
-              {isLoadingCourse ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  {t('common.loading')}
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  {t('activeProjects.enrollInCourse')}
-                </>
-              )}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              {t('activeProjects.subscribeToProjects')}
             </button>
           )}
         </div>
       </div>
 
-      {/* Enrollment Wizard */}
-      {courseData && (
-        <EnrollmentWizard
-          course={courseData}
-          isOpen={showEnrollmentWizard}
-          onClose={handleEnrollmentWizardClose}
-          onEnroll={handleEnrollmentSubmit}
-        />
-      )}
+      {/* Project Subscription Modal */}
+      <ProjectSubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        onSuccess={() => {
+          setShowSubscriptionModal(false);
+          onClose();
+        }}
+      />
     </div>
   );
 
