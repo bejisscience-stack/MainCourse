@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
     const serviceClient = createServiceRoleClient(token);
     const projectId = request.nextUrl.searchParams.get('project_id');
 
+    // Query submissions with project join only (no profiles FK exists)
     let query = serviceClient
       .from('project_submissions')
       .select(`
@@ -42,10 +43,6 @@ export async function GET(request: NextRequest) {
         last_scraped_at,
         created_at,
         status,
-        profiles!project_submissions_user_id_fkey (
-          username,
-          avatar_url
-        ),
         projects!project_submissions_project_id_fkey (
           title,
           course_id,
@@ -69,6 +66,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Fetch profiles separately (no FK relationship on this table)
+    const userIds = [...new Set((submissions || []).map((s: any) => s.user_id).filter(Boolean))];
+    let profileMap = new Map<string, { username: string; avatar_url: string | null }>();
+    if (userIds.length > 0) {
+      const { data: profiles } = await serviceClient
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .in('id', userIds);
+      for (const p of profiles || []) {
+        profileMap.set(p.id, { username: p.username, avatar_url: p.avatar_url });
+      }
+    }
+
     // Filter to only submissions that have video URLs
     const withVideos = (submissions || [])
       .filter((s: any) => {
@@ -76,25 +86,28 @@ export async function GET(request: NextRequest) {
         const hasPlatformLinks = s.platform_links && Object.keys(s.platform_links).length > 0;
         return hasVideoUrl || hasPlatformLinks;
       })
-      .map((s: any) => ({
-        id: s.id,
-        user_id: s.user_id,
-        project_id: s.project_id,
-        video_url: s.video_url,
-        platform_links: s.platform_links,
-        latest_views: s.latest_views || {},
-        last_scraped_at: s.last_scraped_at,
-        created_at: s.created_at,
-        status: s.status,
-        username: s.profiles?.username || 'Unknown',
-        avatar_url: s.profiles?.avatar_url || null,
-        project_title: s.projects?.title || 'Unknown Project',
-        course_title: s.projects?.courses?.title || 'Unknown Course',
-        course_id: s.projects?.course_id || '',
-        min_views: s.projects?.min_views || null,
-        max_views: s.projects?.max_views || null,
-        platforms: s.projects?.platforms || null,
-      }));
+      .map((s: any) => {
+        const profile = profileMap.get(s.user_id);
+        return {
+          id: s.id,
+          user_id: s.user_id,
+          project_id: s.project_id,
+          video_url: s.video_url,
+          platform_links: s.platform_links,
+          latest_views: s.latest_views || {},
+          last_scraped_at: s.last_scraped_at,
+          created_at: s.created_at,
+          status: s.status,
+          username: profile?.username || 'Unknown',
+          avatar_url: profile?.avatar_url || null,
+          project_title: s.projects?.title || 'Unknown Project',
+          course_title: s.projects?.courses?.title || 'Unknown Course',
+          course_id: s.projects?.course_id || '',
+          min_views: s.projects?.min_views || null,
+          max_views: s.projects?.max_views || null,
+          platforms: s.projects?.platforms || null,
+        };
+      });
 
     return NextResponse.json({ submissions: withVideos });
   } catch (err) {
