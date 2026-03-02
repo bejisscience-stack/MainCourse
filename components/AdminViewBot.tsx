@@ -18,6 +18,7 @@ export default function AdminViewBot() {
   const [subTab, setSubTab] = useState<SubTab>('dashboard');
   const [checkingId, setCheckingId] = useState<string | null>(null);
   const [checkingProjectId, setCheckingProjectId] = useState<string | null>(null);
+  const [isTriggering, setIsTriggering] = useState(false);
 
   const { runs, activeRun, isRunning, isLoading: runsLoading, triggerRun, triggerCheck, error: scraperError, clearError } = useViewScraperRuns();
   const { submissions, allSubmissions, isLoading: subsLoading, filters, setFilters } = useViewScraperSubmissions();
@@ -73,7 +74,12 @@ export default function AdminViewBot() {
   }, [allSubmissions]);
 
   const handleRunBot = useCallback(async () => {
-    await triggerRun();
+    setIsTriggering(true);
+    try {
+      await triggerRun();
+    } finally {
+      setIsTriggering(false);
+    }
   }, [triggerRun]);
 
   const handleCheckNow = useCallback(async (submissionId: string) => {
@@ -140,7 +146,7 @@ export default function AdminViewBot() {
       {subTab === 'dashboard' && (
         <ViewBotDashboard
           runs={runs}
-          isRunning={isRunning}
+          isRunning={isTriggering || isRunning}
           isLoading={runsLoading}
           progress={progress}
           isLiveActive={isLiveActive}

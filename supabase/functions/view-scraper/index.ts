@@ -282,7 +282,7 @@ Deno.serve(async (req: Request) => {
       try {
         const tiktokUrls = tiktokEntries.map((e) => e.originalUrl)
         const actorResponse = await fetch(
-          `https://api.apify.com/v2/acts/clockworks~free-tiktok-scraper/runs?token=${apifyToken}`,
+          `https://api.apify.com/v2/acts/clockworks~tiktok-scraper/runs?token=${apifyToken}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
