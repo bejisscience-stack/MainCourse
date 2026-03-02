@@ -1,6 +1,6 @@
 'use client';
 
-import useSWR from 'swr';
+import useSWR, { mutate } from 'swr';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
@@ -23,6 +23,15 @@ export interface ProjectAccessData {
   projectAccessExpiresAt: string | null;
 }
 
+async function getAuthToken(): Promise<string | null> {
+  let { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+    session = refreshed;
+  }
+  return session?.access_token || null;
+}
+
 /**
  * Determine if user has active project access via:
  * 1. Initial 1-month grant from first course approval
@@ -35,15 +44,11 @@ export function useProjectAccess(userId?: string): ProjectAccessData {
   const { data: profileData, isLoading: profileLoading } = useSWR(
     userId ? `/api/profile?userId=${userId}` : null,
     async (url) => {
-      let { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
-        session = refreshed;
-      }
-      if (!session?.access_token) return null;
+      const token = await getAuthToken();
+      if (!token) return null;
 
       const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) return null;
       return response.json();
@@ -52,10 +57,16 @@ export function useProjectAccess(userId?: string): ProjectAccessData {
   );
 
   // Fetch user's latest subscription
+  const subKey = userId ? '/api/project-subscriptions' : null;
   const { data: subscriptionData, isLoading: subLoading } = useSWR(
-    userId ? '/api/project-subscriptions' : null,
+    subKey,
     async (url) => {
-      const response = await fetch(url);
+      const token = await getAuthToken();
+      if (!token) return null;
+
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!response.ok) return null;
       const result = await response.json();
       return result.subscriptions?.[0] || null;
@@ -67,7 +78,7 @@ export function useProjectAccess(userId?: string): ProjectAccessData {
   useEffect(() => {
     if (!userId) return;
 
-    const subscription = supabase
+    const channel = supabase
       .channel(`project_subscriptions:user_id=eq.${userId}`)
       .on(
         'postgres_changes',
@@ -77,17 +88,18 @@ export function useProjectAccess(userId?: string): ProjectAccessData {
           table: 'project_subscriptions',
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
-          // Refetch subscriptions on any change
-          window.location.reload();
+        () => {
+          // Revalidate SWR caches instead of full page reload
+          mutate('/api/project-subscriptions');
+          mutate(`/api/profile?userId=${userId}`);
         }
       )
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      channel.unsubscribe();
     };
-  }, [userId, supabase]);
+  }, [userId]);
 
   // Update local state from profile data
   useEffect(() => {

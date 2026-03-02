@@ -162,6 +162,16 @@ export default function ProjectSubscriptionModal({
     setStep('loading');
 
     try {
+      // Get auth token
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        session = refreshed;
+      }
+      if (!session?.access_token) {
+        throw new Error('Not authenticated. Please log in again.');
+      }
+
       // Upload screenshot to Supabase Storage
       const filename = `${user.id}/${Date.now()}-${screenshotFile.name}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -180,7 +190,10 @@ export default function ProjectSubscriptionModal({
       // Create subscription request
       const response = await fetch('/api/project-subscriptions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           payment_screenshot: urlData.publicUrl,
         }),
