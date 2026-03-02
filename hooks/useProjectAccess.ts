@@ -53,7 +53,7 @@ export function useProjectAccess(userId?: string): ProjectAccessData {
       if (!response.ok) return null;
       return response.json();
     },
-    { revalidateOnFocus: false, dedupingInterval: 60000 }
+    { revalidateOnFocus: true, dedupingInterval: 5000 }
   );
 
   // Fetch user's latest subscription
@@ -71,7 +71,7 @@ export function useProjectAccess(userId?: string): ProjectAccessData {
       const result = await response.json();
       return result.subscriptions?.[0] || null;
     },
-    { revalidateOnFocus: false, dedupingInterval: 60000 }
+    { revalidateOnFocus: true, dedupingInterval: 5000 }
   );
 
   // Subscribe to realtime updates on project_subscriptions
