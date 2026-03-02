@@ -350,7 +350,9 @@ Deno.serve(async (req: Request) => {
               successCount++
             } else {
               const errorMessage = result
-                ? `No view count in response. Available keys: ${debugKeys(result)}`
+                ? (result.error
+                  ? `Apify actor error: ${typeof result.error === 'string' ? result.error : JSON.stringify(result.error)}`
+                  : `No view count in response. Available keys: ${debugKeys(result)}`)
                 : `URL not found in results. Got ${results.length} result(s)`
               await insertResult(adminClient, {
                 submissionId: entry.submissionId,
@@ -440,7 +442,9 @@ Deno.serve(async (req: Request) => {
               successCount++
             } else {
               const errorMessage = result
-                ? `No view count in response. Available keys: ${debugKeys(result)}`
+                ? (result.error
+                  ? `Apify actor error: ${typeof result.error === 'string' ? result.error : JSON.stringify(result.error)}`
+                  : `No view count in response. Available keys: ${debugKeys(result)}`)
                 : `URL not found in results. Got ${results.length} result(s)`
               await insertResult(adminClient, {
                 submissionId: entry.submissionId,
