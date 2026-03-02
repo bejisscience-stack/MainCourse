@@ -8,6 +8,9 @@ import BackgroundShapes from '@/components/BackgroundShapes';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import AdminNotificationSender from '@/components/AdminNotificationSender';
 import AdminAnalytics from '@/components/AdminAnalytics';
+import dynamic from 'next/dynamic';
+
+const AdminViewBot = dynamic(() => import('@/components/AdminViewBot'), { ssr: false });
 import { useUser } from '@/hooks/useUser';
 import { useAdminEnrollmentRequests } from '@/hooks/useAdminEnrollmentRequests';
 import { useAdminBundleEnrollmentRequests } from '@/hooks/useAdminBundleEnrollmentRequests';
@@ -23,7 +26,7 @@ import type { BundleEnrollmentRequest } from '@/hooks/useAdminBundleEnrollmentRe
 import type { WithdrawalRequest } from '@/types/balance';
 import type { Course } from '@/components/CourseCard';
 
-type TabType = 'overview' | 'enrollment-requests' | 'withdrawals' | 'project-subscriptions' | 'courses' | 'notifications' | 'analytics';
+type TabType = 'overview' | 'enrollment-requests' | 'withdrawals' | 'project-subscriptions' | 'view-bot' | 'courses' | 'notifications' | 'analytics';
 
 // Retry with exponential backoff utility
 async function retryWithBackoff<T>(
@@ -582,6 +585,16 @@ export default function AdminDashboard() {
                   {pendingSubscriptions.length}
                 </span>
               )}
+            </button>
+            <button
+              onClick={() => setActiveTab('view-bot')}
+              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
+                activeTab === 'view-bot'
+                  ? 'text-navy-900 border-navy-900'
+                  : 'text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300'
+              }`}
+            >
+              View Bot
             </button>
             <button
               onClick={() => setActiveTab('courses')}
@@ -1452,6 +1465,14 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+            </ErrorBoundary>
+          )}
+
+          {activeTab === 'view-bot' && (
+            <ErrorBoundary
+              onError={(error) => console.error('[Admin Dashboard] View Bot error:', error)}
+            >
+              <AdminViewBot />
             </ErrorBoundary>
           )}
 
