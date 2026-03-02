@@ -21,6 +21,7 @@ export default function CourseChatPage() {
   const courseId = params?.courseId as string;
   const { user, role: userRole, isLoading: userLoading } = useUser();
   const { enrolledCourseIds, isEnrollmentActive, getEnrollmentInfo, isLoading: enrollmentsLoading, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
+  const { hasProjectAccess, isLoading: projectAccessLoading } = useProjectAccess(user?.id);
   const [activeServerId, setActiveServerId] = useActiveServer();
   const [activeChannelId, setActiveChannelId] = useActiveChannel();
   const [course, setCourse] = useState<any>(null);
@@ -50,8 +51,8 @@ export default function CourseChatPage() {
       setError(null);
 
       // Admins can access all courses without enrollment
-      // Regular users must be enrolled
-      if (userRole !== 'admin' && !enrolledCourseIds.has(courseId)) {
+      // Regular users must be enrolled OR have project access
+      if (userRole !== 'admin' && !enrolledCourseIds.has(courseId) && !hasProjectAccess) {
         setError('You are not enrolled in this course.');
         setIsLoadingCourse(false);
         return;
@@ -244,7 +245,19 @@ export default function CourseChatPage() {
         };
       });
 
-      setServers(serversData);
+      // Filter channels for project-access-only users (not enrolled, not admin)
+      const isProjectAccessOnly = !enrolledCourseIds.has(courseId) && userRole !== 'admin' && hasProjectAccess;
+      const filteredServers = isProjectAccessOnly
+        ? serversData.map(server => ({
+            ...server,
+            channels: server.channels.map(category => ({
+              ...category,
+              channels: category.channels.filter(ch => ch.name.toLowerCase() === 'projects'),
+            })).filter(category => category.channels.length > 0),
+          }))
+        : serversData;
+
+      setServers(filteredServers);
 
       // Set active server to this course
       setActiveServerId(courseId);
@@ -255,41 +268,45 @@ export default function CourseChatPage() {
       setError(err.message || 'Failed to load course chat. Please try again.');
       setIsLoadingCourse(false);
     }
-  }, [courseId, user, enrolledCourseIds]);
+  }, [courseId, user, enrolledCourseIds, hasProjectAccess, userRole]);
 
   // Check enrollment and fetch course
   useEffect(() => {
-    if (courseId && user && !userLoading && !enrollmentsLoading) {
+    if (courseId && user && !userLoading && !enrollmentsLoading && !projectAccessLoading) {
       loadCourseAndChannels();
     }
-  }, [courseId, user, userLoading, enrollmentsLoading, loadCourseAndChannels]);
+  }, [courseId, user, userLoading, enrollmentsLoading, projectAccessLoading, loadCourseAndChannels]);
 
   // Reset auto-select flag when courseId changes
   useEffect(() => {
     setHasAutoSelectedChannel(false);
   }, [courseId]);
 
-  // Auto-select lectures channel when servers are loaded
+  // Auto-select channel when servers are loaded
+  // Project-access-only users get the "projects" channel; enrolled users get "lectures"
+  const isProjectAccessOnly = !enrolledCourseIds.has(courseId) && userRole !== 'admin' && hasProjectAccess;
+
   useEffect(() => {
     if (servers.length > 0 && !hasAutoSelectedChannel && courseId) {
-      // Find the lectures channel
       const server = servers[0];
       const allChannels = server.channels.flatMap(cat => cat.channels);
-      const lecturesChannel = allChannels.find(
-        ch => ch.type === 'lectures' && ch.name.toLowerCase() === 'lectures'
-      );
+
+      // Pick the right default channel
+      const targetChannel = isProjectAccessOnly
+        ? allChannels.find(ch => ch.name.toLowerCase() === 'projects')
+        : allChannels.find(ch => ch.type === 'lectures' && ch.name.toLowerCase() === 'lectures');
 
       // Only auto-select if no channel is currently selected, or if the selected channel is not from this course
       const currentChannel = allChannels.find(ch => ch.id === activeChannelId);
-      if (lecturesChannel && (!activeChannelId || !currentChannel)) {
-        setActiveChannelId(lecturesChannel.id);
+      if (targetChannel && (!activeChannelId || !currentChannel)) {
+        setActiveChannelId(targetChannel.id);
         setHasAutoSelectedChannel(true);
       } else if (activeChannelId && currentChannel) {
         // Channel is already selected for this course, mark as done
         setHasAutoSelectedChannel(true);
       }
     }
-  }, [servers, activeChannelId, courseId, hasAutoSelectedChannel, setActiveChannelId]);
+  }, [servers, activeChannelId, courseId, hasAutoSelectedChannel, setActiveChannelId, isProjectAccessOnly]);
 
   const handleSendMessage = async (channelId: string, content: string) => {
     // Message sending is now handled by ChatArea component via API
@@ -303,7 +320,7 @@ export default function CourseChatPage() {
     console.log('Adding reaction:', { messageId, emoji, userId: user.id });
   };
 
-  const loading = userLoading || isLoadingCourse || enrollmentsLoading;
+  const loading = userLoading || isLoadingCourse || enrollmentsLoading || projectAccessLoading;
 
   if (loading) {
     return (
@@ -371,10 +388,7 @@ export default function CourseChatPage() {
   const isExpired = isEnrolled && !isEnrollmentActive(courseId);
   const showExpirationOverlay = isExpired && userRole !== 'admin';
 
-  // Check project access (enrolled users always have it; non-enrolled need subscription)
-  const { hasProjectAccess } = useProjectAccess(user?.id);
-
-  // Gate access: allow if admin, OR enrolled, OR (not enrolled but has subscription)
+  // Gate access: allow if admin, OR enrolled, OR (not enrolled but has project access)
   const hasAccess =
     userRole === 'admin' ||
     isEnrolled ||
