@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import LayoutContainer from '@/components/chat/LayoutContainer';
@@ -30,6 +30,10 @@ export default function CourseChatPage() {
   const [isLoadingCourse, setIsLoadingCourse] = useState(true);
   const [hasAutoSelectedChannel, setHasAutoSelectedChannel] = useState(false);
 
+  // Stable primitive to prevent infinite re-renders from Set/boolean reference changes
+  const isEnrolledInCourse = enrolledCourseIds.has(courseId);
+  const loadedCourseRef = useRef<string | null>(null);
+
   // Redirect if not logged in
   useEffect(() => {
     if (!userLoading && !user) {
@@ -52,7 +56,7 @@ export default function CourseChatPage() {
 
       // Admins can access all courses without enrollment
       // Regular users must be enrolled OR have project access
-      if (userRole !== 'admin' && !enrolledCourseIds.has(courseId) && !hasProjectAccess) {
+      if (userRole !== 'admin' && !isEnrolledInCourse && !hasProjectAccess) {
         setError('You are not enrolled in this course.');
         setIsLoadingCourse(false);
         return;
@@ -246,7 +250,7 @@ export default function CourseChatPage() {
       });
 
       // Filter channels for project-access-only users (not enrolled, not admin)
-      const isProjectAccessOnly = !enrolledCourseIds.has(courseId) && userRole !== 'admin' && hasProjectAccess;
+      const isProjectAccessOnly = !isEnrolledInCourse && userRole !== 'admin' && hasProjectAccess;
       const filteredServers = isProjectAccessOnly
         ? serversData.map(server => ({
             ...server,
@@ -268,23 +272,27 @@ export default function CourseChatPage() {
       setError(err.message || 'Failed to load course chat. Please try again.');
       setIsLoadingCourse(false);
     }
-  }, [courseId, user, enrolledCourseIds, hasProjectAccess, userRole]);
+  }, [courseId, user, isEnrolledInCourse, hasProjectAccess, userRole]);
 
-  // Check enrollment and fetch course
+  // Check enrollment and fetch course (only once per courseId)
   useEffect(() => {
     if (courseId && user && !userLoading && !enrollmentsLoading && !projectAccessLoading) {
+      // Prevent re-triggering for the same course
+      if (loadedCourseRef.current === courseId) return;
+      loadedCourseRef.current = courseId;
       loadCourseAndChannels();
     }
   }, [courseId, user, userLoading, enrollmentsLoading, projectAccessLoading, loadCourseAndChannels]);
 
-  // Reset auto-select flag when courseId changes
+  // Reset flags when courseId changes
   useEffect(() => {
     setHasAutoSelectedChannel(false);
+    loadedCourseRef.current = null;
   }, [courseId]);
 
   // Auto-select channel when servers are loaded
   // Project-access-only users get the "projects" channel; enrolled users get "lectures"
-  const isProjectAccessOnly = !enrolledCourseIds.has(courseId) && userRole !== 'admin' && hasProjectAccess;
+  const isProjectAccessOnly = !isEnrolledInCourse && userRole !== 'admin' && hasProjectAccess;
 
   useEffect(() => {
     if (servers.length > 0 && !hasAutoSelectedChannel && courseId) {
