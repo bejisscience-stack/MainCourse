@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
         created_at,
         payment_screenshot,
         approved_at,
-        profiles!project_subscriptions_user_id_fkey (
+        profiles (
           username,
           avatar_url
         )

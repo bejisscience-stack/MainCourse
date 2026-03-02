@@ -135,6 +135,8 @@ export default function AdminDashboard() {
     all: allSubscriptions,
     isLoading: subscriptionsLoading,
     mutate: mutateSubscriptions,
+    approveSubscription,
+    rejectSubscription,
   } = useAdminProjectSubscriptions();
   
   // Debug logging
@@ -1229,18 +1231,10 @@ export default function AdminDashboard() {
                               onClick={async () => {
                                 setProcessingId(sub.id);
                                 try {
-                                  const response = await fetch(`/api/admin/project-subscriptions/${sub.id}/approve`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                  });
-                                  if (response.ok) {
-                                    setSuccessMessage(`✓ Subscription approved`);
-                                    mutateSubscriptions();
-                                  } else {
-                                    setError('Failed to approve subscription');
-                                  }
+                                  await approveSubscription(sub.id);
+                                  setSuccessMessage(`✓ Subscription approved`);
                                 } catch (err) {
-                                  setError('Error approving subscription');
+                                  setError(err instanceof Error ? err.message : 'Error approving subscription');
                                 } finally {
                                   setProcessingId(null);
                                 }
@@ -1254,18 +1248,10 @@ export default function AdminDashboard() {
                               onClick={async () => {
                                 setProcessingId(sub.id);
                                 try {
-                                  const response = await fetch(`/api/admin/project-subscriptions/${sub.id}/reject`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                  });
-                                  if (response.ok) {
-                                    setSuccessMessage(`✓ Subscription rejected`);
-                                    mutateSubscriptions();
-                                  } else {
-                                    setError('Failed to reject subscription');
-                                  }
+                                  await rejectSubscription(sub.id);
+                                  setSuccessMessage(`✓ Subscription rejected`);
                                 } catch (err) {
-                                  setError('Error rejecting subscription');
+                                  setError(err instanceof Error ? err.message : 'Error rejecting subscription');
                                 } finally {
                                   setProcessingId(null);
                                 }

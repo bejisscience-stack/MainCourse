@@ -23,6 +23,18 @@ export interface AdminProjectSubscriptionsResult {
   all: AdminSubscriptionData[];
   isLoading: boolean;
   mutate: () => Promise<any>;
+  approveSubscription: (id: string) => Promise<void>;
+  rejectSubscription: (id: string) => Promise<void>;
+}
+
+async function getToken(): Promise<string> {
+  let { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+    session = refreshed;
+  }
+  if (!session?.access_token) throw new Error('Not authenticated');
+  return session.access_token;
 }
 
 /**
@@ -32,21 +44,16 @@ export interface AdminProjectSubscriptionsResult {
 export function useAdminProjectSubscriptions(): AdminProjectSubscriptionsResult {
 
   const { data, isLoading, mutate } = useSWR(
-    '/api/admin/project-subscriptions',
-    async (url) => {
-      let { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
-        session = refreshed;
-      }
-      if (!session?.access_token) return { subscriptions: [], counts: {} };
-      const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${session.access_token}` },
+    'admin-project-subscriptions',
+    async () => {
+      const token = await getToken();
+      const response = await fetch('/api/admin/project-subscriptions', {
+        headers: { 'Authorization': `Bearer ${token}` },
       });
-      if (!response.ok) return { subscriptions: [], counts: {} };
+      if (!response.ok) return { subscriptions: [] };
       return response.json();
     },
-    { revalidateOnFocus: false, dedupingInterval: 30000 }
+    { revalidateOnFocus: true, dedupingInterval: 5000 }
   );
 
   const subscriptions: AdminSubscriptionData[] = data?.subscriptions || [];
@@ -62,7 +69,7 @@ export function useAdminProjectSubscriptions(): AdminProjectSubscriptionsResult 
           schema: 'public',
           table: 'project_subscriptions',
         },
-        (payload) => {
+        () => {
           mutate();
         }
       )
@@ -71,7 +78,63 @@ export function useAdminProjectSubscriptions(): AdminProjectSubscriptionsResult 
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase, mutate]);
+  }, [mutate]);
+
+  const approveSubscription = async (id: string) => {
+    const token = await getToken();
+    const response = await fetch(`/api/admin/project-subscriptions/${id}/approve`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Failed to approve' }));
+      throw new Error(err.error || 'Failed to approve subscription');
+    }
+
+    // Optimistic update then revalidate
+    await mutate((current: any) => {
+      if (!current?.subscriptions) return current;
+      return {
+        ...current,
+        subscriptions: current.subscriptions.map((s: AdminSubscriptionData) =>
+          s.id === id ? { ...s, status: 'active' as const } : s
+        ),
+      };
+    }, false);
+    await mutate();
+  };
+
+  const rejectSubscription = async (id: string) => {
+    const token = await getToken();
+    const response = await fetch(`/api/admin/project-subscriptions/${id}/reject`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Failed to reject' }));
+      throw new Error(err.error || 'Failed to reject subscription');
+    }
+
+    // Optimistic update then revalidate
+    await mutate((current: any) => {
+      if (!current?.subscriptions) return current;
+      return {
+        ...current,
+        subscriptions: current.subscriptions.map((s: AdminSubscriptionData) =>
+          s.id === id ? { ...s, status: 'rejected' as const } : s
+        ),
+      };
+    }, false);
+    await mutate();
+  };
 
   return {
     pending: subscriptions.filter((s) => s.status === 'pending'),
@@ -80,5 +143,7 @@ export function useAdminProjectSubscriptions(): AdminProjectSubscriptionsResult 
     all: subscriptions,
     isLoading,
     mutate: () => mutate(),
+    approveSubscription,
+    rejectSubscription,
   };
 }
