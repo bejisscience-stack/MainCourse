@@ -99,7 +99,7 @@ export default function ViewBotSubmissions({
         <select
           value={filters.projectId || ''}
           onChange={(e) => onFilterChange({ ...filters, projectId: e.target.value || null })}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-900"
         >
           <option value="">{t('viewBot.allProjects')}</option>
           {projects.map((p) => (
@@ -110,7 +110,7 @@ export default function ViewBotSubmissions({
         <select
           value={filters.platform || ''}
           onChange={(e) => onFilterChange({ ...filters, platform: (e.target.value as Platform) || null })}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-900"
         >
           <option value="">{t('viewBot.allPlatforms')}</option>
           <option value="tiktok">TikTok</option>
@@ -126,7 +126,7 @@ export default function ViewBotSubmissions({
           <div className="p-8 text-center text-gray-400">{t('viewBot.noSubmissions')}</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm text-gray-900">
               <thead className="bg-gray-50 text-gray-600">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">{t('viewBot.student')}</th>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useI18n } from '@/contexts/I18nContext';
 import { useViewScraperRuns } from '@/hooks/useViewScraperRuns';
 import { useViewScraperSubmissions } from '@/hooks/useViewScraperSubmissions';
@@ -19,7 +19,7 @@ export default function AdminViewBot() {
   const [checkingId, setCheckingId] = useState<string | null>(null);
   const [checkingProjectId, setCheckingProjectId] = useState<string | null>(null);
 
-  const { runs, activeRun, isRunning, isLoading: runsLoading, triggerRun, triggerCheck } = useViewScraperRuns();
+  const { runs, activeRun, isRunning, isLoading: runsLoading, triggerRun, triggerCheck, error: scraperError, clearError } = useViewScraperRuns();
   const { submissions, allSubmissions, isLoading: subsLoading, filters, setFilters } = useViewScraperSubmissions();
   const { progress, isActive: isLiveActive } = useViewScraperLive(activeRun?.id || null);
   const { schedule, isLoading: scheduleLoading, updateSchedule, toggleActive } = useViewScraperSchedule();
@@ -97,8 +97,26 @@ export default function AdminViewBot() {
     setFilters(newFilters);
   }, [setFilters]);
 
+  // Auto-dismiss error after 8 seconds
+  useEffect(() => {
+    if (!scraperError) return;
+    const timer = setTimeout(() => clearError(), 8000);
+    return () => clearTimeout(timer);
+  }, [scraperError, clearError]);
+
   return (
     <div className="space-y-6">
+      {/* Error alert */}
+      {scraperError && (
+        <div
+          className="flex items-center justify-between bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm cursor-pointer"
+          onClick={clearError}
+        >
+          <span>{scraperError}</span>
+          <span className="text-red-400 hover:text-red-600 ml-4 font-medium">&times;</span>
+        </div>
+      )}
+
       {/* Sub-tab navigation */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
         {(['dashboard', 'submissions', 'by-project'] as SubTab[]).map((tab) => (
