@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
         created_at,
         status,
         projects!project_submissions_project_id_fkey (
-          title,
+          name,
           course_id,
           min_views,
           max_views,
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
           status: s.status,
           username: profile?.username || 'Unknown',
           avatar_url: profile?.avatar_url || null,
-          project_title: s.projects?.title || 'Unknown Project',
+          project_title: s.projects?.name || 'Unknown Project',
           course_title: s.projects?.courses?.title || 'Unknown Course',
           course_id: s.projects?.course_id || '',
           min_views: s.projects?.min_views || null,
