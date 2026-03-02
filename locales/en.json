@@ -373,7 +373,9 @@
     "submitted": "Submitted!",
     "pleaseProvideLink": "Please provide at least one video link for a platform",
     "projectNotFound": "Project not found. Please make sure you are replying to a valid project.",
-    "closeDialog": "Close dialog"
+    "closeDialog": "Close dialog",
+    "invalidUrl": "Please enter a valid URL",
+    "invalidPlatformUrl": "This URL doesn't appear to be from {{platform}}. Please enter a valid {{platform}} link."
   },
   "enrollment": {
     "requestEnrollment": "Request Enrollment",
@@ -894,6 +896,18 @@
     "preset_weeklyMon": "Weekly Mon",
     "customCronPlaceholder": "Custom cron (e.g. 0 3 * * *)",
     "apply": "Apply",
-    "noSchedule": "No cron job found. Apply migration 102 first."
+    "noSchedule": "No cron job found. Apply migration 102 first.",
+    "lastRunResults": "Last Run Results",
+    "noResults": "No results yet",
+    "showAll": "Show All",
+    "showLess": "Show Less",
+    "platform": "Platform",
+    "user": "User",
+    "course": "Course",
+    "link": "Link",
+    "runtime": "Runtime",
+    "autoManual": "Automatic/Manual",
+    "automatic": "Automatic",
+    "manual_label": "Manual"
   }
 }

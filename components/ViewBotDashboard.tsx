@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useI18n } from '@/contexts/I18nContext';
-import type { ViewScrapeRun, ViewScraperProgress } from '@/types/view-scraper';
+import type { ViewScrapeRun, ViewScraperProgress, ViewScrapeResultEnriched } from '@/types/view-scraper';
 import type { ViewScraperSchedule } from '@/hooks/useViewScraperSchedule';
 
 interface ViewBotDashboardProps {
@@ -19,6 +19,9 @@ interface ViewBotDashboardProps {
   scheduleLoading: boolean;
   onUpdateSchedule: (cron: string) => Promise<boolean>;
   onToggleActive: (active: boolean) => Promise<boolean>;
+  lastRunResults: ViewScrapeResultEnriched[];
+  lastRunResultsLoading: boolean;
+  latestCompletedRun: ViewScrapeRun | null;
 }
 
 const SCHEDULE_PRESETS = [
@@ -28,6 +31,8 @@ const SCHEDULE_PRESETS = [
   { label: 'every6h', cron: '0 0,6,12,18 * * *' },
   { label: 'weeklyMon', cron: '0 3 * * 1' },
 ];
+
+const COLLAPSED_LIMIT = 5;
 
 function cronToHuman(cron: string, t: (key: string) => string): string {
   for (const preset of SCHEDULE_PRESETS) {
@@ -57,13 +62,20 @@ export default function ViewBotDashboard({
   scheduleLoading,
   onUpdateSchedule,
   onToggleActive,
+  lastRunResults,
+  lastRunResultsLoading,
+  latestCompletedRun,
 }: ViewBotDashboardProps) {
   const { t } = useI18n();
   const [customCron, setCustomCron] = useState('');
   const [scheduleUpdating, setScheduleUpdating] = useState(false);
+  const [showAllRuns, setShowAllRuns] = useState(false);
+  const [showAllResults, setShowAllResults] = useState(false);
 
   const lastRun = runs[0] || null;
   const progressPercent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
+  const displayedRuns = showAllRuns ? runs : runs.slice(0, COLLAPSED_LIMIT);
+  const displayedResults = showAllResults ? lastRunResults : lastRunResults.slice(0, COLLAPSED_LIMIT);
 
   function formatDuration(run: ViewScrapeRun): string {
     if (!run.completed_at) return 'In progress...';
@@ -76,6 +88,11 @@ export default function ViewBotDashboard({
 
   function formatDate(dateStr: string): string {
     return new Date(dateStr).toLocaleString();
+  }
+
+  function truncateUrl(url: string, maxLen = 40): string {
+    if (url.length <= maxLen) return url;
+    return url.slice(0, maxLen) + '...';
   }
 
   return (
@@ -252,54 +269,156 @@ export default function ViewBotDashboard({
         ) : runs.length === 0 ? (
           <div className="p-8 text-center text-gray-400">{t('viewBot.noRuns')}</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-gray-900">
-              <thead className="bg-gray-50 text-gray-600">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium">{t('viewBot.triggeredBy')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('viewBot.type')}</th>
-                  <th className="px-4 py-3 text-center font-medium">{t('viewBot.urlsCheckedCol')}</th>
-                  <th className="px-4 py-3 text-center font-medium">{t('viewBot.successCol')}</th>
-                  <th className="px-4 py-3 text-center font-medium">{t('viewBot.failedCol')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('viewBot.duration')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('viewBot.statusCol')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {runs.map((run) => (
-                  <tr key={run.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      {run.triggered_by_username || (run.trigger_type === 'scheduled' ? 'System' : 'Unknown')}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                        run.trigger_type === 'scheduled'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-purple-100 text-purple-700'
-                      }`}>
-                        {run.trigger_type}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">{run.total_urls}</td>
-                    <td className="px-4 py-3 text-center text-emerald-600 font-medium">{run.successful}</td>
-                    <td className="px-4 py-3 text-center text-red-600 font-medium">{run.failed}</td>
-                    <td className="px-4 py-3">{formatDuration(run)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                        run.status === 'completed'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : run.status === 'running'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}>
-                        {run.status}
-                      </span>
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-gray-900">
+                <thead className="bg-gray-50 text-gray-600">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">{t('viewBot.triggeredBy')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('viewBot.type')}</th>
+                    <th className="px-4 py-3 text-center font-medium">{t('viewBot.urlsCheckedCol')}</th>
+                    <th className="px-4 py-3 text-center font-medium">{t('viewBot.successCol')}</th>
+                    <th className="px-4 py-3 text-center font-medium">{t('viewBot.failedCol')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('viewBot.duration')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('viewBot.statusCol')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {displayedRuns.map((run) => (
+                    <tr key={run.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        {run.triggered_by_username || (run.trigger_type === 'scheduled' ? 'System' : 'Unknown')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                          run.trigger_type === 'scheduled'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-purple-100 text-purple-700'
+                        }`}>
+                          {run.trigger_type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">{run.total_urls}</td>
+                      <td className="px-4 py-3 text-center text-emerald-600 font-medium">{run.successful}</td>
+                      <td className="px-4 py-3 text-center text-red-600 font-medium">{run.failed}</td>
+                      <td className="px-4 py-3">{formatDuration(run)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                          run.status === 'completed'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : run.status === 'running'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {run.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {runs.length > COLLAPSED_LIMIT && (
+              <div className="p-3 border-t border-gray-100 text-center">
+                <button
+                  onClick={() => setShowAllRuns(!showAllRuns)}
+                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                >
+                  {showAllRuns
+                    ? t('viewBot.showLess')
+                    : `${t('viewBot.showAll')} (${runs.length})`}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Last Run Results */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="p-5 border-b border-gray-100">
+          <h3 className="text-lg font-semibold text-navy-900">{t('viewBot.lastRunResults')}</h3>
+        </div>
+
+        {lastRunResultsLoading ? (
+          <div className="p-8 text-center text-gray-400">{t('common.loading')}</div>
+        ) : lastRunResults.length === 0 ? (
+          <div className="p-8 text-center text-gray-400">{t('viewBot.noResults')}</div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-gray-900">
+                <thead className="bg-gray-50 text-gray-600">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">{t('viewBot.platform')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('viewBot.user')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('viewBot.course')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('viewBot.link')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('viewBot.runtime')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('viewBot.autoManual')}</th>
+                    <th className="px-4 py-3 text-right font-medium">{t('viewBot.views')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {displayedResults.map((result) => (
+                    <tr key={result.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                          result.platform === 'tiktok'
+                            ? 'bg-pink-100 text-pink-700'
+                            : 'bg-purple-100 text-purple-700'
+                        }`}>
+                          {result.platform === 'tiktok' ? 'TikTok' : 'Instagram'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">{result.username}</td>
+                      <td className="px-4 py-3">{result.course_title}</td>
+                      <td className="px-4 py-3">
+                        <a
+                          href={result.video_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-600 hover:text-emerald-700 hover:underline"
+                          title={result.video_url}
+                        >
+                          {truncateUrl(result.video_url)}
+                        </a>
+                      </td>
+                      <td className="px-4 py-3">
+                        {latestCompletedRun ? formatDuration(latestCompletedRun) : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                          latestCompletedRun?.trigger_type === 'scheduled'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-purple-100 text-purple-700'
+                        }`}>
+                          {latestCompletedRun?.trigger_type === 'scheduled'
+                            ? t('viewBot.automatic')
+                            : t('viewBot.manual_label')}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium">
+                        {result.view_count !== null ? result.view_count.toLocaleString() : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {lastRunResults.length > COLLAPSED_LIMIT && (
+              <div className="p-3 border-t border-gray-100 text-center">
+                <button
+                  onClick={() => setShowAllResults(!showAllResults)}
+                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                >
+                  {showAllResults
+                    ? t('viewBot.showLess')
+                    : `${t('viewBot.showAll')} (${lastRunResults.length})`}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

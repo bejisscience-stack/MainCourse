@@ -6,6 +6,7 @@ import { useViewScraperRuns } from '@/hooks/useViewScraperRuns';
 import { useViewScraperSubmissions } from '@/hooks/useViewScraperSubmissions';
 import { useViewScraperLive } from '@/hooks/useViewScraperLive';
 import { useViewScraperSchedule } from '@/hooks/useViewScraperSchedule';
+import { useViewScraperRunResults } from '@/hooks/useViewScraperRunResults';
 import ViewBotDashboard from './ViewBotDashboard';
 import ViewBotSubmissions from './ViewBotSubmissions';
 import ViewBotByProject from './ViewBotByProject';
@@ -24,6 +25,9 @@ export default function AdminViewBot() {
   const { submissions, allSubmissions, isLoading: subsLoading, filters, setFilters } = useViewScraperSubmissions();
   const { progress, isActive: isLiveActive } = useViewScraperLive(activeRun?.id || null);
   const { schedule, isLoading: scheduleLoading, updateSchedule, toggleActive } = useViewScraperSchedule();
+
+  const latestCompletedRun = useMemo(() => runs.find(r => r.status === 'completed') || null, [runs]);
+  const { results: lastRunResults, isLoading: lastRunResultsLoading } = useViewScraperRunResults(latestCompletedRun?.id || null);
 
   // Compute link counts
   const linkCounts = useMemo(() => {
@@ -158,6 +162,9 @@ export default function AdminViewBot() {
           scheduleLoading={scheduleLoading}
           onUpdateSchedule={updateSchedule}
           onToggleActive={toggleActive}
+          lastRunResults={lastRunResults}
+          lastRunResultsLoading={lastRunResultsLoading}
+          latestCompletedRun={latestCompletedRun}
         />
       )}
 

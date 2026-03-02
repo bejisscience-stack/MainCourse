@@ -55,6 +55,11 @@ export interface SubmissionWithViews {
   platforms: string[] | null;
 }
 
+export interface ViewScrapeResultEnriched extends ViewScrapeResult {
+  username: string;
+  course_title: string;
+}
+
 export interface ViewScraperProgress {
   completed: number;
   total: number;

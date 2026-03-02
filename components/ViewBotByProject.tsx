@@ -97,7 +97,7 @@ export default function ViewBotByProject({
             {project.minViews !== null && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">{t('viewBot.minViews')}:</span>
-                <span className="font-medium">{project.minViews.toLocaleString()}</span>
+                <span className="font-medium text-gray-900">{project.minViews.toLocaleString()}</span>
               </div>
             )}
             {project.platforms && project.platforms.length > 0 && (
@@ -118,11 +118,11 @@ export default function ViewBotByProject({
             )}
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">{t('viewBot.submissionsCount')}:</span>
-              <span className="font-medium">{project.submissionCount}</span>
+              <span className="font-medium text-gray-900">{project.submissionCount}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">{t('viewBot.avgViews')}:</span>
-              <span className="font-medium">{project.avgViews.toLocaleString()}</span>
+              <span className="font-medium text-gray-900">{project.avgViews.toLocaleString()}</span>
             </div>
           </div>
 

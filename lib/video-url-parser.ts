@@ -1,5 +1,31 @@
 import type { Platform } from '@/types/view-scraper';
 
+const PLATFORM_HOSTNAMES: Record<string, string[]> = {
+  tiktok: ['tiktok.com'],
+  instagram: ['instagram.com'],
+  facebook: ['facebook.com', 'fb.watch'],
+  youtube: ['youtube.com', 'youtu.be'],
+  twitter: ['twitter.com', 'x.com'],
+  linkedin: ['linkedin.com'],
+};
+
+/**
+ * Validate that a URL belongs to the expected platform.
+ * Returns true for unknown platforms (safe default — don't block).
+ * Returns false for invalid URLs.
+ */
+export function validatePlatformUrl(platform: string, url: string): boolean {
+  const allowedHostnames = PLATFORM_HOSTNAMES[platform.toLowerCase()];
+  if (!allowedHostnames) return true;
+
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return allowedHostnames.some(allowed => hostname.includes(allowed));
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Detect platform from a video URL
  */

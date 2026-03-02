@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import VideoPlayer from '@/components/VideoPlayer';
 
-// Launch date - March 11, 2026 at midnight Georgia time (GMT+4)
-const LAUNCH_DATE = new Date('2026-03-11T00:00:00+04:00');
+// Launch date - March 21, 2026 at midnight Georgia time (GMT+4)
+const LAUNCH_DATE = new Date('2026-03-21T00:00:00+04:00');
 
 interface TimeLeft {
   days: number;

@@ -373,7 +373,9 @@
     "submitted": "წარიგდა!",
     "pleaseProvideLink": "გთხოვთ მიუთითოთ მინიმუმ ერთი ვიდეო ლინკი პლატფორმისთვის",
     "projectNotFound": "პროექტი ვერ მოიძებნა. გთხოვთ დარწმუნდეთ, რომ პასუხობთ სწორ პროექტზე.",
-    "closeDialog": "დიალოგის დახურვა"
+    "closeDialog": "დიალოგის დახურვა",
+    "invalidUrl": "გთხოვთ შეიყვანოთ სწორი URL",
+    "invalidPlatformUrl": "ეს URL არ ჰგავს {{platform}}-ის ბმულს. გთხოვთ შეიყვანოთ სწორი {{platform}} ლინკი."
   },
   "enrollment": {
     "requestEnrollment": "რეგისტრაციის მოთხოვნა",
@@ -894,6 +896,18 @@
     "preset_weeklyMon": "ორშაბათს",
     "customCronPlaceholder": "Cron გამოსახულება (მაგ. 0 3 * * *)",
     "apply": "გამოყენება",
-    "noSchedule": "Cron ვერ მოიძებნა. გაუშვით მიგრაცია 102."
+    "noSchedule": "Cron ვერ მოიძებნა. გაუშვით მიგრაცია 102.",
+    "lastRunResults": "ბოლო გაშვების შედეგები",
+    "noResults": "შედეგები ჯერ არ არის",
+    "showAll": "ყველას ჩვენება",
+    "showLess": "ნაკლების ჩვენება",
+    "platform": "პლატფორმა",
+    "user": "მომხმარებელი",
+    "course": "კურსი",
+    "link": "ბმული",
+    "runtime": "ხანგრძლივობა",
+    "autoManual": "ავტომატური/ხელით",
+    "automatic": "ავტომატური",
+    "manual_label": "ხელით"
   }
 }

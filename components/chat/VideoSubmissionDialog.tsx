@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { edgeFunctionUrl } from '@/lib/api-client';
 import { useI18n } from '@/contexts/I18nContext';
+import { validatePlatformUrl } from '@/lib/video-url-parser';
 
 interface VideoSubmissionDialogProps {
   isOpen: boolean;
@@ -106,15 +107,19 @@ export default function VideoSubmissionDialog({
       if (link && link.length > 0) {
         try {
           new URL(link);
+          if (!validatePlatformUrl(platform, link)) {
+            const displayName = PLATFORM_NAMES[platform.toLowerCase()] || platform;
+            newErrors[`platform_${platform}`] = t('videoSubmission.invalidPlatformUrl', { platform: displayName });
+          }
         } catch {
-          newErrors[`platform_${platform}`] = 'Please enter a valid URL';
+          newErrors[`platform_${platform}`] = t('videoSubmission.invalidUrl');
         }
       }
     });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [platformLinks, platforms]);
+  }, [platformLinks, platforms, t]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
