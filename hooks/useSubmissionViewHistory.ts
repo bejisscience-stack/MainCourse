@@ -1,6 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
+import { supabase } from '@/lib/supabase';
 import type { ViewScrapeResult } from '@/types/view-scraper';
 
 export interface SubmissionViewHistoryResult {
@@ -12,7 +13,15 @@ export function useSubmissionViewHistory(submissionId: string | null): Submissio
   const { data, isLoading } = useSWR(
     submissionId ? `/api/admin/view-scraper/history/${submissionId}` : null,
     async (url) => {
-      const response = await fetch(url);
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        session = refreshed;
+      }
+      if (!session?.access_token) return { history: [] };
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
       if (!response.ok) return { history: [] };
       return response.json();
     },

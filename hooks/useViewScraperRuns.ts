@@ -19,7 +19,15 @@ export function useViewScraperRuns(): ViewScraperRunsResult {
   const { data, isLoading, mutate } = useSWR(
     '/api/admin/view-scraper/runs',
     async (url) => {
-      const response = await fetch(url);
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        session = refreshed;
+      }
+      if (!session?.access_token) return { runs: [] };
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
       if (!response.ok) return { runs: [] };
       return response.json();
     },
@@ -46,9 +54,18 @@ export function useViewScraperRuns(): ViewScraperRunsResult {
 
   const triggerRun = useCallback(async (projectId?: string) => {
     try {
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        session = refreshed;
+      }
+      if (!session?.access_token) return null;
       const response = await fetch('/api/admin/view-scraper/run', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ project_id: projectId || null }),
       });
       const result = await response.json();
@@ -66,9 +83,18 @@ export function useViewScraperRuns(): ViewScraperRunsResult {
 
   const triggerCheck = useCallback(async (submissionId: string) => {
     try {
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        session = refreshed;
+      }
+      if (!session?.access_token) return null;
       const response = await fetch('/api/admin/view-scraper/check', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ submission_id: submissionId }),
       });
       const result = await response.json();

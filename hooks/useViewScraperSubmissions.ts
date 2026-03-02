@@ -28,7 +28,15 @@ export function useViewScraperSubmissions(): ViewScraperSubmissionsResult {
   const { data, isLoading, mutate } = useSWR(
     '/api/admin/view-scraper/submissions',
     async (url) => {
-      const response = await fetch(url);
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        session = refreshed;
+      }
+      if (!session?.access_token) return { submissions: [] };
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
       if (!response.ok) return { submissions: [] };
       return response.json();
     },

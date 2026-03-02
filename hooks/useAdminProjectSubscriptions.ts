@@ -34,7 +34,15 @@ export function useAdminProjectSubscriptions(): AdminProjectSubscriptionsResult 
   const { data, isLoading, mutate } = useSWR(
     '/api/admin/project-subscriptions',
     async (url) => {
-      const response = await fetch(url);
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        session = refreshed;
+      }
+      if (!session?.access_token) return { subscriptions: [], counts: {} };
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
       if (!response.ok) return { subscriptions: [], counts: {} };
       return response.json();
     },
