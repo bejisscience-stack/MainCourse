@@ -34,17 +34,22 @@ export default function AdminViewBot() {
     let total = 0;
     let tiktok = 0;
     let instagram = 0;
+    let youtube = 0;
+    let facebook = 0;
+
+    const countPlatform = (hostname: string) => {
+      if (hostname.includes('tiktok.com')) tiktok++;
+      else if (hostname.includes('instagram.com')) instagram++;
+      else if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) youtube++;
+      else if (hostname.includes('facebook.com') || hostname.includes('fb.watch')) facebook++;
+    };
 
     for (const sub of allSubmissions) {
       if (sub.platform_links) {
         for (const [, url] of Object.entries(sub.platform_links)) {
           if (typeof url === 'string' && url.trim()) {
             total++;
-            try {
-              const hostname = new URL(url).hostname.toLowerCase();
-              if (hostname.includes('tiktok.com')) tiktok++;
-              else if (hostname.includes('instagram.com')) instagram++;
-            } catch { /* skip */ }
+            try { countPlatform(new URL(url).hostname.toLowerCase()); } catch { /* skip */ }
           }
         }
       }
@@ -54,16 +59,12 @@ export default function AdminViewBot() {
           : false;
         if (!alreadyCounted) {
           total++;
-          try {
-            const hostname = new URL(sub.video_url).hostname.toLowerCase();
-            if (hostname.includes('tiktok.com')) tiktok++;
-            else if (hostname.includes('instagram.com')) instagram++;
-          } catch { /* skip */ }
+          try { countPlatform(new URL(sub.video_url).hostname.toLowerCase()); } catch { /* skip */ }
         }
       }
     }
 
-    return { total, tiktok, instagram };
+    return { total, tiktok, instagram, youtube, facebook };
   }, [allSubmissions]);
 
   // Unique projects for filter dropdown
@@ -157,6 +158,8 @@ export default function AdminViewBot() {
           totalLinks={linkCounts.total}
           tiktokLinks={linkCounts.tiktok}
           instagramLinks={linkCounts.instagram}
+          youtubeLinks={linkCounts.youtube}
+          facebookLinks={linkCounts.facebook}
           onRunBot={handleRunBot}
           schedule={schedule}
           scheduleLoading={scheduleLoading}
