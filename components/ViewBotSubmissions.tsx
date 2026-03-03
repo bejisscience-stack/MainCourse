@@ -165,9 +165,11 @@ export default function ViewBotSubmissions({
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium ${
-                                urlInfo.platform === 'TikTok'
-                                  ? 'bg-gray-900 text-white'
-                                  : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                                urlInfo.platform === 'TikTok' ? 'bg-gray-900 text-white'
+                                  : urlInfo.platform === 'Instagram' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                                  : urlInfo.platform === 'YouTube' ? 'bg-red-600 text-white'
+                                  : urlInfo.platform === 'Facebook' ? 'bg-blue-600 text-white'
+                                  : 'bg-gray-200 text-gray-700'
                               }`}>
                                 {urlInfo.platform}
                               </span>

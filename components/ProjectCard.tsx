@@ -9,20 +9,10 @@ import { useProjectBudget } from '@/hooks/useProjectBudget';
 
 // Platform icons/badges configuration
 const platformConfig: Record<string, { icon: string; bgColor: string; textColor: string }> = {
-  youtube: {
-    icon: '▶',
-    bgColor: 'bg-red-100 dark:bg-red-500/20',
-    textColor: 'text-red-600 dark:text-red-400',
-  },
   instagram: {
     icon: '📷',
     bgColor: 'bg-pink-100 dark:bg-pink-500/20',
     textColor: 'text-pink-600 dark:text-pink-400',
-  },
-  facebook: {
-    icon: 'f',
-    bgColor: 'bg-blue-100 dark:bg-blue-500/20',
-    textColor: 'text-blue-600 dark:text-blue-400',
   },
   tiktok: {
     icon: '♪',

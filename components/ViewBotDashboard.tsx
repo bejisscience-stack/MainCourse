@@ -14,8 +14,6 @@ interface ViewBotDashboardProps {
   totalLinks: number;
   tiktokLinks: number;
   instagramLinks: number;
-  youtubeLinks: number;
-  facebookLinks: number;
   onRunBot: () => void;
   schedule: ViewScraperSchedule | null;
   scheduleLoading: boolean;
@@ -59,8 +57,6 @@ export default function ViewBotDashboard({
   totalLinks,
   tiktokLinks,
   instagramLinks,
-  youtubeLinks,
-  facebookLinks,
   onRunBot,
   schedule,
   scheduleLoading,
@@ -102,7 +98,7 @@ export default function ViewBotDashboard({
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500">{t('viewBot.totalLinks')}</p>
           <p className="text-2xl font-bold text-navy-900 mt-1">{totalLinks.toLocaleString()}</p>
@@ -114,14 +110,6 @@ export default function ViewBotDashboard({
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500">{t('viewBot.instagramLinks')}</p>
           <p className="text-2xl font-bold text-navy-900 mt-1">{instagramLinks.toLocaleString()}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm text-gray-500">{t('viewBot.youtubeLinks')}</p>
-          <p className="text-2xl font-bold text-navy-900 mt-1">{youtubeLinks.toLocaleString()}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm text-gray-500">{t('viewBot.facebookLinks')}</p>
-          <p className="text-2xl font-bold text-navy-900 mt-1">{facebookLinks.toLocaleString()}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500">{t('viewBot.lastRun')}</p>
@@ -379,14 +367,10 @@ export default function ViewBotDashboard({
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                           result.platform === 'tiktok' ? 'bg-pink-100 text-pink-700'
                             : result.platform === 'instagram' ? 'bg-purple-100 text-purple-700'
-                            : result.platform === 'youtube' ? 'bg-red-100 text-red-700'
-                            : result.platform === 'facebook' ? 'bg-blue-100 text-blue-700'
                             : 'bg-gray-200 text-gray-700'
                         }`}>
                           {result.platform === 'tiktok' ? 'TikTok'
                             : result.platform === 'instagram' ? 'Instagram'
-                            : result.platform === 'youtube' ? 'YouTube'
-                            : result.platform === 'facebook' ? 'Facebook'
                             : result.platform}
                         </span>
                       </td>

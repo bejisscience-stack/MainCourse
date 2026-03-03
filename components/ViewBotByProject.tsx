@@ -106,9 +106,9 @@ export default function ViewBotByProject({
                 <div className="flex gap-1">
                   {project.platforms.map((p) => (
                     <span key={p} className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium ${
-                      p.toLowerCase() === 'tiktok'
-                        ? 'bg-gray-900 text-white'
-                        : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                      p.toLowerCase() === 'tiktok' ? 'bg-gray-900 text-white'
+                        : p.toLowerCase() === 'instagram' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                        : 'bg-gray-200 text-gray-700'
                     }`}>
                       {p}
                     </span>

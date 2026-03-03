@@ -68,14 +68,20 @@ export function useViewScraperSubmissions(): ViewScraperSubmissionsResult {
     }
 
     if (filters.platform) {
+      const matchesPlatform = (hostname: string, platform: Platform): boolean => {
+        switch (platform) {
+          case 'tiktok': return hostname.includes('tiktok.com');
+          case 'instagram': return hostname.includes('instagram.com');
+          default: return false;
+        }
+      };
+
       filtered = filtered.filter((s) => {
         // Check platform_links keys
         if (s.platform_links) {
           const hasMatchingLink = Object.values(s.platform_links).some((url) => {
             try {
-              const hostname = new URL(url).hostname.toLowerCase();
-              if (filters.platform === 'tiktok') return hostname.includes('tiktok.com');
-              if (filters.platform === 'instagram') return hostname.includes('instagram.com');
+              return matchesPlatform(new URL(url).hostname.toLowerCase(), filters.platform!);
             } catch { /* skip invalid urls */ }
             return false;
           });
@@ -84,9 +90,7 @@ export function useViewScraperSubmissions(): ViewScraperSubmissionsResult {
         // Check video_url
         if (s.video_url) {
           try {
-            const hostname = new URL(s.video_url).hostname.toLowerCase();
-            if (filters.platform === 'tiktok') return hostname.includes('tiktok.com');
-            if (filters.platform === 'instagram') return hostname.includes('instagram.com');
+            return matchesPlatform(new URL(s.video_url).hostname.toLowerCase(), filters.platform!);
           } catch { /* skip */ }
         }
         return false;

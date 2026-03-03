@@ -15,9 +15,7 @@ interface SubmissionReviewDialogProps {
 }
 
 const PLATFORM_NAMES: Record<string, string> = {
-  youtube: 'YouTube',
   instagram: 'Instagram',
-  facebook: 'Facebook',
   tiktok: 'TikTok',
 };
 

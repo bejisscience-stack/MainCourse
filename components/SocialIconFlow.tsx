@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 interface SocialIcon {
   id: number;
   x: number;
-  type: 'instagram' | 'youtube' | 'tiktok' | 'x';
+  type: 'instagram' | 'tiktok' | 'x';
   delay: number;
   duration: number;
 }
@@ -48,7 +48,7 @@ export function SocialIconFlow() {
     if (currentMilestone) {
       setLastMilestone(currentMilestone);
       
-      const types: SocialIcon['type'][] = ['instagram', 'youtube', 'tiktok', 'x'];
+      const types: SocialIcon['type'][] = ['instagram', 'tiktok', 'x'];
       const newIcon: SocialIcon = {
         id: iconIdRef.current++,
         x: Math.random() * window.innerWidth * 0.8 + window.innerWidth * 0.1,
@@ -83,13 +83,6 @@ export function SocialIconFlow() {
             <rect x="2" y="2" width="20" height="20" rx="5" stroke="currentColor" strokeWidth="1.5" />
             <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.5" />
             <circle cx="17" cy="7" r="1" fill="currentColor" />
-          </svg>
-        );
-      case 'youtube':
-        return (
-          <svg {...commonProps}>
-            <path d="M22 8.5c0 1.5-.5 2.5-1 3s-1.5 1-3 1h-12c-1.5 0-2-.5-2.5-1S2 10 2 8.5v7c0 1.5.5 2.5 1 3s1.5 1 2.5 1h12c1.5 0 2-.5 2.5-1s1-1.5 1-3v-7z" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M10 9l5 3-5 3V9z" fill="currentColor" />
           </svg>
         );
       case 'tiktok':

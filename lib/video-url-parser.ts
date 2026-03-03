@@ -3,10 +3,6 @@ import type { Platform } from '@/types/view-scraper';
 const PLATFORM_HOSTNAMES: Record<string, string[]> = {
   tiktok: ['tiktok.com'],
   instagram: ['instagram.com'],
-  facebook: ['facebook.com', 'fb.watch'],
-  youtube: ['youtube.com', 'youtu.be'],
-  twitter: ['twitter.com', 'x.com'],
-  linkedin: ['linkedin.com'],
 };
 
 /**

@@ -16,12 +16,8 @@ interface VideoSubmissionDialogProps {
 }
 
 const PLATFORM_NAMES: Record<string, string> = {
-  facebook: 'Facebook',
-  youtube: 'YouTube',
   instagram: 'Instagram',
   tiktok: 'TikTok',
-  twitter: 'Twitter',
-  linkedin: 'LinkedIn',
 };
 
 export default function VideoSubmissionDialog({

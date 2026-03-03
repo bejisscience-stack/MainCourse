@@ -34,14 +34,10 @@ export default function AdminViewBot() {
     let total = 0;
     let tiktok = 0;
     let instagram = 0;
-    let youtube = 0;
-    let facebook = 0;
 
     const countPlatform = (hostname: string) => {
       if (hostname.includes('tiktok.com')) tiktok++;
       else if (hostname.includes('instagram.com')) instagram++;
-      else if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) youtube++;
-      else if (hostname.includes('facebook.com') || hostname.includes('fb.watch')) facebook++;
     };
 
     for (const sub of allSubmissions) {
@@ -64,7 +60,7 @@ export default function AdminViewBot() {
       }
     }
 
-    return { total, tiktok, instagram, youtube, facebook };
+    return { total, tiktok, instagram };
   }, [allSubmissions]);
 
   // Unique projects for filter dropdown
@@ -158,8 +154,6 @@ export default function AdminViewBot() {
           totalLinks={linkCounts.total}
           tiktokLinks={linkCounts.tiktok}
           instagramLinks={linkCounts.instagram}
-          youtubeLinks={linkCounts.youtube}
-          facebookLinks={linkCounts.facebook}
           onRunBot={handleRunBot}
           schedule={schedule}
           scheduleLoading={scheduleLoading}
