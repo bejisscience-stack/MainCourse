@@ -34,8 +34,9 @@ interface MessageProps {
   onReaction?: (messageId: string, emoji: string) => void;
   isLecturer?: boolean;
   channelId?: string;
+  courseId?: string;
   showAvatar?: boolean;
-  isEnrollmentExpired?: boolean;
+  isEnrolledInCourse?: boolean;
 }
 
 const formatTimestamp = (timestamp: number) => {
@@ -199,8 +200,9 @@ const Message = memo(function Message({
   onReaction,
   isLecturer = false,
   channelId,
+  courseId,
   showAvatar = true,
-  isEnrollmentExpired = false,
+  isEnrolledInCourse = false,
 }: MessageProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
@@ -512,7 +514,8 @@ const Message = memo(function Message({
           currentUserId={currentUserId}
           isLecturer={isLecturer}
           channelId={channelId || ''}
-          isEnrollmentExpired={isEnrollmentExpired}
+          courseId={courseId || ''}
+          isEnrolledInCourse={isEnrolledInCourse}
         />
       </div>
     );

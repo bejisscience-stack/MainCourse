@@ -508,14 +508,6 @@ export default function LecturerDashboard() {
       return;
     }
 
-    // Validate file size (10GB limit)
-    const maxSize = 10 * 1024 * 1024 * 1024; // 10GB
-    if (file.size > maxSize) {
-      const sizeGB = (file.size / (1024 * 1024 * 1024)).toFixed(2);
-      setError(`Video file size (${sizeGB}GB) exceeds the 10GB limit. Please compress your video or use a smaller file.`);
-      return;
-    }
-
     // Validate file type
     const validVideoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
     const validExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
@@ -554,12 +546,6 @@ export default function LecturerDashboard() {
 
   const handleThumbnailUpload = async (file: File) => {
     if (!user) return;
-
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Thumbnail image size must be less than 5MB');
-      return;
-    }
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -1244,7 +1230,7 @@ export default function LecturerDashboard() {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                 </svg>
                                 <p className="text-sm font-medium text-charcoal-700 dark:text-gray-300">Click to upload video</p>
-                                <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">MP4, MOV up to 50MB</p>
+                                <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">MP4, MOV</p>
                               </>
                             )}
                           </div>
@@ -1303,7 +1289,7 @@ export default function LecturerDashboard() {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
                                 <p className="text-sm font-medium text-charcoal-700 dark:text-gray-300">Click to upload thumbnail</p>
-                                <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">PNG, JPG up to 5MB</p>
+                                <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">PNG, JPG</p>
                               </>
                             )}
                           </div>

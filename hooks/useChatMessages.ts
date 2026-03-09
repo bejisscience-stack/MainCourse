@@ -54,20 +54,19 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
   ) => {
     try {
       // Get session quickly - use cached session first
-      const { data: { session } } = await supabase.auth.getSession();
+      let { data: { session } } = await supabase.auth.getSession();
 
       if (!session?.access_token) {
         // Try refresh only if no session
-        const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
-        if (!refreshedSession?.access_token) {
-          throw new Error('Not authenticated. Please log in again.');
-        }
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        session = refreshed;
       }
 
-      const token = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) {
+      if (!session?.access_token) {
         throw new Error('Not authenticated. Please log in again.');
       }
+
+      const token = session.access_token;
 
       const url = new URL(edgeFunctionUrl('chat-messages'));
       url.searchParams.set('chatId', targetChannelId);

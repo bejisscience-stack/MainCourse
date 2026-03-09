@@ -74,3 +74,5 @@ dist/
 
 # Next.js artifacts that cause corruption
 .next/cache*
+.env.supabase
+.env.supabase.local

@@ -32,9 +32,7 @@ export interface ProjectSubmissionData {
 }
 
 const SOCIAL_MEDIA_PLATFORMS = [
-  { id: 'youtube', label: 'YouTube' },
   { id: 'instagram', label: 'Instagram' },
-  { id: 'facebook', label: 'Facebook' },
   { id: 'tiktok', label: 'TikTok' },
 ];
 

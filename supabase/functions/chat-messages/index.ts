@@ -24,7 +24,7 @@ Deno.serve(async (req: Request) => {
 
       const { data: channel, error: channelError } = await supabase
         .from('channels')
-        .select('id, course_id')
+        .select('id, course_id, name')
         .eq('id', chatId)
         .single()
 
@@ -41,7 +41,15 @@ Deno.serve(async (req: Request) => {
           .from('enrollments').select('id').eq('user_id', user.id).eq('course_id', channel.course_id).single()
 
         if (!enrollment && course?.lecturer_id !== user.id) {
-          return errorResponse('Forbidden: You do not have access to this channel', 403)
+          // Allow project-access users in the projects channel
+          if (channel.name?.toLowerCase() === 'projects') {
+            const { data: hasAccess } = await supabase.rpc('has_project_access', { uid: user.id })
+            if (!hasAccess) {
+              return errorResponse('Forbidden: You do not have access to this channel', 403)
+            }
+          } else {
+            return errorResponse('Forbidden: You do not have access to this channel', 403)
+          }
         }
 
         // Check if user is muted
@@ -136,7 +144,15 @@ Deno.serve(async (req: Request) => {
         .from('enrollments').select('id').eq('user_id', user.id).eq('course_id', channel.course_id).single()
 
       if (!enrollment && courseData?.lecturer_id !== user.id) {
-        return errorResponse('Forbidden: You do not have access to this channel', 403)
+        // Allow project-access users in the projects channel
+        if (channel.name?.toLowerCase() === 'projects') {
+          const { data: hasAccess } = await supabase.rpc('has_project_access', { uid: user.id })
+          if (!hasAccess) {
+            return errorResponse('Forbidden: You do not have access to this channel', 403)
+          }
+        } else {
+          return errorResponse('Forbidden: You do not have access to this channel', 403)
+        }
       }
     }
 

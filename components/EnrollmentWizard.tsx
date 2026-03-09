@@ -280,7 +280,8 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
 
   const handleSubmit = useCallback(async (uploadedUrls?: string[]) => {
     // Final validation
-    if (!validateStep(4)) {
+    const isValid = await validateStep(4);
+    if (!isValid) {
       setCurrentStep(4); // Go back to upload step if invalid
       return;
     }

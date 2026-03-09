@@ -23,7 +23,7 @@ interface ChatAreaProps {
   onSendMessage: (channelId: string, content: string) => void;
   onReply?: (messageId: string) => void;
   onReaction?: (messageId: string, emoji: string) => void;
-  isEnrollmentExpired?: boolean;
+  isEnrolledInCourse?: boolean;
   enrollmentInfo?: EnrollmentInfo | null;
   onReEnrollRequest?: () => void;
   onMobileMenuClick?: () => void;
@@ -36,12 +36,13 @@ export default function ChatArea({
   onSendMessage,
   onReply,
   onReaction,
-  isEnrollmentExpired = false,
+  isEnrolledInCourse = false,
   enrollmentInfo = null,
   onReEnrollRequest,
   onMobileMenuClick,
 }: ChatAreaProps) {
   const { t } = useI18n();
+  const isEnrollmentExpired = !isEnrolledInCourse;
   const [replyTo, setReplyTo] = useState<{
     id: string;
     username: string;
@@ -215,8 +216,13 @@ export default function ChatArea({
       return;
     }
 
-    // Get session once
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Get session once, with refresh fallback
+    let { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      const { data: { session: refreshed }, error: refreshError } = await supabase.auth.refreshSession();
+      session = refreshed;
+      sessionError = refreshError;
+    }
     if (sessionError || !session?.user) {
       console.error('Session error:', sessionError);
       throw new Error('Not authenticated. Please log in again.');
@@ -337,8 +343,12 @@ export default function ChatArea({
     if (!channel) return;
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        session = refreshed;
+      }
+      if (!session?.access_token) return;
 
       const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
       await fetch(edgeFunctionUrl('chat-typing'), {
@@ -391,7 +401,12 @@ export default function ChatArea({
       throw new Error('Channel not found');
     }
 
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    let { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      const { data: { session: refreshed }, error: refreshError } = await supabase.auth.refreshSession();
+      session = refreshed;
+      sessionError = refreshError;
+    }
     if (sessionError || !session?.user) {
       throw new Error('Not authenticated. Please log in again.');
     }
@@ -720,8 +735,9 @@ export default function ChatArea({
                         onReaction={handleReaction}
                         isLecturer={isLecturer}
                         channelId={channel.id}
+                        courseId={channel.courseId}
                         showAvatar={showAvatar}
-                        isEnrollmentExpired={isEnrollmentExpired}
+                        isEnrolledInCourse={isEnrolledInCourse}
                       />
                     );
                   });

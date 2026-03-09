@@ -25,7 +25,7 @@ interface LayoutContainerProps {
   onChannelUpdate?: (channelId: string, updates: Partial<Channel>) => Promise<void>;
   onChannelDelete?: (channelId: string) => Promise<void>;
   showDMButton?: boolean;
-  isEnrollmentExpired?: boolean;
+  isEnrolledInCourse?: boolean;
   enrollmentInfo?: EnrollmentInfo | null;
   onReEnrollRequest?: () => void;
 }
@@ -42,7 +42,7 @@ export default function LayoutContainer({
   onChannelUpdate,
   onChannelDelete,
   showDMButton = true,
-  isEnrollmentExpired = false,
+  isEnrolledInCourse = false,
   enrollmentInfo = null,
   onReEnrollRequest,
 }: LayoutContainerProps) {
@@ -272,7 +272,7 @@ export default function LayoutContainer({
           isLecturer={isLecturer}
           onSendMessage={onSendMessage || (() => { })}
           onReaction={onReaction}
-          isEnrollmentExpired={isEnrollmentExpired}
+          isEnrolledInCourse={isEnrolledInCourse}
           enrollmentInfo={enrollmentInfo}
           onReEnrollRequest={onReEnrollRequest}
           onMobileMenuClick={() => setMobileMenuOpen(true)}

@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { edgeFunctionUrl } from '@/lib/api-client';
 import { useI18n } from '@/contexts/I18nContext';
+import { validatePlatformUrl } from '@/lib/video-url-parser';
 
 interface VideoSubmissionDialogProps {
   isOpen: boolean;
@@ -15,12 +16,8 @@ interface VideoSubmissionDialogProps {
 }
 
 const PLATFORM_NAMES: Record<string, string> = {
-  facebook: 'Facebook',
-  youtube: 'YouTube',
   instagram: 'Instagram',
   tiktok: 'TikTok',
-  twitter: 'Twitter',
-  linkedin: 'LinkedIn',
 };
 
 export default function VideoSubmissionDialog({
@@ -106,15 +103,19 @@ export default function VideoSubmissionDialog({
       if (link && link.length > 0) {
         try {
           new URL(link);
+          if (!validatePlatformUrl(platform, link)) {
+            const displayName = PLATFORM_NAMES[platform.toLowerCase()] || platform;
+            newErrors[`platform_${platform}`] = t('videoSubmission.invalidPlatformUrl', { platform: displayName });
+          }
         } catch {
-          newErrors[`platform_${platform}`] = 'Please enter a valid URL';
+          newErrors[`platform_${platform}`] = t('videoSubmission.invalidUrl');
         }
       }
     });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [platformLinks, platforms]);
+  }, [platformLinks, platforms, t]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,10 +128,12 @@ export default function VideoSubmissionDialog({
     setErrors({});
 
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.user) {
-        throw new Error('Not authenticated. Please log in again.');
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        session = refreshed;
       }
+      if (!session?.access_token) throw new Error('Not authenticated. Please log in again.');
 
       console.log('Starting submission process:', { projectId, channelId, userId: session.user.id, platforms });
 
