@@ -7,7 +7,6 @@ import { useUser } from '@/hooks/useUser';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/contexts/ThemeContext';
 import { toast } from 'sonner';
-import PaymentMethodSelector from './PaymentMethodSelector';
 
 interface ProjectSubscriptionModalProps {
   isOpen: boolean;
@@ -43,8 +42,6 @@ export default function ProjectSubscriptionModal({
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'keepz' | 'bank_transfer'>('keepz');
-  const [isRedirecting, setIsRedirecting] = useState(false);
 
   // Show status view if user has existing subscription
   if (subscription) {
@@ -155,50 +152,6 @@ export default function ProjectSubscriptionModal({
     reader.readAsDataURL(file);
   };
 
-  const handleKeepzPayment = async () => {
-    setIsRedirecting(true);
-    setError(null);
-    try {
-      let { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
-        session = refreshed;
-      }
-      if (!session?.access_token) throw new Error('Not authenticated');
-      const token = session.access_token;
-
-      // Create subscription request with keepz payment method
-      const subResponse = await fetch('/api/project-subscriptions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ payment_method: 'keepz' }),
-      });
-      if (!subResponse.ok) {
-        const errData = await subResponse.json();
-        throw new Error(errData.error || 'Failed to create subscription');
-      }
-      const subscription = await subResponse.json();
-
-      // Create Keepz order
-      const orderResponse = await fetch('/api/payments/keepz/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ paymentType: 'project_subscription', referenceId: subscription.id }),
-      });
-      if (!orderResponse.ok) {
-        const errData = await orderResponse.json();
-        throw new Error(errData.error || 'Failed to create payment');
-      }
-      const { checkoutUrl } = await orderResponse.json();
-
-      window.location.href = checkoutUrl;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Payment failed';
-      setError(message);
-      setIsRedirecting(false);
-    }
-  };
-
   const handleSubmit = async () => {
     if (!screenshotFile) {
       setError(t('screenshotRequired'));
@@ -285,25 +238,7 @@ export default function ProjectSubscriptionModal({
           <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">per month</p>
         </div>
 
-        {/* Payment Method Selection */}
-        <PaymentMethodSelector
-          selectedMethod={paymentMethod}
-          onSelect={setPaymentMethod}
-          amount={SUBSCRIPTION_PRICE}
-        />
-
-        {paymentMethod === 'keepz' && (
-          <button
-            onClick={handleKeepzPayment}
-            disabled={isRedirecting}
-            className="w-full px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold disabled:opacity-50 text-lg"
-          >
-            {isRedirecting ? t('paymentMethod.redirecting') : t('paymentMethod.payWithCard', { amount: `₾${SUBSCRIPTION_PRICE.toFixed(2)}` })}
-          </button>
-        )}
-
-        {paymentMethod === 'bank_transfer' && (
-        <>{/* Bank Account Section */}
+        {/* Bank Account Section */}
         <div>
           <label className="block text-sm font-semibold mb-2">
             {t('bankAccount')}
@@ -407,9 +342,6 @@ export default function ProjectSubscriptionModal({
           )}
         </div>
 
-        </>
-        )}
-
         {/* Error Message */}
         {error && (
           <div className={`p-3 rounded-lg border ${
@@ -422,7 +354,6 @@ export default function ProjectSubscriptionModal({
         )}
 
         {/* Buttons */}
-        {paymentMethod === 'bank_transfer' && (
         <div className="flex gap-2">
           <button
             onClick={onClose}
@@ -439,7 +370,6 @@ export default function ProjectSubscriptionModal({
             {isSubmitting ? t('submitting') : t('submit')}
           </button>
         </div>
-        )}
       </div>
       </div>
     </div>

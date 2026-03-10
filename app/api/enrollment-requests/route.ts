@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { courseId, paymentScreenshots, referralCode, isReEnrollment, payment_method } = body;
+    const { courseId, paymentScreenshots, referralCode, isReEnrollment } = body;
 
     if (!courseId) {
       return NextResponse.json(
@@ -92,8 +92,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate paymentScreenshots if provided (skip for keepz payments)
-    if (payment_method !== 'keepz' && paymentScreenshots && !Array.isArray(paymentScreenshots)) {
+    // Validate paymentScreenshots if provided
+    if (paymentScreenshots && !Array.isArray(paymentScreenshots)) {
       return NextResponse.json(
         { error: 'paymentScreenshots must be an array' },
         { status: 400 }
@@ -215,7 +215,6 @@ export async function POST(request: NextRequest) {
         status: 'pending',
         payment_screenshots: formattedScreenshots.length > 0 ? formattedScreenshots : [],
         referral_code: referralCode ? referralCode.trim().toUpperCase() : null,
-        payment_method: payment_method || 'bank_transfer',
       })
       .select()
       .single();

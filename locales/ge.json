@@ -910,27 +910,5 @@
     "automatic": "ავტომატური",
     "manual_label": "ხელით",
     "date": "თარიღი"
-  },
-  "paymentMethod": {
-    "chooseMethod": "აირჩიეთ გადახდის მეთოდი",
-    "cardPayment": "ბარათით გადახდა",
-    "bankTransfer": "საბანკო გადარიცხვა",
-    "instant": "მომენტალური",
-    "manualProcessing": "~2სთ",
-    "visaMastercard": "Visa, Mastercard",
-    "manualTransfer": "ხელით გადარიცხვა",
-    "payWithCard": "გადაიხადე {amount}",
-    "redirecting": "გადამისამართება გადახდაზე...",
-    "processingPayment": "გადახდა მუშავდება",
-    "pleaseWait": "გთხოვთ დაელოდოთ გადახდის დადასტურებას...",
-    "paymentSuccessful": "გადახდა წარმატებულია!",
-    "paymentConfirmed": "თქვენი გადახდა დადასტურდა და წვდომა გააქტიურდა.",
-    "paymentFailed": "გადახდა ვერ მოხერხდა",
-    "paymentFailedMessage": "გადახდა ვერ დამუშავდა. გთხოვთ სცადოთ ხელახლა ან გამოიყენოთ საბანკო გადარიცხვა.",
-    "processingDelayed": "დამუშავება გაჭიანურდა",
-    "checkLater": "გადახდის დამუშავებას ჩვეულებრივზე მეტი დრო სჭირდება. წვდომა მალე გააქტიურდება.",
-    "goToCourses": "ჩემს კურსებზე გადასვლა",
-    "goToProjects": "პროექტებზე გადასვლა",
-    "tryAgain": "ხელახლა ცდა"
   }
 }

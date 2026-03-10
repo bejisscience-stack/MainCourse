@@ -58,9 +58,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { payment_screenshot, payment_method } = body;
+    const { payment_screenshot } = body;
 
-    if (payment_method !== 'keepz' && (!payment_screenshot || typeof payment_screenshot !== 'string')) {
+    if (!payment_screenshot || typeof payment_screenshot !== 'string') {
       return NextResponse.json(
         { error: 'Invalid payment_screenshot URL' },
         { status: 422 }
@@ -89,10 +89,9 @@ export async function POST(request: NextRequest) {
       .from('project_subscriptions')
       .insert({
         user_id: user.id,
-        payment_screenshot: payment_screenshot || null,
+        payment_screenshot,
         price: 10.0,
         status: 'pending',
-        payment_method: payment_method || 'bank_transfer',
       })
       .select()
       .single();

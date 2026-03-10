@@ -186,39 +186,26 @@ export async function createKeepzOrder(
     }),
   });
 
-  const contentType = response.headers.get('content-type') ?? '';
+  const body = await response.json();
 
   // Error responses from Keepz are plaintext JSON with a statusCode field
-  if (!response.ok || contentType.includes('application/json')) {
-    const text = await response.text();
-    let parsed: Record<string, unknown> | null = null;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      // not JSON — throw generic error
-    }
+  if (body.statusCode && typeof body.statusCode === 'number') {
+    throw new KeepzError(
+      (body.message as string) ?? 'Keepz API error',
+      body.statusCode as number,
+      (body.exceptionGroup as number) ?? 0,
+    );
+  }
 
-    if (parsed && typeof parsed.statusCode === 'number') {
-      throw new KeepzError(
-        (parsed.message as string) ?? 'Keepz API error',
-        parsed.statusCode as number,
-        (parsed.exceptionGroup as number) ?? 0,
-      );
-    }
-
-    // If response is OK and JSON but no statusCode, it might be an
-    // unexpected format — but we still need to handle encrypted success below.
-    if (!response.ok) {
-      throw new KeepzError(
-        text || `Keepz API error (HTTP ${response.status})`,
-        response.status,
-        0,
-      );
-    }
+  if (!response.ok) {
+    throw new KeepzError(
+      body.message || `Keepz API error (HTTP ${response.status})`,
+      response.status,
+      0,
+    );
   }
 
   // Success responses are encrypted
-  const body = await response.json();
   const decrypted = keepzCrypto.decrypt(
     body.encryptedData as string,
     body.encryptedKeys as string,
@@ -226,7 +213,7 @@ export async function createKeepzOrder(
 
   return {
     integratorOrderId,
-    checkoutUrl: decrypted.checkoutUrl as string,
+    checkoutUrl: decrypted.urlForQR as string,
   };
 }
 
