@@ -53,8 +53,13 @@ export async function POST(request: NextRequest) {
         p_keepz_order_id: integratorOrderId,
         p_callback_payload: callbackData,
       });
-      if (rpcError) {
-        console.error('Keepz callback: RPC error', rpcError);
+      if (rpcError || rpcResult?.success === false) {
+        console.error('Keepz callback: payment processing failed', {
+          rpcError,
+          rpcResult,
+          integratorOrderId,
+          callbackStatus: callbackData.status || callbackData.orderStatus,
+        });
       }
     } else {
       await supabase

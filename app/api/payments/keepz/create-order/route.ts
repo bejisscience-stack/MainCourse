@@ -104,7 +104,8 @@ export async function POST(request: NextRequest) {
         .eq('id', existing.id);
     }
 
-    // 5. Create keepz_payments row (status: pending)
+    // 5. Create keepz_payments row (status: pending) with keepz_order_id pre-set
+    //    so the callback can find this payment even if the server crashes after Keepz call
     const integratorOrderId = randomUUID();
     const { data: paymentRow, error: insertError } = await supabase
       .from('keepz_payments')
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
         amount,
         currency: 'GEL',
         status: 'pending',
+        keepz_order_id: integratorOrderId,
       })
       .select()
       .single();
@@ -155,11 +157,10 @@ export async function POST(request: NextRequest) {
       throw keepzErr; // Re-throw to be caught by outer catch
     }
 
-    // 7. Update payment row with Keepz details
+    // 7. Update payment row with checkout URL and status
     await supabase
       .from('keepz_payments')
       .update({
-        keepz_order_id: integratorOrderId,
         checkout_url: checkoutUrl,
         status: 'created',
         updated_at: new Date().toISOString(),

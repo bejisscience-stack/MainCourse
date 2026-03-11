@@ -99,7 +99,11 @@ export default function EnrollmentModal({
     setReferralValidation('validating');
     setReferralMessage('');
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        session = refreshed;
+      }
       if (!session?.access_token) {
         setReferralValidation('invalid');
         setReferralMessage('Please log in to validate referral code');

@@ -83,10 +83,10 @@ function PaymentSuccessContent() {
             <h1 className="text-2xl font-bold text-white mb-2">{t('paymentMethod.paymentSuccessful')}</h1>
             <p className="text-gray-400 mb-6">{t('paymentMethod.paymentConfirmed')}</p>
             <button
-              onClick={() => router.push(paymentType === 'course_enrollment' ? '/my-courses' : '/chat')}
+              onClick={() => router.push(paymentType === 'course_enrollment' || paymentType === 'bundle_enrollment' ? '/my-courses' : '/chat')}
               className="w-full px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold"
             >
-              {paymentType === 'course_enrollment' ? t('paymentMethod.goToCourses') : t('paymentMethod.goToProjects')}
+              {paymentType === 'course_enrollment' || paymentType === 'bundle_enrollment' ? t('paymentMethod.goToCourses') : t('paymentMethod.goToProjects')}
             </button>
           </>
         )}
