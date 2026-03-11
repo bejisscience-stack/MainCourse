@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { bundleId, paymentScreenshots, referralCode } = body;
+    const { bundleId, paymentScreenshots, referralCode, payment_method } = body;
 
     if (!bundleId) {
       return NextResponse.json(
@@ -122,22 +122,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Format payment screenshots as JSONB array
-    const formattedScreenshots = Array.isArray(paymentScreenshots) 
-      ? paymentScreenshots 
-      : paymentScreenshots 
-        ? [paymentScreenshots] 
+    // Format payment screenshots as JSONB array (not required for keepz)
+    const formattedScreenshots = Array.isArray(paymentScreenshots)
+      ? paymentScreenshots
+      : paymentScreenshots
+        ? [paymentScreenshots]
         : [];
 
     // Create bundle enrollment request
+    const insertData: any = {
+      user_id: user.id,
+      bundle_id: bundleId,
+      status: 'pending',
+      payment_screenshots: formattedScreenshots.length > 0 ? formattedScreenshots : [],
+    };
+    if (payment_method === 'keepz') {
+      insertData.payment_method = 'keepz';
+    }
+
     const { data: enrollmentRequest, error: insertError } = await supabase
       .from('bundle_enrollment_requests')
-      .insert({
-        user_id: user.id,
-        bundle_id: bundleId,
-        status: 'pending',
-        payment_screenshots: formattedScreenshots.length > 0 ? formattedScreenshots : [],
-      })
+      .insert(insertData)
       .select()
       .single();
 

@@ -2,9 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import { useI18n } from '@/contexts/I18nContext';
-import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import EnrollmentWizard from './EnrollmentWizard';
+import EnrollmentModal from './EnrollmentModal';
 import type { Course } from './CourseCard';
 import { clearReferral } from '@/lib/referral-storage';
 
@@ -30,70 +29,14 @@ export default function ExpiredEnrollmentOverlay({
     setShowEnrollmentWizard(false);
   }, []);
 
-  const handleEnrollmentSubmit = useCallback(async (courseId: string, screenshotUrls: string[], referralCode?: string) => {
-    try {
-      // Get access token
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError || !session?.access_token) {
-        console.error('Session error:', sessionError);
-        throw new Error('Not authenticated. Please log in again.');
-      }
-
-      // Create re-enrollment request via API (with payment screenshot)
-      const response = await fetch('/api/enrollment-requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          courseId,
-          paymentScreenshots: screenshotUrls,
-          referralCode: referralCode || undefined,
-          isReEnrollment: true
-        }),
-      });
-
-      let result;
-      try {
-        result = await response.json();
-      } catch (jsonError) {
-        console.error('Failed to parse response:', jsonError);
-        throw new Error('Server returned an invalid response. Please try again.');
-      }
-
-      if (!response.ok) {
-        const errorMessage = result?.error || result?.details || `Server error (${response.status})`;
-        console.error('API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: result,
-        });
-        throw new Error(errorMessage);
-      }
-
-      // Success - close wizard
-      setShowEnrollmentWizard(false);
-
-      // Show success toast
-      toast.success(
-        t('enrollment.reEnrollmentRequested') || 'Re-enrollment request submitted! Waiting for approval.',
-        { duration: 5000 }
-      );
-
-      // Clear referral from persistent storage after successful enrollment
-      clearReferral();
-
-      // Notify parent to refresh enrollments
-      onReEnrollRequest?.();
-    } catch (err: any) {
-      console.error('Error requesting re-enrollment:', err);
-      const errorMessage = err.message || 'Failed to create re-enrollment request. Please try again.';
-      toast.error(errorMessage, { duration: 5000 });
-      // Don't close dialog on error so user can retry
-      throw err;
-    }
+  const handleEnrollmentSuccess = useCallback(() => {
+    setShowEnrollmentWizard(false);
+    toast.success(
+      t('enrollment.reEnrollmentRequested') || 'Re-enrollment request submitted! Waiting for approval.',
+      { duration: 5000 }
+    );
+    clearReferral();
+    onReEnrollRequest?.();
   }, [t, onReEnrollRequest]);
 
   const formattedDate = expiresAt
@@ -163,12 +106,13 @@ export default function ExpiredEnrollmentOverlay({
         </div>
       </div>
 
-      {/* Enrollment Wizard */}
-      <EnrollmentWizard
+      {/* Enrollment Modal */}
+      <EnrollmentModal
         course={course}
         isOpen={showEnrollmentWizard}
         onClose={handleCloseEnrollmentWizard}
-        onEnroll={handleEnrollmentSubmit}
+        onSuccess={handleEnrollmentSuccess}
+        isReEnrollment
       />
     </>
   );

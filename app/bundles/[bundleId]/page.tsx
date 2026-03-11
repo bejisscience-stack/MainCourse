@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
-import EnrollmentWizard from '@/components/EnrollmentWizard';
+import EnrollmentModal from '@/components/EnrollmentModal';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useI18n } from '@/contexts/I18nContext';
@@ -92,52 +92,11 @@ export default function BundleEnrollmentPage() {
     loadData();
   }, [bundleId, user?.id, t]);
 
-  const handlePaymentSubmit = useCallback(async (bundleId: string, screenshotUrls: string[], referralCode?: string) => {
-    if (!user?.id) {
-      alert(t('bundles.pleaseLogIn'));
-      return;
-    }
-
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session?.access_token) {
-        throw new Error('Not authenticated. Please log in again.');
-      }
-
-      const response = await fetch('/api/bundle-enrollment-requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ 
-          bundleId,
-          paymentScreenshots: screenshotUrls,
-          referralCode: referralCode || undefined
-        }),
-      });
-
-      let result;
-      try {
-        result = await response.json();
-      } catch (jsonError) {
-        throw new Error('Server returned an invalid response. Please try again.');
-      }
-
-      if (!response.ok) {
-        const errorMessage = result?.error || result?.details || `Server error (${response.status})`;
-        throw new Error(errorMessage);
-      }
-
-      setShowEnrollmentWizard(false);
-      alert(t('bundles.enrollmentRequestSubmitted'));
-      router.push('/courses');
-    } catch (err: any) {
-      const errorMessage = err.message || t('bundles.failedToCreateRequest');
-      alert(errorMessage);
-    }
-  }, [user, router]);
+  const handleEnrollmentSuccess = useCallback(() => {
+    setShowEnrollmentWizard(false);
+    alert(t('bundles.enrollmentRequestSubmitted'));
+    router.push('/courses');
+  }, [router, t]);
 
   if (userLoading || loading) {
     return (
@@ -327,11 +286,12 @@ export default function BundleEnrollmentPage() {
         </div>
       </div>
 
-      <EnrollmentWizard
+      <EnrollmentModal
         course={bundleAsCourse}
         isOpen={showEnrollmentWizard}
         onClose={() => setShowEnrollmentWizard(false)}
-        onEnroll={(courseId, screenshots, referralCode) => handlePaymentSubmit(courseId, screenshots, referralCode)}
+        onSuccess={handleEnrollmentSuccess}
+        enrollmentMode="bundle"
       />
     </main>
   );

@@ -3,10 +3,9 @@
 import { useMemo, useState, useCallback, memo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import CourseCard, { type Course } from './CourseCard';
-import EnrollmentWizard from './EnrollmentWizard';
+import EnrollmentModal from './EnrollmentModal';
 import { useEnrollmentRequestStatus } from '@/hooks/useEnrollmentRequests';
 import { useRealtimeEnrollmentRequests } from '@/hooks/useRealtimeEnrollmentRequests';
-import { supabase } from '@/lib/supabase';
 import { useI18n } from '@/contexts/I18nContext';
 import { useUser } from '@/hooks/useUser';
 import { toast } from 'sonner';
@@ -358,75 +357,15 @@ function CourseEnrollmentCard({
     }
   }, [onWizardClose]);
 
-  const handleEnrollmentSubmit = useCallback(async (courseId: string, screenshotUrls: string[], referralCode?: string) => {
-    if (!userId) {
-      alert(t('enrollment.pleaseLogin'));
-      return;
-    }
-
-    try {
-      // Get access token
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session?.access_token) {
-        console.error('Session error:', sessionError);
-        throw new Error('Not authenticated. Please log in again.');
-      }
-
-      // Create enrollment request via API (after payment screenshot is uploaded)
-      const response = await fetch('/api/enrollment-requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          courseId,
-          paymentScreenshots: screenshotUrls,
-          referralCode: referralCode || undefined,
-          isReEnrollment: isExpired || undefined,
-        }),
-      });
-
-      let result;
-      try {
-        result = await response.json();
-      } catch (jsonError) {
-        console.error('Failed to parse response:', jsonError);
-        throw new Error('Server returned an invalid response. Please try again.');
-      }
-
-      if (!response.ok) {
-        const errorMessage = result?.error || result?.details || `Server error (${response.status})`;
-        console.error('API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: result,
-        });
-        throw new Error(errorMessage);
-      }
-
-      // Success - refresh the request status
-      await mutate();
-
-      // Close wizard first
-      setShowEnrollmentWizard(false);
-
-      // Show success toast
-      toast.success(
-        t('enrollment.enrollmentRequestSubmitted') || 'Enrollment request submitted! Waiting for approval.',
-        { duration: 5000 }
-      );
-
-      // Clear referral from persistent storage after successful enrollment
-      clearReferral();
-    } catch (err: any) {
-      console.error('Error requesting enrollment:', err);
-      const errorMessage = err.message || 'Failed to create enrollment request. Please try again.';
-      toast.error(errorMessage, { duration: 5000 });
-      // Don't close dialog on error so user can retry
-    }
-  }, [userId, isExpired, mutate]);
+  const handleEnrollmentSuccess = useCallback(() => {
+    mutate();
+    setShowEnrollmentWizard(false);
+    toast.success(
+      t('enrollment.enrollmentRequestSubmitted') || 'Enrollment request submitted! Waiting for approval.',
+      { duration: 5000 }
+    );
+    clearReferral();
+  }, [mutate, t]);
 
   return (
     <>
@@ -439,12 +378,13 @@ function CourseEnrollmentCard({
         daysRemaining={daysRemaining}
         isExpired={isExpired}
       />
-      <EnrollmentWizard
+      <EnrollmentModal
         course={course}
         isOpen={showEnrollmentWizard}
         onClose={handleEnrollmentWizardClose}
-        onEnroll={handleEnrollmentSubmit}
+        onSuccess={handleEnrollmentSuccess}
         initialReferralCode={initialReferralCode || undefined}
+        isReEnrollment={isExpired}
       />
     </>
   );

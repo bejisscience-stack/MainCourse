@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     if (!paymentType || !referenceId) {
       return NextResponse.json({ error: 'paymentType and referenceId are required' }, { status: 400 });
     }
-    if (!['course_enrollment', 'project_subscription'].includes(paymentType)) {
+    if (!['course_enrollment', 'project_subscription', 'bundle_enrollment'].includes(paymentType)) {
       return NextResponse.json({ error: 'Invalid paymentType' }, { status: 400 });
     }
 
@@ -47,6 +47,22 @@ export async function POST(request: NextRequest) {
       amount = course?.price || 0;
       if (amount <= 0) {
         return NextResponse.json({ error: 'Invalid course price' }, { status: 400 });
+      }
+    } else if (paymentType === 'bundle_enrollment') {
+      const { data: bundleReq, error } = await supabase
+        .from('bundle_enrollment_requests')
+        .select('id, status, user_id, course_bundles(price)')
+        .eq('id', referenceId)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .single();
+      if (error || !bundleReq) {
+        return NextResponse.json({ error: 'Bundle enrollment request not found or not pending' }, { status: 404 });
+      }
+      const bundle = bundleReq.course_bundles as any;
+      amount = bundle?.price || 0;
+      if (amount <= 0) {
+        return NextResponse.json({ error: 'Invalid bundle price' }, { status: 400 });
       }
     } else {
       // project_subscription — fixed price
