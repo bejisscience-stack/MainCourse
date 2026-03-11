@@ -184,7 +184,10 @@ export async function createKeepzOrder(
 
   const { encryptedData, encryptedKeys } = keepzCrypto.encrypt(payload);
 
-  const response = await fetch(`${BASE_URL}/api/integrator/order`, {
+  const url = `${BASE_URL}/api/integrator/order`;
+  console.log('[Keepz] Creating order:', { url, integratorOrderId, amount: options.amount });
+
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -195,10 +198,23 @@ export async function createKeepzOrder(
     }),
   });
 
-  const body = await response.json();
+  // Read raw text first to handle both JSON and non-JSON responses
+  const rawText = await response.text();
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(rawText);
+  } catch {
+    console.error('[Keepz] Non-JSON response:', response.status, rawText.substring(0, 500));
+    throw new KeepzError(
+      `Keepz returned non-JSON response (HTTP ${response.status})`,
+      response.status,
+      0,
+    );
+  }
 
   // Error responses from Keepz are plaintext JSON with a statusCode field
   if (body.statusCode && typeof body.statusCode === 'number') {
+    console.error('[Keepz] API error response:', JSON.stringify(body));
     throw new KeepzError(
       (body.message as string) ?? 'Keepz API error',
       body.statusCode as number,
@@ -207,18 +223,26 @@ export async function createKeepzOrder(
   }
 
   if (!response.ok) {
+    console.error('[Keepz] HTTP error:', response.status, JSON.stringify(body));
     throw new KeepzError(
-      body.message || `Keepz API error (HTTP ${response.status})`,
+      body.message as string || `Keepz API error (HTTP ${response.status})`,
       response.status,
       0,
     );
   }
 
   // Success responses are encrypted
+  if (!body.encryptedData || !body.encryptedKeys) {
+    console.error('[Keepz] Missing encrypted fields in response:', JSON.stringify(body));
+    throw new KeepzError('Invalid Keepz response: missing encryptedData or encryptedKeys', 0, 0);
+  }
+
   const decrypted = keepzCrypto.decrypt(
     body.encryptedData as string,
     body.encryptedKeys as string,
   );
+
+  console.log('[Keepz] Order created successfully:', { integratorOrderId, hasCheckoutUrl: !!decrypted.urlForQR });
 
   return {
     integratorOrderId,

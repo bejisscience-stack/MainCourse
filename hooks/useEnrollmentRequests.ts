@@ -12,6 +12,7 @@ export interface EnrollmentRequest {
   reviewed_at?: string | null;
   payment_screenshots?: string[] | null;
   referral_code?: string | null;
+  payment_method?: string | null;
   referrer?: {
     id: string;
     username?: string | null;
@@ -70,6 +71,7 @@ async function fetchPendingRequestForCourse(userId: string, courseId: string): P
       status,
       created_at,
       updated_at,
+      payment_method,
       courses (
         id,
         title,

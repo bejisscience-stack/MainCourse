@@ -8,7 +8,7 @@ import { useUser } from '@/hooks/useUser';
 import { supabase } from '@/lib/supabase';
 import { getReferral } from '@/lib/referral-storage';
 
-type KeepzMethod = 'card' | 'online_banking' | 'crypto' | 'all';
+type KeepzMethod = 'all';
 
 interface EnrollmentModalProps {
   course: Course;
@@ -225,48 +225,7 @@ export default function EnrollmentModal({
 
   const price = course.price || 0;
 
-  const paymentMethods: { id: KeepzMethod; icon: React.ReactNode; label: string; desc: string }[] = [
-    {
-      id: 'card',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-        </svg>
-      ),
-      label: t('paymentMethod.bankCard'),
-      desc: t('paymentMethod.bankCardDesc'),
-    },
-    {
-      id: 'online_banking',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-        </svg>
-      ),
-      label: t('paymentMethod.onlineBanking'),
-      desc: t('paymentMethod.onlineBankingDesc'),
-    },
-    {
-      id: 'crypto',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      label: t('paymentMethod.crypto'),
-      desc: t('paymentMethod.cryptoDesc'),
-    },
-    {
-      id: 'all',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      ),
-      label: t('paymentMethod.allMethods'),
-      desc: t('paymentMethod.allMethodsDesc'),
-    },
-  ];
+  const isPayDisabled = isSubmitting || referralValidation === 'validating';
 
   const modalContent = (
     <div
@@ -373,67 +332,56 @@ export default function EnrollmentModal({
         {/* Divider */}
         <div className="border-t border-gray-100 dark:border-navy-700/50" />
 
-        {/* Payment Method Selector */}
+        {/* Pay Button */}
         <div className="p-6 pt-5 pb-4">
-          <h3 className="text-sm font-semibold text-charcoal-800 dark:text-gray-300 mb-3">
-            {t('paymentMethod.selectMethod')}
-          </h3>
-          <div className="space-y-2">
-            {paymentMethods.map((method) => {
-              const isActive = selectedMethod === method.id;
-              const isLoading = isSubmitting && isActive;
-              const isDisabled = isSubmitting || referralValidation === 'validating';
+          <button
+            onClick={() => handlePay('all')}
+            disabled={isPayDisabled}
+            className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-semibold text-base transition-all ${
+              isSubmitting
+                ? 'bg-emerald-500 text-white cursor-wait'
+                : isPayDisabled
+                ? 'bg-gray-200 dark:bg-navy-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg hover:shadow-xl hover:shadow-emerald-500/25 hover:-translate-y-0.5'
+            }`}
+          >
+            {isSubmitting ? (
+              <>
+                <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                {t('paymentMethod.redirecting')}
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                {t('paymentMethod.payNow')}
+              </>
+            )}
+          </button>
 
-              return (
-                <button
-                  key={method.id}
-                  onClick={() => handlePay(method.id)}
-                  disabled={isDisabled}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left group ${
-                    isActive
-                      ? 'border-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/5'
-                      : 'border-gray-200 dark:border-navy-700 hover:border-emerald-400 dark:hover:border-emerald-600 bg-gray-50 dark:bg-navy-800/50 hover:bg-emerald-50 dark:hover:bg-navy-800'
-                  } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                >
-                  <div className={`flex-shrink-0 ${
-                    isActive ? 'text-emerald-500' : 'text-gray-400 dark:text-gray-500 group-hover:text-emerald-500'
-                  } transition-colors`}>
-                    {isLoading ? (
-                      <svg className="animate-spin w-6 h-6" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                    ) : method.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-semibold ${
-                      isActive ? 'text-emerald-700 dark:text-emerald-400' : 'text-charcoal-900 dark:text-white'
-                    }`}>
-                      {method.label}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {method.desc}
-                    </p>
-                  </div>
-                  <svg className={`w-4 h-4 flex-shrink-0 ${
-                    isActive ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600 group-hover:text-emerald-400'
-                  } transition-colors`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              );
-            })}
+          {/* Accepted methods hint */}
+          <div className="flex items-center justify-center gap-3 mt-3">
+            <span className="text-xs text-gray-400 dark:text-gray-500">{t('paymentMethod.acceptedMethods')}</span>
+            <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500">
+              {/* Card icon */}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              {/* Bank icon */}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              {/* QR/Mobile icon */}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </div>
           </div>
         </div>
-
-        {/* Submitting state indicator */}
-        {isSubmitting && (
-          <div className="px-6 pb-2">
-            <p className="text-sm text-center text-emerald-600 dark:text-emerald-400 animate-pulse">
-              {t('paymentMethod.redirecting')}
-            </p>
-          </div>
-        )}
 
         {/* Error display */}
         {error && (

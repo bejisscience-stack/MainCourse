@@ -254,6 +254,32 @@ function CourseEnrollmentCard({
     }
 
     if (buttonState.type === 'pending') {
+      // For Keepz payments, allow retrying payment instead of showing disabled "Pending Approval"
+      const isKeepzPayment = request?.payment_method === 'keepz';
+      if (isKeepzPayment) {
+        return (
+          <button
+            onClick={handleOpenEnrollmentWizard}
+            className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-emerald-500 rounded-full hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5 will-change-transform"
+            style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+          >
+            <svg
+              className="w-3.5 h-3.5 mr-1.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+              />
+            </svg>
+            {t('enrollment.completePayment')}
+          </button>
+        );
+      }
       return (
         <button
           disabled
@@ -339,7 +365,7 @@ function CourseEnrollmentCard({
         {t('enrollment.requestEnrollment')}
       </button>
     );
-  }, [buttonState, showEnrollButton, translationsReady, t, course.id, handleOpenEnrollmentWizard]);
+  }, [buttonState, showEnrollButton, translationsReady, t, course.id, handleOpenEnrollmentWizard, request]);
 
   const handleEnrollmentWizardClose = useCallback(() => {
     setShowEnrollmentWizard(false);

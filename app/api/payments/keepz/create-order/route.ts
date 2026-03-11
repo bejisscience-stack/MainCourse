@@ -135,19 +135,25 @@ export async function POST(request: NextRequest) {
       callbackUri: `${appUrl}/api/payments/keepz/callback`,
     };
 
-    // Map keepzMethod to Keepz provider parameters
-    if (keepzMethod === 'card') {
-      orderOptions.directLinkProvider = 'DEFAULT';
-    } else if (keepzMethod === 'online_banking') {
-      orderOptions.openBankingLinkProvider = 'DEFAULT';
-    } else if (keepzMethod === 'crypto') {
-      orderOptions.cryptoPaymentProvider = 'CITYPAY';
-    } else if (keepzMethod === 'installment') {
-      orderOptions.installmentPaymentProvider = 'CREDO';
-    }
-    // 'all' or undefined → no provider param → Keepz shows all methods
+    // NOTE: Provider pre-selection (directLinkProvider, cryptoPaymentProvider, etc.)
+    // requires special Keepz permission that this account doesn't have.
+    // All payment methods redirect to the generic Keepz checkout page where
+    // the user selects their preferred method. The keepzMethod param is stored
+    // for analytics but does not affect the Keepz API call.
 
-    const { checkoutUrl } = await createKeepzOrder(orderOptions);
+    let checkoutUrl: string;
+    try {
+      const result = await createKeepzOrder(orderOptions);
+      checkoutUrl = result.checkoutUrl;
+    } catch (keepzErr) {
+      // Clean up the pending payment row so it doesn't block retries
+      await supabase
+        .from('keepz_payments')
+        .update({ status: 'failed', updated_at: new Date().toISOString() })
+        .eq('id', paymentRow.id);
+
+      throw keepzErr; // Re-throw to be caught by outer catch
+    }
 
     // 7. Update payment row with Keepz details
     await supabase
@@ -163,10 +169,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ checkoutUrl, paymentId: paymentRow.id });
   } catch (error) {
     if (error instanceof KeepzError) {
-      console.error('Keepz API error:', error.message, error.statusCode);
-      return NextResponse.json({ error: 'Payment service error' }, { status: 502 });
+      console.error('Keepz API error:', error.message, 'statusCode:', error.statusCode, 'exceptionGroup:', error.exceptionGroup);
+      return NextResponse.json(
+        { error: `Payment service error: ${error.message}` },
+        { status: 502 },
+      );
     }
     console.error('Create order error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 },
+    );
   }
 }
