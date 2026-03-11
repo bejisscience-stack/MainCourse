@@ -13,6 +13,7 @@ import EnrollmentStepPayment from './enrollment/EnrollmentStepPayment';
 import EnrollmentStepReferral from './enrollment/EnrollmentStepReferral';
 import EnrollmentStepUpload from './enrollment/EnrollmentStepUpload';
 import EnrollmentStepReview from './enrollment/EnrollmentStepReview';
+import PaymentMethodSelector from './PaymentMethodSelector';
 
 // localStorage key for backup
 const ENROLLMENT_BACKUP_KEY = 'enrollment_form_backup';
@@ -20,6 +21,7 @@ const ENROLLMENT_BACKUP_KEY = 'enrollment_form_backup';
 export interface EnrollmentWizardData {
   course: Course;
   referralCode: string;
+  paymentMethod: 'keepz' | 'bank_transfer';
   uploadedImages: Array<{ file: File; preview: string; url?: string }>;
   uploadedUrls: string[];
 }
@@ -32,7 +34,7 @@ interface EnrollmentWizardProps {
   initialReferralCode?: string;
 }
 
-const TOTAL_STEPS = 5;
+// Total steps computed dynamically based on payment method
 
 // Helper functions for localStorage backup
 function saveFormBackup(courseId: string, data: { referralCode: string; step: number }) {
@@ -87,6 +89,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
   const [wizardData, setWizardData] = useState<EnrollmentWizardData>({
     course,
     referralCode: '',
+    paymentMethod: 'keepz',
     uploadedImages: [],
     uploadedUrls: [],
   });
@@ -94,6 +97,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
   const [isValidating, setIsValidating] = useState(false);
   const [wasAutoFilled, setWasAutoFilled] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const totalSteps = wizardData.paymentMethod === 'keepz' ? 4 : 5;
 
   useEffect(() => {
     setMounted(true);
@@ -140,6 +144,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
       setWizardData({
         course,
         referralCode: referralCodeToUse,
+        paymentMethod: 'keepz',
         uploadedImages: [],
         uploadedUrls: [],
       });
@@ -172,6 +177,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
     setWizardData({
       course,
       referralCode: '',
+      paymentMethod: 'keepz',
       uploadedImages: [],
       uploadedUrls: [],
     });
@@ -237,14 +243,14 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
           }
         }
         break;
-      case 4: // Upload - must have at least one image
-        if (wizardData.uploadedImages.length === 0) {
+      case 4: // Upload (bank_transfer) or Review (keepz)
+        if (wizardData.paymentMethod === 'bank_transfer' && wizardData.uploadedImages.length === 0) {
           isValid = false;
           error = t('payment.pleaseUploadScreenshot');
         }
         break;
-      case 5: // Review - must have at least one image
-        if (wizardData.uploadedImages.length === 0) {
+      case 5: // Review (bank_transfer only)
+        if (wizardData.paymentMethod === 'bank_transfer' && wizardData.uploadedImages.length === 0) {
           isValid = false;
           error = t('payment.pleaseUploadScreenshot');
         }
@@ -258,7 +264,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
   const handleNext = useCallback(async () => {
     const isValid = await validateStep(currentStep);
     if (isValid) {
-      if (currentStep < TOTAL_STEPS) {
+      if (currentStep < totalSteps) {
         setCurrentStep(prev => prev + 1);
         // Scroll to top of dialog on step change
         if (dialogRef.current) {
@@ -279,18 +285,65 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
   }, [currentStep]);
 
   const handleSubmit = useCallback(async (uploadedUrls?: string[]) => {
-    // Final validation
+    // Keepz payment flow
+    if (wizardData.paymentMethod === 'keepz') {
+      try {
+        let { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+          session = refreshed;
+        }
+        if (!session?.access_token) throw new Error('Not authenticated');
+        const token = session.access_token;
+
+        // Create enrollment request with keepz payment method
+        const enrollResponse = await fetch('/api/enrollment-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            courseId: course.id,
+            payment_method: 'keepz',
+            referralCode: wizardData.referralCode.trim() || undefined,
+          }),
+        });
+        if (!enrollResponse.ok) {
+          const errData = await enrollResponse.json();
+          throw new Error(errData.error || 'Failed to create enrollment request');
+        }
+        const { request: enrollmentRequest } = await enrollResponse.json();
+
+        // Create Keepz order
+        const orderResponse = await fetch('/api/payments/keepz/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ paymentType: 'course_enrollment', referenceId: enrollmentRequest.id }),
+        });
+        if (!orderResponse.ok) {
+          const errData = await orderResponse.json();
+          throw new Error(errData.error || 'Failed to create payment');
+        }
+        const { checkoutUrl } = await orderResponse.json();
+
+        clearFormBackup();
+        window.location.href = checkoutUrl;
+        return;
+      } catch (error: any) {
+        console.error('Keepz enrollment error:', error);
+        throw error;
+      }
+    }
+
+    // Bank transfer flow (existing logic)
     const isValid = await validateStep(4);
     if (!isValid) {
-      setCurrentStep(4); // Go back to upload step if invalid
+      setCurrentStep(4);
       return;
     }
 
-    // Use provided URLs or fall back to wizardData.uploadedUrls
     const urlsToUse = uploadedUrls || wizardData.uploadedUrls;
 
     if (urlsToUse.length === 0) {
-      setCurrentStep(4); // Go back to upload step if no URLs
+      setCurrentStep(4);
       return;
     }
 
@@ -330,11 +383,21 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
         );
       case 2:
         return (
-          <EnrollmentStepPayment
-            course={wizardData.course}
-            data={wizardData}
-            updateData={updateWizardData}
-          />
+          <div className="space-y-6">
+            <div className="max-w-lg mx-auto">
+              <PaymentMethodSelector
+                selectedMethod={wizardData.paymentMethod}
+                onSelect={(method) => updateWizardData({ paymentMethod: method })}
+              />
+            </div>
+            {wizardData.paymentMethod === 'bank_transfer' && (
+              <EnrollmentStepPayment
+                course={wizardData.course}
+                data={wizardData}
+                updateData={updateWizardData}
+              />
+            )}
+          </div>
         );
       case 3:
         return (
@@ -348,6 +411,16 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
           />
         );
       case 4:
+        if (wizardData.paymentMethod === 'keepz') {
+          return (
+            <EnrollmentStepReview
+              course={wizardData.course}
+              data={wizardData}
+              updateData={updateWizardData}
+              onSubmit={handleSubmit}
+            />
+          );
+        }
         return (
           <EnrollmentStepUpload
             course={wizardData.course}
@@ -420,11 +493,11 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
             {/* Connecting Line - Active Progress */}
             <div
               className="absolute top-5 left-6 h-0.5 bg-emerald-500 -z-10 transition-all duration-500 ease-out rounded-full"
-              style={{ width: `calc(${((currentStep - 1) / (TOTAL_STEPS - 1)) * 100}% - 3rem)` }}
+              style={{ width: `calc(${((currentStep - 1) / (totalSteps - 1)) * 100}% - 3rem)` }}
             />
 
             <div className="flex justify-between items-start">
-              {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((step) => (
+              {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
                 <div key={step} className="flex flex-col items-center relative z-10 group cursor-default">
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 border-2 ${step < currentStep
@@ -447,10 +520,18 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
                       : 'text-gray-400 dark:text-gray-500'
                     }`}>
                     {step === 1 && t('enrollment.stepOverview')}
-                    {step === 2 && t('enrollment.stepPayment')}
+                    {step === 2 && t('paymentMethod.chooseMethod')}
                     {step === 3 && t('enrollment.stepReferral')}
-                    {step === 4 && t('enrollment.stepUpload')}
-                    {step === 5 && t('enrollment.stepReview')}
+                    {wizardData.paymentMethod === 'keepz' ? (
+                      <>
+                        {step === 4 && t('enrollment.stepReview')}
+                      </>
+                    ) : (
+                      <>
+                        {step === 4 && t('enrollment.stepUpload')}
+                        {step === 5 && t('enrollment.stepReview')}
+                      </>
+                    )}
                   </span>
                 </div>
               ))}
@@ -458,7 +539,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
 
             {/* Step Counter */}
             <div className="text-center text-sm text-charcoal-500 dark:text-gray-400 mt-12 font-medium">
-              {t('enrollment.stepProgress', { current: currentStep, total: TOTAL_STEPS })}
+              {t('enrollment.stepProgress', { current: currentStep, total: totalSteps })}
             </div>
           </div>
 
@@ -481,7 +562,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
           </div>
 
           {/* Navigation Buttons - Hidden on review step (step 5) */}
-          {currentStep < TOTAL_STEPS && (
+          {currentStep < totalSteps && (
             <div className="flex items-center justify-between pt-8 border-t border-gray-100 dark:border-navy-700/50">
               <div>
                 {currentStep > 1 && (
@@ -530,7 +611,7 @@ export default function EnrollmentWizard({ course, isOpen, onClose, onEnroll, in
           )}
 
           {/* Cancel button on review step */}
-          {currentStep === TOTAL_STEPS && (
+          {currentStep === totalSteps && (
             <div className="flex items-center justify-end pt-6 border-t border-gray-200 dark:border-navy-700">
               <button
                 onClick={handleClose}
