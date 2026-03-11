@@ -8,6 +8,8 @@ import { useUser } from '@/hooks/useUser';
 import { supabase } from '@/lib/supabase';
 import { getReferral } from '@/lib/referral-storage';
 
+type KeepzMethod = 'card' | 'online_banking' | 'crypto' | 'all';
+
 interface EnrollmentModalProps {
   course: Course;
   isOpen: boolean;
@@ -36,6 +38,7 @@ export default function EnrollmentModal({
   const [referralMessage, setReferralMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<KeepzMethod | null>(null);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -51,6 +54,7 @@ export default function EnrollmentModal({
       setIsSubmitting(false);
       setReferralValidation('idle');
       setReferralMessage('');
+      setSelectedMethod(null);
 
       // Auto-fill referral code: props > persistent storage > profile
       let code = initialReferralCode || '';
@@ -140,9 +144,10 @@ export default function EnrollmentModal({
     }, 500);
   }, [validateReferralCode]);
 
-  const handleSubmit = useCallback(async () => {
+  const handlePay = useCallback(async (method: KeepzMethod) => {
     setError(null);
     setIsSubmitting(true);
+    setSelectedMethod(method);
 
     try {
       // 1. Get auth session with refresh fallback
@@ -193,12 +198,12 @@ export default function EnrollmentModal({
         enrollmentRequestId = request.id;
       }
 
-      // 3. Create Keepz order
+      // 3. Create Keepz order with selected payment method
       const paymentType = enrollmentMode === 'bundle' ? 'bundle_enrollment' : 'course_enrollment';
       const orderResponse = await fetch('/api/payments/keepz/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ paymentType, referenceId: enrollmentRequestId }),
+        body: JSON.stringify({ paymentType, referenceId: enrollmentRequestId, keepzMethod: method }),
       });
       if (!orderResponse.ok) {
         const errData = await orderResponse.json();
@@ -212,6 +217,7 @@ export default function EnrollmentModal({
       console.error('Enrollment payment error:', err);
       setError(err.message || 'Something went wrong. Please try again.');
       setIsSubmitting(false);
+      setSelectedMethod(null);
     }
   }, [course.id, enrollmentMode, referralCode, isReEnrollment]);
 
@@ -219,13 +225,56 @@ export default function EnrollmentModal({
 
   const price = course.price || 0;
 
+  const paymentMethods: { id: KeepzMethod; icon: React.ReactNode; label: string; desc: string }[] = [
+    {
+      id: 'card',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        </svg>
+      ),
+      label: t('paymentMethod.bankCard'),
+      desc: t('paymentMethod.bankCardDesc'),
+    },
+    {
+      id: 'online_banking',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      ),
+      label: t('paymentMethod.onlineBanking'),
+      desc: t('paymentMethod.onlineBankingDesc'),
+    },
+    {
+      id: 'crypto',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      label: t('paymentMethod.crypto'),
+      desc: t('paymentMethod.cryptoDesc'),
+    },
+    {
+      id: 'all',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      ),
+      label: t('paymentMethod.allMethods'),
+      desc: t('paymentMethod.allMethodsDesc'),
+    },
+  ];
+
   const modalContent = (
     <div
       className="fixed inset-0 bg-black/70 dark:bg-black/85 z-[9999] flex items-center justify-center p-4"
       onClick={() => { if (!isSubmitting) onClose(); }}
     >
       <div
-        className="relative w-full max-w-md bg-white dark:bg-navy-900 border border-gray-200 dark:border-navy-700 rounded-2xl shadow-2xl"
+        className="relative w-full max-w-md bg-white dark:bg-navy-900 border border-gray-200 dark:border-navy-700 rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -324,32 +373,79 @@ export default function EnrollmentModal({
         {/* Divider */}
         <div className="border-t border-gray-100 dark:border-navy-700/50" />
 
-        {/* Footer: Pay button + error */}
-        <div className="p-6 pt-5 space-y-3">
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting || referralValidation === 'validating'}
-            className="w-full px-6 py-3.5 text-base font-semibold text-white bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-lg shadow-emerald-500/20 hover:shadow-xl hover:shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg"
-          >
-            {isSubmitting ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                {t('paymentMethod.redirecting')}
-              </span>
-            ) : (
-              t('paymentMethod.payWithCard', { amount: `₾${price.toFixed(2)}` })
-            )}
-          </button>
+        {/* Payment Method Selector */}
+        <div className="p-6 pt-5 pb-4">
+          <h3 className="text-sm font-semibold text-charcoal-800 dark:text-gray-300 mb-3">
+            {t('paymentMethod.selectMethod')}
+          </h3>
+          <div className="space-y-2">
+            {paymentMethods.map((method) => {
+              const isActive = selectedMethod === method.id;
+              const isLoading = isSubmitting && isActive;
+              const isDisabled = isSubmitting || referralValidation === 'validating';
 
-          {error && (
+              return (
+                <button
+                  key={method.id}
+                  onClick={() => handlePay(method.id)}
+                  disabled={isDisabled}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left group ${
+                    isActive
+                      ? 'border-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/5'
+                      : 'border-gray-200 dark:border-navy-700 hover:border-emerald-400 dark:hover:border-emerald-600 bg-gray-50 dark:bg-navy-800/50 hover:bg-emerald-50 dark:hover:bg-navy-800'
+                  } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <div className={`flex-shrink-0 ${
+                    isActive ? 'text-emerald-500' : 'text-gray-400 dark:text-gray-500 group-hover:text-emerald-500'
+                  } transition-colors`}>
+                    {isLoading ? (
+                      <svg className="animate-spin w-6 h-6" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    ) : method.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold ${
+                      isActive ? 'text-emerald-700 dark:text-emerald-400' : 'text-charcoal-900 dark:text-white'
+                    }`}>
+                      {method.label}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {method.desc}
+                    </p>
+                  </div>
+                  <svg className={`w-4 h-4 flex-shrink-0 ${
+                    isActive ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600 group-hover:text-emerald-400'
+                  } transition-colors`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Submitting state indicator */}
+        {isSubmitting && (
+          <div className="px-6 pb-2">
+            <p className="text-sm text-center text-emerald-600 dark:text-emerald-400 animate-pulse">
+              {t('paymentMethod.redirecting')}
+            </p>
+          </div>
+        )}
+
+        {/* Error display */}
+        {error && (
+          <div className="px-6 pb-4">
             <div className="p-3 rounded-lg border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-900/20">
               <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Bottom padding */}
+        <div className="pb-2" />
       </div>
     </div>
   );

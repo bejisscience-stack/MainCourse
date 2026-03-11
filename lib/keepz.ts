@@ -142,6 +142,11 @@ export interface CreateOrderOptions {
   failRedirectUri?: string;
   callbackUri?: string;
   language?: string;
+  // Keepz provider parameters — skip method selection on checkout page
+  directLinkProvider?: string;       // BOG | TBC | CREDO | DEFAULT — card payments
+  openBankingLinkProvider?: string;  // BOG | TBC | CREDO | LIBERTY — online banking
+  cryptoPaymentProvider?: string;    // CITYPAY — crypto payments
+  installmentPaymentProvider?: string; // CREDO — installment payments
 }
 
 export interface CreateOrderResult {
@@ -172,6 +177,10 @@ export async function createKeepzOrder(
   if (options.failRedirectUri !== undefined) payload.failRedirectUri = options.failRedirectUri;
   if (options.callbackUri !== undefined) payload.callbackUri = options.callbackUri;
   if (options.language !== undefined) payload.language = options.language;
+  if (options.directLinkProvider !== undefined) payload.directLinkProvider = options.directLinkProvider;
+  if (options.openBankingLinkProvider !== undefined) payload.openBankingLinkProvider = options.openBankingLinkProvider;
+  if (options.cryptoPaymentProvider !== undefined) payload.cryptoPaymentProvider = options.cryptoPaymentProvider;
+  if (options.installmentPaymentProvider !== undefined) payload.installmentPaymentProvider = options.installmentPaymentProvider;
 
   const { encryptedData, encryptedKeys } = keepzCrypto.encrypt(payload);
 

@@ -128,10 +128,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (existingRequest) {
-      return NextResponse.json(
-        { error: 'You already have a pending enrollment request for this course' },
-        { status: 400 }
-      );
+      // Reuse existing pending request instead of blocking — allows payment retries
+      return NextResponse.json({ request: existingRequest }, { status: 200 });
     }
 
     // Check if user is already enrolled (use maybeSingle to handle no rows gracefully)

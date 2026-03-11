@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Parse body
-    const { paymentType, referenceId } = await request.json();
+    const { paymentType, referenceId, keepzMethod } = await request.json();
     if (!paymentType || !referenceId) {
       return NextResponse.json({ error: 'paymentType and referenceId are required' }, { status: 400 });
     }
@@ -82,14 +82,26 @@ export async function POST(request: NextRequest) {
     // 4. Idempotency check — existing active payment for this reference
     const { data: existing } = await supabase
       .from('keepz_payments')
-      .select('id, checkout_url, status')
+      .select('id, checkout_url, status, created_at')
       .eq('payment_type', paymentType)
       .eq('reference_id', referenceId)
       .in('status', ['pending', 'created'])
       .maybeSingle();
 
-    if (existing?.checkout_url) {
-      return NextResponse.json({ checkoutUrl: existing.checkout_url, paymentId: existing.id });
+    if (existing) {
+      // Keepz orders expire after 5 minutes — expire stale payments so we create a fresh one
+      const ageMs = Date.now() - new Date(existing.created_at).getTime();
+      const FIVE_MINUTES = 5 * 60 * 1000;
+
+      if (ageMs < FIVE_MINUTES && existing.checkout_url) {
+        return NextResponse.json({ checkoutUrl: existing.checkout_url, paymentId: existing.id });
+      }
+
+      // Mark stale payment as expired before creating a new one
+      await supabase
+        .from('keepz_payments')
+        .update({ status: 'expired', updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
     }
 
     // 5. Create keepz_payments row (status: pending)
@@ -112,16 +124,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create payment' }, { status: 500 });
     }
 
-    // 6. Create Keepz order
+    // 6. Create Keepz order with optional payment method pre-selection
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://swavleba.ge';
-    const { checkoutUrl } = await createKeepzOrder({
+    const orderOptions: Parameters<typeof createKeepzOrder>[0] = {
       amount,
       currency: 'GEL',
       integratorOrderId,
       successRedirectUri: `${appUrl}/payment/success?paymentId=${paymentRow.id}`,
       failRedirectUri: `${appUrl}/payment/failed?paymentId=${paymentRow.id}`,
       callbackUri: `${appUrl}/api/payments/keepz/callback`,
-    });
+    };
+
+    // Map keepzMethod to Keepz provider parameters
+    if (keepzMethod === 'card') {
+      orderOptions.directLinkProvider = 'DEFAULT';
+    } else if (keepzMethod === 'online_banking') {
+      orderOptions.openBankingLinkProvider = 'DEFAULT';
+    } else if (keepzMethod === 'crypto') {
+      orderOptions.cryptoPaymentProvider = 'CITYPAY';
+    } else if (keepzMethod === 'installment') {
+      orderOptions.installmentPaymentProvider = 'CREDO';
+    }
+    // 'all' or undefined → no provider param → Keepz shows all methods
+
+    const { checkoutUrl } = await createKeepzOrder(orderOptions);
 
     // 7. Update payment row with Keepz details
     await supabase

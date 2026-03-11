@@ -31,6 +31,12 @@ supabase/migrations/ # 92+ migrations
 supabase/functions/  # 28 Edge Functions (shared code in _shared/)
 ```
 
+## Workflow Rules
+- **Context7 MCP**: Always use Context7 MCP (`resolve-library-id` → `query-docs`) for library documentation lookups — do not rely on training data. Do this automatically without being asked.
+- **frontend-design skill**: Use the `frontend-design` skill for all UI work (components, pages, layouts, styling).
+- **Code review before merge**: Run `/code-review` before merging any PR.
+- **TypeScript LSP**: Use TypeScript LSP for type checking when available.
+
 ## Conventions
 - API auth: `Authorization: Bearer <token>` → `verifyTokenAndGetUser(token)`
 - Supabase: browser = `createBrowserClient()`, server = `createClient()` via cookies
