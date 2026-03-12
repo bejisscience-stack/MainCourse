@@ -1,7 +1,13 @@
-import { handleCors, jsonResponse, errorResponse } from "../_shared/cors.ts";
+import {
+  getCorsHeaders,
+  handleCors,
+  jsonResponse,
+  errorResponse,
+} from "../_shared/cors.ts";
 import { getAuthenticatedUser } from "../_shared/auth.ts";
 
 Deno.serve(async (req: Request) => {
+  const cors = getCorsHeaders(req);
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
@@ -10,7 +16,7 @@ Deno.serve(async (req: Request) => {
     req.method !== "GET" &&
     req.method !== "DELETE"
   ) {
-    return errorResponse("Method not allowed", 405);
+    return errorResponse("Method not allowed", 405, cors);
   }
 
   const auth = await getAuthenticatedUser(req);
@@ -24,8 +30,8 @@ Deno.serve(async (req: Request) => {
     const chatId = url.searchParams.get("chatId");
     const userId = url.searchParams.get("userId");
 
-    if (!chatId) return errorResponse("chatId is required", 400);
-    if (!userId) return errorResponse("userId is required", 400);
+    if (!chatId) return errorResponse("chatId is required", 400, cors);
+    if (!userId) return errorResponse("userId is required", 400, cors);
 
     try {
       const { data: channel, error: channelError } = await supabase
@@ -34,7 +40,7 @@ Deno.serve(async (req: Request) => {
         .eq("id", chatId)
         .single();
       if (channelError || !channel)
-        return errorResponse("Channel not found", 404);
+        return errorResponse("Channel not found", 404, cors);
 
       const { data: course } = await supabase
         .from("courses")
@@ -42,7 +48,8 @@ Deno.serve(async (req: Request) => {
         .eq("id", channel.course_id)
         .single();
 
-      if (!course?.lecturer_id) return jsonResponse({ muted: false });
+      if (!course?.lecturer_id)
+        return jsonResponse({ muted: false }, 200, cors);
 
       const { data: mutedRecord } = await supabase
         .from("muted_users")
@@ -51,10 +58,10 @@ Deno.serve(async (req: Request) => {
         .eq("user_id", userId)
         .single();
 
-      return jsonResponse({ muted: !!mutedRecord });
+      return jsonResponse({ muted: !!mutedRecord }, 200, cors);
     } catch (error) {
       console.error("Error:", error);
-      return errorResponse("Internal server error", 500);
+      return errorResponse("Internal server error", 500, cors);
     }
   }
 
@@ -63,8 +70,8 @@ Deno.serve(async (req: Request) => {
     const chatId = url.searchParams.get("chatId");
     const userId = url.searchParams.get("userId");
 
-    if (!chatId) return errorResponse("chatId is required", 400);
-    if (!userId) return errorResponse("userId is required", 400);
+    if (!chatId) return errorResponse("chatId is required", 400, cors);
+    if (!userId) return errorResponse("userId is required", 400, cors);
 
     try {
       const { data: channel, error: channelError } = await supabase
@@ -73,16 +80,20 @@ Deno.serve(async (req: Request) => {
         .eq("id", chatId)
         .single();
       if (channelError || !channel)
-        return errorResponse("Channel not found", 404);
+        return errorResponse("Channel not found", 404, cors);
 
       const { data: course } = await supabase
         .from("courses")
         .select("lecturer_id")
         .eq("id", channel.course_id)
         .single();
-      if (!course) return errorResponse("Course not found", 404);
+      if (!course) return errorResponse("Course not found", 404, cors);
       if (course.lecturer_id !== user.id)
-        return errorResponse("Forbidden: Only lecturers can unmute users", 403);
+        return errorResponse(
+          "Forbidden: Only lecturers can unmute users",
+          403,
+          cors,
+        );
 
       const { error: unmuteError } = await supabase
         .from("muted_users")
@@ -94,12 +105,17 @@ Deno.serve(async (req: Request) => {
         return jsonResponse(
           { error: "Failed to unmute user", details: unmuteError.message },
           500,
+          cors,
         );
 
-      return jsonResponse({ muted: false, message: "User has been unmuted" });
+      return jsonResponse(
+        { muted: false, message: "User has been unmuted" },
+        200,
+        cors,
+      );
     } catch (error) {
       console.error("Error:", error);
-      return errorResponse("Internal server error", 500);
+      return errorResponse("Internal server error", 500, cors);
     }
   }
 
@@ -108,9 +124,9 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const { chatId, muted, userId } = body;
 
-    if (!chatId) return errorResponse("chatId is required", 400);
+    if (!chatId) return errorResponse("chatId is required", 400, cors);
     if (typeof muted !== "boolean")
-      return errorResponse("muted (boolean) is required", 400);
+      return errorResponse("muted (boolean) is required", 400, cors);
 
     const { data: channel, error: channelError } = await supabase
       .from("channels")
@@ -118,20 +134,30 @@ Deno.serve(async (req: Request) => {
       .eq("id", chatId)
       .single();
     if (channelError || !channel)
-      return errorResponse("Channel not found", 404);
+      return errorResponse("Channel not found", 404, cors);
 
     const { data: course, error: courseError } = await supabase
       .from("courses")
       .select("lecturer_id")
       .eq("id", channel.course_id)
       .single();
-    if (courseError || !course) return errorResponse("Course not found", 404);
+    if (courseError || !course)
+      return errorResponse("Course not found", 404, cors);
 
     if (course.lecturer_id !== user.id)
-      return errorResponse("Forbidden: Only lecturers can mute users", 403);
+      return errorResponse(
+        "Forbidden: Only lecturers can mute users",
+        403,
+        cors,
+      );
     if (!userId)
-      return errorResponse("userId is required to mute/unmute a user", 400);
-    if (userId === user.id) return errorResponse("Cannot mute yourself", 400);
+      return errorResponse(
+        "userId is required to mute/unmute a user",
+        400,
+        cors,
+      );
+    if (userId === user.id)
+      return errorResponse("Cannot mute yourself", 400, cors);
 
     if (muted) {
       const { data: mutedUser, error: muteError } = await supabase
@@ -150,15 +176,17 @@ Deno.serve(async (req: Request) => {
 
       if (muteError) {
         if (muteError.code === "23505")
-          return jsonResponse({ error: "User is already muted" }, 409);
+          return jsonResponse({ error: "User is already muted" }, 409, cors);
         return jsonResponse(
           { error: "Failed to mute user", details: muteError.message },
           500,
+          cors,
         );
       }
       return jsonResponse(
         { muted: true, mutedUser, message: "User has been muted" },
         201,
+        cors,
       );
     } else {
       const { error: unmuteError } = await supabase
@@ -170,10 +198,15 @@ Deno.serve(async (req: Request) => {
         return jsonResponse(
           { error: "Failed to unmute user", details: unmuteError.message },
           500,
+          cors,
         );
-      return jsonResponse({ muted: false, message: "User has been unmuted" });
+      return jsonResponse(
+        { muted: false, message: "User has been unmuted" },
+        200,
+        cors,
+      );
     }
   } catch (error) {
-    return errorResponse("Internal server error", 500);
+    return errorResponse("Internal server error", 500, cors);
   }
 });

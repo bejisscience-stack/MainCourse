@@ -1,23 +1,60 @@
 /**
- * CORS headers for Edge Functions
- * Include these headers in ALL responses (including errors)
+ * Dynamic CORS for Edge Functions
+ * Checks Origin against an allowlist instead of using wildcard '*'
  */
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, x-scraper-secret',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+
+const ALLOWED_ORIGINS = [
+  "https://swavleba.ge",
+  "https://www.swavleba.ge",
+  "https://plankton-app-wpsym.ondigitalocean.app",
+  "http://localhost:3000",
+];
+
+/**
+ * Build CORS headers for the given request.
+ * Returns matched origin or omits Access-Control-Allow-Origin entirely.
+ * @param req - The incoming request
+ * @param extraAllowedHeaders - Additional headers to allow (e.g. 'x-scraper-secret')
+ */
+export function getCorsHeaders(
+  req: Request,
+  extraAllowedHeaders: string[] = [],
+): Record<string, string> {
+  const origin = req.headers.get("Origin") || "";
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": [
+      "authorization",
+      "x-client-info",
+      "apikey",
+      "content-type",
+      "cache-control",
+      ...extraAllowedHeaders,
+    ].join(", "),
+  };
+
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Vary"] = "Origin";
+  }
+
+  return headers;
 }
 
 /**
  * Handle CORS preflight requests
- * Call this at the start of every Edge Function
  * @returns Response for OPTIONS request, or null if not a preflight
  */
-export function handleCors(req: Request): Response | null {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+export function handleCors(
+  req: Request,
+  extraAllowedHeaders: string[] = [],
+): Response | null {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", {
+      headers: getCorsHeaders(req, extraAllowedHeaders),
+    });
   }
-  return null
+  return null;
 }
 
 /**
@@ -25,15 +62,13 @@ export function handleCors(req: Request): Response | null {
  */
 export function jsonResponse(
   data: unknown,
-  status: number = 200
+  status: number = 200,
+  corsHeaders: Record<string, string> = {},
 ): Response {
-  return new Response(
-    JSON.stringify(data),
-    {
-      status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    }
-  )
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 /**
@@ -41,7 +76,8 @@ export function jsonResponse(
  */
 export function errorResponse(
   error: string,
-  status: number = 500
+  status: number = 500,
+  corsHeaders: Record<string, string> = {},
 ): Response {
-  return jsonResponse({ error }, status)
+  return jsonResponse({ error }, status, corsHeaders);
 }

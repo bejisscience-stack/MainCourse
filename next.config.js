@@ -63,6 +63,7 @@ const nextConfig = {
           },
           {
             // TODO: migrate 'unsafe-inline' in script-src to nonce-based scripts
+            // Next.js 14 supports nonce via middleware. See: https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy
             key: "Content-Security-Policy",
             value:
               "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in; font-src 'self'; connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.keepz.me https://app.posthog.com https://us.i.posthog.com; frame-src 'self' https://checkout.keepz.me; object-src 'none'; base-uri 'self'; form-action 'self'",

@@ -1,5 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { handleCors, jsonResponse, errorResponse } from "../_shared/cors.ts";
+import {
+  getCorsHeaders,
+  handleCors,
+  jsonResponse,
+  errorResponse,
+} from "../_shared/cors.ts";
 import { getAuthenticatedUser, checkIsAdmin } from "../_shared/auth.ts";
 import { createServiceRoleClient } from "../_shared/supabase.ts";
 
@@ -150,12 +155,13 @@ function timingSafeSecretEqual(a: string, b: string): boolean {
 }
 
 Deno.serve(async (req: Request) => {
-  // CORS preflight
-  const corsResponse = handleCors(req);
+  // CORS preflight — allow x-scraper-secret header for this function
+  const cors = getCorsHeaders(req, ["x-scraper-secret"]);
+  const corsResponse = handleCors(req, ["x-scraper-secret"]);
   if (corsResponse) return corsResponse;
 
   if (req.method !== "POST") {
-    return errorResponse("Method not allowed", 405);
+    return errorResponse("Method not allowed", 405, cors);
   }
 
   try {
@@ -181,7 +187,7 @@ Deno.serve(async (req: Request) => {
 
       const serviceClient = createServiceRoleClient(auth.token);
       const isAdmin = await checkIsAdmin(serviceClient, auth.user.id);
-      if (!isAdmin) return errorResponse("Forbidden: admin only", 403);
+      if (!isAdmin) return errorResponse("Forbidden: admin only", 403, cors);
 
       triggerType = "manual";
       triggeredBy = auth.user.id;
@@ -201,7 +207,7 @@ Deno.serve(async (req: Request) => {
     const adminClient = createServiceRoleClient();
     const apifyToken = Deno.env.get("APIFY_API_TOKEN");
     if (!apifyToken) {
-      return errorResponse("APIFY_API_TOKEN not configured", 500);
+      return errorResponse("APIFY_API_TOKEN not configured", 500, cors);
     }
 
     // Create run record
@@ -217,7 +223,7 @@ Deno.serve(async (req: Request) => {
 
     if (runError || !run) {
       console.error("Failed to create run record:", runError);
-      return errorResponse("Failed to create scrape run", 500);
+      return errorResponse("Failed to create scrape run", 500, cors);
     }
 
     const runId = run.id;
@@ -259,7 +265,7 @@ Deno.serve(async (req: Request) => {
           completed_at: new Date().toISOString(),
         })
         .eq("id", runId);
-      return errorResponse("Failed to fetch submissions", 500);
+      return errorResponse("Failed to fetch submissions", 500, cors);
     }
 
     // Extract all video URLs grouped by platform
@@ -324,11 +330,15 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", runId);
 
-      return jsonResponse({
-        run_id: runId,
-        status: "completed",
-        message: "No video URLs to scrape",
-      });
+      return jsonResponse(
+        {
+          run_id: runId,
+          status: "completed",
+          message: "No video URLs to scrape",
+        },
+        200,
+        cors,
+      );
     }
 
     // Update total count
@@ -564,18 +574,23 @@ Deno.serve(async (req: Request) => {
       })
       .eq("id", runId);
 
-    return jsonResponse({
-      run_id: runId,
-      status: finalStatus,
-      total_urls: videoEntries.length,
-      successful: successCount,
-      failed: failCount,
-    });
+    return jsonResponse(
+      {
+        run_id: runId,
+        status: finalStatus,
+        total_urls: videoEntries.length,
+        successful: successCount,
+        failed: failCount,
+      },
+      200,
+      cors,
+    );
   } catch (err) {
     console.error("View scraper error:", err);
     return errorResponse(
       err instanceof Error ? err.message : "Internal server error",
       500,
+      cors,
     );
   }
 });

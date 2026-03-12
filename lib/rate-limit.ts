@@ -81,6 +81,10 @@ export const adminLimiter = new RateLimiter({
   windowMs: 60_000,
   maxRequests: 30,
 });
+export const subscribeLimiter = new RateLimiter({
+  windowMs: 60_000,
+  maxRequests: 3,
+});
 
 export function getClientIP(request: NextRequest): string {
   return (

@@ -7,15 +7,16 @@ const TEAM_ACCESS_COOKIE = "team_session_access";
 // Routes that should bypass the coming soon check
 const BYPASS_ROUTES = ["/coming-soon", "/api/", "/_next/", "/favicon.ico"];
 
-/** Constant-time string comparison safe for Edge Runtime (no Node.js crypto). */
+/** Constant-time string comparison safe for Edge Runtime (no Node.js crypto).
+ *  Pads both inputs to the same length to avoid leaking length information. */
 function timingSafeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
   const encoder = new TextEncoder();
   const aBuf = encoder.encode(a);
   const bBuf = encoder.encode(b);
-  let mismatch = 0;
-  for (let i = 0; i < aBuf.length; i++) {
-    mismatch |= aBuf[i] ^ bBuf[i];
+  const maxLen = Math.max(aBuf.length, bBuf.length);
+  let mismatch = aBuf.length !== bBuf.length ? 1 : 0;
+  for (let i = 0; i < maxLen; i++) {
+    mismatch |= (aBuf[i] ?? 0) ^ (bBuf[i] ?? 0);
   }
   return mismatch === 0;
 }

@@ -4,12 +4,21 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import {
+  referralLimiter,
+  getClientIP,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 // POST: Validate referral code
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIP(request);
+    const { allowed, retryAfterMs } = referralLimiter.check(ip);
+    if (!allowed) return rateLimitResponse(retryAfterMs);
+
     const token = getTokenFromHeader(request);
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,10 +26,7 @@ export async function POST(request: NextRequest) {
     const { user, error: userError } = await verifyTokenAndGetUser(token);
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized", details: userError?.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();

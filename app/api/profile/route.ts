@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  createServiceRoleClient,
+  createServerSupabaseClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
@@ -17,13 +17,10 @@ export async function GET(request: NextRequest) {
     const { user, error: userError } = await verifyTokenAndGetUser(token);
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized", details: userError?.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabase = createServiceRoleClient(token);
+    const supabase = createServerSupabaseClient(token);
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
@@ -59,10 +56,7 @@ export async function PATCH(request: NextRequest) {
     const { user, error: userError } = await verifyTokenAndGetUser(token);
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized", details: userError?.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -101,9 +95,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Use service role client to bypass RLS - auth is already verified above
-    // Falls back to user token if service role key is not set
-    const supabase = createServiceRoleClient(token);
+    const supabase = createServerSupabaseClient(token);
 
     const { data: updated, error: updateError } = await supabase
       .from("profiles")
