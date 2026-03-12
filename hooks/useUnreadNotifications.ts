@@ -1,9 +1,11 @@
-import useSWR from 'swr';
-import { supabase } from '@/lib/supabase';
-import type { UnreadCountResponse } from '@/types/notification';
+import useSWR from "swr";
+import { supabase } from "@/lib/supabase";
+import type { UnreadCountResponse } from "@/types/notification";
 
 async function fetchUnreadCount(): Promise<UnreadCountResponse> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const token = session?.access_token;
 
   if (!token) {
@@ -11,17 +13,17 @@ async function fetchUnreadCount(): Promise<UnreadCountResponse> {
     return { count: 0 };
   }
 
-  const response = await fetch('/api/notifications/unread-count', {
+  const response = await fetch("/api/notifications/unread-count", {
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Cache-Control': 'no-cache',
+      Authorization: `Bearer ${token}`,
+      "Cache-Control": "no-cache",
     },
-    cache: 'no-store',
+    cache: "no-store",
   });
 
   if (!response.ok) {
     // Return 0 on error instead of throwing to avoid breaking the UI
-    console.error('Failed to fetch unread count');
+    console.error("Failed to fetch unread count");
     return { count: 0 };
   }
 
@@ -30,18 +32,18 @@ async function fetchUnreadCount(): Promise<UnreadCountResponse> {
 
 export function useUnreadNotifications() {
   const { data, error, isLoading, mutate } = useSWR<UnreadCountResponse>(
-    'unread-notifications-count',
+    "unread-notifications-count",
     fetchUnreadCount,
     {
-      revalidateOnFocus: true,
+      revalidateOnFocus: false,
       dedupingInterval: 1000,
-      refreshInterval: 30000, // Refresh every 30 seconds
+      refreshInterval: 30000,
       fallbackData: { count: 0 },
       // Don't throw errors for this hook - UI should gracefully degrade
       onError: (err) => {
-        console.error('Error fetching unread count:', err);
+        console.error("Error fetching unread count:", err);
       },
-    }
+    },
   );
 
   const decrementCount = async () => {
@@ -51,7 +53,7 @@ export function useUnreadNotifications() {
         if (!currentData) return { count: 0 };
         return { count: Math.max(0, currentData.count - 1) };
       },
-      { revalidate: false }
+      { revalidate: false },
     );
   };
 

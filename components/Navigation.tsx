@@ -1,20 +1,24 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, memo, useRef } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { signOut } from '@/lib/auth';
-import { useUser } from '@/hooks/useUser';
-import { useI18n } from '@/contexts/I18nContext';
-import LanguageSelector from './LanguageSelector';
-import NotificationBell from './NotificationBell';
+import { useState, useEffect, useCallback, memo, useRef } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { signOut } from "@/lib/auth";
+import { useUser } from "@/hooks/useUser";
+import { useI18n } from "@/contexts/I18nContext";
+import LanguageSelector from "./LanguageSelector";
+import NotificationBell from "./NotificationBell";
 
 function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    right: 0,
+  });
   const profileButtonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
   const { user, profile, role: userRole, isLoading: loading } = useUser();
@@ -27,16 +31,16 @@ function Navigation() {
       const viewportWidth = window.innerWidth;
       const dropdownWidth = 224; // w-56 = 224px
       const padding = 16; // padding from viewport edge
-      
+
       // Calculate right position - ensure dropdown stays within viewport
       let right = viewportWidth - rect.right;
       if (right < padding) {
         right = padding;
       }
-      
+
       setDropdownPosition({
         top: rect.bottom + 8, // mt-2 = 8px
-        right: Math.max(right, padding)
+        right: Math.max(right, padding),
       });
     }
   }, [isProfileMenuOpen]);
@@ -50,9 +54,9 @@ function Navigation() {
     };
 
     if (isProfileMenuOpen) {
-      document.addEventListener('click', handleClickOutside);
+      document.addEventListener("click", handleClickOutside);
       return () => {
-        document.removeEventListener('click', handleClickOutside);
+        document.removeEventListener("click", handleClickOutside);
       };
     }
   }, [isProfileMenuOpen]);
@@ -64,11 +68,11 @@ function Navigation() {
       await signOut();
       setIsProfileMenuOpen(false);
       setIsMenuOpen(false);
-      router.push('/');
+      router.push("/");
       router.refresh();
     } catch (error) {
-      console.error('Error signing out:', error);
-      setSignOutError(t('auth.failedToSignOut'));
+      console.error("Error signing out:", error);
+      setSignOutError(t("auth.failedToSignOut"));
     } finally {
       setSignOutLoading(false);
     }
@@ -80,46 +84,73 @@ function Navigation() {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center group">
-            <img
+            <Image
               src="/wavleba-logo-new.png"
               alt="Wavleba"
+              width={160}
+              height={40}
+              priority
               className="h-8 md:h-10 w-auto transition-all duration-200 group-hover:scale-105 will-change-transform"
-              style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+              style={{
+                transformOrigin: "center",
+                backfaceVisibility: "hidden",
+              }}
             />
           </Link>
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
-            {userRole !== 'lecturer' && (
+            {userRole !== "lecturer" && (
               <>
-                <Link href="/courses" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
-                  {t('nav.courses')}
+                <Link
+                  href="/courses"
+                  className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
+                >
+                  {t("nav.courses")}
                 </Link>
-                <Link href="/projects" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
-                  {t('nav.projects')}
+                <Link
+                  href="/projects"
+                  className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
+                >
+                  {t("nav.projects")}
                 </Link>
                 {user && (
-                  <Link href="/my-courses" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
-                    {t('nav.myCourses')}
+                  <Link
+                    href="/my-courses"
+                    className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
+                  >
+                    {t("nav.myCourses")}
                   </Link>
                 )}
               </>
             )}
-            {userRole === 'lecturer' && (
-              <Link href="/lecturer/dashboard" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
-                {t('nav.dashboard')}
+            {userRole === "lecturer" && (
+              <Link
+                href="/lecturer/dashboard"
+                className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
+              >
+                {t("nav.dashboard")}
               </Link>
             )}
-            {userRole === 'admin' && (
+            {userRole === "admin" && (
               <>
-                <Link href="/admin" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
-                  {t('nav.adminDashboard')}
+                <Link
+                  href="/admin"
+                  className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
+                >
+                  {t("nav.adminDashboard")}
                 </Link>
-                <Link href="/courses" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
-                  {t('nav.allCourses')}
+                <Link
+                  href="/courses"
+                  className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
+                >
+                  {t("nav.allCourses")}
                 </Link>
-                <Link href="/projects" className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors">
-                  {t('nav.projects')}
+                <Link
+                  href="/projects"
+                  className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
+                >
+                  {t("nav.projects")}
                 </Link>
               </>
             )}
@@ -130,7 +161,9 @@ function Navigation() {
             <LanguageSelector />
             {user && <NotificationBell />}
             {loading ? (
-              <div className="text-charcoal-500 dark:text-gray-500 text-sm">{t('common.loading')}</div>
+              <div className="text-charcoal-500 dark:text-gray-500 text-sm">
+                {t("common.loading")}
+              </div>
             ) : user ? (
               <div className="relative">
                 {/* Profile Icon Button */}
@@ -138,22 +171,36 @@ function Navigation() {
                   ref={profileButtonRef}
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                   className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:ring-offset-2 rounded-full p-1 hover:bg-charcoal-100/50 dark:hover:bg-navy-800/50 transition-all duration-200"
-                  aria-label={t('nav.userMenu')}
+                  aria-label={t("nav.userMenu")}
                 >
                   {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt={profile.username || ''} className="w-9 h-9 rounded-full object-cover" />
+                    <Image
+                      src={profile.avatar_url}
+                      alt={profile.username || ""}
+                      width={36}
+                      height={36}
+                      unoptimized
+                      className="w-9 h-9 rounded-full object-cover"
+                    />
                   ) : (
                     <div className="w-9 h-9 bg-charcoal-950 dark:bg-emerald-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
-                      {(profile?.username || user.email || 'U').charAt(0).toUpperCase()}
+                      {(profile?.username || user.email || "U")
+                        .charAt(0)
+                        .toUpperCase()}
                     </div>
                   )}
                   <svg
-                    className={`w-3.5 h-3.5 text-charcoal-500 dark:text-gray-400 transition-transform duration-200 ${isProfileMenuOpen ? 'rotate-180' : ''}`}
+                    className={`w-3.5 h-3.5 text-charcoal-500 dark:text-gray-400 transition-transform duration-200 ${isProfileMenuOpen ? "rotate-180" : ""}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </button>
 
@@ -164,88 +211,137 @@ function Navigation() {
                       className="fixed inset-0 z-40"
                       onClick={() => setIsProfileMenuOpen(false)}
                     />
-                    <div 
+                    <div
                       className="fixed w-56 min-w-[224px] bg-white dark:bg-navy-700 rounded-xl shadow-2xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-charcoal-200 dark:border-navy-600/80 backdrop-blur-sm dark:backdrop-blur-md py-2 z-50 overflow-hidden"
                       style={{
                         top: `${dropdownPosition.top}px`,
-                        right: `${dropdownPosition.right}px`
+                        right: `${dropdownPosition.right}px`,
                       }}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="px-4 py-3 border-b border-charcoal-200 dark:border-navy-600/60 bg-charcoal-50/30 dark:bg-navy-600/20">
                         <div className="flex items-center space-x-3">
                           {profile?.avatar_url ? (
-                            <img src={profile.avatar_url} alt={profile.username || ''} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                            <Image
+                              src={profile.avatar_url}
+                              alt={profile.username || ""}
+                              width={40}
+                              height={40}
+                              unoptimized
+                              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                            />
                           ) : (
                             <div className="w-10 h-10 bg-charcoal-950 dark:bg-emerald-500 rounded-full flex items-center justify-center text-white font-medium text-sm flex-shrink-0">
-                              {(profile?.username || user.email || 'U').charAt(0).toUpperCase()}
+                              {(profile?.username || user.email || "U")
+                                .charAt(0)
+                                .toUpperCase()}
                             </div>
                           )}
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-charcoal-950 dark:text-white truncate">
-                              {profile?.username || t('nav.user')}
+                              {profile?.username || t("nav.user")}
                             </p>
                             <p className="text-xs text-charcoal-500 dark:text-gray-300 truncate mt-0.5">
                               {user.email}
                             </p>
                           </div>
                         </div>
-                        {userRole === 'lecturer' && (
+                        {userRole === "lecturer" && (
                           <span className="inline-block mt-2 px-2 py-0.5 text-xs font-medium bg-emerald-50 dark:bg-emerald-500/30 text-emerald-700 dark:text-emerald-200 rounded-md border border-emerald-200 dark:border-emerald-500/30">
-                            {t('nav.lecturer')}
+                            {t("nav.lecturer")}
                           </span>
                         )}
-                        {userRole === 'admin' && (
+                        {userRole === "admin" && (
                           <span className="inline-block mt-2 px-2 py-0.5 text-xs font-medium bg-charcoal-100 dark:bg-navy-600 text-charcoal-700 dark:text-gray-200 rounded-md border border-charcoal-300 dark:border-navy-500">
-                            {t('nav.admin')}
+                            {t("nav.admin")}
                           </span>
                         )}
                       </div>
                       <div className="py-1.5">
-                        {userRole === 'lecturer' ? (
+                        {userRole === "lecturer" ? (
                           <>
                             <Link
                               href="/lecturer/dashboard"
                               onClick={() => setIsProfileMenuOpen(false)}
                               className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 dark:text-gray-200 hover:bg-charcoal-100 dark:hover:bg-navy-600/80 transition-colors font-medium"
                             >
-                              <svg className="w-5 h-5 mr-3 text-charcoal-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              <svg
+                                className="w-5 h-5 mr-3 text-charcoal-500 dark:text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
                               </svg>
-                              {t('nav.dashboard')}
+                              {t("nav.dashboard")}
                             </Link>
                             <Link
                               href="/lecturer/chat"
                               onClick={() => setIsProfileMenuOpen(false)}
                               className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 dark:text-gray-200 hover:bg-charcoal-100 dark:hover:bg-navy-600/80 transition-colors font-medium"
                             >
-                              <svg className="w-5 h-5 mr-3 text-charcoal-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                              <svg
+                                className="w-5 h-5 mr-3 text-charcoal-500 dark:text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                />
                               </svg>
-                              {t('nav.chat')}
+                              {t("nav.chat")}
                             </Link>
                           </>
-                        ) : userRole === 'admin' ? (
+                        ) : userRole === "admin" ? (
                           <>
                             <Link
                               href="/admin"
                               onClick={() => setIsProfileMenuOpen(false)}
                               className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 dark:text-gray-200 hover:bg-charcoal-100 dark:hover:bg-navy-600/80 transition-colors font-medium"
                             >
-                              <svg className="w-5 h-5 mr-3 text-charcoal-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                              <svg
+                                className="w-5 h-5 mr-3 text-charcoal-500 dark:text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                                />
                               </svg>
-                              {t('nav.adminDashboard')}
+                              {t("nav.adminDashboard")}
                             </Link>
                             <Link
                               href="/courses"
                               onClick={() => setIsProfileMenuOpen(false)}
                               className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 dark:text-gray-200 hover:bg-charcoal-100 dark:hover:bg-navy-600/80 transition-colors font-medium"
                             >
-                              <svg className="w-5 h-5 mr-3 text-charcoal-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                              <svg
+                                className="w-5 h-5 mr-3 text-charcoal-500 dark:text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                                />
                               </svg>
-                              {t('nav.allCourses')}
+                              {t("nav.allCourses")}
                             </Link>
                           </>
                         ) : (
@@ -255,10 +351,20 @@ function Navigation() {
                               onClick={() => setIsProfileMenuOpen(false)}
                               className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 dark:text-gray-200 hover:bg-charcoal-100 dark:hover:bg-navy-600/80 transition-colors font-medium"
                             >
-                              <svg className="w-5 h-5 mr-3 text-charcoal-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                              <svg
+                                className="w-5 h-5 mr-3 text-charcoal-500 dark:text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                                />
                               </svg>
-                              {t('nav.myCourses')}
+                              {t("nav.myCourses")}
                             </Link>
                           </>
                         )}
@@ -267,11 +373,26 @@ function Navigation() {
                           onClick={() => setIsProfileMenuOpen(false)}
                           className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 dark:text-gray-200 hover:bg-charcoal-100 dark:hover:bg-navy-600/80 transition-colors font-medium"
                         >
-                          <svg className="w-5 h-5 mr-3 text-charcoal-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <svg
+                            className="w-5 h-5 mr-3 text-charcoal-500 dark:text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
                           </svg>
-                          {t('nav.settings')}
+                          {t("nav.settings")}
                         </Link>
                         <div className="border-t border-charcoal-200 dark:border-navy-600/60 my-1.5"></div>
                         <button
@@ -282,13 +403,27 @@ function Navigation() {
                           disabled={signOutLoading}
                           className="w-full flex items-center px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                         >
-                          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          <svg
+                            className="w-5 h-5 mr-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                            />
                           </svg>
-                          {signOutLoading ? t('nav.signingOut') : t('nav.signOut')}
+                          {signOutLoading
+                            ? t("nav.signingOut")
+                            : t("nav.signOut")}
                         </button>
                         {signOutError && (
-                          <div className="px-4 py-2 text-xs text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-500/10 rounded-md mx-2 mt-1">{signOutError}</div>
+                          <div className="px-4 py-2 text-xs text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-500/10 rounded-md mx-2 mt-1">
+                            {signOutError}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -301,13 +436,13 @@ function Navigation() {
                   href="/login"
                   className="text-charcoal-600 dark:text-gray-400 font-medium hover:text-charcoal-950 dark:hover:text-white transition-colors px-4 py-2 text-sm"
                 >
-                  {t('nav.logIn')}
+                  {t("nav.logIn")}
                 </Link>
                 <Link
                   href="/signup"
                   className="bg-charcoal-950 dark:bg-emerald-500 text-white font-medium px-5 py-2 rounded-full hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft text-sm"
                 >
-                  {t('nav.signUp')}
+                  {t("nav.signUp")}
                 </Link>
               </>
             )}
@@ -317,7 +452,7 @@ function Navigation() {
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden text-charcoal-950 dark:text-white focus:outline-none"
-            aria-label={t('nav.toggleMenu')}
+            aria-label={t("nav.toggleMenu")}
           >
             <svg
               className="w-6 h-6"
@@ -341,21 +476,21 @@ function Navigation() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-charcoal-100/50 dark:border-navy-800/50">
             <div className="flex flex-col space-y-3">
-              {userRole !== 'lecturer' && (
+              {userRole !== "lecturer" && (
                 <>
                   <Link
                     href="/courses"
                     className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    {t('nav.courses')}
+                    {t("nav.courses")}
                   </Link>
                   <Link
                     href="/projects"
                     className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    {t('nav.projects')}
+                    {t("nav.projects")}
                   </Link>
                   {user && (
                     <Link
@@ -363,18 +498,18 @@ function Navigation() {
                       className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      {t('nav.myCourses')}
+                      {t("nav.myCourses")}
                     </Link>
                   )}
                 </>
               )}
-              {userRole === 'lecturer' && (
+              {userRole === "lecturer" && (
                 <Link
                   href="/lecturer/dashboard"
                   className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  {t('nav.dashboard')}
+                  {t("nav.dashboard")}
                 </Link>
               )}
               <div className="pt-4 border-t border-charcoal-100/50 dark:border-navy-800/50">
@@ -383,103 +518,184 @@ function Navigation() {
                   {user && <NotificationBell />}
                 </div>
                 {loading ? (
-                  <div className="text-charcoal-500 dark:text-gray-500 text-sm text-center py-2">{t('common.loading')}</div>
+                  <div className="text-charcoal-500 dark:text-gray-500 text-sm text-center py-2">
+                    {t("common.loading")}
+                  </div>
                 ) : user ? (
                   <div className="space-y-2">
                     {/* Mobile Profile Section */}
                     <div className="flex items-center space-x-3 px-3 py-3 bg-charcoal-50/50 dark:bg-navy-800/50 rounded-xl mb-2">
                       {profile?.avatar_url ? (
-                        <img src={profile.avatar_url} alt={profile.username || ''} className="w-10 h-10 rounded-full object-cover" />
+                        <Image
+                          src={profile.avatar_url}
+                          alt={profile.username || ""}
+                          width={40}
+                          height={40}
+                          unoptimized
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
                       ) : (
                         <div className="w-10 h-10 bg-charcoal-950 dark:bg-emerald-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
-                          {(profile?.username || user.email || 'U').charAt(0).toUpperCase()}
+                          {(profile?.username || user.email || "U")
+                            .charAt(0)
+                            .toUpperCase()}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-charcoal-950 dark:text-white truncate">
-                          {profile?.username || t('nav.user')}
+                          {profile?.username || t("nav.user")}
                         </p>
                         <p className="text-xs text-charcoal-500 dark:text-gray-400 truncate">
                           {user.email}
                         </p>
-                        {userRole === 'lecturer' && (
+                        {userRole === "lecturer" && (
                           <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-md">
-                            {t('nav.lecturer')}
+                            {t("nav.lecturer")}
                           </span>
                         )}
-                        {userRole === 'admin' && (
+                        {userRole === "admin" && (
                           <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium bg-charcoal-100 dark:bg-navy-700 text-charcoal-700 dark:text-gray-300 rounded-md">
-                            {t('nav.admin')}
+                            {t("nav.admin")}
                           </span>
                         )}
                       </div>
                     </div>
-                    {userRole === 'lecturer' ? (
+                    {userRole === "lecturer" ? (
                       <>
                         <Link
                           href="/lecturer/dashboard"
                           className="flex items-center w-full px-4 py-2 text-charcoal-950 dark:text-white font-medium hover:bg-charcoal-50/50 dark:hover:bg-navy-800/50 rounded-xl transition-colors text-sm"
                           onClick={() => setIsMenuOpen(false)}
                         >
-                          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          <svg
+                            className="w-5 h-5 mr-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
                           </svg>
-                          {t('nav.dashboard')}
+                          {t("nav.dashboard")}
                         </Link>
                         <Link
                           href="/lecturer/chat"
                           className="flex items-center w-full px-4 py-2 text-charcoal-600 dark:text-gray-300 hover:bg-charcoal-50/50 dark:hover:bg-navy-800/50 rounded-xl transition-colors text-sm"
                           onClick={() => setIsMenuOpen(false)}
                         >
-                          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          <svg
+                            className="w-5 h-5 mr-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                            />
                           </svg>
-                          {t('nav.chat')}
+                          {t("nav.chat")}
                         </Link>
                         <Link
                           href="/settings"
                           className="flex items-center w-full px-4 py-2 text-charcoal-600 dark:text-gray-300 hover:bg-charcoal-50/50 dark:hover:bg-navy-800/50 rounded-xl transition-colors text-sm"
                           onClick={() => setIsMenuOpen(false)}
                         >
-                          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <svg
+                            className="w-5 h-5 mr-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
                           </svg>
-                          {t('nav.settings')}
+                          {t("nav.settings")}
                         </Link>
                       </>
-                    ) : userRole === 'admin' ? (
+                    ) : userRole === "admin" ? (
                       <>
                         <Link
                           href="/admin"
                           className="flex items-center w-full px-4 py-2 text-charcoal-950 dark:text-white font-medium hover:bg-charcoal-50/50 dark:hover:bg-navy-800/50 rounded-xl transition-colors text-sm"
                           onClick={() => setIsMenuOpen(false)}
                         >
-                          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                          <svg
+                            className="w-5 h-5 mr-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                            />
                           </svg>
-                          {t('nav.adminDashboard')}
+                          {t("nav.adminDashboard")}
                         </Link>
                         <Link
                           href="/courses"
                           className="flex items-center w-full px-4 py-2 text-charcoal-600 dark:text-gray-300 hover:bg-charcoal-50/50 dark:hover:bg-navy-800/50 rounded-xl transition-colors text-sm"
                           onClick={() => setIsMenuOpen(false)}
                         >
-                          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                          <svg
+                            className="w-5 h-5 mr-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                            />
                           </svg>
-                          {t('nav.allCourses')}
+                          {t("nav.allCourses")}
                         </Link>
                         <Link
                           href="/settings"
                           className="flex items-center w-full px-4 py-2 text-charcoal-600 dark:text-gray-300 hover:bg-charcoal-50/50 dark:hover:bg-navy-800/50 rounded-xl transition-colors text-sm"
                           onClick={() => setIsMenuOpen(false)}
                         >
-                          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <svg
+                            className="w-5 h-5 mr-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
                           </svg>
-                          {t('nav.settings')}
+                          {t("nav.settings")}
                         </Link>
                       </>
                     ) : (
@@ -489,21 +705,46 @@ function Navigation() {
                           className="flex items-center w-full px-4 py-2 text-charcoal-600 dark:text-gray-300 hover:bg-charcoal-50/50 dark:hover:bg-navy-800/50 rounded-xl transition-colors text-sm"
                           onClick={() => setIsMenuOpen(false)}
                         >
-                          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                          <svg
+                            className="w-5 h-5 mr-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                            />
                           </svg>
-                          {t('nav.myCourses')}
+                          {t("nav.myCourses")}
                         </Link>
                         <Link
                           href="/settings"
                           className="flex items-center w-full px-4 py-2 text-charcoal-600 dark:text-gray-300 hover:bg-charcoal-50/50 dark:hover:bg-navy-800/50 rounded-xl transition-colors text-sm"
                           onClick={() => setIsMenuOpen(false)}
                         >
-                          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <svg
+                            className="w-5 h-5 mr-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
                           </svg>
-                          {t('nav.settings')}
+                          {t("nav.settings")}
                         </Link>
                       </>
                     )}
@@ -515,13 +756,25 @@ function Navigation() {
                       disabled={signOutLoading}
                       className="flex items-center w-full px-4 py-2 text-red-600 dark:text-red-400 font-semibold hover:bg-red-50/50 dark:hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      <svg
+                        className="w-5 h-5 mr-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                        />
                       </svg>
-                      {signOutLoading ? t('nav.signingOut') : t('nav.signOut')}
+                      {signOutLoading ? t("nav.signingOut") : t("nav.signOut")}
                     </button>
                     {signOutError && (
-                      <div className="px-4 text-xs text-red-600 dark:text-red-400">{signOutError}</div>
+                      <div className="px-4 text-xs text-red-600 dark:text-red-400">
+                        {signOutError}
+                      </div>
                     )}
                   </div>
                 ) : (
@@ -531,14 +784,14 @@ function Navigation() {
                       className="text-charcoal-600 dark:text-gray-400 font-medium text-center py-2 block text-sm"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      {t('nav.logIn')}
+                      {t("nav.logIn")}
                     </Link>
                     <Link
                       href="/signup"
                       className="bg-charcoal-950 dark:bg-emerald-500 text-white font-medium text-center py-2.5 rounded-full hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft block text-sm"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      {t('nav.signUp')}
+                      {t("nav.signUp")}
                     </Link>
                   </>
                 )}

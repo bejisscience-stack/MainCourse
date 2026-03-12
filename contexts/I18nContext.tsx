@@ -1,9 +1,17 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Language, getStoredLanguage, setStoredLanguage } from '@/lib/i18n';
-import enTranslations from '@/locales/en.json';
-import geTranslations from '@/locales/ge.json';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  ReactNode,
+} from "react";
+import { Language, getStoredLanguage, setStoredLanguage } from "@/lib/i18n";
+import enTranslations from "@/locales/en.json";
+import geTranslations from "@/locales/ge.json";
 
 type Translations = typeof enTranslations;
 
@@ -45,63 +53,65 @@ export function I18nProvider({ children, initialLanguage }: I18nProviderProps) {
     document.documentElement.lang = language;
   }, [language]);
 
-  const setLanguage = (lang: Language) => {
+  const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
     setStoredLanguage(lang);
     document.documentElement.lang = lang;
-  };
+  }, []);
 
-  const t = (key: string, params?: Record<string, string | number>): string => {
-    const keys = key.split('.');
-    let value: any = translations[language];
+  const t = useCallback(
+    (key: string, params?: Record<string, string | number>): string => {
+      const keys = key.split(".");
+      let value: any = translations[language];
 
-    for (const k of keys) {
-      value = value?.[k];
-    }
-
-    if (typeof value !== 'string') {
-      // Fallback to English if translation missing in current language
-      let fallback: any = translations.en;
       for (const k of keys) {
-        fallback = fallback?.[k];
+        value = value?.[k];
       }
-      if (typeof fallback === 'string') {
-        value = fallback;
-      } else {
-        // Final fallback to Georgian if English translation is missing
-        let georgianFallback: any = translations.ge;
+
+      if (typeof value !== "string") {
+        let fallback: any = translations.en;
         for (const k of keys) {
-          georgianFallback = georgianFallback?.[k];
+          fallback = fallback?.[k];
         }
-        if (typeof georgianFallback === 'string') {
-          value = georgianFallback;
+        if (typeof fallback === "string") {
+          value = fallback;
         } else {
-          return key; // Return key if no translation found
+          let georgianFallback: any = translations.ge;
+          for (const k of keys) {
+            georgianFallback = georgianFallback?.[k];
+          }
+          if (typeof georgianFallback === "string") {
+            value = georgianFallback;
+          } else {
+            return key;
+          }
         }
       }
-    }
 
-    return params ? replaceParams(value, params) : value;
-  };
+      if (params) {
+        return value.replace(/\{\{(\w+)\}\}/g, (match: string, k: string) => {
+          return params[k]?.toString() || match;
+        });
+      }
+      return value;
+    },
+    [language],
+  );
 
-  function replaceParams(str: string, params: Record<string, string | number>): string {
-    return str.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-      return params[key]?.toString() || match;
-    });
-  }
+  const contextValue = useMemo(
+    () => ({ language, setLanguage, t, isReady }),
+    [language, setLanguage, t, isReady],
+  );
 
   return (
-    <I18nContext.Provider value={{ language, setLanguage, t, isReady }}>
-      {children}
-    </I18nContext.Provider>
+    <I18nContext.Provider value={contextValue}>{children}</I18nContext.Provider>
   );
 }
 
 export function useI18n() {
   const context = useContext(I18nContext);
   if (!context) {
-    throw new Error('useI18n must be used within I18nProvider');
+    throw new Error("useI18n must be used within I18nProvider");
   }
   return context;
 }
-

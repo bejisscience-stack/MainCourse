@@ -1,19 +1,27 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  ReactNode,
+} from "react";
 
 export type BackgroundTheme =
-  | 'none'
-  | 'subtle'
-  | 'stockMarket'
-  | 'cryptoRain'
-  | 'moneyFlow'
-  | 'socialMedia'
-  | 'aiNetwork'
-  | 'globalCommerce'
-  | 'analytics';
+  | "none"
+  | "subtle"
+  | "stockMarket"
+  | "cryptoRain"
+  | "moneyFlow"
+  | "socialMedia"
+  | "aiNetwork"
+  | "globalCommerce"
+  | "analytics";
 
-export type AnimationIntensity = 'low' | 'medium' | 'high';
+export type AnimationIntensity = "low" | "medium" | "high";
 
 interface BackgroundContextType {
   theme: BackgroundTheme;
@@ -23,22 +31,28 @@ interface BackgroundContextType {
   setIntensity: (intensity: AnimationIntensity) => void;
 }
 
-const BackgroundContext = createContext<BackgroundContextType | undefined>(undefined);
+const BackgroundContext = createContext<BackgroundContextType | undefined>(
+  undefined,
+);
 
 interface BackgroundProviderProps {
   children: ReactNode;
 }
 
 export function BackgroundProvider({ children }: BackgroundProviderProps) {
-  const [theme, setThemeState] = useState<BackgroundTheme>('stockMarket');
-  const [intensity, setIntensityState] = useState<AnimationIntensity>('medium');
+  const [theme, setThemeState] = useState<BackgroundTheme>("stockMarket");
+  const [intensity, setIntensityState] = useState<AnimationIntensity>("medium");
   const [isReducedMotion, setIsReducedMotion] = useState(false);
 
   // Load settings from localStorage on mount
   useEffect(() => {
     try {
-      const savedTheme = localStorage.getItem('backgroundTheme') as BackgroundTheme;
-      const savedIntensity = localStorage.getItem('backgroundIntensity') as AnimationIntensity;
+      const savedTheme = localStorage.getItem(
+        "backgroundTheme",
+      ) as BackgroundTheme;
+      const savedIntensity = localStorage.getItem(
+        "backgroundIntensity",
+      ) as AnimationIntensity;
 
       if (savedTheme && savedTheme !== theme) {
         setThemeState(savedTheme);
@@ -51,42 +65,39 @@ export function BackgroundProvider({ children }: BackgroundProviderProps) {
     }
 
     // Check for reduced motion preference
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     setIsReducedMotion(mediaQuery.matches);
 
     const handleChange = (e: MediaQueryListEvent) => {
       setIsReducedMotion(e.matches);
     };
 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
-  const setTheme = (newTheme: BackgroundTheme) => {
+  const setTheme = useCallback((newTheme: BackgroundTheme) => {
     setThemeState(newTheme);
     try {
-      localStorage.setItem('backgroundTheme', newTheme);
+      localStorage.setItem("backgroundTheme", newTheme);
     } catch (error) {
       // Ignore localStorage errors
     }
-  };
+  }, []);
 
-  const setIntensity = (newIntensity: AnimationIntensity) => {
+  const setIntensity = useCallback((newIntensity: AnimationIntensity) => {
     setIntensityState(newIntensity);
     try {
-      localStorage.setItem('backgroundIntensity', newIntensity);
+      localStorage.setItem("backgroundIntensity", newIntensity);
     } catch (error) {
       // Ignore localStorage errors
     }
-  };
+  }, []);
 
-  const value: BackgroundContextType = {
-    theme,
-    intensity,
-    isReducedMotion,
-    setTheme,
-    setIntensity,
-  };
+  const value = useMemo(
+    () => ({ theme, intensity, isReducedMotion, setTheme, setIntensity }),
+    [theme, intensity, isReducedMotion, setTheme, setIntensity],
+  );
 
   return (
     <BackgroundContext.Provider value={value}>
@@ -98,7 +109,7 @@ export function BackgroundProvider({ children }: BackgroundProviderProps) {
 export function useBackground() {
   const context = useContext(BackgroundContext);
   if (context === undefined) {
-    throw new Error('useBackground must be used within a BackgroundProvider');
+    throw new Error("useBackground must be used within a BackgroundProvider");
   }
   return context;
 }

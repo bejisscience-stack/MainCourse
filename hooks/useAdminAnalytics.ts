@@ -1,11 +1,11 @@
-import useSWR from 'swr';
-import { supabase } from '@/lib/supabase';
+import useSWR from "swr";
+import { supabase } from "@/lib/supabase";
 import type {
   AnalyticsOverview,
   RevenueData,
   ReferralStats,
   ProjectStats,
-} from '@/types/analytics';
+} from "@/types/analytics";
 
 interface AdminAnalytics {
   overview: AnalyticsOverview | undefined;
@@ -17,26 +17,28 @@ interface AdminAnalytics {
 }
 
 async function fetchAnalytics<T>(endpoint: string): Promise<T> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const token = session?.access_token;
 
   if (!token) {
-    throw new Error('Not authenticated');
+    throw new Error("Not authenticated");
   }
 
   const timestamp = Date.now();
   const response = await fetch(`${endpoint}?t=${timestamp}`, {
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Cache-Control': 'no-cache',
+      Authorization: `Bearer ${token}`,
+      "Cache-Control": "no-cache",
     },
-    cache: 'no-store',
+    cache: "no-store",
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
     throw new Error(
-      errorData?.error || `Failed to fetch ${endpoint} (${response.status})`
+      errorData?.error || `Failed to fetch ${endpoint} (${response.status})`,
     );
   }
 
@@ -50,10 +52,10 @@ async function fetchAllAnalytics(): Promise<{
   projects: ProjectStats;
 }> {
   const [overview, revenue, referrals, projects] = await Promise.all([
-    fetchAnalytics<AnalyticsOverview>('/api/admin/analytics/overview'),
-    fetchAnalytics<RevenueData>('/api/admin/analytics/revenue'),
-    fetchAnalytics<ReferralStats>('/api/admin/analytics/referrals'),
-    fetchAnalytics<ProjectStats>('/api/admin/analytics/projects'),
+    fetchAnalytics<AnalyticsOverview>("/api/admin/analytics/overview"),
+    fetchAnalytics<RevenueData>("/api/admin/analytics/revenue"),
+    fetchAnalytics<ReferralStats>("/api/admin/analytics/referrals"),
+    fetchAnalytics<ProjectStats>("/api/admin/analytics/projects"),
   ]);
 
   return { overview, revenue, referrals, projects };
@@ -61,14 +63,14 @@ async function fetchAllAnalytics(): Promise<{
 
 export function useAdminAnalytics(): AdminAnalytics {
   const { data, error, isLoading } = useSWR(
-    'admin-analytics',
+    "admin-analytics",
     fetchAllAnalytics,
     {
-      revalidateOnFocus: true,
+      revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 5000,
       refreshInterval: 30000,
-    }
+    },
   );
 
   return {

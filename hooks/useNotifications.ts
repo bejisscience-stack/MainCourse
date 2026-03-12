@@ -1,6 +1,6 @@
-import useSWR from 'swr';
-import { supabase } from '@/lib/supabase';
-import type { Notification, NotificationsResponse } from '@/types/notification';
+import useSWR from "swr";
+import { supabase } from "@/lib/supabase";
+import type { Notification, NotificationsResponse } from "@/types/notification";
 
 interface UseNotificationsOptions {
   page?: number;
@@ -8,77 +8,87 @@ interface UseNotificationsOptions {
   unreadOnly?: boolean;
 }
 
-async function fetchNotifications(options: UseNotificationsOptions = {}): Promise<NotificationsResponse> {
+async function fetchNotifications(
+  options: UseNotificationsOptions = {},
+): Promise<NotificationsResponse> {
   const { page = 1, limit = 20, unreadOnly = false } = options;
 
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const token = session?.access_token;
 
   if (!token) {
-    throw new Error('Not authenticated');
+    throw new Error("Not authenticated");
   }
 
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
-    ...(unreadOnly ? { unread: 'true' } : {}),
+    ...(unreadOnly ? { unread: "true" } : {}),
   });
 
   const response = await fetch(`/api/notifications?${params}`, {
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Cache-Control': 'no-cache',
+      Authorization: `Bearer ${token}`,
+      "Cache-Control": "no-cache",
     },
-    cache: 'no-store',
+    cache: "no-store",
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData?.error || 'Failed to fetch notifications');
+    throw new Error(errorData?.error || "Failed to fetch notifications");
   }
 
   return response.json();
 }
 
 async function markAsRead(notificationId: string): Promise<void> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const token = session?.access_token;
 
   if (!token) {
-    throw new Error('Not authenticated');
+    throw new Error("Not authenticated");
   }
 
   const response = await fetch(`/api/notifications/${notificationId}/read`, {
-    method: 'PATCH',
+    method: "PATCH",
     headers: {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData?.error || 'Failed to mark notification as read');
+    throw new Error(errorData?.error || "Failed to mark notification as read");
   }
 }
 
 async function markAllAsRead(): Promise<number> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const token = session?.access_token;
 
   if (!token) {
-    throw new Error('Not authenticated');
+    throw new Error("Not authenticated");
   }
 
-  const response = await fetch('/api/notifications/read-all', {
-    method: 'PATCH',
+  const response = await fetch("/api/notifications/read-all", {
+    method: "PATCH",
     headers: {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData?.error || 'Failed to mark all notifications as read');
+    throw new Error(
+      errorData?.error || "Failed to mark all notifications as read",
+    );
   }
 
   const data = await response.json();
@@ -93,9 +103,9 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     cacheKey,
     () => fetchNotifications(options),
     {
-      revalidateOnFocus: true,
+      revalidateOnFocus: false,
       dedupingInterval: 1000,
-      refreshInterval: 30000, // Refresh every 30 seconds
+      refreshInterval: 30000,
       fallbackData: {
         notifications: [],
         total: 0,
@@ -103,7 +113,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
         limit,
         hasMore: false,
       },
-    }
+    },
   );
 
   const handleMarkAsRead = async (notificationId: string) => {
@@ -116,14 +126,16 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
           return {
             ...currentData,
             notifications: currentData.notifications.map((n) =>
-              n.id === notificationId ? { ...n, read: true, read_at: new Date().toISOString() } : n
+              n.id === notificationId
+                ? { ...n, read: true, read_at: new Date().toISOString() }
+                : n,
             ),
           };
         },
-        { revalidate: true }
+        { revalidate: true },
       );
     } catch (err) {
-      console.error('Error marking notification as read:', err);
+      console.error("Error marking notification as read:", err);
       throw err;
     }
   };
@@ -144,11 +156,11 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
             })),
           };
         },
-        { revalidate: true }
+        { revalidate: true },
       );
       return count;
     } catch (err) {
-      console.error('Error marking all notifications as read:', err);
+      console.error("Error marking all notifications as read:", err);
       throw err;
     }
   };

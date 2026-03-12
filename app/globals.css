@@ -52,7 +52,9 @@ html {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 body {
@@ -66,13 +68,14 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
   position: relative;
   overscroll-behavior-x: none;
 }
 
 @media (max-width: 768px) {
-
   html,
   body {
     height: 100dvh;
@@ -95,7 +98,7 @@ main {
 
 /* Prevent scrolling beyond content */
 #__next,
-#__next>div {
+#__next > div {
   min-height: 100%;
   height: auto;
   width: 100%;
@@ -117,17 +120,21 @@ main {
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(to bottom,
-      rgb(var(--background-start-rgb)),
-      rgb(var(--background-end-rgb)));
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--background-start-rgb)),
+    rgb(var(--background-end-rgb))
+  );
   background-attachment: fixed;
-  font-feature-settings: 'rlig' 1, 'calt' 1;
+  font-feature-settings:
+    "rlig" 1,
+    "calt" 1;
   letter-spacing: -0.01em;
 }
 
 /* Subtle Grain Texture - Extremely low opacity - GPU optimized */
 body::before {
-  content: '';
+  content: "";
   position: fixed;
   top: 0;
   left: 0;
@@ -137,24 +144,29 @@ body::before {
   pointer-events: none;
   z-index: 1;
   opacity: 0.015;
-  background-image:
-    radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.15) 1px, transparent 0);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 0
+  );
   background-size: 20px 20px;
   mix-blend-mode: overlay;
-  will-change: opacity;
   contain: strict;
   transform: translateZ(0);
 }
 
 :root.dark body::before {
   opacity: 0.02;
-  background-image:
-    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.1) 1px, transparent 0);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(255, 255, 255, 0.1) 1px,
+    transparent 0
+  );
 }
 
 /* Additional subtle noise texture layer - GPU optimized */
 body::after {
-  content: '';
+  content: "";
   position: fixed;
   top: 0;
   left: 0;
@@ -166,7 +178,6 @@ body::after {
   opacity: 0.008;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
   mix-blend-mode: soft-light;
-  will-change: opacity;
   contain: strict;
   transform: translateZ(0);
 }
@@ -274,11 +285,6 @@ select:-webkit-autofill:focus {
   }
 }
 
-/* Performance optimizations */
-* {
-  will-change: auto;
-}
-
 img {
   content-visibility: auto;
 }
@@ -307,7 +313,6 @@ img {
 }
 
 @keyframes pulse-subtle {
-
   0%,
   100% {
     opacity: 1;
@@ -319,7 +324,6 @@ img {
 }
 
 @keyframes float {
-
   0%,
   100% {
     transform: translateY(0px);
@@ -396,7 +400,6 @@ nav,
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
-
 
 /* New background animation keyframes */
 @keyframes stockFadeIn {
@@ -524,7 +527,6 @@ nav,
 }
 
 @keyframes patternShift {
-
   0%,
   100% {
     transform: translateX(0) translateY(0);
@@ -536,7 +538,6 @@ nav,
 }
 
 @keyframes successPulse {
-
   0%,
   100% {
     transform: scale(1);
@@ -598,7 +599,6 @@ nav,
 }
 
 @keyframes networkPulse {
-
   0%,
   100% {
     transform: scale(1);
@@ -627,7 +627,6 @@ nav,
 }
 
 @keyframes neuralPulse {
-
   0%,
   100% {
     opacity: 0.003;
@@ -639,7 +638,6 @@ nav,
 }
 
 @keyframes nodePulse {
-
   0%,
   100% {
     transform: scale(1);
@@ -694,7 +692,6 @@ nav,
 }
 
 @keyframes worldMapShift {
-
   0%,
   100% {
     transform: translateX(0);
@@ -735,7 +732,6 @@ nav,
 }
 
 @keyframes tradePulse {
-
   0%,
   100% {
     transform: scale(1);
@@ -749,7 +745,6 @@ nav,
 }
 
 @keyframes commerceActivity {
-
   0%,
   100% {
     transform: scale(1) rotate(0deg);
@@ -778,7 +773,6 @@ nav,
 }
 
 @keyframes dashboardGrid {
-
   0%,
   100% {
     transform: translateX(0) translateY(0);
@@ -841,7 +835,6 @@ nav,
 }
 
 @keyframes kpiPulse {
-
   0%,
   100% {
     opacity: 0.04;
@@ -852,10 +845,8 @@ nav,
   }
 }
 
-
 /* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
-
   *,
   *::before,
   *::after {
