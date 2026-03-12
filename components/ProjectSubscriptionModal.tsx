@@ -42,6 +42,7 @@ export default function ProjectSubscriptionModal({
   >(null);
   const [payingWithCardId, setPayingWithCardId] = useState<string | null>(null);
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -58,6 +59,7 @@ export default function ProjectSubscriptionModal({
       setSaveCardChecked(false);
       setTokenPaymentStatus(null);
       setPayingWithCardId(null);
+      setIsRetrying(false);
     }
   }, [isOpen]);
 
@@ -240,6 +242,37 @@ export default function ProjectSubscriptionModal({
     [getAuthToken, createSubscriptionAndGetId, pollPaymentStatus],
   );
 
+  // Retry payment for existing pending subscription (skip creating new sub)
+  const handleRetryPayment = useCallback(async () => {
+    if (!subscription?.id) return;
+    setIsRetrying(true);
+    setError(null);
+    try {
+      const token = await getAuthToken();
+      const orderResponse = await fetch("/api/payments/keepz/create-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          paymentType: "project_subscription",
+          referenceId: subscription.id,
+        }),
+      });
+      if (!orderResponse.ok) {
+        const errData = await orderResponse.json();
+        throw new Error(errData.error || "Failed to create payment");
+      }
+      const { checkoutUrl } = await orderResponse.json();
+      window.location.href = checkoutUrl;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Payment failed";
+      setError(message);
+      setIsRetrying(false);
+    }
+  }, [subscription, getAuthToken]);
+
   const handleDeleteCard = useCallback(
     async (cardId: string) => {
       if (!confirm(t("paymentMethod.deleteCardConfirm"))) return;
@@ -280,10 +313,17 @@ export default function ProjectSubscriptionModal({
           </svg>
         ),
         bg: "bg-amber-500/10 border-amber-500/30",
-        title: t("projectSubscription.pendingTitle"),
-        message: t("projectSubscription.pendingMessage"),
+        title:
+          subscription?.payment_method === "keepz"
+            ? t("projectSubscription.pendingPaymentTitle")
+            : t("projectSubscription.pendingTitle"),
+        message:
+          subscription?.payment_method === "keepz"
+            ? t("projectSubscription.pendingPaymentMessage")
+            : t("projectSubscription.pendingMessage"),
         titleColor: "text-amber-300",
         messageColor: "text-amber-200/70",
+        showRetry: subscription?.payment_method === "keepz",
       },
       active: {
         icon: (
@@ -356,9 +396,58 @@ export default function ProjectSubscriptionModal({
             )}
           </div>
         </div>
+
+        {/* Error display */}
+        {error && (
+          <div className="mt-3 p-3 rounded-xl border border-red-800/50 bg-red-900/20">
+            <p className="text-sm text-red-300">{error}</p>
+          </div>
+        )}
+
+        {/* Retry payment button for Keepz pending subscriptions */}
+        {"showRetry" in config && config.showRetry && (
+          <button
+            onClick={handleRetryPayment}
+            disabled={isRetrying}
+            className={`w-full mt-4 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
+              isRetrying
+                ? "bg-emerald-500 text-white cursor-wait"
+                : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg hover:shadow-emerald-500/25"
+            }`}
+          >
+            {isRetrying ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg
+                  className="animate-spin w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                {t("paymentMethod.redirecting")}
+              </span>
+            ) : (
+              t("projectSubscription.retryPayment")
+            )}
+          </button>
+        )}
+
         <button
           onClick={onClose}
-          className="w-full mt-4 px-4 py-2.5 bg-navy-800/70 text-gray-300 rounded-xl hover:bg-navy-700 font-medium transition-colors text-sm"
+          disabled={isRetrying}
+          className="w-full mt-2 px-4 py-2.5 bg-navy-800/70 text-gray-300 rounded-xl hover:bg-navy-700 font-medium transition-colors text-sm disabled:opacity-50"
         >
           {t("close")}
         </button>
