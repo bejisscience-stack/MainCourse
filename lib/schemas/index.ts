@@ -1,0 +1,46 @@
+import { z } from "zod";
+
+export const paymentOrderSchema = z.object({
+  paymentType: z.enum([
+    "course_enrollment",
+    "project_subscription",
+    "bundle_enrollment",
+  ]),
+  referenceId: z.string().uuid(),
+  keepzMethod: z.string().optional(),
+  saveCard: z.boolean().optional(),
+  savedCardId: z.string().uuid().optional(),
+});
+
+export const enrollmentRequestSchema = z.object({
+  courseId: z.string().uuid(),
+  referralCode: z
+    .string()
+    .max(20)
+    .regex(/^[a-zA-Z0-9]*$/)
+    .optional()
+    .nullable(),
+  isReEnrollment: z.boolean().optional(),
+  payment_method: z.string().optional(),
+});
+
+export const bundleEnrollmentRequestSchema = z.object({
+  bundleId: z.string().uuid(),
+  referralCode: z
+    .string()
+    .max(20)
+    .regex(/^[a-zA-Z0-9]*$/)
+    .optional()
+    .nullable(),
+  payment_method: z.string().optional(),
+});
+
+export const completeProfileSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(3)
+    .max(30)
+    .regex(/^[a-zA-Z0-9_]+$/),
+  role: z.enum(["student", "lecturer"]),
+});

@@ -3,47 +3,33 @@ import {
   createServerSupabaseClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
+import { getTokenFromHeader } from "@/lib/admin-auth";
+import { bundleEnrollmentRequestSchema } from "@/lib/schemas";
 
 export const dynamic = "force-dynamic";
 
 // POST: Create a new bundle enrollment request
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const token = getTokenFromHeader(request);
+    if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const token = authHeader.replace("Bearer ", "");
     const { user, error: userError } = await verifyTokenAndGetUser(token);
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized", details: userError?.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { bundleId, referralCode, payment_method } = body;
-
-    if (!bundleId) {
+    const rawBody = await request.json();
+    const parsed = bundleEnrollmentRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "bundleId is required" },
+        { error: "Invalid request data" },
         { status: 400 },
       );
     }
-
-    // Validate referralCode if provided
-    if (
-      referralCode &&
-      (typeof referralCode !== "string" || referralCode.length > 20)
-    ) {
-      return NextResponse.json(
-        { error: "referralCode must be a string with max 20 characters" },
-        { status: 400 },
-      );
-    }
+    const { bundleId, referralCode, payment_method } = parsed.data;
 
     const supabase = createServerSupabaseClient(token);
 
@@ -79,13 +65,7 @@ export async function POST(request: NextRequest) {
 
     if (requestCheckError && requestCheckError.code !== "PGRST116") {
       console.error("Error checking existing request:", requestCheckError);
-      return NextResponse.json(
-        {
-          error: "Failed to verify bundle enrollment request status",
-          details: requestCheckError.message,
-        },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: "An error occurred" }, { status: 500 });
     }
 
     if (existingRequest) {
@@ -98,13 +78,7 @@ export async function POST(request: NextRequest) {
         "Error checking existing enrollment:",
         enrollmentCheckError,
       );
-      return NextResponse.json(
-        {
-          error: "Failed to verify bundle enrollment status",
-          details: enrollmentCheckError.message,
-        },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: "An error occurred" }, { status: 500 });
     }
 
     if (existingEnrollment) {
@@ -116,10 +90,7 @@ export async function POST(request: NextRequest) {
 
     if (bundleError) {
       console.error("Error checking bundle:", bundleError);
-      return NextResponse.json(
-        { error: "Failed to verify bundle", details: bundleError.message },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: "An error occurred" }, { status: 500 });
     }
 
     if (!bundle) {
@@ -141,7 +112,9 @@ export async function POST(request: NextRequest) {
     const { data: enrollmentRequest, error: insertError } = await supabase
       .from("bundle_enrollment_requests")
       .insert(insertData)
-      .select()
+      .select(
+        "id, user_id, bundle_id, status, payment_screenshots, payment_method, created_at, updated_at",
+      )
       .single();
 
     if (insertError) {
@@ -160,7 +133,6 @@ export async function POST(request: NextRequest) {
           {
             error:
               "You already have a bundle enrollment request for this bundle",
-            details: insertError.message,
           },
           { status: 400 },
         );
@@ -168,7 +140,7 @@ export async function POST(request: NextRequest) {
 
       if (insertError.code === "23503") {
         return NextResponse.json(
-          { error: "Invalid bundle or user", details: insertError.message },
+          { error: "Invalid bundle or user" },
           { status: 400 },
         );
       }
@@ -178,20 +150,12 @@ export async function POST(request: NextRequest) {
           {
             error:
               "Permission denied. Please ensure you are logged in correctly.",
-            details: insertError.message,
           },
           { status: 403 },
         );
       }
 
-      return NextResponse.json(
-        {
-          error: "Failed to create bundle enrollment request",
-          details: insertError.message || "Unknown database error",
-          code: insertError.code,
-        },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: "An error occurred" }, { status: 500 });
     }
 
     if (!enrollmentRequest) {
@@ -207,20 +171,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ request: enrollmentRequest }, { status: 201 });
   } catch (error: any) {
     console.error("Error in POST /api/bundle-enrollment-requests:", error);
-
-    let errorMessage = "Internal server error";
-    if (error.message) {
-      errorMessage = error.message;
-    } else if (error.error) {
-      errorMessage = error.error;
-    }
-
-    return NextResponse.json(
-      {
-        error: errorMessage,
-        details: error.details || error.stack || "An unexpected error occurred",
-      },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "An error occurred" }, { status: 500 });
   }
 }
