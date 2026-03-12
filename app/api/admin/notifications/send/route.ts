@@ -6,6 +6,7 @@ import {
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { sendAdminNotificationEmail } from "@/lib/email";
+import { logAdminAction } from "@/lib/audit-log";
 import type { AdminNotificationPayload } from "@/types/notification";
 
 export const dynamic = "force-dynamic";
@@ -387,6 +388,28 @@ export async function POST(request: NextRequest) {
     });
 
     const allFailed = emailFailed > 0 && emailSent === 0 && inAppCount === 0;
+
+    try {
+      await logAdminAction(
+        request,
+        user.id,
+        "send_notification",
+        "notifications",
+        "bulk",
+        {
+          channel,
+          language,
+          target_type,
+          target_role,
+          email_target,
+          inAppCount,
+          emailSent,
+          emailFailed,
+        },
+      );
+    } catch (e) {
+      console.error("[Audit] Failed to log:", e);
+    }
 
     return NextResponse.json({
       success: !allFailed,

@@ -3,6 +3,7 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import { logAdminAction } from "@/lib/audit-log";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +121,22 @@ export async function PATCH(request: NextRequest) {
     if (error) {
       console.error("[View Scraper Schedule API] Error:", error);
       return NextResponse.json({ error: "An error occurred" }, { status: 500 });
+    }
+
+    try {
+      await logAdminAction(
+        request,
+        user.id,
+        "update_schedule",
+        "cron_jobs",
+        "view_scraper",
+        {
+          schedule: schedule ?? null,
+          active: active ?? null,
+        },
+      );
+    } catch (e) {
+      console.error("[Audit] Failed to log:", e);
     }
 
     return NextResponse.json({ schedule: data });

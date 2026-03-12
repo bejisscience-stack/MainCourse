@@ -3,6 +3,7 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import { logAdminAction } from "@/lib/audit-log";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +46,23 @@ export async function POST(request: NextRequest) {
     });
 
     const data = await response.json();
+
+    try {
+      await logAdminAction(
+        request,
+        user.id,
+        "run_scraper",
+        "view_scrape_runs",
+        body.project_id || "all",
+        {
+          project_id: body.project_id || null,
+          response_status: response.status,
+        },
+      );
+    } catch (e) {
+      console.error("[Audit] Failed to log:", e);
+    }
+
     return NextResponse.json(data, { status: response.status });
   } catch (err) {
     console.error("[View Scraper Run API] Unhandled exception:", err);
