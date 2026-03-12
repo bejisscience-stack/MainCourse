@@ -1,7 +1,10 @@
-import { useEffect, useCallback } from 'react';
-import useSWR from 'swr';
-import { supabase } from '@/lib/supabase';
-import { useRealtimeProjects, useRealtimeProjectCriteria } from './useRealtimeProjects';
+import { useEffect, useCallback } from "react";
+import useSWR from "swr";
+import { supabase } from "@/lib/supabase";
+import {
+  useRealtimeProjects,
+  useRealtimeProjectCriteria,
+} from "./useRealtimeProjects";
 
 export interface ProjectCriteria {
   id: string;
@@ -41,28 +44,33 @@ export interface ActiveProject {
 async function fetchActiveProjects(): Promise<ActiveProject[]> {
   try {
     // Get current date in YYYY-MM-DD format
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
 
     // Fetch active projects with course and lecturer info
     const { data: projects, error: projectsError } = await supabase
-      .from('projects')
-      .select(`
-        *,
+      .from("projects")
+      .select(
+        `
+        id, message_id, channel_id, course_id, user_id, name, description, video_link, budget, min_views, max_views, platforms, start_date, end_date, created_at, updated_at,
         courses!inner (
           id,
           title,
           thumbnail_url,
           lecturer_id
         )
-      `)
-      .not('start_date', 'is', null)
-      .not('end_date', 'is', null)
-      .lte('start_date', today)
-      .gte('end_date', today)
-      .order('budget', { ascending: false });
+      `,
+      )
+      .not("start_date", "is", null)
+      .not("end_date", "is", null)
+      .lte("start_date", today)
+      .gte("end_date", today)
+      .order("budget", { ascending: false });
 
     if (projectsError) {
-      console.error('[useActiveProjects] Error fetching projects:', projectsError);
+      console.error(
+        "[useActiveProjects] Error fetching projects:",
+        projectsError,
+      );
       throw projectsError;
     }
 
@@ -71,33 +79,41 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
     }
 
     // Get unique lecturer IDs
-    const lecturerIds = [...new Set(projects.map((p: any) => p.courses.lecturer_id))];
+    const lecturerIds = [
+      ...new Set(projects.map((p: any) => p.courses.lecturer_id)),
+    ];
 
     // Fetch lecturer profiles
     const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, username, full_name')
-      .in('id', lecturerIds);
+      .from("profiles")
+      .select("id, username, full_name")
+      .in("id", lecturerIds);
 
     if (profilesError) {
-      console.error('[useActiveProjects] Error fetching profiles:', profilesError);
+      console.error(
+        "[useActiveProjects] Error fetching profiles:",
+        profilesError,
+      );
       // Continue without profiles - not critical
     }
 
-    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+    const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
 
     // Get all project IDs to fetch criteria
     const projectIds = projects.map((p: any) => p.id);
 
     // Fetch criteria for all projects
     const { data: allCriteria, error: criteriaError } = await supabase
-      .from('project_criteria')
-      .select('*')
-      .in('project_id', projectIds)
-      .order('display_order', { ascending: true });
+      .from("project_criteria")
+      .select("id, project_id, criteria_text, rpm, display_order, platform")
+      .in("project_id", projectIds)
+      .order("display_order", { ascending: true });
 
     if (criteriaError) {
-      console.error('[useActiveProjects] Error fetching criteria:', criteriaError);
+      console.error(
+        "[useActiveProjects] Error fetching criteria:",
+        criteriaError,
+      );
       // Continue without criteria - not critical
     }
 
@@ -145,17 +161,20 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
       };
     });
 
-    console.log('[useActiveProjects] Fetched active projects:', activeProjects.length);
+    console.log(
+      "[useActiveProjects] Fetched active projects:",
+      activeProjects.length,
+    );
     return activeProjects;
   } catch (err: any) {
-    console.error('[useActiveProjects] Unexpected error:', err);
+    console.error("[useActiveProjects] Unexpected error:", err);
     throw err;
   }
 }
 
 export function useActiveProjects() {
   const { data, error, isLoading, mutate } = useSWR<ActiveProject[]>(
-    'active-projects',
+    "active-projects",
     fetchActiveProjects,
     {
       revalidateOnFocus: false,
@@ -165,22 +184,26 @@ export function useActiveProjects() {
       errorRetryInterval: 2000,
       shouldRetryOnError: (error) => {
         // Don't retry on authentication errors
-        if (error?.message?.includes('Missing Supabase') ||
-            error?.code === 'PGRST301' ||
-            error?.code === 'PGRST116') {
+        if (
+          error?.message?.includes("Missing Supabase") ||
+          error?.code === "PGRST301" ||
+          error?.code === "PGRST116"
+        ) {
           return false;
         }
         return true;
       },
       onError: (error) => {
-        console.error('[useActiveProjects] SWR error:', error);
+        console.error("[useActiveProjects] SWR error:", error);
       },
-    }
+    },
   );
 
   // Callback to refresh projects data
   const refreshProjects = useCallback(() => {
-    console.log('[useActiveProjects] Real-time update triggered, refreshing data');
+    console.log(
+      "[useActiveProjects] Real-time update triggered, refreshing data",
+    );
     mutate();
   }, [mutate]);
 

@@ -50,6 +50,91 @@ type TabType =
   | "notifications"
   | "analytics";
 
+// Extract storage path from a public payment-screenshots URL
+function getScreenshotPath(url: string): string | null {
+  const match = url.match(/\/payment-screenshots\/(.+?)(?:\?.*)?$/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+// Renders a payment screenshot using a signed URL (bucket is private)
+function SignedScreenshot({ url, index }: { url: string; index: number }) {
+  const [signedUrl, setSignedUrl] = useState<string>("");
+  React.useEffect(() => {
+    const path = getScreenshotPath(url);
+    if (!path) {
+      setSignedUrl(url);
+      return;
+    }
+    supabase.storage
+      .from("payment-screenshots")
+      .createSignedUrl(path, 3600)
+      .then(({ data }) => setSignedUrl(data?.signedUrl || url));
+  }, [url]);
+  return (
+    <div className="relative group bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
+      <a
+        href={signedUrl || "#"}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block"
+      >
+        {signedUrl ? (
+          <img
+            src={signedUrl}
+            alt={`Payment screenshot ${index + 1}`}
+            className="w-full h-64 object-contain cursor-pointer bg-white"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-64 flex items-center justify-center bg-white text-gray-400 text-sm animate-pulse">
+            Loading...
+          </div>
+        )}
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity flex items-center justify-center">
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 px-4 py-2 rounded-lg text-sm font-medium text-gray-900 shadow-lg">
+            View Full Size
+          </div>
+        </div>
+      </a>
+      <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
+        {index + 1}
+      </div>
+    </div>
+  );
+}
+
+// Renders a signed URL link for a single payment screenshot
+function SignedScreenshotLink({ url }: { url: string }) {
+  const [signedUrl, setSignedUrl] = useState<string>("");
+  React.useEffect(() => {
+    const path = getScreenshotPath(url);
+    if (!path) {
+      setSignedUrl(url);
+      return;
+    }
+    supabase.storage
+      .from("payment-screenshots")
+      .createSignedUrl(path, 3600)
+      .then(({ data }) => setSignedUrl(data?.signedUrl || url));
+  }, [url]);
+  if (!signedUrl)
+    return (
+      <span className="text-xs text-gray-400 mt-2 inline-block">
+        Loading...
+      </span>
+    );
+  return (
+    <a
+      href={signedUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-xs text-blue-600 hover:underline mt-2 inline-block"
+    >
+      View Screenshot
+    </a>
+  );
+}
+
 // Retry with exponential backoff utility
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
@@ -1554,14 +1639,9 @@ export default function AdminDashboard() {
                               {new Date(sub.created_at).toLocaleDateString()}
                             </p>
                             {sub.payment_screenshot && (
-                              <a
-                                href={sub.payment_screenshot}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-blue-600 hover:underline mt-2 inline-block"
-                              >
-                                View Screenshot
-                              </a>
+                              <SignedScreenshotLink
+                                url={sub.payment_screenshot}
+                              />
                             )}
                           </div>
                           {statusFilter === "pending" && (
@@ -2217,32 +2297,7 @@ export default function AdminDashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {selectedRequest.payment_screenshots.map(
                       (url: string, index: number) => (
-                        <div
-                          key={index}
-                          className="relative group bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
-                        >
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block"
-                          >
-                            <img
-                              src={url}
-                              alt={`Payment screenshot ${index + 1}`}
-                              className="w-full h-64 object-contain cursor-pointer bg-white"
-                              loading="lazy"
-                            />
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity flex items-center justify-center">
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 px-4 py-2 rounded-lg text-sm font-medium text-gray-900 shadow-lg">
-                                View Full Size
-                              </div>
-                            </div>
-                          </a>
-                          <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
-                            {index + 1}
-                          </div>
-                        </div>
+                        <SignedScreenshot key={index} url={url} index={index} />
                       ),
                     )}
                   </div>
@@ -2737,27 +2792,11 @@ export default function AdminDashboard() {
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {screenshots.map((url: string, index: number) => (
-                          <div
+                          <SignedScreenshot
                             key={index}
-                            className="relative group bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
-                          >
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block"
-                            >
-                              <img
-                                src={url}
-                                alt={`Payment screenshot ${index + 1}`}
-                                className="w-full h-64 object-contain cursor-pointer bg-white"
-                                loading="lazy"
-                              />
-                            </a>
-                            <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
-                              {index + 1}
-                            </div>
-                          </div>
+                            url={url}
+                            index={index}
+                          />
                         ))}
                       </div>
                     </div>

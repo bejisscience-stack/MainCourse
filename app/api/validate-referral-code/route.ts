@@ -1,26 +1,25 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  createServerSupabaseClient,
+  verifyTokenAndGetUser,
+} from "@/lib/supabase-server";
+import { getTokenFromHeader } from "@/lib/admin-auth";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 // POST: Validate referral code
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const token = getTokenFromHeader(request);
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const token = authHeader.replace('Bearer ', '');
     const { user, error: userError } = await verifyTokenAndGetUser(token);
 
     if (userError || !user) {
       return NextResponse.json(
-        { error: 'Unauthorized', details: userError?.message },
-        { status: 401 }
+        { error: "Unauthorized", details: userError?.message },
+        { status: 401 },
       );
     }
 
@@ -29,16 +28,16 @@ export async function POST(request: NextRequest) {
 
     if (!referralCode) {
       return NextResponse.json(
-        { error: 'referralCode is required' },
-        { status: 400 }
+        { error: "referralCode is required" },
+        { status: 400 },
       );
     }
 
     // Validate referralCode format
-    if (typeof referralCode !== 'string' || referralCode.length > 20) {
+    if (typeof referralCode !== "string" || referralCode.length > 20) {
       return NextResponse.json(
-        { valid: false, error: 'Invalid referral code format' },
-        { status: 200 }
+        { valid: false, error: "Invalid referral code format" },
+        { status: 200 },
       );
     }
 
@@ -49,29 +48,29 @@ export async function POST(request: NextRequest) {
 
     // Check if referral code exists in profiles table
     const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('referral_code')
-      .eq('referral_code', normalizedCode)
+      .from("profiles")
+      .select("referral_code")
+      .eq("referral_code", normalizedCode)
       .maybeSingle();
 
     if (error) {
-      console.error('Error validating referral code:', error);
+      console.error("Error validating referral code:", error);
       return NextResponse.json(
-        { error: 'Failed to validate referral code' },
-        { status: 500 }
+        { error: "Failed to validate referral code" },
+        { status: 500 },
       );
     }
 
     // Return validation result
     return NextResponse.json({
       valid: !!profile,
-      message: profile ? 'Valid referral code' : 'Invalid referral code'
+      message: profile ? "Valid referral code" : "Invalid referral code",
     });
   } catch (error: any) {
-    console.error('Error in POST /api/validate-referral-code:', error);
+    console.error("Error in POST /api/validate-referral-code:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }

@@ -1,23 +1,31 @@
-import useSWR from 'swr';
-import { supabase } from '@/lib/supabase';
-import type { Video, VideoProgress } from '@/types/server';
+import useSWR from "swr";
+import { supabase } from "@/lib/supabase";
+import type { Video, VideoProgress } from "@/types/server";
 
-async function fetchVideos(channelId: string, courseId: string, userId: string): Promise<Video[]> {
+async function fetchVideos(
+  channelId: string,
+  courseId: string,
+  userId: string,
+): Promise<Video[]> {
   // OPTIMIZATION: Fetch videos and all user progress for this course in parallel
   // This avoids the sequential dependency on video IDs
   const [videosResult, progressResult] = await Promise.all([
     supabase
-      .from('videos')
-      .select('*')
-      .eq('channel_id', channelId)
-      .eq('course_id', courseId)
-      .order('display_order', { ascending: true }),
+      .from("videos")
+      .select(
+        "id, channel_id, course_id, title, description, video_url, thumbnail_url, duration, display_order, is_published",
+      )
+      .eq("channel_id", channelId)
+      .eq("course_id", courseId)
+      .order("display_order", { ascending: true }),
     // Fetch all progress for this user in this course (filter by course instead of video_id)
     supabase
-      .from('video_progress')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('course_id', courseId),
+      .from("video_progress")
+      .select(
+        "id, user_id, video_id, course_id, progress_seconds, duration_seconds, is_completed, completed_at",
+      )
+      .eq("user_id", userId)
+      .eq("course_id", courseId),
   ]);
 
   if (videosResult.error) throw videosResult.error;
@@ -27,7 +35,7 @@ async function fetchVideos(channelId: string, courseId: string, userId: string):
 
   // Create progress map for quick lookup
   const progressMap = new Map(
-    progressData.map((p) => [p.video_id, p as VideoProgress])
+    progressData.map((p) => [p.video_id, p as unknown as VideoProgress]),
   );
 
   return data.map((v) => ({
@@ -50,7 +58,8 @@ async function fetchVideos(channelId: string, courseId: string, userId: string):
             videoId: p.video_id || p.videoId,
             courseId: p.course_id || p.courseId,
             progressSeconds: p.progress_seconds || p.progressSeconds,
-            durationSeconds: p.duration_seconds || p.durationSeconds || undefined,
+            durationSeconds:
+              p.duration_seconds || p.durationSeconds || undefined,
             isCompleted: p.is_completed || p.isCompleted,
             completedAt: p.completed_at || p.completedAt || undefined,
           };
@@ -59,15 +68,21 @@ async function fetchVideos(channelId: string, courseId: string, userId: string):
   }));
 }
 
-export function useVideos(channelId: string | null, courseId: string | null, userId: string | null) {
+export function useVideos(
+  channelId: string | null,
+  courseId: string | null,
+  userId: string | null,
+) {
   const { data, error, isLoading, mutate } = useSWR<Video[]>(
-    channelId && courseId && userId ? ['videos', channelId, courseId, userId] : null,
+    channelId && courseId && userId
+      ? ["videos", channelId, courseId, userId]
+      : null,
     () => fetchVideos(channelId!, courseId!, userId!),
     {
       revalidateOnFocus: false,
       dedupingInterval: 10000,
       fallbackData: [],
-    }
+    },
   );
 
   return {
@@ -77,18 +92,3 @@ export function useVideos(channelId: string | null, courseId: string | null, use
     mutate,
   };
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

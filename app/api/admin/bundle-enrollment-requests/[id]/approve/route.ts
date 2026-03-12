@@ -1,15 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, createServiceRoleClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  createServerSupabaseClient,
+  createServiceRoleClient,
+  verifyTokenAndGetUser,
+} from "@/lib/supabase-server";
+import { getTokenFromHeader } from "@/lib/admin-auth";
+import { isValidUUID } from "@/lib/validation";
+import { adminLimiter, rateLimitResponse } from "@/lib/rate-limit";
+import { logAdminAction } from "@/lib/audit-log";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 // Helper function to check if user is admin using RPC function (bypasses RLS)
 async function checkAdmin(supabase: any, userId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .rpc('check_is_admin', { user_id: userId });
+  const { data, error } = await supabase.rpc("check_is_admin", {
+    user_id: userId,
+  });
 
   if (error) {
-    console.error('Error checking admin status:', error);
+    console.error("Error checking admin status:", error);
     return false;
   }
 
@@ -19,25 +28,17 @@ async function checkAdmin(supabase: any, userId: string): Promise<boolean> {
 // POST: Approve a bundle enrollment request (admin only)
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const token = getTokenFromHeader(request);
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const token = authHeader.replace('Bearer ', '');
     const { user, error: userError } = await verifyTokenAndGetUser(token);
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', details: userError?.message },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const supabase = createServerSupabaseClient(token);
@@ -46,71 +47,89 @@ export async function POST(
     const isAdmin = await checkAdmin(supabase, user.id);
     if (!isAdmin) {
       return NextResponse.json(
-        { error: 'Forbidden: Admin access required' },
-        { status: 403 }
+        { error: "Forbidden: Admin access required" },
+        { status: 403 },
       );
     }
 
     // Await params (Next.js 15 requirement)
     const { id } = await params;
 
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Bundle enrollment request ID is required' },
-        { status: 400 }
-      );
+    if (!id || !isValidUUID(id)) {
+      return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
-    console.log('[Bundle Approve API] Attempting to approve request:', id);
+    // Rate limit
+    const { allowed, retryAfterMs } = adminLimiter.check(user.id);
+    if (!allowed) return rateLimitResponse(retryAfterMs);
+
+    console.log("[Bundle Approve API] Attempting to approve request:", id);
 
     // Use the RPC function to approve the bundle enrollment
     // Pass the admin_user_id parameter so it works with service role
-    const { error: approveError } = await supabase.rpc('approve_bundle_enrollment_request', {
-      request_id: id,
-      admin_user_id: user.id,
-    });
+    const { error: approveError } = await supabase.rpc(
+      "approve_bundle_enrollment_request",
+      {
+        request_id: id,
+        admin_user_id: user.id,
+      },
+    );
 
     if (approveError) {
-      console.error('[Bundle Approve API] Error approving bundle enrollment request:', {
-        code: approveError.code,
-        message: approveError.message,
-        details: approveError.details,
-        hint: approveError.hint
-      });
+      console.error(
+        "[Bundle Approve API] Error approving bundle enrollment request:",
+        {
+          code: approveError.code,
+          message: approveError.message,
+          details: approveError.details,
+          hint: approveError.hint,
+        },
+      );
       return NextResponse.json(
         {
-          error: 'Failed to approve bundle enrollment request',
-          details: approveError.message || 'Unknown error occurred',
-          code: approveError.code
+          error: "An error occurred",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     // Verify the update was successful by querying the request directly
     const serviceSupabase = createServiceRoleClient(token);
     const { data: updatedRequest, error: verifyError } = await serviceSupabase
-      .from('bundle_enrollment_requests')
-      .select('id, status, updated_at, user_id, bundle_id, course_bundles(title)')
-      .eq('id', id)
+      .from("bundle_enrollment_requests")
+      .select(
+        "id, status, updated_at, user_id, bundle_id, course_bundles(title)",
+      )
+      .eq("id", id)
       .single();
 
     if (verifyError) {
-      console.error('[Bundle Approve API] Error verifying approval:', verifyError);
+      console.error(
+        "[Bundle Approve API] Error verifying approval:",
+        verifyError,
+      );
     } else {
-      console.log('[Bundle Approve API] Approval successful, verified status:', updatedRequest?.status, 'updated_at:', updatedRequest?.updated_at);
+      console.log(
+        "[Bundle Approve API] Approval successful, verified status:",
+        updatedRequest?.status,
+        "updated_at:",
+        updatedRequest?.updated_at,
+      );
 
       // Create notification for the user
       if (updatedRequest?.user_id) {
-        const bundleTitle = (updatedRequest.course_bundles as { title?: string } | null)?.title || 'Unknown Bundle';
+        const bundleTitle =
+          (updatedRequest.course_bundles as { title?: string } | null)?.title ||
+          "Unknown Bundle";
 
         try {
-          const { error: notificationError } = await serviceSupabase
-            .rpc('create_notification', {
+          const { error: notificationError } = await serviceSupabase.rpc(
+            "create_notification",
+            {
               p_user_id: updatedRequest.user_id,
-              p_type: 'bundle_enrollment_approved',
-              p_title_en: 'Bundle Enrollment Approved',
-              p_title_ge: 'პაკეტის რეგისტრაცია დამტკიცებულია',
+              p_type: "bundle_enrollment_approved",
+              p_title_en: "Bundle Enrollment Approved",
+              p_title_ge: "პაკეტის რეგისტრაცია დამტკიცებულია",
               p_message_en: `Your enrollment request for the bundle "${bundleTitle}" has been approved. You can now access all courses in this bundle.`,
               p_message_ge: `თქვენი რეგისტრაციის მოთხოვნა პაკეტზე "${bundleTitle}" დამტკიცებულია. ახლა შეგიძლიათ ამ პაკეტის ყველა კურსზე წვდომა.`,
               p_metadata: {
@@ -119,32 +138,53 @@ export async function POST(
                 request_id: id,
               },
               p_created_by: user.id,
-            });
+            },
+          );
 
           if (notificationError) {
-            console.error('[Bundle Approve API] Error creating notification:', notificationError);
+            console.error(
+              "[Bundle Approve API] Error creating notification:",
+              notificationError,
+            );
           } else {
-            console.log('[Bundle Approve API] Notification created for user:', updatedRequest.user_id);
+            console.log(
+              "[Bundle Approve API] Notification created for user:",
+              updatedRequest.user_id,
+            );
           }
         } catch (notifError) {
-          console.error('[Bundle Approve API] Exception creating notification:', notifError);
+          console.error(
+            "[Bundle Approve API] Exception creating notification:",
+            notifError,
+          );
         }
       }
     }
 
+    // Audit log
+    logAdminAction(
+      request,
+      user.id,
+      "bundle_enrollment_approved",
+      "bundle_enrollment_requests",
+      id,
+    );
+
     // Return success - the frontend will refresh the list automatically
     return NextResponse.json({
-      message: 'Bundle enrollment request approved successfully',
-      success: true
+      message: "Bundle enrollment request approved successfully",
+      success: true,
     });
   } catch (error: any) {
-    console.error('Error in POST /api/admin/bundle-enrollment-requests/[id]/approve:', error);
+    console.error(
+      "Error in POST /api/admin/bundle-enrollment-requests/[id]/approve:",
+      error,
+    );
     return NextResponse.json(
       {
-        error: 'Internal server error',
-        details: error.message || 'An unexpected error occurred'
+        error: "An error occurred",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

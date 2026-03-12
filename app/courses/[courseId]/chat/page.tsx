@@ -1,27 +1,34 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
-import LayoutContainer from '@/components/chat/LayoutContainer';
-import ChatNavigation from '@/components/chat/ChatNavigation';
-import ExpiredEnrollmentOverlay from '@/components/ExpiredEnrollmentOverlay';
-import { supabase } from '@/lib/supabase';
-import { useUser } from '@/hooks/useUser';
-import { useEnrollments } from '@/hooks/useEnrollments';
-import { useActiveChannel } from '@/hooks/useActiveChannel';
-import { useActiveServer } from '@/hooks/useActiveServer';
-import { useProjectAccess } from '@/hooks/useProjectAccess';
-import type { Server, Channel } from '@/types/server';
-import type { Message as MessageType } from '@/types/message';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import LayoutContainer from "@/components/chat/LayoutContainer";
+import ChatNavigation from "@/components/chat/ChatNavigation";
+import ExpiredEnrollmentOverlay from "@/components/ExpiredEnrollmentOverlay";
+import { supabase } from "@/lib/supabase";
+import { useUser } from "@/hooks/useUser";
+import { useEnrollments } from "@/hooks/useEnrollments";
+import { useActiveChannel } from "@/hooks/useActiveChannel";
+import { useActiveServer } from "@/hooks/useActiveServer";
+import { useProjectAccess } from "@/hooks/useProjectAccess";
+import type { Server, Channel } from "@/types/server";
+import type { Message as MessageType } from "@/types/message";
 
 export default function CourseChatPage() {
   const router = useRouter();
   const params = useParams();
   const courseId = params?.courseId as string;
   const { user, role: userRole, isLoading: userLoading } = useUser();
-  const { enrolledCourseIds, isEnrollmentActive, getEnrollmentInfo, isLoading: enrollmentsLoading, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
-  const { hasProjectAccess, isLoading: projectAccessLoading } = useProjectAccess(user?.id);
+  const {
+    enrolledCourseIds,
+    isEnrollmentActive,
+    getEnrollmentInfo,
+    isLoading: enrollmentsLoading,
+    mutate: mutateEnrollments,
+  } = useEnrollments(user?.id || null);
+  const { hasProjectAccess, isLoading: projectAccessLoading } =
+    useProjectAccess(user?.id);
   const [activeServerId, setActiveServerId] = useActiveServer();
   const [activeChannelId, setActiveChannelId] = useActiveChannel();
   const [course, setCourse] = useState<any>(null);
@@ -37,14 +44,14 @@ export default function CourseChatPage() {
   // Redirect if not logged in
   useEffect(() => {
     if (!userLoading && !user) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [user, userLoading, router]);
 
   // Redirect lecturers to their chat page (but allow admins)
   useEffect(() => {
-    if (!userLoading && userRole === 'lecturer') {
-      router.push('/lecturer/chat');
+    if (!userLoading && userRole === "lecturer") {
+      router.push("/lecturer/chat");
     }
   }, [userRole, userLoading, router]);
 
@@ -56,22 +63,22 @@ export default function CourseChatPage() {
 
       // Admins can access all courses without enrollment
       // Regular users must be enrolled OR have project access
-      if (userRole !== 'admin' && !isEnrolledInCourse && !hasProjectAccess) {
-        setError('You are not enrolled in this course.');
+      if (userRole !== "admin" && !isEnrolledInCourse && !hasProjectAccess) {
+        setError("You are not enrolled in this course.");
         setIsLoadingCourse(false);
         return;
       }
 
       // Fetch course details
       const { data: courseData, error: courseError } = await supabase
-        .from('courses')
-        .select('*')
-        .eq('id', courseId)
+        .from("courses")
+        .select("id, title, lecturer_id")
+        .eq("id", courseId)
         .single();
 
       if (courseError) throw courseError;
       if (!courseData) {
-        setError('Course not found.');
+        setError("Course not found.");
         setIsLoadingCourse(false);
         return;
       }
@@ -82,18 +89,26 @@ export default function CourseChatPage() {
       let channelsData: any[] = [];
       try {
         const { data: channels, error: channelsError } = await supabase
-          .from('channels')
-          .select('*')
-          .eq('course_id', courseId)
-          .order('display_order', { ascending: true });
+          .from("channels")
+          .select(
+            "id, course_id, name, type, description, category_name, display_order",
+          )
+          .eq("course_id", courseId)
+          .order("display_order", { ascending: true });
 
         if (channelsError) {
           // If channels table doesn't exist or query fails, continue with empty channels
-          if (channelsError.code === 'PGRST116' || channelsError.message?.includes('relation') || channelsError.message?.includes('does not exist')) {
-            console.warn('Channels table does not exist yet. Using default channels.');
+          if (
+            channelsError.code === "PGRST116" ||
+            channelsError.message?.includes("relation") ||
+            channelsError.message?.includes("does not exist")
+          ) {
+            console.warn(
+              "Channels table does not exist yet. Using default channels.",
+            );
             channelsData = [];
           } else {
-            console.warn('Error fetching channels:', channelsError);
+            console.warn("Error fetching channels:", channelsError);
             channelsData = [];
           }
         } else {
@@ -101,32 +116,39 @@ export default function CourseChatPage() {
         }
       } catch (channelsErr: any) {
         // Channels table might not exist yet, continue with empty channels
-        console.warn('Channels query failed (table may not exist):', channelsErr);
+        console.warn(
+          "Channels query failed (table may not exist):",
+          channelsErr,
+        );
         channelsData = [];
       }
 
       // Ensure required channels exist in database
-      const hasLectures = channelsData.some((ch) => ch.name.toLowerCase() === 'lectures' && ch.type === 'lectures');
-      const hasProjects = channelsData.some((ch) => ch.name.toLowerCase() === 'projects');
+      const hasLectures = channelsData.some(
+        (ch) => ch.name.toLowerCase() === "lectures" && ch.type === "lectures",
+      );
+      const hasProjects = channelsData.some(
+        (ch) => ch.name.toLowerCase() === "projects",
+      );
 
       const channelsToCreate: any[] = [];
       if (!hasLectures) {
         channelsToCreate.push({
           course_id: courseId,
-          name: 'lectures',
-          type: 'lectures',
+          name: "lectures",
+          type: "lectures",
           description: `Video lectures for ${courseData.title}`,
-          category_name: 'COURSE CHANNELS',
+          category_name: "COURSE CHANNELS",
           display_order: 0,
         });
       }
       if (!hasProjects) {
         channelsToCreate.push({
           course_id: courseId,
-          name: 'projects',
-          type: 'text',
+          name: "projects",
+          type: "text",
           description: `Project submissions and discussions for ${courseData.title}`,
-          category_name: 'COURSE CHANNELS',
+          category_name: "COURSE CHANNELS",
           display_order: 1,
         });
       }
@@ -134,15 +156,17 @@ export default function CourseChatPage() {
       if (channelsToCreate.length > 0) {
         try {
           const { data: newChannels, error: createError } = await supabase
-            .from('channels')
+            .from("channels")
             .insert(channelsToCreate)
-            .select();
+            .select(
+              "id, course_id, name, type, description, category_name, display_order",
+            );
 
           if (!createError && newChannels) {
             channelsData.push(...newChannels);
           }
         } catch (err) {
-          console.warn('Error creating required channels:', err);
+          console.warn("Error creating required channels:", err);
         }
       }
 
@@ -152,14 +176,14 @@ export default function CourseChatPage() {
       // Group channels by category
       const channelsByCategory: { [key: string]: Channel[] } = {};
       courseChannels.forEach((ch) => {
-        const category = ch.category_name || 'COURSE CHANNELS';
+        const category = ch.category_name || "COURSE CHANNELS";
         if (!channelsByCategory[category]) {
           channelsByCategory[category] = [];
         }
         channelsByCategory[category].push({
           id: ch.id,
           name: ch.name,
-          type: ch.type as 'text' | 'voice' | 'lectures',
+          type: ch.type as "text" | "voice" | "lectures",
           description: ch.description || undefined,
           courseId: courseData.id,
           categoryName: ch.category_name || undefined,
@@ -172,11 +196,19 @@ export default function CourseChatPage() {
       Object.keys(channelsByCategory).forEach((cat) => {
         channelsByCategory[cat].sort((a, b) => {
           // Lectures always first
-          if (a.type === 'lectures' && b.type !== 'lectures') return -1;
-          if (b.type === 'lectures' && a.type !== 'lectures') return 1;
+          if (a.type === "lectures" && b.type !== "lectures") return -1;
+          if (b.type === "lectures" && a.type !== "lectures") return 1;
           // Projects second
-          if (a.name.toLowerCase() === 'projects' && b.name.toLowerCase() !== 'projects') return -1;
-          if (b.name.toLowerCase() === 'projects' && a.name.toLowerCase() !== 'projects') return 1;
+          if (
+            a.name.toLowerCase() === "projects" &&
+            b.name.toLowerCase() !== "projects"
+          )
+            return -1;
+          if (
+            b.name.toLowerCase() === "projects" &&
+            a.name.toLowerCase() !== "projects"
+          )
+            return 1;
           // Then by displayOrder
           return (a.displayOrder || 0) - (b.displayOrder || 0);
         });
@@ -186,10 +218,10 @@ export default function CourseChatPage() {
       let allLecturerCourses: any[] = [courseData];
       if (courseData.lecturer_id) {
         const { data: lecturerCourses } = await supabase
-          .from('courses')
-          .select('*')
-          .eq('lecturer_id', courseData.lecturer_id)
-          .order('created_at', { ascending: false });
+          .from("courses")
+          .select("id, title, lecturer_id")
+          .eq("lecturer_id", courseData.lecturer_id)
+          .order("created_at", { ascending: false });
 
         if (lecturerCourses && lecturerCourses.length > 0) {
           allLecturerCourses = lecturerCourses;
@@ -197,27 +229,31 @@ export default function CourseChatPage() {
       }
 
       // Fetch channels for all lecturer courses
-      const lecturerCourseIds = allLecturerCourses.map(c => c.id);
+      const lecturerCourseIds = allLecturerCourses.map((c) => c.id);
       const { data: allChannelsData } = await supabase
-        .from('channels')
-        .select('*')
-        .in('course_id', lecturerCourseIds)
-        .order('display_order', { ascending: true });
+        .from("channels")
+        .select(
+          "id, course_id, name, type, description, category_name, display_order",
+        )
+        .in("course_id", lecturerCourseIds)
+        .order("display_order", { ascending: true });
 
       // Transform all courses into servers
       const serversData: Server[] = allLecturerCourses.map((course) => {
-        const courseChannels = (allChannelsData || []).filter((ch) => ch.course_id === course.id);
+        const courseChannels = (allChannelsData || []).filter(
+          (ch) => ch.course_id === course.id,
+        );
 
         const channelsByCategory: { [key: string]: Channel[] } = {};
         courseChannels.forEach((ch) => {
-          const category = ch.category_name || 'COURSE CHANNELS';
+          const category = ch.category_name || "COURSE CHANNELS";
           if (!channelsByCategory[category]) {
             channelsByCategory[category] = [];
           }
           channelsByCategory[category].push({
             id: ch.id,
             name: ch.name,
-            type: ch.type as 'text' | 'voice' | 'lectures',
+            type: ch.type as "text" | "voice" | "lectures",
             description: ch.description || undefined,
             courseId: course.id,
             categoryName: ch.category_name || undefined,
@@ -229,10 +265,18 @@ export default function CourseChatPage() {
         // Sort channels
         Object.keys(channelsByCategory).forEach((cat) => {
           channelsByCategory[cat].sort((a, b) => {
-            if (a.type === 'lectures' && b.type !== 'lectures') return -1;
-            if (b.type === 'lectures' && a.type !== 'lectures') return 1;
-            if (a.name.toLowerCase() === 'projects' && b.name.toLowerCase() !== 'projects') return -1;
-            if (b.name.toLowerCase() === 'projects' && a.name.toLowerCase() !== 'projects') return 1;
+            if (a.type === "lectures" && b.type !== "lectures") return -1;
+            if (b.type === "lectures" && a.type !== "lectures") return 1;
+            if (
+              a.name.toLowerCase() === "projects" &&
+              b.name.toLowerCase() !== "projects"
+            )
+              return -1;
+            if (
+              b.name.toLowerCase() === "projects" &&
+              a.name.toLowerCase() !== "projects"
+            )
+              return 1;
             return (a.displayOrder || 0) - (b.displayOrder || 0);
           });
         });
@@ -241,23 +285,30 @@ export default function CourseChatPage() {
           id: course.id,
           name: course.title,
           icon: course.title.charAt(0).toUpperCase(),
-          channels: Object.entries(channelsByCategory).map(([categoryName, channels]) => ({
-            id: `category-${course.id}-${categoryName}`,
-            name: categoryName,
-            channels,
-          })),
+          channels: Object.entries(channelsByCategory).map(
+            ([categoryName, channels]) => ({
+              id: `category-${course.id}-${categoryName}`,
+              name: categoryName,
+              channels,
+            }),
+          ),
         };
       });
 
       // Filter channels for project-access-only users (not enrolled, not admin)
-      const isProjectAccessOnly = !isEnrolledInCourse && userRole !== 'admin' && hasProjectAccess;
+      const isProjectAccessOnly =
+        !isEnrolledInCourse && userRole !== "admin" && hasProjectAccess;
       const filteredServers = isProjectAccessOnly
-        ? serversData.map(server => ({
+        ? serversData.map((server) => ({
             ...server,
-            channels: server.channels.map(category => ({
-              ...category,
-              channels: category.channels.filter(ch => ch.name.toLowerCase() === 'projects'),
-            })).filter(category => category.channels.length > 0),
+            channels: server.channels
+              .map((category) => ({
+                ...category,
+                channels: category.channels.filter(
+                  (ch) => ch.name.toLowerCase() === "projects",
+                ),
+              }))
+              .filter((category) => category.channels.length > 0),
           }))
         : serversData;
 
@@ -268,21 +319,34 @@ export default function CourseChatPage() {
 
       setIsLoadingCourse(false);
     } catch (err: any) {
-      console.error('Error loading course chat:', err);
-      setError(err.message || 'Failed to load course chat. Please try again.');
+      console.error("Error loading course chat:", err);
+      setError(err.message || "Failed to load course chat. Please try again.");
       setIsLoadingCourse(false);
     }
   }, [courseId, user, isEnrolledInCourse, hasProjectAccess, userRole]);
 
   // Check enrollment and fetch course (only once per courseId)
   useEffect(() => {
-    if (courseId && user && !userLoading && !enrollmentsLoading && !projectAccessLoading) {
+    if (
+      courseId &&
+      user &&
+      !userLoading &&
+      !enrollmentsLoading &&
+      !projectAccessLoading
+    ) {
       // Prevent re-triggering for the same course
       if (loadedCourseRef.current === courseId) return;
       loadedCourseRef.current = courseId;
       loadCourseAndChannels();
     }
-  }, [courseId, user, userLoading, enrollmentsLoading, projectAccessLoading, loadCourseAndChannels]);
+  }, [
+    courseId,
+    user,
+    userLoading,
+    enrollmentsLoading,
+    projectAccessLoading,
+    loadCourseAndChannels,
+  ]);
 
   // Reset flags when courseId changes
   useEffect(() => {
@@ -292,20 +356,26 @@ export default function CourseChatPage() {
 
   // Auto-select channel when servers are loaded
   // Project-access-only users get the "projects" channel; enrolled users get "lectures"
-  const isProjectAccessOnly = !isEnrolledInCourse && userRole !== 'admin' && hasProjectAccess;
+  const isProjectAccessOnly =
+    !isEnrolledInCourse && userRole !== "admin" && hasProjectAccess;
 
   useEffect(() => {
     if (servers.length > 0 && !hasAutoSelectedChannel && courseId) {
       const server = servers[0];
-      const allChannels = server.channels.flatMap(cat => cat.channels);
+      const allChannels = server.channels.flatMap((cat) => cat.channels);
 
       // Pick the right default channel
       const targetChannel = isProjectAccessOnly
-        ? allChannels.find(ch => ch.name.toLowerCase() === 'projects')
-        : allChannels.find(ch => ch.type === 'lectures' && ch.name.toLowerCase() === 'lectures');
+        ? allChannels.find((ch) => ch.name.toLowerCase() === "projects")
+        : allChannels.find(
+            (ch) =>
+              ch.type === "lectures" && ch.name.toLowerCase() === "lectures",
+          );
 
       // Only auto-select if no channel is currently selected, or if the selected channel is not from this course
-      const currentChannel = allChannels.find(ch => ch.id === activeChannelId);
+      const currentChannel = allChannels.find(
+        (ch) => ch.id === activeChannelId,
+      );
       if (targetChannel && (!activeChannelId || !currentChannel)) {
         setActiveChannelId(targetChannel.id);
         setHasAutoSelectedChannel(true);
@@ -314,7 +384,14 @@ export default function CourseChatPage() {
         setHasAutoSelectedChannel(true);
       }
     }
-  }, [servers, activeChannelId, courseId, hasAutoSelectedChannel, setActiveChannelId, isProjectAccessOnly]);
+  }, [
+    servers,
+    activeChannelId,
+    courseId,
+    hasAutoSelectedChannel,
+    setActiveChannelId,
+    isProjectAccessOnly,
+  ]);
 
   const handleSendMessage = async (channelId: string, content: string) => {
     // Message sending is now handled by ChatArea component via API
@@ -325,10 +402,14 @@ export default function CourseChatPage() {
     if (!user) return;
 
     // TODO: Save reaction to database
-    console.log('Adding reaction:', { messageId, emoji, userId: user.id });
+    console.log("Adding reaction:", { messageId, emoji, userId: user.id });
   };
 
-  const loading = userLoading || isLoadingCourse || enrollmentsLoading || projectAccessLoading;
+  const loading =
+    userLoading ||
+    isLoadingCourse ||
+    enrollmentsLoading ||
+    projectAccessLoading;
 
   if (loading) {
     return (
@@ -394,23 +475,27 @@ export default function CourseChatPage() {
   const enrollmentInfo = getEnrollmentInfo(courseId);
   const isEnrolled = enrolledCourseIds.has(courseId);
   const isExpired = isEnrolled && !isEnrollmentActive(courseId);
-  const showExpirationOverlay = isExpired && userRole !== 'admin';
+  const showExpirationOverlay = isExpired && userRole !== "admin";
 
   // Gate access: allow if admin, OR enrolled, OR (not enrolled but has project access)
   const hasAccess =
-    userRole === 'admin' ||
-    isEnrolled ||
-    (!isEnrolled && hasProjectAccess);
+    userRole === "admin" || isEnrolled || (!isEnrolled && hasProjectAccess);
 
-  if (!hasAccess && userRole !== 'admin') {
+  if (!hasAccess && userRole !== "admin") {
     return (
       <div className="flex flex-col h-[100dvh] bg-navy-950/20 backdrop-blur-[0.5px]">
         <ChatNavigation />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-gray-400 max-w-md">
             <p className="text-lg font-medium mb-4">No Access</p>
-            <p className="text-sm mb-6">You must be enrolled in this course or have an active project subscription.</p>
-            <Link href="/my-courses" className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg">
+            <p className="text-sm mb-6">
+              You must be enrolled in this course or have an active project
+              subscription.
+            </p>
+            <Link
+              href="/my-courses"
+              className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg"
+            >
               Back to My Courses
             </Link>
           </div>
@@ -452,7 +537,9 @@ export default function CourseChatPage() {
         ) : (
           <>
             {user && (
-              <div className={`h-full w-full ${showExpirationOverlay ? 'filter blur-sm pointer-events-none' : ''}`}>
+              <div
+                className={`h-full w-full ${showExpirationOverlay ? "filter blur-sm pointer-events-none" : ""}`}
+              >
                 <LayoutContainer
                   servers={servers}
                   currentUserId={user.id}

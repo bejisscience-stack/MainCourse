@@ -5,6 +5,10 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { sendWithdrawalApprovedEmail } from "@/lib/email";
+import { getTokenFromHeader } from "@/lib/admin-auth";
+import { isValidUUID } from "@/lib/validation";
+import { adminLimiter, rateLimitResponse } from "@/lib/rate-limit";
+import { logAdminAction } from "@/lib/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -36,19 +40,14 @@ export async function POST(
   { params }: { params: Promise<{ requestId: string }> },
 ) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const token = getTokenFromHeader(request);
+    if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const token = authHeader.replace("Bearer ", "");
     const { user, error: userError } = await verifyTokenAndGetUser(token);
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized", details: userError?.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Pass user token as fallback so RLS admin policies work if service role key is missing
@@ -68,6 +67,14 @@ export async function POST(
 
     // Await params (Next.js 15 requirement)
     const { requestId } = await params;
+    if (!isValidUUID(requestId)) {
+      return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
+    }
+
+    // Rate limit
+    const { allowed, retryAfterMs } = adminLimiter.check(user.id);
+    if (!allowed) return rateLimitResponse(retryAfterMs);
+
     const body = await request.json().catch(() => ({}));
     const { adminNotes } = body;
 
@@ -110,12 +117,7 @@ export async function POST(
 
     if (approveError) {
       console.error("[Approve Withdrawal API] RPC error:", approveError);
-      return NextResponse.json(
-        {
-          error: approveError.message || "Failed to approve withdrawal request",
-        },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: "An error occurred" }, { status: 500 });
     }
 
     console.log(
@@ -174,8 +176,8 @@ export async function POST(
           withdrawalRequest.amount,
         );
         console.log(
-          "[Approve Withdrawal API] Email sent to:",
-          userProfile.email,
+          "[Approve Withdrawal API] Email sent to user:",
+          withdrawalRequest.user_id,
         );
       }
     } catch (emailError) {
@@ -185,15 +187,21 @@ export async function POST(
       );
     }
 
+    // Audit log
+    logAdminAction(
+      request,
+      user.id,
+      "withdrawal_approved",
+      "withdrawal_requests",
+      requestId,
+    );
+
     return NextResponse.json({
       success: true,
       message: "Withdrawal request approved successfully",
     });
   } catch (error: any) {
     console.error("[Approve Withdrawal API] Unhandled exception:", error);
-    return NextResponse.json(
-      { error: "Internal server error", details: error.message },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "An error occurred" }, { status: 500 });
   }
 }

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { ProjectCriteria } from './ProjectCard';
+import { useState, useCallback, useEffect, useRef } from "react";
+import { supabase } from "@/lib/supabase";
+import type { ProjectCriteria } from "./ProjectCard";
 
 interface SubmissionReviewDialogProps {
   isOpen: boolean;
@@ -15,8 +15,8 @@ interface SubmissionReviewDialogProps {
 }
 
 const PLATFORM_NAMES: Record<string, string> = {
-  instagram: 'Instagram',
-  tiktok: 'TikTok',
+  instagram: "Instagram",
+  tiktok: "TikTok",
 };
 
 export default function SubmissionReviewDialog({
@@ -30,30 +30,43 @@ export default function SubmissionReviewDialog({
 }: SubmissionReviewDialogProps) {
   // Get platforms from submission
   const platformLinks = submission?.submissionData?.platformLinks || {};
-  const platforms = Object.keys(platformLinks).filter(p => platformLinks[p]);
+  const platforms = Object.keys(platformLinks).filter((p) => platformLinks[p]);
   const hasMultiplePlatforms = platforms.length > 1;
-  
+
   // State per platform
-  const [selectedPlatform, setSelectedPlatform] = useState<string>(platforms[0] || '');
-  const [selectedCriteria, setSelectedCriteria] = useState<Record<string, string[]>>({});
+  const [selectedPlatform, setSelectedPlatform] = useState<string>(
+    platforms[0] || "",
+  );
+  const [selectedCriteria, setSelectedCriteria] = useState<
+    Record<string, string[]>
+  >({});
   const [comments, setComments] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [lastSavedRPM, setLastSavedRPM] = useState<Record<string, number>>({});
   const [saveSuccess, setSaveSuccess] = useState<Record<string, boolean>>({});
-  const [reviewStatus, setReviewStatus] = useState<Record<string, 'accepted' | 'rejected'>>({});
+  const [reviewStatus, setReviewStatus] = useState<
+    Record<string, "accepted" | "rejected">
+  >({});
 
   // Get criteria for current platform (platform-specific + all-platform criteria)
-  const getCriteriaForPlatform = useCallback((platform: string) => {
-    return criteria.filter(c => c.platform === undefined || c.platform === platform);
-  }, [criteria]);
+  const getCriteriaForPlatform = useCallback(
+    (platform: string) => {
+      return criteria.filter(
+        (c) => c.platform === undefined || c.platform === platform,
+      );
+    },
+    [criteria],
+  );
 
   const loadExistingReviews = useCallback(async () => {
     try {
       const { data: reviews, error } = await supabase
-        .from('submission_reviews')
-        .select('*')
-        .eq('submission_id', submissionId);
+        .from("submission_reviews")
+        .select(
+          "id, submission_id, platform, status, matched_criteria_ids, comment, payment_amount, created_at",
+        )
+        .eq("submission_id", submissionId);
 
       if (reviews && !error && reviews.length > 0) {
         const criteriaMap: Record<string, string[]> = {};
@@ -61,20 +74,20 @@ export default function SubmissionReviewDialog({
         const rpmMap: Record<string, number> = {};
 
         reviews.forEach((review) => {
-          const platform = review.platform || 'all';
+          const platform = review.platform || "all";
           criteriaMap[platform] = review.matched_criteria_ids || [];
-          commentsMap[platform] = review.comment || '';
-          rpmMap[platform] = parseFloat(review.payment_amount || '0');
+          commentsMap[platform] = review.comment || "";
+          rpmMap[platform] = parseFloat(review.payment_amount || "0");
         });
 
         // Only update state if we have reviews - don't reset existing state
-        setSelectedCriteria(prev => ({ ...prev, ...criteriaMap }));
-        setComments(prev => ({ ...prev, ...commentsMap }));
-        setLastSavedRPM(prev => ({ ...prev, ...rpmMap }));
+        setSelectedCriteria((prev) => ({ ...prev, ...criteriaMap }));
+        setComments((prev) => ({ ...prev, ...commentsMap }));
+        setLastSavedRPM((prev) => ({ ...prev, ...rpmMap }));
       }
       // If no reviews, don't reset - let user make selections
     } catch (error) {
-      console.error('Error loading reviews:', error);
+      console.error("Error loading reviews:", error);
       // Don't reset on error - preserve user's current selections
     }
   }, [submissionId]);
@@ -88,7 +101,7 @@ export default function SubmissionReviewDialog({
       setLastSavedRPM({});
       setSaveSuccess({});
       setIsSaving({});
-      setSelectedPlatform(platforms[0] || '');
+      setSelectedPlatform(platforms[0] || "");
     } else {
       // Set initial platform only if not set
       if (platforms.length > 0 && !selectedPlatform) {
@@ -100,7 +113,12 @@ export default function SubmissionReviewDialog({
   // Load existing reviews only once when dialog opens
   const hasLoadedRef = useRef(false);
   useEffect(() => {
-    if (isOpen && platforms.length > 0 && submissionId && !hasLoadedRef.current) {
+    if (
+      isOpen &&
+      platforms.length > 0 &&
+      submissionId &&
+      !hasLoadedRef.current
+    ) {
       loadExistingReviews();
       hasLoadedRef.current = true;
     }
@@ -110,143 +128,177 @@ export default function SubmissionReviewDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, submissionId]); // Only depend on isOpen and submissionId
 
-  const saveReviewForPlatform = useCallback(async (platform: string) => {
-    setIsSaving(prev => ({ ...prev, [platform]: true }));
-    setError(null);
+  const saveReviewForPlatform = useCallback(
+    async (platform: string) => {
+      setIsSaving((prev) => ({ ...prev, [platform]: true }));
+      setError(null);
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Not authenticated');
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error("Not authenticated");
+        }
+
+        const platformCriteria = getCriteriaForPlatform(platform);
+        const criteriaToSave = selectedCriteria[platform] || [];
+
+        const paymentAmount = criteriaToSave.reduce((total, criteriaId) => {
+          const criterion = platformCriteria.find((c) => c.id === criteriaId);
+          return total + (criterion?.rpm || 0);
+        }, 0);
+
+        // Ensure payment_amount is a proper decimal number (round to 2 decimal places)
+        const finalPaymentAmount = Math.round(paymentAmount * 100) / 100;
+
+        console.log("Saving review for platform:", {
+          submissionId,
+          projectId,
+          platform,
+          lecturerId: session.user.id,
+          matchedCriteriaIds: criteriaToSave,
+          paymentAmount: finalPaymentAmount,
+          comment: (comments[platform] || "").trim() || null,
+        });
+
+        // First, check if a review already exists for this submission and platform
+        const { data: existingReview } = await supabase
+          .from("submission_reviews")
+          .select("id")
+          .eq("submission_id", submissionId)
+          .eq("platform", platform)
+          .maybeSingle();
+
+        let reviewData;
+        let reviewError;
+
+        const currentStatus = reviewStatus[platform] || "accepted";
+
+        if (existingReview) {
+          // Update existing review
+          const { data, error } = await supabase
+            .from("submission_reviews")
+            .update({
+              status: currentStatus,
+              matched_criteria_ids:
+                currentStatus === "rejected"
+                  ? []
+                  : criteriaToSave.length > 0
+                    ? criteriaToSave
+                    : [],
+              comment: (comments[platform] || "").trim() || null,
+              payment_amount:
+                currentStatus === "rejected" ? 0 : finalPaymentAmount,
+            })
+            .eq("id", existingReview.id)
+            .select("id, status, matched_criteria_ids, comment, payment_amount")
+            .single();
+
+          reviewData = data;
+          reviewError = error;
+        } else {
+          // Insert new review
+          const { data, error } = await supabase
+            .from("submission_reviews")
+            .insert({
+              submission_id: submissionId,
+              project_id: projectId,
+              lecturer_id: session.user.id,
+              platform: platform, // Platform-specific review
+              status: currentStatus,
+              matched_criteria_ids:
+                currentStatus === "rejected"
+                  ? []
+                  : criteriaToSave.length > 0
+                    ? criteriaToSave
+                    : [],
+              comment: (comments[platform] || "").trim() || null,
+              payment_amount:
+                currentStatus === "rejected" ? 0 : finalPaymentAmount,
+            })
+            .select("id, status, matched_criteria_ids, comment, payment_amount")
+            .single();
+
+          reviewData = data;
+          reviewError = error;
+        }
+
+        if (reviewError) {
+          console.error("Error saving review:", reviewError);
+          throw new Error(reviewError.message);
+        }
+
+        console.log("Review saved successfully:", reviewData);
+
+        setLastSavedRPM((prev) => ({
+          ...prev,
+          [platform]: finalPaymentAmount,
+        }));
+        setSaveSuccess((prev) => ({ ...prev, [platform]: true }));
+
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setSaveSuccess((prev) => ({ ...prev, [platform]: false }));
+        }, 3000);
+
+        onReview(); // Notify parent to refresh
+      } catch (err: any) {
+        setError(err.message || "Failed to save review");
+      } finally {
+        setIsSaving((prev) => ({ ...prev, [platform]: false }));
       }
+    },
+    [
+      submissionId,
+      projectId,
+      selectedCriteria,
+      comments,
+      getCriteriaForPlatform,
+      supabase,
+      onReview,
+    ],
+  );
 
+  const handleCriteriaToggle = useCallback(
+    (criteriaId: string, platform: string) => {
+      setSelectedCriteria((prev) => {
+        const currentCriteria = prev[platform] || [];
+        const newSelectedCriteria = currentCriteria.includes(criteriaId)
+          ? currentCriteria.filter((id) => id !== criteriaId)
+          : [...currentCriteria, criteriaId];
+
+        return { ...prev, [platform]: newSelectedCriteria };
+      });
+      setSaveSuccess((prev) => ({ ...prev, [platform]: false })); // Clear success message when criteria changes
+    },
+    [],
+  ); // Remove selectedCriteria from dependencies to avoid stale closures
+
+  const calculatePaymentAmount = useCallback(
+    (platform: string): number => {
       const platformCriteria = getCriteriaForPlatform(platform);
-      const criteriaToSave = selectedCriteria[platform] || [];
-      
-      const paymentAmount = criteriaToSave.reduce((total, criteriaId) => {
-        const criterion = platformCriteria.find(c => c.id === criteriaId);
+      const criteriaToCheck = selectedCriteria[platform] || [];
+      return criteriaToCheck.reduce((total, criteriaId) => {
+        const criterion = platformCriteria.find((c) => c.id === criteriaId);
         return total + (criterion?.rpm || 0);
       }, 0);
-
-      // Ensure payment_amount is a proper decimal number (round to 2 decimal places)
-      const finalPaymentAmount = Math.round(paymentAmount * 100) / 100;
-
-      console.log('Saving review for platform:', {
-        submissionId,
-        projectId,
-        platform,
-        lecturerId: session.user.id,
-        matchedCriteriaIds: criteriaToSave,
-        paymentAmount: finalPaymentAmount,
-        comment: (comments[platform] || '').trim() || null,
-      });
-
-      // First, check if a review already exists for this submission and platform
-      const { data: existingReview } = await supabase
-        .from('submission_reviews')
-        .select('id')
-        .eq('submission_id', submissionId)
-        .eq('platform', platform)
-        .maybeSingle();
-
-      let reviewData;
-      let reviewError;
-
-      const currentStatus = reviewStatus[platform] || 'accepted';
-
-      if (existingReview) {
-        // Update existing review
-        const { data, error } = await supabase
-          .from('submission_reviews')
-          .update({
-            status: currentStatus,
-            matched_criteria_ids: currentStatus === 'rejected' ? [] : (criteriaToSave.length > 0 ? criteriaToSave : []),
-            comment: (comments[platform] || '').trim() || null,
-            payment_amount: currentStatus === 'rejected' ? 0 : finalPaymentAmount,
-          })
-          .eq('id', existingReview.id)
-          .select()
-          .single();
-
-        reviewData = data;
-        reviewError = error;
-      } else {
-        // Insert new review
-        const { data, error } = await supabase
-          .from('submission_reviews')
-          .insert({
-            submission_id: submissionId,
-            project_id: projectId,
-            lecturer_id: session.user.id,
-            platform: platform, // Platform-specific review
-            status: currentStatus,
-            matched_criteria_ids: currentStatus === 'rejected' ? [] : (criteriaToSave.length > 0 ? criteriaToSave : []),
-            comment: (comments[platform] || '').trim() || null,
-            payment_amount: currentStatus === 'rejected' ? 0 : finalPaymentAmount,
-          })
-          .select()
-          .single();
-
-        reviewData = data;
-        reviewError = error;
-      }
-
-      if (reviewError) {
-        console.error('Error saving review:', reviewError);
-        throw new Error(reviewError.message);
-      }
-
-      console.log('Review saved successfully:', reviewData);
-
-      setLastSavedRPM(prev => ({ ...prev, [platform]: finalPaymentAmount }));
-      setSaveSuccess(prev => ({ ...prev, [platform]: true }));
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSaveSuccess(prev => ({ ...prev, [platform]: false }));
-      }, 3000);
-      
-      onReview(); // Notify parent to refresh
-    } catch (err: any) {
-      setError(err.message || 'Failed to save review');
-    } finally {
-      setIsSaving(prev => ({ ...prev, [platform]: false }));
-    }
-  }, [submissionId, projectId, selectedCriteria, comments, getCriteriaForPlatform, supabase, onReview]);
-
-  const handleCriteriaToggle = useCallback((criteriaId: string, platform: string) => {
-    setSelectedCriteria(prev => {
-      const currentCriteria = prev[platform] || [];
-      const newSelectedCriteria = currentCriteria.includes(criteriaId)
-        ? currentCriteria.filter(id => id !== criteriaId)
-        : [...currentCriteria, criteriaId];
-      
-      return { ...prev, [platform]: newSelectedCriteria };
-    });
-    setSaveSuccess(prev => ({ ...prev, [platform]: false })); // Clear success message when criteria changes
-  }, []); // Remove selectedCriteria from dependencies to avoid stale closures
-
-  const calculatePaymentAmount = useCallback((platform: string): number => {
-    const platformCriteria = getCriteriaForPlatform(platform);
-    const criteriaToCheck = selectedCriteria[platform] || [];
-    return criteriaToCheck.reduce((total, criteriaId) => {
-      const criterion = platformCriteria.find(c => c.id === criteriaId);
-      return total + (criterion?.rpm || 0);
-    }, 0);
-  }, [selectedCriteria, getCriteriaForPlatform]);
+    },
+    [selectedCriteria, getCriteriaForPlatform],
+  );
 
   if (!isOpen) return null;
 
   const currentCriteria = getCriteriaForPlatform(selectedPlatform);
   const currentSelectedCriteria = selectedCriteria[selectedPlatform] || [];
-  const currentComment = comments[selectedPlatform] || '';
+  const currentComment = comments[selectedPlatform] || "";
   const currentPaymentAmount = calculatePaymentAmount(selectedPlatform);
   const currentLastSavedRPM = lastSavedRPM[selectedPlatform] || 0;
   const currentIsSaving = isSaving[selectedPlatform] || false;
   const currentSaveSuccess = saveSuccess[selectedPlatform] || false;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-navy-950/80 z-50 flex items-center justify-center p-4"
       onClick={(e) => {
         // Close modal when clicking outside
@@ -255,7 +307,7 @@ export default function SubmissionReviewDialog({
         }
       }}
     >
-      <div 
+      <div
         className="relative w-full max-w-3xl bg-navy-950/90 border border-navy-800/60 rounded-2xl shadow-soft-xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
@@ -283,11 +335,13 @@ export default function SubmissionReviewDialog({
         <div className="p-6 space-y-6 overflow-y-auto chat-scrollbar flex-1 min-h-0">
           {/* Header */}
           <div>
-            <h2 className="text-2xl font-bold text-white mb-2">Review Submission</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Review Submission
+            </h2>
             <p className="text-gray-400 text-sm">
-              {hasMultiplePlatforms 
-                ? 'Review each platform independently. Select criteria that match for each platform.'
-                : 'Select which criteria this video matches and provide your feedback'}
+              {hasMultiplePlatforms
+                ? "Review each platform independently. Select criteria that match for each platform."
+                : "Select which criteria this video matches and provide your feedback"}
             </p>
           </div>
 
@@ -308,8 +362,8 @@ export default function SubmissionReviewDialog({
                     onClick={() => setSelectedPlatform(platform)}
                     className={`px-4 py-2 text-sm font-medium transition-colors ${
                       selectedPlatform === platform
-                        ? 'text-white border-b-2 border-emerald-400'
-                        : 'text-gray-400 hover:text-gray-300'
+                        ? "text-white border-b-2 border-emerald-400"
+                        : "text-gray-400 hover:text-gray-300"
                     }`}
                   >
                     {PLATFORM_NAMES[platform.toLowerCase()] || platform}
@@ -323,10 +377,20 @@ export default function SubmissionReviewDialog({
           {hasMultiplePlatforms && (
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
               <p className="text-sm text-emerald-200">
-                Reviewing: <span className="font-semibold">{PLATFORM_NAMES[selectedPlatform.toLowerCase()] || selectedPlatform}</span>
+                Reviewing:{" "}
+                <span className="font-semibold">
+                  {PLATFORM_NAMES[selectedPlatform.toLowerCase()] ||
+                    selectedPlatform}
+                </span>
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                Link: <a href={platformLinks[selectedPlatform]} target="_blank" rel="noopener noreferrer" className="text-emerald-300 hover:underline">
+                Link:{" "}
+                <a
+                  href={platformLinks[selectedPlatform]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-300 hover:underline"
+                >
                   {platformLinks[selectedPlatform]}
                 </a>
               </p>
@@ -335,24 +399,36 @@ export default function SubmissionReviewDialog({
 
           {/* Review Status Toggle */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-3">Review Decision</label>
+            <label className="block text-sm font-medium text-gray-300 mb-3">
+              Review Decision
+            </label>
             <div className="flex gap-3">
               <button
-                onClick={() => setReviewStatus(prev => ({ ...prev, [selectedPlatform]: 'accepted' }))}
+                onClick={() =>
+                  setReviewStatus((prev) => ({
+                    ...prev,
+                    [selectedPlatform]: "accepted",
+                  }))
+                }
                 className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${
-                  (reviewStatus[selectedPlatform] || 'accepted') === 'accepted'
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-navy-800/70 text-gray-400 border border-navy-700/50 hover:bg-navy-800'
+                  (reviewStatus[selectedPlatform] || "accepted") === "accepted"
+                    ? "bg-emerald-500 text-white"
+                    : "bg-navy-800/70 text-gray-400 border border-navy-700/50 hover:bg-navy-800"
                 }`}
               >
                 ✓ Accept
               </button>
               <button
-                onClick={() => setReviewStatus(prev => ({ ...prev, [selectedPlatform]: 'rejected' }))}
+                onClick={() =>
+                  setReviewStatus((prev) => ({
+                    ...prev,
+                    [selectedPlatform]: "rejected",
+                  }))
+                }
                 className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${
-                  (reviewStatus[selectedPlatform] || 'accepted') === 'rejected'
-                    ? 'bg-red-500 text-white'
-                    : 'bg-navy-800/70 text-gray-400 border border-navy-700/50 hover:bg-navy-800'
+                  (reviewStatus[selectedPlatform] || "accepted") === "rejected"
+                    ? "bg-red-500 text-white"
+                    : "bg-navy-800/70 text-gray-400 border border-navy-700/50 hover:bg-navy-800"
                 }`}
               >
                 ✕ Reject
@@ -361,71 +437,95 @@ export default function SubmissionReviewDialog({
           </div>
 
           {/* Criteria Selection - Hidden if Rejected */}
-          {(reviewStatus[selectedPlatform] || 'accepted') !== 'rejected' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-3">
-              Select Matching Criteria {hasMultiplePlatforms && `for ${PLATFORM_NAMES[selectedPlatform.toLowerCase()] || selectedPlatform}`}
-            </label>
-            {currentCriteria.length === 0 ? (
-              <p className="text-gray-500 text-sm">No criteria defined for this platform</p>
-            ) : (
-              <div className="space-y-2">
-                {currentCriteria.map((criterion) => {
-                  const checkboxId = `criteria-${criterion.id}-${selectedPlatform}`;
-                  return (
-                  <label
-                    key={criterion.id}
-                    htmlFor={checkboxId}
-                    onClick={(e) => {
-                      // Prevent double-toggling when clicking directly on checkbox
-                      if ((e.target as HTMLElement).tagName !== 'INPUT') {
-                        handleCriteriaToggle(criterion.id, selectedPlatform);
-                      }
-                    }}
-                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
-                      currentSelectedCriteria.includes(criterion.id)
-                        ? 'bg-emerald-500/15 border-emerald-500/40'
-                        : 'bg-navy-900/60 border-navy-800/60 hover:border-navy-700/70'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <input
-                        id={checkboxId}
-                        type="checkbox"
-                        checked={currentSelectedCriteria.includes(criterion.id)}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleCriteriaToggle(criterion.id, selectedPlatform);
+          {(reviewStatus[selectedPlatform] || "accepted") !== "rejected" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-3">
+                Select Matching Criteria{" "}
+                {hasMultiplePlatforms &&
+                  `for ${PLATFORM_NAMES[selectedPlatform.toLowerCase()] || selectedPlatform}`}
+              </label>
+              {currentCriteria.length === 0 ? (
+                <p className="text-gray-500 text-sm">
+                  No criteria defined for this platform
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {currentCriteria.map((criterion) => {
+                    const checkboxId = `criteria-${criterion.id}-${selectedPlatform}`;
+                    return (
+                      <label
+                        key={criterion.id}
+                        htmlFor={checkboxId}
+                        onClick={(e) => {
+                          // Prevent double-toggling when clicking directly on checkbox
+                          if ((e.target as HTMLElement).tagName !== "INPUT") {
+                            handleCriteriaToggle(
+                              criterion.id,
+                              selectedPlatform,
+                            );
+                          }
                         }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-4 h-4 text-emerald-500 bg-navy-900 border-navy-700 rounded focus:ring-emerald-400 focus:ring-2 cursor-pointer pointer-events-auto z-10 relative"
-                      />
-                      <span className="text-white text-sm">{criterion.text}</span>
-                      {criterion.platform && (
-                        <span className="text-xs text-emerald-300">({PLATFORM_NAMES[criterion.platform.toLowerCase()] || criterion.platform})</span>
-                      )}
-                    </div>
-                    <span className="text-emerald-300 text-sm font-semibold">
-                      ${criterion.rpm.toFixed(2)} RPM
+                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                          currentSelectedCriteria.includes(criterion.id)
+                            ? "bg-emerald-500/15 border-emerald-500/40"
+                            : "bg-navy-900/60 border-navy-800/60 hover:border-navy-700/70"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <input
+                            id={checkboxId}
+                            type="checkbox"
+                            checked={currentSelectedCriteria.includes(
+                              criterion.id,
+                            )}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleCriteriaToggle(
+                                criterion.id,
+                                selectedPlatform,
+                              );
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-4 h-4 text-emerald-500 bg-navy-900 border-navy-700 rounded focus:ring-emerald-400 focus:ring-2 cursor-pointer pointer-events-auto z-10 relative"
+                          />
+                          <span className="text-white text-sm">
+                            {criterion.text}
+                          </span>
+                          {criterion.platform && (
+                            <span className="text-xs text-emerald-300">
+                              (
+                              {PLATFORM_NAMES[
+                                criterion.platform.toLowerCase()
+                              ] || criterion.platform}
+                              )
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-emerald-300 text-sm font-semibold">
+                          ${criterion.rpm.toFixed(2)} RPM
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+              {currentSelectedCriteria.length > 0 && (
+                <div className="mt-3 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                  <p className="text-sm text-gray-300">
+                    <span className="font-semibold">Total RPM:</span>{" "}
+                    <span className="text-emerald-300 font-bold">
+                      ${currentPaymentAmount.toFixed(2)}
                     </span>
-                  </label>
-                  );
-                })}
-              </div>
-            )}
-            {currentSelectedCriteria.length > 0 && (
-              <div className="mt-3 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-                <p className="text-sm text-gray-300">
-                  <span className="font-semibold">Total RPM:</span>{' '}
-                  <span className="text-emerald-300 font-bold">${currentPaymentAmount.toFixed(2)}</span>
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Based on {currentSelectedCriteria.length} matched criteria
-                  {currentIsSaving && <span className="ml-2 text-yellow-400">(Saving...)</span>}
-                </p>
-              </div>
-            )}
-          </div>
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Based on {currentSelectedCriteria.length} matched criteria
+                    {currentIsSaving && (
+                      <span className="ml-2 text-yellow-400">(Saving...)</span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Comment */}
@@ -436,8 +536,14 @@ export default function SubmissionReviewDialog({
             <textarea
               value={currentComment}
               onChange={(e) => {
-                setComments(prev => ({ ...prev, [selectedPlatform]: e.target.value }));
-                setSaveSuccess(prev => ({ ...prev, [selectedPlatform]: false }));
+                setComments((prev) => ({
+                  ...prev,
+                  [selectedPlatform]: e.target.value,
+                }));
+                setSaveSuccess((prev) => ({
+                  ...prev,
+                  [selectedPlatform]: false,
+                }));
               }}
               placeholder="Add your feedback or comments about this submission..."
               rows={4}
@@ -449,11 +555,24 @@ export default function SubmissionReviewDialog({
           {currentSaveSuccess && (
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
               <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-5 h-5 text-emerald-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 <p className="text-sm text-emerald-200 font-semibold">
-                  Review saved successfully for {PLATFORM_NAMES[selectedPlatform.toLowerCase()] || selectedPlatform}! Student will see this information.
+                  Review saved successfully for{" "}
+                  {PLATFORM_NAMES[selectedPlatform.toLowerCase()] ||
+                    selectedPlatform}
+                  ! Student will see this information.
                 </p>
               </div>
             </div>
@@ -463,11 +582,15 @@ export default function SubmissionReviewDialog({
           {currentLastSavedRPM > 0 && !currentSaveSuccess && (
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
               <p className="text-sm text-gray-300">
-                <span className="font-semibold">Saved RPM:</span>{' '}
-                <span className="text-emerald-300 font-bold">${currentLastSavedRPM.toFixed(2)}</span>
+                <span className="font-semibold">Saved RPM:</span>{" "}
+                <span className="text-emerald-300 font-bold">
+                  ${currentLastSavedRPM.toFixed(2)}
+                </span>
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                Student will see this amount based on selected criteria for {PLATFORM_NAMES[selectedPlatform.toLowerCase()] || selectedPlatform}
+                Student will see this amount based on selected criteria for{" "}
+                {PLATFORM_NAMES[selectedPlatform.toLowerCase()] ||
+                  selectedPlatform}
               </p>
             </div>
           )}
@@ -492,17 +615,39 @@ export default function SubmissionReviewDialog({
             >
               {currentIsSaving ? (
                 <>
-                  <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  <svg
+                    className="w-4 h-4 animate-spin"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
                   </svg>
                   Saving...
                 </>
               ) : (
                 <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
-                  Save Review {hasMultiplePlatforms && `for ${PLATFORM_NAMES[selectedPlatform.toLowerCase()] || selectedPlatform}`}
+                  Save Review{" "}
+                  {hasMultiplePlatforms &&
+                    `for ${PLATFORM_NAMES[selectedPlatform.toLowerCase()] || selectedPlatform}`}
                 </>
               )}
             </button>

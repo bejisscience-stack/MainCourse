@@ -53,10 +53,15 @@ export default function StudentChatPage() {
 
       // Fetch courses and channels in parallel (both depend only on courseIds)
       const [coursesResult, channelsResult] = await Promise.all([
-        supabase.from("courses").select("*").in("id", courseIds),
+        supabase
+          .from("courses")
+          .select("id, title, lecturer_id")
+          .in("id", courseIds),
         supabase
           .from("channels")
-          .select("*")
+          .select(
+            "id, course_id, name, type, description, category_name, display_order",
+          )
           .in("course_id", courseIds)
           .order("display_order", { ascending: true }),
       ]);

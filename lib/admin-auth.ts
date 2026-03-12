@@ -11,6 +11,13 @@ interface AdminAuthResult {
   serviceSupabase: ReturnType<typeof createServiceRoleClient>;
 }
 
+/** Extract Bearer token from Authorization header. Returns null if missing/malformed. */
+export function getTokenFromHeader(request: NextRequest): string | null {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  return authHeader.slice(7);
+}
+
 /**
  * Shared admin auth check for API routes.
  * Verifies the Bearer token, checks admin role, and returns a service-role Supabase client.
@@ -19,12 +26,10 @@ interface AdminAuthResult {
 export async function verifyAdminRequest(
   request: NextRequest,
 ): Promise<AdminAuthResult | NextResponse> {
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
+  const token = getTokenFromHeader(request);
+  if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const token = authHeader.replace("Bearer ", "");
   const { user, error: userError } = await verifyTokenAndGetUser(token);
   if (userError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -54,13 +59,6 @@ export async function verifyAdminRequest(
     userId: user.id,
     serviceSupabase: createServiceRoleClient(token),
   };
-}
-
-/** Extract Bearer token from Authorization header, or null if missing/invalid */
-export function getTokenFromHeader(request: NextRequest): string | null {
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) return null;
-  return authHeader.replace("Bearer ", "");
 }
 
 /** Check if a verifyAdminRequest result is an error response */

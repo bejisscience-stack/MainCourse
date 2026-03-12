@@ -1,11 +1,11 @@
-import useSWR from 'swr';
-import { supabase } from '@/lib/supabase';
+import useSWR from "swr";
+import { supabase } from "@/lib/supabase";
 
 export interface Course {
   id: string;
   title: string;
   description: string | null;
-  course_type: 'Editing' | 'Content Creation' | 'Website Creation';
+  course_type: "Editing" | "Content Creation" | "Website Creation";
   price: number;
   original_price: number | null;
   author: string;
@@ -24,35 +24,37 @@ export interface Course {
 async function fetchCourses(filter?: string): Promise<Course[]> {
   try {
     let query = supabase
-      .from('courses')
-      .select('*')
-      .order('created_at', { ascending: false })
+      .from("courses")
+      .select(
+        "id, title, description, course_type, price, original_price, author, creator, intro_video_url, thumbnail_url, rating, review_count, is_bestseller, referral_commission_percentage, created_at, updated_at, lecturer_id",
+      )
+      .order("created_at", { ascending: false })
       .limit(100);
 
-    if (filter && filter !== 'All') {
-      query = query.eq('course_type', filter);
+    if (filter && filter !== "All") {
+      query = query.eq("course_type", filter);
     }
 
     const { data, error } = await query;
 
     if (error) {
-      console.error('[useCourses] Error fetching courses:', error);
-      console.error('[useCourses] Error code:', error.code);
-      console.error('[useCourses] Error message:', error.message);
+      console.error("[useCourses] Error fetching courses:", error);
+      console.error("[useCourses] Error code:", error.code);
+      console.error("[useCourses] Error message:", error.message);
       throw error;
     }
-    
-    console.log('[useCourses] Fetched courses:', data?.length || 0);
+
+    console.log("[useCourses] Fetched courses:", data?.length || 0);
     return data || [];
   } catch (err: any) {
-    console.error('[useCourses] Unexpected error:', err);
+    console.error("[useCourses] Unexpected error:", err);
     throw err;
   }
 }
 
-export function useCourses(filter: string = 'All') {
+export function useCourses(filter: string = "All") {
   const { data, error, isLoading, mutate } = useSWR<Course[]>(
-    ['courses', filter],
+    ["courses", filter],
     () => fetchCourses(filter),
     {
       revalidateOnFocus: false,
@@ -62,17 +64,19 @@ export function useCourses(filter: string = 'All') {
       errorRetryInterval: 2000, // Wait 2 seconds between retries
       shouldRetryOnError: (error) => {
         // Don't retry on authentication errors or missing env vars
-        if (error?.message?.includes('Missing Supabase') || 
-            error?.code === 'PGRST301' || 
-            error?.code === 'PGRST116') {
+        if (
+          error?.message?.includes("Missing Supabase") ||
+          error?.code === "PGRST301" ||
+          error?.code === "PGRST116"
+        ) {
           return false;
         }
         return true;
       },
       onError: (error) => {
-        console.error('[useCourses] SWR error:', error);
+        console.error("[useCourses] SWR error:", error);
       },
-    }
+    },
   );
 
   return {
@@ -82,13 +86,3 @@ export function useCourses(filter: string = 'All') {
     mutate,
   };
 }
-
-
-
-
-
-
-
-
-
-

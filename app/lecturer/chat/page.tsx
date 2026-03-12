@@ -1,22 +1,26 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import LayoutContainer from '@/components/chat/LayoutContainer';
-import ChatNavigation from '@/components/chat/ChatNavigation';
-import CourseCreationModal from '@/components/CourseCreationModal';
-import { supabase } from '@/lib/supabase';
-import { useUser } from '@/hooks/useUser';
-import { useLecturerCourses } from '@/hooks/useLecturerCourses';
-import type { Server, Channel } from '@/types/server';
-import type { Message as MessageType } from '@/types/message';
-import type { User } from '@supabase/supabase-js';
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import LayoutContainer from "@/components/chat/LayoutContainer";
+import ChatNavigation from "@/components/chat/ChatNavigation";
+import CourseCreationModal from "@/components/CourseCreationModal";
+import { supabase } from "@/lib/supabase";
+import { useUser } from "@/hooks/useUser";
+import { useLecturerCourses } from "@/hooks/useLecturerCourses";
+import type { Server, Channel } from "@/types/server";
+import type { Message as MessageType } from "@/types/message";
+import type { User } from "@supabase/supabase-js";
 
 export default function LecturerChatPage() {
   const router = useRouter();
   const { user, role: userRole, isLoading: userLoading } = useUser();
-  const { courses, isLoading: coursesLoading, mutate: mutateCourses } = useLecturerCourses(user?.id || null);
+  const {
+    courses,
+    isLoading: coursesLoading,
+    mutate: mutateCourses,
+  } = useLecturerCourses(user?.id || null);
   const [servers, setServers] = useState<Server[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showCourseModal, setShowCourseModal] = useState(false);
@@ -29,16 +33,16 @@ export default function LecturerChatPage() {
   useEffect(() => {
     if (!userLoading) {
       if (!user) {
-        router.push('/login');
-      } else if (userRole !== 'lecturer') {
-        router.push('/');
+        router.push("/login");
+      } else if (userRole !== "lecturer") {
+        router.push("/");
       }
     }
   }, [user, userRole, userLoading, router]);
 
   const loadChannelsAndMembers = useCallback(async () => {
     if (!user) return;
-    
+
     try {
       setError(null);
 
@@ -54,18 +58,26 @@ export default function LecturerChatPage() {
       if (courseIds.length > 0) {
         try {
           const { data: channels, error: channelsError } = await supabase
-            .from('channels')
-            .select('*')
-            .in('course_id', courseIds)
-            .order('display_order', { ascending: true });
+            .from("channels")
+            .select(
+              "id, course_id, name, type, description, category_name, display_order",
+            )
+            .in("course_id", courseIds)
+            .order("display_order", { ascending: true });
 
           if (channelsError) {
             // If channels table doesn't exist (PGRST116) or query fails, continue with empty channels
-            if (channelsError.code === 'PGRST116' || channelsError.message?.includes('relation') || channelsError.message?.includes('does not exist')) {
-              console.warn('Channels table does not exist yet. Using default channels.');
+            if (
+              channelsError.code === "PGRST116" ||
+              channelsError.message?.includes("relation") ||
+              channelsError.message?.includes("does not exist")
+            ) {
+              console.warn(
+                "Channels table does not exist yet. Using default channels.",
+              );
               channelsData = [];
             } else {
-              console.warn('Error fetching channels:', channelsError);
+              console.warn("Error fetching channels:", channelsError);
               channelsData = [];
             }
           } else {
@@ -73,71 +85,85 @@ export default function LecturerChatPage() {
           }
         } catch (channelsErr: any) {
           // Channels table might not exist yet, continue with empty channels
-          console.warn('Channels query failed (table may not exist):', channelsErr);
+          console.warn(
+            "Channels query failed (table may not exist):",
+            channelsErr,
+          );
           channelsData = [];
         }
       }
 
       // Ensure required channels exist in database for each course
       for (const course of courses) {
-        const courseChannels = (channelsData || []).filter((ch) => ch.course_id === course.id);
-        const hasLectures = courseChannels.some((ch) => ch.name.toLowerCase() === 'lectures' && ch.type === 'lectures');
-        const hasProjects = courseChannels.some((ch) => ch.name.toLowerCase() === 'projects');
-        
+        const courseChannels = (channelsData || []).filter(
+          (ch) => ch.course_id === course.id,
+        );
+        const hasLectures = courseChannels.some(
+          (ch) =>
+            ch.name.toLowerCase() === "lectures" && ch.type === "lectures",
+        );
+        const hasProjects = courseChannels.some(
+          (ch) => ch.name.toLowerCase() === "projects",
+        );
+
         // Create required channels in database if they don't exist
         const channelsToCreate: any[] = [];
         if (!hasLectures) {
           channelsToCreate.push({
             course_id: course.id,
-            name: 'lectures',
-            type: 'lectures',
+            name: "lectures",
+            type: "lectures",
             description: `Video lectures for ${course.title}`,
-            category_name: 'COURSE CHANNELS',
+            category_name: "COURSE CHANNELS",
             display_order: 0,
           });
         }
         if (!hasProjects) {
           channelsToCreate.push({
             course_id: course.id,
-            name: 'projects',
-            type: 'text',
+            name: "projects",
+            type: "text",
             description: `Project submissions and discussions for ${course.title}`,
-            category_name: 'COURSE CHANNELS',
+            category_name: "COURSE CHANNELS",
             display_order: 1,
           });
         }
-        
+
         if (channelsToCreate.length > 0) {
           try {
             const { data: newChannels, error: createError } = await supabase
-              .from('channels')
+              .from("channels")
               .insert(channelsToCreate)
-              .select();
-            
+              .select(
+                "id, course_id, name, type, description, category_name, display_order",
+              );
+
             if (!createError && newChannels) {
               channelsData.push(...newChannels);
             }
           } catch (err) {
-            console.warn('Error creating required channels:', err);
+            console.warn("Error creating required channels:", err);
           }
         }
       }
 
       // Transform courses into servers/channels structure
       const serversData: Server[] = (courses || []).map((course) => {
-        const courseChannels = (channelsData || []).filter((ch) => ch.course_id === course.id);
+        const courseChannels = (channelsData || []).filter(
+          (ch) => ch.course_id === course.id,
+        );
 
         // Group channels by category
         const channelsByCategory: { [key: string]: Channel[] } = {};
         courseChannels.forEach((ch) => {
-          const category = ch.category_name || 'COURSE CHANNELS';
+          const category = ch.category_name || "COURSE CHANNELS";
           if (!channelsByCategory[category]) {
             channelsByCategory[category] = [];
           }
           channelsByCategory[category].push({
             id: ch.id,
             name: ch.name,
-            type: ch.type as 'text' | 'voice' | 'lectures',
+            type: ch.type as "text" | "voice" | "lectures",
             description: ch.description || undefined,
             courseId: course.id,
             categoryName: ch.category_name || undefined,
@@ -150,11 +176,19 @@ export default function LecturerChatPage() {
         Object.keys(channelsByCategory).forEach((cat) => {
           channelsByCategory[cat].sort((a, b) => {
             // Lectures always first
-            if (a.type === 'lectures' && b.type !== 'lectures') return -1;
-            if (b.type === 'lectures' && a.type !== 'lectures') return 1;
+            if (a.type === "lectures" && b.type !== "lectures") return -1;
+            if (b.type === "lectures" && a.type !== "lectures") return 1;
             // Projects second
-            if (a.name.toLowerCase() === 'projects' && b.name.toLowerCase() !== 'projects') return -1;
-            if (b.name.toLowerCase() === 'projects' && a.name.toLowerCase() !== 'projects') return 1;
+            if (
+              a.name.toLowerCase() === "projects" &&
+              b.name.toLowerCase() !== "projects"
+            )
+              return -1;
+            if (
+              b.name.toLowerCase() === "projects" &&
+              a.name.toLowerCase() !== "projects"
+            )
+              return 1;
             // Then by displayOrder
             return (a.displayOrder || 0) - (b.displayOrder || 0);
           });
@@ -164,19 +198,20 @@ export default function LecturerChatPage() {
           id: course.id,
           name: course.title,
           icon: course.title.charAt(0).toUpperCase(),
-          channels: Object.entries(channelsByCategory).map(([categoryName, channels]) => ({
-            id: `category-${course.id}-${categoryName}`,
-            name: categoryName,
-            channels,
-          })),
+          channels: Object.entries(channelsByCategory).map(
+            ([categoryName, channels]) => ({
+              id: `category-${course.id}-${categoryName}`,
+              name: categoryName,
+              channels,
+            }),
+          ),
         };
       });
 
       setServers(serversData);
-
     } catch (err: any) {
-      console.error('Error loading chat data:', err);
-      setError(err.message || 'Failed to load chat. Please try again.');
+      console.error("Error loading chat data:", err);
+      setError(err.message || "Failed to load chat. Please try again.");
     }
   }, [user, courses]);
 
@@ -201,26 +236,26 @@ export default function LecturerChatPage() {
     if (!user) return;
 
     // TODO: Save reaction to database
-    console.log('Adding reaction:', { messageId, emoji, userId: user.id });
+    console.log("Adding reaction:", { messageId, emoji, userId: user.id });
   };
 
-  const handleChannelCreate = async (channel: Omit<Channel, 'id'>) => {
+  const handleChannelCreate = async (channel: Omit<Channel, "id">) => {
     if (!user || !channel.courseId) return;
 
     try {
       const { data, error } = await supabase
-        .from('channels')
+        .from("channels")
         .insert([
           {
             course_id: channel.courseId,
             name: channel.name,
             type: channel.type,
             description: channel.description || null,
-            category_name: channel.categoryName || 'COURSE CHANNELS',
+            category_name: channel.categoryName || "COURSE CHANNELS",
             display_order: channel.displayOrder || 0,
           },
         ])
-        .select()
+        .select("id")
         .single();
 
       if (error) throw error;
@@ -228,17 +263,20 @@ export default function LecturerChatPage() {
       // Refresh servers
       loadChannelsAndMembers();
     } catch (err: any) {
-      console.error('Error creating channel:', err);
+      console.error("Error creating channel:", err);
       throw err;
     }
   };
 
-  const handleChannelUpdate = async (channelId: string, updates: Partial<Channel>) => {
+  const handleChannelUpdate = async (
+    channelId: string,
+    updates: Partial<Channel>,
+  ) => {
     if (!user) return;
 
     try {
       const { error } = await supabase
-        .from('channels')
+        .from("channels")
         .update({
           name: updates.name,
           type: updates.type,
@@ -246,14 +284,14 @@ export default function LecturerChatPage() {
           category_name: updates.categoryName,
           display_order: updates.displayOrder,
         })
-        .eq('id', channelId);
+        .eq("id", channelId);
 
       if (error) throw error;
 
       // Refresh servers
       loadChannelsAndMembers();
     } catch (err: any) {
-      console.error('Error updating channel:', err);
+      console.error("Error updating channel:", err);
       throw err;
     }
   };
@@ -262,14 +300,17 @@ export default function LecturerChatPage() {
     if (!user) return;
 
     try {
-      const { error } = await supabase.from('channels').delete().eq('id', channelId);
+      const { error } = await supabase
+        .from("channels")
+        .delete()
+        .eq("id", channelId);
 
       if (error) throw error;
 
       // Refresh servers
       loadChannelsAndMembers();
     } catch (err: any) {
-      console.error('Error deleting channel:', err);
+      console.error("Error deleting channel:", err);
       throw err;
     }
   };
@@ -355,7 +396,9 @@ export default function LecturerChatPage() {
                 />
               </svg>
               <p className="text-lg font-medium mb-2">No courses yet</p>
-              <p className="text-sm mb-6">Create your first course to start chatting with students</p>
+              <p className="text-sm mb-6">
+                Create your first course to start chatting with students
+              </p>
               <Link
                 href="/lecturer/dashboard"
                 className="inline-block bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"

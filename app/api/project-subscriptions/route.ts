@@ -2,6 +2,7 @@ import {
   createServerSupabaseClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
+import { getTokenFromHeader } from "@/lib/admin-auth";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -10,12 +11,10 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    const token = getTokenFromHeader(request);
+    if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const token = authHeader.slice(7);
     const { user, error: userError } = await verifyTokenAndGetUser(token);
 
     if (userError || !user) {
@@ -32,14 +31,17 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error(
+        "[Project Subscriptions API] Error fetching subscriptions:",
+        error,
+      );
+      return NextResponse.json({ error: "An error occurred" }, { status: 500 });
     }
 
     return NextResponse.json({ subscriptions: data || [] });
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[Project Subscriptions API] Unhandled exception:", err);
+    return NextResponse.json({ error: "An error occurred" }, { status: 500 });
   }
 }
 
@@ -51,12 +53,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    const token = getTokenFromHeader(request);
+    if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const token = authHeader.slice(7);
     const { user, error: userError } = await verifyTokenAndGetUser(token);
 
     if (userError || !user) {
@@ -93,17 +93,22 @@ export async function POST(request: NextRequest) {
         status: "pending",
         payment_method: payment_method || "keepz",
       })
-      .select()
+      .select(
+        "id, user_id, status, price, payment_method, payment_screenshot, created_at, updated_at",
+      )
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error(
+        "[Project Subscriptions API] Error creating subscription:",
+        error,
+      );
+      return NextResponse.json({ error: "An error occurred" }, { status: 500 });
     }
 
     return NextResponse.json(data, { status: 201 });
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[Project Subscriptions API] Unhandled exception:", err);
+    return NextResponse.json({ error: "An error occurred" }, { status: 500 });
   }
 }
