@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Parse body
-    const { paymentType, referenceId, keepzMethod } = await request.json();
+    const { paymentType, referenceId, keepzMethod, saveCard, savedCardId } = await request.json();
     if (!paymentType || !referenceId) {
       return NextResponse.json({ error: 'paymentType and referenceId are required' }, { status: 400 });
     }
@@ -137,37 +137,87 @@ export async function POST(request: NextRequest) {
       callbackUri: `${appUrl}/api/payments/keepz/callback`,
     };
 
-    // NOTE: Provider pre-selection (directLinkProvider, cryptoPaymentProvider, etc.)
-    // requires special Keepz permission that this account doesn't have.
-    // All payment methods redirect to the generic Keepz checkout page where
-    // the user selects their preferred method. The keepzMethod param is stored
-    // for analytics but does not affect the Keepz API call.
+    // Saved card: look up card_token if savedCardId is provided
+    if (savedCardId) {
+      const { data: savedCard, error: cardErr } = await supabase
+        .from('saved_cards')
+        .select('card_token')
+        .eq('id', savedCardId)
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .single();
 
-    let checkoutUrl: string;
+      if (cardErr || !savedCard) {
+        return NextResponse.json({ error: 'Saved card not found' }, { status: 404 });
+      }
+
+      orderOptions.cardToken = savedCard.card_token;
+    }
+
+    // Save card for future use (first-time redirect payment)
+    if (saveCard && !savedCardId) {
+      orderOptions.saveCard = true;
+    }
+
+    let checkoutUrl: string | null;
+    let saveCardUnsupported = false;
     try {
       const result = await createKeepzOrder(orderOptions);
       checkoutUrl = result.checkoutUrl;
     } catch (keepzErr) {
-      // Clean up the pending payment row so it doesn't block retries
-      await supabase
-        .from('keepz_payments')
-        .update({ status: 'failed', updated_at: new Date().toISOString() })
-        .eq('id', paymentRow.id);
-
-      throw keepzErr; // Re-throw to be caught by outer catch
+      // Handle saveCard permission error — retry without saveCard
+      if (keepzErr instanceof KeepzError && keepzErr.statusCode === 6031 && orderOptions.saveCard) {
+        console.warn('[Keepz] saveCard not permitted, retrying without it');
+        delete orderOptions.saveCard;
+        delete orderOptions.directLinkProvider;
+        saveCardUnsupported = true;
+        try {
+          const result = await createKeepzOrder(orderOptions);
+          checkoutUrl = result.checkoutUrl;
+        } catch (retryErr) {
+          await supabase
+            .from('keepz_payments')
+            .update({ status: 'failed', updated_at: new Date().toISOString() })
+            .eq('id', paymentRow.id);
+          throw retryErr;
+        }
+      } else {
+        // Clean up the pending payment row so it doesn't block retries
+        await supabase
+          .from('keepz_payments')
+          .update({ status: 'failed', updated_at: new Date().toISOString() })
+          .eq('id', paymentRow.id);
+        throw keepzErr;
+      }
     }
 
-    // 7. Update payment row with checkout URL and status
+    // Track if saveCard was requested
+    const updateData: Record<string, unknown> = {
+      status: 'created',
+      updated_at: new Date().toISOString(),
+    };
+    if (checkoutUrl) updateData.checkout_url = checkoutUrl;
+    if (saveCard && !saveCardUnsupported) updateData.save_card = true;
+
     await supabase
       .from('keepz_payments')
-      .update({
-        checkout_url: checkoutUrl,
-        status: 'created',
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', paymentRow.id);
 
-    return NextResponse.json({ checkoutUrl, paymentId: paymentRow.id });
+    // Token-based charge (saved card): no redirect, payment processes server-side
+    if (!checkoutUrl) {
+      return NextResponse.json({
+        paymentId: paymentRow.id,
+        processing: true,
+        saveCardUnsupported,
+      });
+    }
+
+    return NextResponse.json({
+      checkoutUrl,
+      paymentId: paymentRow.id,
+      saveCardUnsupported,
+    });
   } catch (error) {
     if (error instanceof KeepzError) {
       console.error('Keepz API error:', error.message, 'statusCode:', error.statusCode, 'exceptionGroup:', error.exceptionGroup);

@@ -147,11 +147,14 @@ export interface CreateOrderOptions {
   openBankingLinkProvider?: string;  // BOG | TBC | CREDO | LIBERTY — online banking
   cryptoPaymentProvider?: string;    // CITYPAY — crypto payments
   installmentPaymentProvider?: string; // CREDO — installment payments
+  // Saved card parameters
+  saveCard?: boolean;                // tokenize card for future payments (requires directLinkProvider)
+  cardToken?: string;                // charge a previously saved card (no redirect, server-to-server)
 }
 
 export interface CreateOrderResult {
   integratorOrderId: string;
-  checkoutUrl: string;
+  checkoutUrl: string | null;  // null when charging a saved card (no redirect)
 }
 
 export async function createKeepzOrder(
@@ -181,6 +184,12 @@ export async function createKeepzOrder(
   if (options.openBankingLinkProvider !== undefined) payload.openBankingLinkProvider = options.openBankingLinkProvider;
   if (options.cryptoPaymentProvider !== undefined) payload.cryptoPaymentProvider = options.cryptoPaymentProvider;
   if (options.installmentPaymentProvider !== undefined) payload.installmentPaymentProvider = options.installmentPaymentProvider;
+  if (options.cardToken !== undefined) payload.cardToken = options.cardToken;
+  if (options.saveCard) {
+    payload.saveCard = true;
+    // saveCard requires directLinkProvider — default to 'DEFAULT' if not set
+    if (!payload.directLinkProvider) payload.directLinkProvider = 'DEFAULT';
+  }
 
   const { encryptedData, encryptedKeys } = keepzCrypto.encrypt(payload);
 
@@ -246,7 +255,7 @@ export async function createKeepzOrder(
 
   return {
     integratorOrderId,
-    checkoutUrl: decrypted.urlForQR as string,
+    checkoutUrl: (decrypted.urlForQR as string) || null,
   };
 }
 
@@ -316,6 +325,64 @@ export function decryptCallback(
   body: Record<string, unknown>,
 ): Record<string, unknown> {
   const keepzCrypto = getKeepzCrypto();
+  return keepzCrypto.decrypt(
+    body.encryptedData as string,
+    body.encryptedKeys as string,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// getSavedCardsFromKeepz — retrieve saved card info from Keepz by order ID
+// ---------------------------------------------------------------------------
+
+export async function getSavedCardsFromKeepz(
+  integratorOrderId: string,
+): Promise<Record<string, unknown>> {
+  const BASE_URL = env('KEEPZ_BASE_URL');
+  const integratorId = env('KEEPZ_INTEGRATOR_ID');
+  const keepzCrypto = getKeepzCrypto();
+
+  const { encryptedData, encryptedKeys } = keepzCrypto.encrypt({
+    integratorOrderId,
+  });
+
+  const params = new URLSearchParams({
+    identifier: integratorId,
+    encryptedData,
+    encryptedKeys,
+    aes: 'true',
+  });
+
+  const response = await fetch(
+    `${BASE_URL}/api/v1/integrator/card/order-id?${params.toString()}`,
+    { method: 'GET' },
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    let parsed: Record<string, unknown> | null = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      // not JSON
+    }
+
+    if (parsed && typeof parsed.statusCode === 'number') {
+      throw new KeepzError(
+        (parsed.message as string) ?? 'Keepz API error',
+        parsed.statusCode as number,
+        (parsed.exceptionGroup as number) ?? 0,
+      );
+    }
+
+    throw new KeepzError(
+      text || `Keepz API error (HTTP ${response.status})`,
+      response.status,
+      0,
+    );
+  }
+
+  const body = await response.json();
   return keepzCrypto.decrypt(
     body.encryptedData as string,
     body.encryptedKeys as string,

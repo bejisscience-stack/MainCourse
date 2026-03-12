@@ -1,118 +1,164 @@
-# Swavleba Cleanup Report
-
-Generated: 2026-03-12
-
----
-
-## HIGH CONFIDENCE — Safe to delete (no code references)
-
-### Orphaned Components (10 files)
-Files with zero imports anywhere in the codebase:
-
-| File | Description |
-|------|-------------|
-| `components/AIParticles.tsx` | Unused animation component |
-| `components/BackgroundSelector.tsx` | Unused background picker |
-| `components/BitcoinDrops.tsx` | Unused animation component |
-| `components/DataSignals.tsx` | Unused animation component |
-| `components/FloatingButton.tsx` | Unused floating button |
-| `components/ScrollChart.tsx` | Unused chart component |
-| `components/SimpleBackgroundAnimation.tsx` | Unused animation component |
-| `components/SocialIconFlow.tsx` | Unused animation component |
-| `components/TestBackgroundAnimations.tsx` | Test page for animations |
-| `components/chat/MemberSidebar.tsx` | Unused chat sidebar variant |
-
-### Unused Hooks (3 files)
-Hooks with zero imports anywhere in the codebase:
-
-| File | Description |
-|------|-------------|
-| `hooks/useMembers.ts` | Unused members hook |
-| `hooks/useMessages.ts` | Unused messages hook |
-| `hooks/useWindowDimensions.ts` | Unused window dimensions hook |
-
-### Orphaned Edge Functions (13 functions)
-All replaced by equivalent Next.js API routes. Zero calls from frontend, hooks, or other code:
-
-| Edge Function | Replaced By |
-|---------------|-------------|
-| `admin-bundle-enrollment-approve` | `app/api/admin/bundle-enrollment-requests/[id]/approve/route.ts` |
-| `admin-bundle-enrollment-reject` | `app/api/admin/bundle-enrollment-requests/[id]/reject/route.ts` |
-| `admin-enrollment-approve` | `app/api/admin/enrollment-requests/[id]/approve/route.ts` |
-| `admin-enrollment-reject` | `app/api/admin/enrollment-requests/[id]/reject/route.ts` |
-| `admin-notifications-send` | `app/api/admin/notifications/send/route.ts` |
-| `admin-withdrawal-approve` | `app/api/admin/withdrawals/[requestId]/approve/route.ts` |
-| `admin-withdrawal-reject` | `app/api/admin/withdrawals/[requestId]/reject/route.ts` |
-| `admin-withdrawals` | `app/api/admin/withdrawals/route.ts` |
-| `course-chats` | `app/api/courses/[courseId]/chats/route.ts` |
-| `me-enrollments` | `app/api/me/enrollments/route.ts` |
-| `notification-read` | `app/api/notifications/[id]/read/route.ts` |
-| `notifications-read-all` | `app/api/notifications/read-all/route.ts` |
-| `notifications-unread-count` | `app/api/notifications/unread-count/route.ts` |
-
-### Stale Config (1 file)
-
-| File | Reason |
-|------|--------|
-| `vercel.json` | Project is hosted on DigitalOcean, not Vercel |
+# Cleanup Report — Swavleba (MainCourse)
+Generated: 2026-03-12 (comprehensive audit)
 
 ---
 
-## MEDIUM CONFIDENCE — Likely safe but verify with user
+## HIGH CONFIDENCE — Safe to Delete
 
-### Unused Database Tables (0 rows, 0 code references outside migrations)
+### Unused Source Files (zero imports anywhere)
+| # | File | Reason |
+|---|------|--------|
+| 1 | `lib/supabase/client.ts` | Duplicate of `lib/supabase.ts` — zero imports |
+| 2 | `lib/supabase/server.ts` | Duplicate of `lib/supabase-server.ts` — zero imports |
+| 3 | `types/channel.ts` | Duplicate of types in `types/server.ts` — zero imports |
+| 4 | `app/api/courses/[courseId]/chats/route.ts` | Zero fetch calls to this endpoint |
+| 5 | `app/api/me/enrollments/route.ts` | Zero fetch calls to this endpoint |
+| 6 | `app/api/notifications/test-email/route.ts` | Test endpoint — zero frontend callers |
 
-| Table | Notes |
-|-------|-------|
-| `services` | No code references. Appears to be an abandoned feature. |
-| `friendships` | No code references. Abandoned social feature. |
-| `dm_conversations` | No code references. Abandoned DM feature. |
-| `dm_messages` | No code references. Abandoned DM feature. |
+### Unused Public Assets (11 files)
+| # | File | Reason |
+|---|------|--------|
+| 7 | `public/wavleba-logo.backup.png` | Backup file — zero references |
+| 8 | `public/wavleba-logo.png` | Superseded by `wavleba-logo-new.png` |
+| 9 | `public/wavleba-logo.svg` | Only in stale `generate-logos 2.js` |
+| 10 | `public/supabase/font.png` | Zero references |
+| 11 | `public/apple-touch-icon-57x57.png` | Not in layout.tsx or manifest.json |
+| 12 | `public/apple-touch-icon-60x60.png` | Not in layout.tsx or manifest.json |
+| 13 | `public/apple-touch-icon-72x72.png` | Not in layout.tsx or manifest.json |
+| 14 | `public/apple-touch-icon-114x114.png` | Not in layout.tsx or manifest.json |
+| 15 | `public/apple-touch-icon-144x144.png` | Not in layout.tsx or manifest.json |
+| 16 | `public/apple-touch-icon-180x180.png` | Not in layout.tsx or manifest.json |
+| 17 | `public/mstile-144x144.png` | Not in browserconfig.xml |
 
-**Note:** These tables have associated migrations. We will NOT drop them or delete migrations. They can be left in the DB as empty tables, or dropped in a future cleanup with explicit approval.
+### Stale Root-level Files (10 files)
+| # | File | Reason |
+|---|------|--------|
+| 18 | `CHANGES.md` | Unreferenced documentation artifact |
+| 19 | `COURSES.md` | Unreferenced documentation artifact |
+| 20 | `PROJECTS.md` | Unreferenced documentation artifact |
+| 21 | `SECURITY_AUDIT_REPORT.md` | One-time audit output, never consumed |
+| 22 | `KEEPZ_INTEGRATION_GUIDE.md` | Superseded by `docs/keepz-api-guide.md` |
+| 23 | `view_scraper_bot.md` | Unreferenced documentation artifact |
+| 24 | `chatdesign.md` | Stale design spec (64KB) |
+| 25 | `technical+implementation.md` | Empty file (0 bytes) |
+| 26 | `production_schema.sql` | Empty file (0 bytes) |
+| 27 | `ChatGPT Image Jan 26, 2026, 08_40_18 PM.png` | Source image — generated outputs already in /public/ |
 
-### Unused PostHog Integration
+### Stale Scripts (4 files)
+| # | File | Reason |
+|---|------|--------|
+| 28 | `scripts/execute-migration.js` | One-time utility for migration 100, already applied |
+| 29 | `scripts/generate-logos 2.js` | macOS Finder duplicate — logos already generated |
+| 30 | `scripts/process-logo.js` | One-time logo processor — output already in /public/ |
+| 31 | `scripts/run-migrations-simple.sh` | Not in package.json, superseded by run-migrations.js |
 
-| Item | Details |
-|------|---------|
-| `contexts/PostHogContext.tsx` | Provider exists and is wrapped in `app/layout.tsx`, but no tracking calls (`posthog.capture()`, `posthog.identify()`) exist anywhere |
-| `posthog-js` npm package | Installed but only used by the inactive provider |
-| `NEXT_PUBLIC_POSTHOG_KEY` env var | Defined in `.env.local` but effectively unused |
-| `NEXT_PUBLIC_POSTHOG_HOST` env var | Defined in `.env.local` but effectively unused |
+### Stale Config Files (3 files)
+| # | File | Reason |
+|---|------|--------|
+| 32 | `.watchmanconfig` | Watchman not used — Next.js has own file watcher |
+| 33 | `tsconfig.dev.json` | Not referenced by any npm script or build |
+| 34 | `start-dev.sh` | Superseded by `npm run dev` |
 
-**Decision needed:** Remove PostHog entirely, or keep it for future use? Removing saves ~50KB bundle size.
+### Stale Legacy Directory (5 files)
+| # | File | Reason |
+|---|------|--------|
+| 35 | `Files/about us.txt` | Raw text draft — content already in app pages |
+| 36 | `Files/personal info security.txt` | Raw text draft |
+| 37 | `Files/privacy policy.txt` | Raw text draft |
+| 38 | `Files/refund policy.txt` | Raw text draft |
+| 39 | `Files/terms and conditions.txt` | Raw text draft |
+
+### Unused npm Package
+| # | Package | Reason |
+|---|---------|--------|
+| 40 | `semver` | Zero imports or usage anywhere in codebase |
+
+### Unused Supabase DB Functions (5 functions)
+| # | Function | Reason |
+|---|----------|--------|
+| 41 | `search_users()` | Created in migration 095, never called via .rpc() |
+| 42 | `cleanup_expired_typing_indicators()` | No cron job or code calls it |
+| 43 | `reset_unread_count()` | Never called from code |
+| 44 | `is_admin()` | Superseded by `check_is_admin()` |
+| 45 | `get_user_role()` | Never called from code |
+
+**Total HIGH CONFIDENCE items: 45**
 
 ---
 
-## NOT REMOVING — Actively used despite 0 rows
+## MEDIUM CONFIDENCE — Needs Manual Review
 
-These tables have 0 rows but are actively referenced in code:
+### Debug/Test API Routes in Production
+| File | Notes |
+|------|-------|
+| `app/api/admin/enrollment-requests/test/route.ts` | Test endpoint — called from admin page but no production purpose |
+| `app/api/admin/debug-requests/route.ts` | Debug endpoint — called from admin page |
 
-| Table | Used By |
-|-------|---------|
-| `saved_cards` | `hooks/useSavedCards.ts`, `components/EnrollmentModal.tsx`, payment API routes |
-| `muted_users` | `hooks/useMuteStatus.ts`, chat edge functions |
-| `course_bundles` | `app/bundles/[bundleId]/page.tsx`, lecturer dashboard |
-| `course_bundle_items` | Bundle detail page, lecturer dashboard |
-| `bundle_enrollments` | Bundle enrollment flow, admin dashboard |
-| `bundle_enrollment_requests` | Full enrollment workflow with real-time subscriptions |
+### Redundant Edge Functions (22 functions)
+These have parallel Next.js API routes that the frontend actually calls. The edge functions are never invoked directly:
+
+`admin-enrollment-requests`, `admin-enrollment-approve`, `admin-enrollment-reject`, `admin-bundle-enrollment-requests`, `admin-bundle-enrollment-approve`, `admin-bundle-enrollment-reject`, `admin-withdrawals`, `admin-withdrawal-approve`, `admin-withdrawal-reject`, `admin-notifications-send`, `enrollment-requests`, `bundle-enrollment-requests`, `notifications`, `notification-read`, `notifications-read-all`, `notifications-unread-count`, `balance`, `withdrawals`, `validate-referral-code`, `me-enrollments`, `health`, `course-chats`
+
+### Unused Exports Within Used Files (~30 exports)
+Exported functions/types never imported elsewhere — not critical but add dead weight:
+- `lib/api-client.ts`: `fetchWithAuth`
+- `lib/auth.ts`: `SignUpData`, `SignInData`, `resendVerificationEmail`
+- `lib/currency.ts`: `formatGel`
+- `lib/email.ts`: `SendEmailParams`
+- `lib/i18n.ts`: `LANGUAGE_COOKIE_NAME`
+- `lib/keepz.ts`: `KeepzCrypto`, `CreateOrderOptions`, `CreateOrderResult`, `getSavedCardsFromKeepz`
+- `lib/referral-storage.ts`: `hasStoredReferral`
+- `lib/username.ts`: `getDisplayUsername`
+- `lib/video-url-parser.ts`: `extractVideoUrls`
+- `components/ErrorBoundary.tsx`: `withErrorBoundary`
+- Various hook type exports: `AdminSubscriptionData`, `BudgetResult`, `CountdownResult`, etc.
+
+### PostHog Integration (wired but inactive)
+`PostHogContext.tsx` and `PostHogPageView.tsx` run in layout.tsx but no `posthog.capture()` or `posthog.identify()` calls exist anywhere. Only automatic pageviews are tracked.
+
+### Unused DB Tables (already dropped)
+`friend_requests`, `friendships` — properly dropped in migration 049. No cleanup needed.
+
+### `payment-screenshots` Storage Bucket
+No new screenshots uploaded since Keepz replaced screenshot flow. Old enrollment requests may still reference stored URLs.
 
 ---
 
-## CLEAN — No issues found
-
-| Category | Result |
-|----------|--------|
-| Commented-out code blocks (10+ lines) | None found |
-| Unused npm packages | None found (all packages have code references) |
-| Stale config files (besides vercel.json) | None found |
+## NOT Deleting (confirmed needed)
+- `scripts/run-migrations.js` — used by `npm run migrate`
+- `scripts/run-migrations-psql.js` — used by `npm run migrate:psql`
+- `supabase/migrations/run-all-migrations.sql` — generated by migrate scripts
+- `lib/supabase/middleware.ts` — imported by root `middleware.ts`
+- All 114 migration files — historical record
+- Both referral-code API routes (different auth contexts)
+- `app/api/health/route.ts` and `app/api/ping/route.ts` — infrastructure monitoring
+- `coming_soon_emails` table — low usage but still actively queried
 
 ---
 
-## Deletion Order
+## Deletion Plan (HIGH CONFIDENCE only)
 
-1. **Components & hooks** (10 + 3 files) — delete, verify build
-2. **Stale config** (vercel.json) — delete
-3. **Edge function source code** (13 directories) — delete from repo only; deployed functions stay on Supabase until manually removed
-4. **PostHog** (if approved) — remove provider from layout, delete context file, uninstall package, remove env vars
-5. **Database tables** (if approved) — NOT deleting in this pass; just documenting
+### Batch 1: Unused npm package
+- `npm uninstall semver`
+- Verify build
+
+### Batch 2: Unused source files (items 1-6)
+- Delete lib/supabase/client.ts, lib/supabase/server.ts
+- Delete types/channel.ts
+- Delete unused API routes
+- Verify build
+
+### Batch 3: Stale root files + scripts + configs (items 18-34)
+- Delete docs, scripts, configs
+- Verify build
+
+### Batch 4: Stale assets + legacy directory (items 7-17, 35-39)
+- Delete unused public/ assets
+- Delete Files/ directory
+- Verify build
+
+### Batch 5: DB function cleanup (items 41-45)
+- Create migration to drop unused functions
+- Apply to staging
+
+### Final: Commit all changes
