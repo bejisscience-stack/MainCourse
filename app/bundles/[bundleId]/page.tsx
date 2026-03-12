@@ -157,7 +157,7 @@ export default function BundleEnrollmentPage() {
   const bundleCourses = bundle.course_bundle_items?.map((item: any) => item.courses).filter(Boolean) || [];
   const totalOriginalPrice = bundleCourses.reduce((sum: number, course: any) => sum + (course?.price || 0), 0);
 
-  // Create a mock course object for PaymentDialog
+  // Create a course-like object for EnrollmentModal
   const bundleAsCourse = {
     id: bundle.id,
     title: bundle.title,

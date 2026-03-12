@@ -83,19 +83,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { courseId, paymentScreenshots, referralCode, isReEnrollment, payment_method } = body;
+    const { courseId, referralCode, isReEnrollment, payment_method } = body;
 
     if (!courseId) {
       return NextResponse.json(
         { error: 'courseId is required' },
-        { status: 400 }
-      );
-    }
-
-    // Validate paymentScreenshots if provided (skip for keepz payments)
-    if (payment_method !== 'keepz' && paymentScreenshots && !Array.isArray(paymentScreenshots)) {
-      return NextResponse.json(
-        { error: 'paymentScreenshots must be an array' },
         { status: 400 }
       );
     }
@@ -197,13 +189,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Format payment screenshots as JSONB array
-    const formattedScreenshots = Array.isArray(paymentScreenshots) 
-      ? paymentScreenshots 
-      : paymentScreenshots 
-        ? [paymentScreenshots] 
-        : [];
-
     // Create enrollment request
     const { data: enrollmentRequest, error: insertError } = await supabase
       .from('enrollment_requests')
@@ -211,9 +196,9 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         course_id: courseId,
         status: 'pending',
-        payment_screenshots: formattedScreenshots.length > 0 ? formattedScreenshots : [],
+        payment_screenshots: [],
         referral_code: referralCode ? referralCode.trim().toUpperCase() : null,
-        payment_method: payment_method || 'bank_transfer',
+        payment_method: payment_method || 'keepz',
       })
       .select()
       .single();

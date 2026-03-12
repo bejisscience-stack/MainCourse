@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import BackgroundShapes from '@/components/BackgroundShapes';
-import PaymentDialog from '@/components/PaymentDialog';
 import CourseEnrollmentCard from '@/components/CourseEnrollmentCard';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
@@ -19,8 +18,6 @@ export default function MyCoursesPage() {
   const { t } = useI18n();
   const { user, profile, role: userRole, isLoading: userLoading } = useUser();
   const { enrolledCourseIds, getEnrollmentInfo, mutate: mutateEnrollments } = useEnrollments(user?.id || null);
-  const [paymentDialogCourse, setPaymentDialogCourse] = useState<CourseCardCourse | null>(null);
-
   // Redirect lecturers immediately
   useEffect(() => {
     if (!userLoading && userRole === 'lecturer') {
@@ -98,10 +95,6 @@ export default function MyCoursesPage() {
       dedupingInterval: 10000,
     }
   );
-
-  // Note: Enrollment requests are now handled through PaymentDialog in CourseEnrollmentCard
-  // This handler is no longer needed but kept for compatibility
-
 
   const isLoading = userLoading || enrolledLoading || discoverLoading;
 
@@ -231,19 +224,6 @@ export default function MyCoursesPage() {
         </div>
       </div>
 
-      {/* Payment Dialog */}
-      {paymentDialogCourse && (
-        <PaymentDialog
-          course={paymentDialogCourse}
-          isOpen={!!paymentDialogCourse}
-          onClose={() => setPaymentDialogCourse(null)}
-          onEnroll={async () => {
-            // Enrollment is handled by CourseEnrollmentCard
-            setPaymentDialogCourse(null);
-            await mutateEnrollments();
-          }}
-        />
-      )}
     </main>
   );
 }

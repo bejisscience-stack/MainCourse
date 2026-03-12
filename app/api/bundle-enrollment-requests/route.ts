@@ -25,19 +25,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { bundleId, paymentScreenshots, referralCode, payment_method } = body;
+    const { bundleId, referralCode, payment_method } = body;
 
     if (!bundleId) {
       return NextResponse.json(
         { error: 'bundleId is required' },
-        { status: 400 }
-      );
-    }
-
-    // Validate paymentScreenshots if provided
-    if (paymentScreenshots && !Array.isArray(paymentScreenshots)) {
-      return NextResponse.json(
-        { error: 'paymentScreenshots must be an array' },
         { status: 400 }
       );
     }
@@ -120,23 +112,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Format payment screenshots as JSONB array (not required for keepz)
-    const formattedScreenshots = Array.isArray(paymentScreenshots)
-      ? paymentScreenshots
-      : paymentScreenshots
-        ? [paymentScreenshots]
-        : [];
-
     // Create bundle enrollment request
     const insertData: any = {
       user_id: user.id,
       bundle_id: bundleId,
       status: 'pending',
-      payment_screenshots: formattedScreenshots.length > 0 ? formattedScreenshots : [],
+      payment_screenshots: [],
+      payment_method: payment_method || 'keepz',
     };
-    if (payment_method === 'keepz') {
-      insertData.payment_method = 'keepz';
-    }
 
     const { data: enrollmentRequest, error: insertError } = await supabase
       .from('bundle_enrollment_requests')

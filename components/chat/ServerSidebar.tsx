@@ -6,7 +6,7 @@ import { useI18n } from '@/contexts/I18nContext';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/hooks/useUser';
 import { useEnrollments } from '@/hooks/useEnrollments';
-import PaymentDialog from '@/components/PaymentDialog';
+import EnrollmentModal from '@/components/EnrollmentModal';
 import type { Server } from '@/types/server';
 import type { Course } from '@/components/CourseCard';
 
@@ -97,62 +97,13 @@ export default function ServerSidebar({
     onServerSelect(serverId);
   };
 
-  const handleEnroll = async (courseId: string) => {
-    if (!user) return;
-    
-    // Prevent duplicate enrollment attempts
-    if (enrolledCourseIds.has(courseId)) {
-      setEnrollmentModal(null);
-      setCourseForPayment(null);
-      onServerSelect(courseId);
-      router.push(`/courses/${courseId}/chat`);
-      return;
-    }
-    
-    setIsEnrolling(true);
-    try {
-      // Perform the actual enrollment with verification
-      const { data: insertedData, error } = await supabase
-        .from('enrollments')
-        .insert([{ user_id: user.id, course_id: courseId }])
-        .select()
-        .single();
-
-      if (error) {
-        if (error.code === '23505') {
-          // Already enrolled, just refresh
-          await mutateEnrollments();
-          setEnrollmentModal(null);
-          setCourseForPayment(null);
-          onServerSelect(courseId);
-          router.push(`/courses/${courseId}/chat`);
-          return;
-        }
-        throw error;
-      }
-
-      // Verify we got exactly one enrollment back for the correct course
-      if (insertedData && insertedData.course_id === courseId) {
-        // Refresh enrollments and navigate
-        await mutateEnrollments();
-        setEnrollmentModal(null);
-        setCourseForPayment(null);
-        onServerSelect(courseId);
-        router.push(`/courses/${courseId}/chat`);
-      } else {
-        throw new Error('Enrollment verification failed');
-      }
-    } catch (err: any) {
-      console.error('Enrollment error:', err);
-      alert(err.message || 'Failed to enroll in course. Please try again.');
-      // Revalidate to get correct state
-      await mutateEnrollments();
-    } finally {
-      setIsEnrolling(false);
-    }
+  const handleEnrollmentModalClose = () => {
+    setEnrollmentModal(null);
+    setCourseForPayment(null);
   };
 
-  const handlePaymentDialogClose = () => {
+  const handleEnrollmentSuccess = async () => {
+    await mutateEnrollments();
     setEnrollmentModal(null);
     setCourseForPayment(null);
   };
@@ -262,13 +213,13 @@ export default function ServerSidebar({
         )}
       </div>
 
-      {/* Payment Dialog */}
+      {/* Enrollment Modal */}
       {courseForPayment && (
-        <PaymentDialog
+        <EnrollmentModal
           course={courseForPayment}
           isOpen={!!courseForPayment}
-          onClose={handlePaymentDialogClose}
-          onEnroll={handleEnroll}
+          onClose={handleEnrollmentModalClose}
+          onSuccess={handleEnrollmentSuccess}
         />
       )}
     </>

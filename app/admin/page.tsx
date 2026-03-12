@@ -1619,6 +1619,19 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <div>
+                    <p className="text-sm text-gray-600">Payment Method</p>
+                    <p className="text-base font-medium text-gray-900">
+                      {selectedRequest.payment_method === 'keepz' ? (
+                        <span className="inline-flex items-center gap-1.5 text-emerald-700">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                          Keepz (Card Payment)
+                        </span>
+                      ) : (
+                        <span className="text-gray-700">Bank Transfer</span>
+                      )}
+                    </p>
+                  </div>
+                  <div>
                     <p className="text-sm text-gray-600">Request ID</p>
                     <p className="text-base font-mono text-sm text-gray-700">
                       {selectedRequest.id}
@@ -1699,72 +1712,55 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              {/* Payment Screenshots */}
-              {selectedRequest.payment_screenshots && Array.isArray(selectedRequest.payment_screenshots) && selectedRequest.payment_screenshots.length > 0 && (
-                <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Payment Screenshots ({selectedRequest.payment_screenshots.length})
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {selectedRequest.payment_screenshots.map((url: string, index: number) => (
-                      <div
-                        key={index}
-                        className="relative group bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
-                      >
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block"
-                        >
-                          <img
-                            src={url}
-                            alt={`Payment screenshot ${index + 1}`}
-                            className="w-full h-64 object-contain cursor-pointer bg-white"
-                            loading="lazy"
-                          />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity flex items-center justify-center">
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 px-4 py-2 rounded-lg text-sm font-medium text-gray-900 shadow-lg">
-                              View Full Size
-                            </div>
-                          </div>
-                        </a>
-                        <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
-                          {index + 1}
-                        </div>
-                      </div>
-                    ))}
+              {/* Payment Info */}
+              {selectedRequest.payment_method === 'keepz' ? (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-3">
+                    <svg className="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm font-medium text-emerald-800">Payment processed via Keepz (automatic)</p>
                   </div>
                 </div>
-              )}
-
-              {/* No Screenshots Message */}
-              {(!selectedRequest.payment_screenshots || 
-                !Array.isArray(selectedRequest.payment_screenshots) || 
-                selectedRequest.payment_screenshots.length === 0) && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <svg
-                      className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                      />
-                    </svg>
-                    <div>
-                      <p className="text-sm font-medium text-yellow-800">No Payment Screenshots</p>
-                      <p className="text-sm text-yellow-700 mt-1">
-                        This enrollment request does not have any payment screenshots attached.
-                      </p>
+              ) : (
+                /* Show payment screenshots only for bank transfer (historical) */
+                selectedRequest.payment_screenshots && Array.isArray(selectedRequest.payment_screenshots) && selectedRequest.payment_screenshots.length > 0 ? (
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Payment Screenshots ({selectedRequest.payment_screenshots.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {selectedRequest.payment_screenshots.map((url: string, index: number) => (
+                        <div
+                          key={index}
+                          className="relative group bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
+                        >
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block"
+                          >
+                            <img
+                              src={url}
+                              alt={`Payment screenshot ${index + 1}`}
+                              className="w-full h-64 object-contain cursor-pointer bg-white"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity flex items-center justify-center">
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 px-4 py-2 rounded-lg text-sm font-medium text-gray-900 shadow-lg">
+                                View Full Size
+                              </div>
+                            </div>
+                          </a>
+                          <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
+                            {index + 1}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
+                ) : null
               )}
 
               {/* Action Buttons */}
@@ -2097,6 +2093,19 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <div>
+                    <p className="text-sm text-gray-600">Payment Method</p>
+                    <p className="text-base font-medium text-gray-900">
+                      {(selectedBundleRequest as any).payment_method === 'keepz' ? (
+                        <span className="inline-flex items-center gap-1.5 text-emerald-700">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                          Keepz (Card Payment)
+                        </span>
+                      ) : (
+                        <span className="text-gray-700">Bank Transfer</span>
+                      )}
+                    </p>
+                  </div>
+                  <div>
                     <p className="text-sm text-gray-600">Request ID</p>
                     <p className="text-base font-mono text-sm text-gray-700">
                       {selectedBundleRequest.id}
@@ -2136,18 +2145,26 @@ export default function AdminDashboard() {
               </div>
 
               {/* Payment Screenshots */}
-              {(() => {
-                // Parse payment_screenshots if it's a string
+              {/* Payment Info */}
+              {(selectedBundleRequest as any).payment_method === 'keepz' ? (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-3">
+                    <svg className="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm font-medium text-emerald-800">Payment processed via Keepz (automatic)</p>
+                  </div>
+                </div>
+              ) : (() => {
+                // Show payment screenshots only for bank transfer (historical)
                 let screenshots = selectedBundleRequest.payment_screenshots;
                 if (typeof screenshots === 'string') {
                   try {
                     screenshots = JSON.parse(screenshots);
                   } catch (e) {
-                    console.warn('[Admin] Failed to parse payment_screenshots:', e);
                     screenshots = [];
                   }
                 }
-                
                 return screenshots && Array.isArray(screenshots) && screenshots.length > 0 ? (
                   <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -2155,78 +2172,25 @@ export default function AdminDashboard() {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {screenshots.map((url: string, index: number) => (
-                      <div
-                        key={index}
-                        className="relative group bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
-                      >
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block"
+                        <div
+                          key={index}
+                          className="relative group bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
                         >
-                          <img
-                            src={url}
-                            alt={`Payment screenshot ${index + 1}`}
-                            className="w-full h-64 object-contain cursor-pointer bg-white"
-                            loading="lazy"
-                          />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity flex items-center justify-center">
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 px-4 py-2 rounded-lg text-sm font-medium text-gray-900 shadow-lg">
-                              View Full Size
-                            </div>
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+                            <img
+                              src={url}
+                              alt={`Payment screenshot ${index + 1}`}
+                              className="w-full h-64 object-contain cursor-pointer bg-white"
+                              loading="lazy"
+                            />
+                          </a>
+                          <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
+                            {index + 1}
                           </div>
-                        </a>
-                        <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded font-semibold">
-                          {index + 1}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                ) : null;
-              })()}
-
-              {/* No Screenshots Message */}
-              {(() => {
-                // Parse payment_screenshots if it's a string (JSON)
-                let screenshots: string[] = [];
-                if (selectedBundleRequest.payment_screenshots) {
-                  if (typeof selectedBundleRequest.payment_screenshots === 'string') {
-                    try {
-                      screenshots = JSON.parse(selectedBundleRequest.payment_screenshots);
-                    } catch (e) {
-                      screenshots = [];
-                    }
-                  } else if (Array.isArray(selectedBundleRequest.payment_screenshots)) {
-                    screenshots = selectedBundleRequest.payment_screenshots;
-                  }
-                }
-                
-                return screenshots.length === 0 ? (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <svg
-                      className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                      />
-                    </svg>
-                    <div>
-                      <p className="text-sm font-medium text-yellow-800">No Payment Screenshots</p>
-                      <p className="text-sm text-yellow-700 mt-1">
-                        This bundle enrollment request does not have any payment screenshots attached.
-                      </p>
+                      ))}
                     </div>
                   </div>
-                </div>
                 ) : null;
               })()}
 

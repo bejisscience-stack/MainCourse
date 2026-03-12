@@ -2,7 +2,7 @@
 
 import { useState, memo, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import PaymentDialog from './PaymentDialog';
+import EnrollmentModal from './EnrollmentModal';
 import { useI18n } from '@/contexts/I18nContext';
 import { useUser } from '@/hooks/useUser';
 import { formatPriceInGel } from '@/lib/currency';
@@ -105,16 +105,9 @@ function CourseCard({
     }
   }, [user, onEnroll, isEnrolled, isEnrolling, router, course.id]);
 
-  const handlePaymentDialogClose = useCallback(() => {
+  const handleEnrollmentModalClose = useCallback(() => {
     setShowPaymentDialog(false);
   }, []);
-
-  const handlePaymentSubmit = useCallback((courseId: string) => {
-    if (onEnroll) {
-      onEnroll(courseId);
-    }
-    setShowPaymentDialog(false);
-  }, [onEnroll]);
 
   // Get course type styling and icon
   const getCourseTypeConfig = useCallback((courseType: string) => {
@@ -464,12 +457,11 @@ function CourseCard({
         </div>
       )}
 
-      {/* Payment Dialog */}
-      <PaymentDialog
+      {/* Enrollment Modal */}
+      <EnrollmentModal
         course={course}
         isOpen={showPaymentDialog}
-        onClose={handlePaymentDialogClose}
-        onEnroll={handlePaymentSubmit}
+        onClose={handleEnrollmentModalClose}
       />
     </>
   );
