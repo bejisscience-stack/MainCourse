@@ -167,7 +167,7 @@ No new screenshots uploaded since Keepz replaced screenshot flow. Old enrollment
 
 ## Execution Summary (completed 2026-03-12)
 
-### Deleted (40 items)
+### Pass 1 — Initial Cleanup (40 items)
 - **1 npm package**: `semver`
 - **6 source files**: 2 duplicate lib/supabase files, types/channel.ts, 3 unused API routes
 - **11 public assets**: old logos, unused apple-touch-icons, unused mstile
@@ -176,16 +176,39 @@ No new screenshots uploaded since Keepz replaced screenshot flow. Old enrollment
 - **3 configs**: .watchmanconfig, tsconfig.dev.json, start-dev.sh
 - **5 legacy text files**: Files/ directory (about us, privacy, refund, terms, personal info)
 
-### Created
-- `supabase/migrations/115_drop_unused_db_functions.sql` — drops 5 unused DB functions (needs deployment to staging)
+### Pass 2 — Deep Cleanup (32 items)
+- **22 orphaned edge functions** deleted across two batches:
+  - Batch 1 (13): admin-bundle-enrollment-approve/reject, admin-enrollment-approve/reject, admin-notifications-send, admin-withdrawal-approve/reject, admin-withdrawals, course-chats, me-enrollments, notification-read, notifications-read-all, notifications-unread-count
+  - Batch 2 (9): admin-bundle-enrollment-requests, admin-enrollment-requests, balance, bundle-enrollment-requests, enrollment-requests, notifications, validate-referral-code, withdrawals, health
+- **1 orphaned shared module**: `_shared/email.ts` (no remaining importers after edge function cleanup)
+- **8 dead CSS keyframes** from deleted animation components: bitcoinDrop, socialFloat, aiSlideLeft, aiSlideRight, signalPulse, testMove, simpleFloat, moveLine
+- **1 stale config**: vercel.json (project is on DigitalOcean)
+
+### Pass 0 — Payment System Cleanup (prior)
+- **2 deleted components**: PaymentDialog.tsx (487 lines), PaymentMethodSelector.tsx (69 lines)
+- **2 deleted images**: payment-step-1.png, payment-step-2.png
+- **~30 obsolete locale keys** removed from en.json and ge.json
+- **10 orphaned components** + **3 unused hooks** deleted
+
+### Remaining Edge Functions (actively called)
+- `chat-messages`, `chat-media`, `chat-mute`, `chat-typing`, `chat-unread` — called directly via `edgeFunctionUrl()`
+- `view-scraper` — called via API route proxy + pg_cron
+- `_shared/` — auth.ts, cors.ts, supabase.ts (used by above functions)
+
+### DB Migration
+- `supabase/migrations/115_drop_unused_db_functions.sql` — deployed to staging (bvptqdmhuumjbyfnjxdt)
+- Drops: `search_users()`, `cleanup_expired_typing_indicators()`, `reset_unread_count()`, `is_admin()`, `get_user_role()`
 
 ### Build Verification
 - `npx tsc --noEmit`: PASS (zero errors)
 - `npm run build`: FAILS (pre-existing `resend` → `mailparser` → `iconv-lite` dependency issue — NOT caused by cleanup)
 - No new errors introduced by cleanup
 
+### Total Lines Removed
+~5,540 lines of dead code across all passes
+
 ### Still Pending (MEDIUM confidence — manual review needed)
-- 22 redundant edge functions (have parallel API routes)
-- 2 debug/test API routes in production
-- ~30 unused exports within used files
-- PostHog integration (wired but inactive)
+- 2 debug/test API routes in production (`admin/enrollment-requests/test`, `admin/debug-requests`)
+- ~30 unused exports within used files (non-critical)
+- PostHog integration (wired but inactive — provider runs, no tracking calls)
+- `payment-screenshots` storage bucket (historical data, no new uploads)
