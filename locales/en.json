@@ -927,5 +927,17 @@
     "savedCardFailed": "Payment failed. Try again or use a different method.",
     "endingIn": "ending in",
     "orPayWithNewMethod": "Or pay with a new method"
+  },
+  "projectSubscription": {
+    "title": "Project Subscription",
+    "monthlyPrice": "per month",
+    "subscribe": "Subscribe",
+    "pendingTitle": "Pending Review",
+    "pendingMessage": "Your subscription request is being reviewed. We'll notify you once it's approved.",
+    "activeTitle": "Subscription Active",
+    "activeUntil": "Active until {{date}}",
+    "rejectedTitle": "Request Declined",
+    "rejectedMessage": "Your subscription request was declined. Please contact support if you believe this is an error.",
+    "resubscribe": "Try Again"
   }
 }
