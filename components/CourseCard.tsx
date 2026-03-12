@@ -48,7 +48,7 @@ function CourseCard({
   const router = useRouter();
   const { user } = useUser();
   const [isVideoExpanded, setIsVideoExpanded] = useState(false);
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
 
   // Ensure prices are never displayed as negative - fallback to 0 for any edge cases
   const safePrice = useMemo(() => Math.max(0, course.price || 0), [course.price]);
@@ -101,12 +101,12 @@ function CourseCard({
       return;
     }
     if (onEnroll && !isEnrolled && !isEnrolling) {
-      setShowPaymentDialog(true);
+      setShowEnrollmentModal(true);
     }
   }, [user, onEnroll, isEnrolled, isEnrolling, router, course.id]);
 
   const handleEnrollmentModalClose = useCallback(() => {
-    setShowPaymentDialog(false);
+    setShowEnrollmentModal(false);
   }, []);
 
   // Get course type styling and icon
@@ -460,7 +460,7 @@ function CourseCard({
       {/* Enrollment Modal */}
       <EnrollmentModal
         course={course}
-        isOpen={showPaymentDialog}
+        isOpen={showEnrollmentModal}
         onClose={handleEnrollmentModalClose}
       />
     </>
