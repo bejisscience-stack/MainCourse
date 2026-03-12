@@ -1,11 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  throw new Error("Missing Supabase environment variables");
 }
 
 // TypeScript type guards - these are guaranteed to be strings after the check above
@@ -23,13 +23,20 @@ const safeSupabaseAnonKey: string = supabaseAnonKey;
  */
 export function createServiceRoleClient(fallbackToken?: string) {
   if (!supabaseServiceRoleKey) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "FATAL: SUPABASE_SERVICE_ROLE_KEY is required in production. Admin operations cannot safely fall back to anon/user tokens.",
+      );
+    }
     if (fallbackToken) {
-      console.warn('SUPABASE_SERVICE_ROLE_KEY not set. Falling back to user token (RLS will apply, admin policies should work).');
+      console.warn(
+        "SUPABASE_SERVICE_ROLE_KEY not set. Falling back to user token (RLS will apply, admin policies should work).",
+      );
       return createClient(safeSupabaseUrl, safeSupabaseAnonKey, {
         global: {
           headers: {
             Authorization: `Bearer ${fallbackToken}`,
-            'Cache-Control': 'no-cache',
+            "Cache-Control": "no-cache",
           },
         },
         auth: {
@@ -37,11 +44,13 @@ export function createServiceRoleClient(fallbackToken?: string) {
           autoRefreshToken: false,
         },
         db: {
-          schema: 'public',
+          schema: "public",
         },
       });
     }
-    console.warn('SUPABASE_SERVICE_ROLE_KEY not set and no fallback token provided. Using anon key (RLS will apply, may fail for admin operations).');
+    console.warn(
+      "SUPABASE_SERVICE_ROLE_KEY not set and no fallback token provided. Using anon key (RLS will apply, may fail for admin operations).",
+    );
     return createClient(safeSupabaseUrl, safeSupabaseAnonKey);
   }
 
@@ -54,13 +63,13 @@ export function createServiceRoleClient(fallbackToken?: string) {
       autoRefreshToken: false,
     },
     db: {
-      schema: 'public',
+      schema: "public",
     },
     global: {
       headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'x-request-id': requestId,
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        "x-request-id": requestId,
       },
     },
   });
@@ -91,33 +100,34 @@ export async function verifyTokenAndGetUser(accessToken: string) {
   try {
     // Call Supabase Auth API directly to verify the token
     const response = await fetch(`${safeSupabaseUrl}/auth/v1/user`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'apikey': safeSupabaseAnonKey,
+        Authorization: `Bearer ${accessToken}`,
+        apikey: safeSupabaseAnonKey,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      return { 
-        user: null, 
-        error: { 
-          message: errorData.msg || errorData.message || `HTTP ${response.status}`,
-          status: response.status
-        } 
+      return {
+        user: null,
+        error: {
+          message:
+            errorData.msg || errorData.message || `HTTP ${response.status}`,
+          status: response.status,
+        },
       };
     }
 
     const user = await response.json();
     return { user, error: null };
   } catch (err: any) {
-    return { 
-      user: null, 
-      error: { 
-        message: err?.message || 'Token verification failed',
-        status: 500
-      } 
+    return {
+      user: null,
+      error: {
+        message: err?.message || "Token verification failed",
+        status: 500,
+      },
     };
   }
 }
