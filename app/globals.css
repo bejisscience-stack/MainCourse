@@ -397,85 +397,6 @@ nav,
   transition-duration: 150ms;
 }
 
-/* Scroll animation keyframes */
-@keyframes bitcoinDrop {
-  0% {
-    opacity: 0.05;
-  }
-
-  80% {
-    opacity: 0.03;
-  }
-
-  100% {
-    transform: translateY(calc(100vh + 100px));
-    opacity: 0;
-  }
-}
-
-@keyframes socialFloat {
-  0% {
-    opacity: 0.08;
-  }
-
-  50% {
-    opacity: 0.05;
-  }
-
-  100% {
-    transform: translateY(calc(-100vh - 100px)) translateX(50px);
-    opacity: 0;
-  }
-}
-
-@keyframes aiSlideLeft {
-  0% {
-    transform: translateX(-100px);
-    opacity: 0.06;
-  }
-
-  50% {
-    opacity: 0.04;
-  }
-
-  100% {
-    transform: translateX(calc(-100vw - 100px));
-    opacity: 0;
-  }
-}
-
-@keyframes aiSlideRight {
-  0% {
-    transform: translateX(100px);
-    opacity: 0.06;
-  }
-
-  50% {
-    opacity: 0.04;
-  }
-
-  100% {
-    transform: translateX(calc(100vw + 100px));
-    opacity: 0;
-  }
-}
-
-@keyframes signalPulse {
-  0% {
-    transform: scale(0.8);
-    opacity: 0.08;
-  }
-
-  50% {
-    transform: scale(1.2);
-    opacity: 0.05;
-  }
-
-  100% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
-}
 
 /* New background animation keyframes */
 @keyframes stockFadeIn {
@@ -931,41 +852,6 @@ nav,
   }
 }
 
-@keyframes testMove {
-  0% {
-    transform: translateX(0px);
-  }
-
-  50% {
-    transform: translateX(200px);
-  }
-
-  100% {
-    transform: translateX(0px);
-  }
-}
-
-@keyframes simpleFloat {
-  0% {
-    transform: translateY(0px);
-    opacity: 0.7;
-  }
-
-  100% {
-    transform: translateY(-100vh);
-    opacity: 0;
-  }
-}
-
-@keyframes moveLine {
-  0% {
-    transform: translateX(-100vw);
-  }
-
-  100% {
-    transform: translateX(100vw);
-  }
-}
 
 /* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
