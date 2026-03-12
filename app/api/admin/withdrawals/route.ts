@@ -5,6 +5,7 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import { logAdminAction } from "@/lib/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -210,6 +211,19 @@ export async function GET(request: NextRequest) {
       requestsWithRelations.length,
       "requests with relations",
     );
+
+    try {
+      await logAdminAction(
+        request,
+        user.id,
+        "view_withdrawals",
+        "withdrawal_requests",
+        "list",
+        { count: requestsWithRelations.length },
+      );
+    } catch (e) {
+      console.error("[Audit] Log failed:", e);
+    }
 
     // Return with no-cache headers to prevent stale data
     return NextResponse.json(

@@ -11,8 +11,11 @@ const nextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 60,
-    // SVG rendering is partially mitigated by the contentSecurityPolicy below (script-src 'none', sandbox).
-    // User-uploaded SVGs should still be sanitized server-side before storage.
+    // SECURITY (CSP-02): dangerouslyAllowSVG enabled for next/image SVG rendering.
+    // Mitigated by restrictive contentSecurityPolicy below (script-src 'none', sandbox).
+    // Current status: No user-uploaded SVGs exist. All SVGs are admin-controlled React components.
+    // If user SVG uploads are added in future, add server-side sanitization (DOMPurify)
+    // to the upload flow before storage.
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
@@ -60,13 +63,6 @@ const nextConfig = {
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
-          },
-          {
-            // TODO: migrate 'unsafe-inline' in script-src to nonce-based scripts
-            // Next.js 14 supports nonce via middleware. See: https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy
-            key: "Content-Security-Policy",
-            value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in; font-src 'self'; connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.keepz.me https://app.posthog.com https://us.i.posthog.com; frame-src 'self' https://checkout.keepz.me; object-src 'none'; base-uri 'self'; form-action 'self'",
           },
         ],
       },

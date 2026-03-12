@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIP(request);
-    const { allowed, retryAfterMs } = subscribeLimiter.check(ip);
+    const { allowed, retryAfterMs } = await subscribeLimiter.check(ip);
     if (!allowed) return rateLimitResponse(retryAfterMs);
 
     const body = await request.json();

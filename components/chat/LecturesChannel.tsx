@@ -1,11 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useVideos } from '@/hooks/useVideos';
-import { useI18n } from '@/contexts/I18nContext';
-import type { Channel, Video, VideoProgress } from '@/types/server';
-import type { EnrollmentInfo } from '@/hooks/useEnrollments';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { useVideos } from "@/hooks/useVideos";
+import { useI18n } from "@/contexts/I18nContext";
+import type { Channel, Video, VideoProgress } from "@/types/server";
+import type { EnrollmentInfo } from "@/hooks/useEnrollments";
+import { useSignedVideoUrl } from "@/hooks/useSignedVideoUrl";
 
 interface LecturesChannelProps {
   channel: Channel;
@@ -29,11 +30,11 @@ export default function LecturesChannel({
   onMobileMenuClick,
 }: LecturesChannelProps) {
   const { t } = useI18n();
-  const { videos, isLoading: loading, mutate: mutateVideos } = useVideos(
-    channel.id,
-    courseId,
-    currentUserId
-  );
+  const {
+    videos,
+    isLoading: loading,
+    mutate: mutateVideos,
+  } = useVideos(channel.id, courseId, currentUserId);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
@@ -51,10 +52,10 @@ export default function LecturesChannel({
   };
 
   const formatDuration = (seconds?: number) => {
-    if (!seconds) return '';
+    if (!seconds) return "";
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const getProgressPercentage = (video: Video) => {
@@ -70,7 +71,7 @@ export default function LecturesChannel({
             <div className="absolute inset-0 rounded-full border-4 border-emerald-500/20"></div>
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-emerald-400 animate-spin"></div>
           </div>
-          <p className="text-gray-400 font-medium">{t('common.loading')}</p>
+          <p className="text-gray-400 font-medium">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -87,19 +88,41 @@ export default function LecturesChannel({
               onClick={onMobileMenuClick}
               className="md:hidden text-gray-400 hover:text-white mr-1"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
               </svg>
             </button>
 
             <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center shadow-soft">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              <svg
+                className="w-5 h-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
               </svg>
             </div>
             <div>
               <h2 className="text-white font-bold text-lg">{channel.name}</h2>
-              <p className="text-gray-500 text-sm">{t('lectures.videos', { count: videos.length })}</p>
+              <p className="text-gray-500 text-sm">
+                {t("lectures.videos", { count: videos.length })}
+              </p>
             </div>
           </div>
           {isLecturer && (
@@ -107,10 +130,26 @@ export default function LecturesChannel({
               onClick={() => setShowUploadModal(true)}
               className="px-4 py-2.5 bg-emerald-500/90 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl transition-all shadow-soft hover:shadow-soft-lg flex items-center gap-2 group"
             >
-              <svg className="w-5 h-5 transition-transform group-hover:scale-110 will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <svg
+                className="w-5 h-5 transition-transform group-hover:scale-110 will-change-transform"
+                style={{
+                  transformOrigin: "center",
+                  backfaceVisibility: "hidden",
+                }}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
               </svg>
-              {videos.length === 0 ? t('lectures.uploadFirstVideo') : t('lectures.uploadVideo')}
+              {videos.length === 0
+                ? t("lectures.uploadFirstVideo")
+                : t("lectures.uploadVideo")}
             </button>
           )}
         </div>
@@ -121,22 +160,34 @@ export default function LecturesChannel({
         {videos.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-16">
             <div className="w-24 h-24 rounded-full bg-navy-900/60 border border-navy-800/60 flex items-center justify-center mb-6">
-              <svg className="w-12 h-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              <svg
+                className="w-12 h-12 text-gray-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">{t('lectures.noVideosYet')}</h3>
+            <h3 className="text-xl font-semibold text-white mb-2">
+              {t("lectures.noVideosYet")}
+            </h3>
             <p className="text-gray-500 max-w-sm mb-6">
               {isLecturer
-                ? t('lectures.startBuildingCourse')
-                : t('lectures.instructorNoVideos')}
+                ? t("lectures.startBuildingCourse")
+                : t("lectures.instructorNoVideos")}
             </p>
             {isLecturer && (
               <button
                 onClick={() => setShowUploadModal(true)}
                 className="px-6 py-3 bg-emerald-500/90 text-white font-semibold rounded-xl hover:bg-emerald-500 transition-all shadow-soft"
               >
-                {t('lectures.uploadFirstVideo')}
+                {t("lectures.uploadFirstVideo")}
               </button>
             )}
           </div>
@@ -160,8 +211,8 @@ export default function LecturesChannel({
                   onPlay={() => unlocked && setSelectedVideo(video)}
                   onEdit={() => setEditingVideo(video)}
                   onDelete={async () => {
-                    if (confirm(t('lectures.confirmDeleteVideo'))) {
-                      await supabase.from('videos').delete().eq('id', video.id);
+                    if (confirm(t("lectures.confirmDeleteVideo"))) {
+                      await supabase.from("videos").delete().eq("id", video.id);
                       mutateVideos();
                     }
                   }}
@@ -249,7 +300,7 @@ function VideoCard({
 
     setIsMarkingAsSeen(true);
     try {
-      const { error } = await supabase.from('video_progress').upsert(
+      const { error } = await supabase.from("video_progress").upsert(
         {
           user_id: currentUserId,
           video_id: video.id,
@@ -259,14 +310,14 @@ function VideoCard({
           is_completed: true,
           completed_at: new Date().toISOString(),
         },
-        { onConflict: 'user_id,video_id' }
+        { onConflict: "user_id,video_id" },
       );
 
       if (error) throw error;
       onMarkAsSeen();
     } catch (err) {
-      console.error('Error marking video as seen:', err);
-      alert('Failed to mark video as seen. Please try again.');
+      console.error("Error marking video as seen:", err);
+      alert("Failed to mark video as seen. Please try again.");
     } finally {
       setIsMarkingAsSeen(false);
     }
@@ -274,10 +325,11 @@ function VideoCard({
 
   return (
     <div
-      className={`group relative flex flex-col sm:flex-row gap-4 p-4 rounded-2xl transition-all duration-300 ${unlocked
-          ? 'bg-navy-900/60 hover:bg-navy-900/80 cursor-pointer border border-navy-800/60 hover:border-emerald-400/40 hover:shadow-soft-lg'
-          : 'bg-navy-900/30 border border-navy-800/50 opacity-60'
-        }`}
+      className={`group relative flex flex-col sm:flex-row gap-4 p-4 rounded-2xl transition-all duration-300 ${
+        unlocked
+          ? "bg-navy-900/60 hover:bg-navy-900/80 cursor-pointer border border-navy-800/60 hover:border-emerald-400/40 hover:shadow-soft-lg"
+          : "bg-navy-900/30 border border-navy-800/50 opacity-60"
+      }`}
       onClick={() => !showMenu && onPlay()}
     >
       {/* Thumbnail */}
@@ -291,7 +343,11 @@ function VideoCard({
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-navy-900 to-navy-950">
-            <svg className="w-12 h-12 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-12 h-12 text-gray-600"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path d="M8 5v14l11-7z" />
             </svg>
           </div>
@@ -300,8 +356,18 @@ function VideoCard({
         {/* Play overlay */}
         {unlocked && (
           <div className="absolute inset-0 flex items-center justify-center bg-navy-950/50 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform will-change-transform" style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}>
-              <svg className="w-6 h-6 text-navy-950 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+            <div
+              className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform will-change-transform"
+              style={{
+                transformOrigin: "center",
+                backfaceVisibility: "hidden",
+              }}
+            >
+              <svg
+                className="w-6 h-6 text-navy-950 ml-0.5"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path d="M8 5v14l11-7z" />
               </svg>
             </div>
@@ -312,16 +378,29 @@ function VideoCard({
         {!unlocked && (
           <div
             className="absolute inset-0 flex items-center justify-center bg-navy-950/70 group/lock"
-            title={t('enrollment.videoLockedTooltip')}
-            aria-label={t('enrollment.videoLockedTooltip')}
+            title={t("enrollment.videoLockedTooltip")}
+            aria-label={t("enrollment.videoLockedTooltip")}
           >
             <div className="text-center relative">
-              <svg className="w-8 h-8 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              <svg
+                className="w-8 h-8 text-gray-400 mx-auto"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                />
               </svg>
               {/* Tooltip on hover */}
-              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-navy-950 border border-navy-700/70 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/lock:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg" role="tooltip">
-                {t('enrollment.videoLockedTooltip')}
+              <div
+                className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-navy-950 border border-navy-700/70 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/lock:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg"
+                role="tooltip"
+              >
+                {t("enrollment.videoLockedTooltip")}
               </div>
             </div>
           </div>
@@ -353,26 +432,52 @@ function VideoCard({
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/15 text-emerald-300 text-xs font-bold">
                 {index + 1}
               </span>
-              <h3 className="text-white font-semibold truncate">{video.title}</h3>
+              <h3 className="text-white font-semibold truncate">
+                {video.title}
+              </h3>
             </div>
             {video.description && (
-              <p className="text-gray-400 text-sm line-clamp-2 mb-3">{video.description}</p>
+              <p className="text-gray-400 text-sm line-clamp-2 mb-3">
+                {video.description}
+              </p>
             )}
             <div className="flex items-center gap-4 text-xs">
               {video.progress?.isCompleted ? (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 font-medium">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
-                  {t('lectures.completed')}
+                  {t("lectures.completed")}
                 </span>
               ) : progress > 0 ? (
-                <span className="text-gray-500">{t('lectures.watched', { percent: Math.round(progress) })}</span>
+                <span className="text-gray-500">
+                  {t("lectures.watched", { percent: Math.round(progress) })}
+                </span>
               ) : null}
               {video.duration && (
                 <span className="text-gray-500 flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   {formatDuration(video.duration)}
                 </span>
@@ -388,17 +493,37 @@ function VideoCard({
               >
                 {isMarkingAsSeen ? (
                   <>
-                    <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <svg
+                      className="w-3 h-3 animate-spin"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
                     </svg>
-                    {t('lectures.marking')}
+                    {t("lectures.marking")}
                   </>
                 ) : (
                   <>
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg
+                      className="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
-                    {t('lectures.markAsSeen')}
+                    {t("lectures.markAsSeen")}
                   </>
                 )}
               </button>
@@ -412,14 +537,21 @@ function VideoCard({
                 onClick={() => setShowMenu(!showMenu)}
                 className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-navy-800/60 transition-colors"
               >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
                 </svg>
               </button>
 
               {showMenu && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowMenu(false)}
+                  />
                   <div className="absolute right-0 top-full mt-1 w-44 bg-navy-950/95 rounded-xl shadow-xl border border-navy-700/70 py-1 z-20 animate-in fade-in slide-in-from-top-2 duration-200">
                     <button
                       onClick={() => {
@@ -428,10 +560,20 @@ function VideoCard({
                       }}
                       className="w-full px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-navy-800/70 hover:text-white flex items-center gap-3 transition-colors"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
                       </svg>
-                      {t('lectures.editVideo')}
+                      {t("lectures.editVideo")}
                     </button>
                     <button
                       onClick={() => {
@@ -440,10 +582,20 @@ function VideoCard({
                       }}
                       className="w-full px-4 py-2.5 text-left text-sm text-red-300 hover:bg-red-500/10 hover:text-red-200 flex items-center gap-3 transition-colors"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
                       </svg>
-                      {t('lectures.deleteVideo')}
+                      {t("lectures.deleteVideo")}
                     </button>
                   </div>
                 </>
@@ -473,56 +625,68 @@ function VideoPlayerModal({
   const { t } = useI18n();
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [isCompleted, setIsCompleted] = useState(video.progress?.isCompleted || false);
+  const [isCompleted, setIsCompleted] = useState(
+    video.progress?.isCompleted || false,
+  );
   const [isMarkingAsSeen, setIsMarkingAsSeen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const progressUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
   const lastProgressPercentageRef = useRef<number>(0);
 
-  const markVideoAsSeen = useCallback(async (manual = false) => {
-    if (!videoRef.current || !duration) return;
+  const {
+    signedUrl,
+    isLoading: isSignedUrlLoading,
+    refresh: refreshSignedUrl,
+  } = useSignedVideoUrl(courseId, video.videoUrl);
 
-    setIsMarkingAsSeen(true);
-    try {
-      const current = videoRef.current.currentTime;
-      const total = duration;
+  const markVideoAsSeen = useCallback(
+    async (manual = false) => {
+      if (!videoRef.current || !duration) return;
 
-      const { error } = await supabase.from('video_progress').upsert(
-        {
-          user_id: currentUserId,
-          video_id: video.id,
-          course_id: courseId,
-          progress_seconds: Math.floor(current),
-          duration_seconds: Math.floor(total),
-          is_completed: true,
-          completed_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,video_id' }
-      );
+      setIsMarkingAsSeen(true);
+      try {
+        const current = videoRef.current.currentTime;
+        const total = duration;
 
-      if (error) throw error;
+        const { error } = await supabase.from("video_progress").upsert(
+          {
+            user_id: currentUserId,
+            video_id: video.id,
+            course_id: courseId,
+            progress_seconds: Math.floor(current),
+            duration_seconds: Math.floor(total),
+            is_completed: true,
+            completed_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,video_id" },
+        );
 
-      setIsCompleted(true);
-      onProgressUpdate();
+        if (error) throw error;
 
-      if (manual) {
-        // Show a brief success message
-        const successMsg = document.createElement('div');
-        successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-        successMsg.textContent = '✓ Video marked as seen!';
-        document.body.appendChild(successMsg);
-        setTimeout(() => {
-          document.body.removeChild(successMsg);
-        }, 2000);
+        setIsCompleted(true);
+        onProgressUpdate();
+
+        if (manual) {
+          // Show a brief success message
+          const successMsg = document.createElement("div");
+          successMsg.className =
+            "fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50";
+          successMsg.textContent = "✓ Video marked as seen!";
+          document.body.appendChild(successMsg);
+          setTimeout(() => {
+            document.body.removeChild(successMsg);
+          }, 2000);
+        }
+      } catch (err) {
+        console.error("Error marking video as seen:", err);
+        alert("Failed to mark video as seen. Please try again.");
+      } finally {
+        setIsMarkingAsSeen(false);
       }
-    } catch (err) {
-      console.error('Error marking video as seen:', err);
-      alert('Failed to mark video as seen. Please try again.');
-    } finally {
-      setIsMarkingAsSeen(false);
-    }
-  }, [video.id, courseId, currentUserId, duration, onProgressUpdate]);
+    },
+    [video.id, courseId, currentUserId, duration, onProgressUpdate],
+  );
 
   const handleTimeUpdate = useCallback(() => {
     if (!videoRef.current) return;
@@ -538,7 +702,11 @@ function VideoPlayerModal({
     const progressPercentage = (current / total) * 100;
 
     // Check if we've reached 90% and haven't marked as completed yet
-    if (progressPercentage >= 90 && !isCompleted && progressPercentage > lastProgressPercentageRef.current) {
+    if (
+      progressPercentage >= 90 &&
+      !isCompleted &&
+      progressPercentage > lastProgressPercentageRef.current
+    ) {
       // Clear any pending timeout
       if (progressUpdateTimeoutRef.current) {
         clearTimeout(progressUpdateTimeoutRef.current);
@@ -554,7 +722,7 @@ function VideoPlayerModal({
 
         if (finalPercentage >= 90 && !isCompleted) {
           try {
-            const { error } = await supabase.from('video_progress').upsert(
+            const { error } = await supabase.from("video_progress").upsert(
               {
                 user_id: currentUserId,
                 video_id: video.id,
@@ -564,7 +732,7 @@ function VideoPlayerModal({
                 is_completed: true,
                 completed_at: new Date().toISOString(),
               },
-              { onConflict: 'user_id,video_id' }
+              { onConflict: "user_id,video_id" },
             );
 
             if (error) throw error;
@@ -573,7 +741,7 @@ function VideoPlayerModal({
             onProgressUpdate();
             lastUpdateTimeRef.current = Date.now();
           } catch (err) {
-            console.error('Error auto-marking video as seen:', err);
+            console.error("Error auto-marking video as seen:", err);
           }
         }
       }, 2000); // Wait 2 seconds at 90% before auto-completing
@@ -582,7 +750,8 @@ function VideoPlayerModal({
     // Update progress every 5 seconds (but not completion status)
     const now = Date.now();
     const timeSinceLastUpdate = now - lastUpdateTimeRef.current;
-    const shouldUpdateProgress = Math.floor(current) % 5 === 0 && timeSinceLastUpdate >= 5000;
+    const shouldUpdateProgress =
+      Math.floor(current) % 5 === 0 && timeSinceLastUpdate >= 5000;
 
     if (shouldUpdateProgress && !isCompleted) {
       if (progressUpdateTimeoutRef.current) {
@@ -599,7 +768,7 @@ function VideoPlayerModal({
         // Only update progress, not completion (completion is handled above)
         if (progressPercentage < 90) {
           try {
-            const { error } = await supabase.from('video_progress').upsert(
+            const { error } = await supabase.from("video_progress").upsert(
               {
                 user_id: currentUserId,
                 video_id: video.id,
@@ -609,13 +778,13 @@ function VideoPlayerModal({
                 is_completed: false,
                 completed_at: null,
               },
-              { onConflict: 'user_id,video_id' }
+              { onConflict: "user_id,video_id" },
             );
 
             if (error) throw error;
             lastUpdateTimeRef.current = Date.now();
           } catch (err) {
-            console.error('Error updating progress:', err);
+            console.error("Error updating progress:", err);
           }
         }
       }, 1000);
@@ -657,30 +826,54 @@ function VideoPlayerModal({
             onClick={onClose}
             className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-navy-800/70 transition-colors"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
         <div className="aspect-video bg-black relative">
-          <video
-            ref={videoRef}
-            src={video.videoUrl}
-            controls
-            autoPlay
-            preload="metadata"
-            playsInline
-            className="w-full h-full"
-            onTimeUpdate={handleTimeUpdate}
-            onLoadedMetadata={() => {
-              if (videoRef.current && video.progress) {
-                videoRef.current.currentTime = video.progress.progressSeconds;
-              }
-              if (videoRef.current) {
-                setDuration(videoRef.current.duration);
-              }
-            }}
-          />
+          {isSignedUrlLoading ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="relative w-12 h-12">
+                <div className="absolute inset-0 rounded-full border-4 border-emerald-500/20"></div>
+                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-emerald-400 animate-spin"></div>
+              </div>
+            </div>
+          ) : signedUrl ? (
+            <video
+              ref={videoRef}
+              src={signedUrl}
+              controls
+              autoPlay
+              preload="metadata"
+              playsInline
+              className="w-full h-full"
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={() => {
+                if (videoRef.current && video.progress) {
+                  videoRef.current.currentTime = video.progress.progressSeconds;
+                }
+                if (videoRef.current) {
+                  setDuration(videoRef.current.duration);
+                }
+              }}
+              onError={() => refreshSignedUrl()}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-400">
+              <p>Failed to load video</p>
+            </div>
+          )}
 
           {/* Progress indicator overlay */}
           {duration > 0 && (
@@ -698,15 +891,27 @@ function VideoPlayerModal({
           <div className="flex items-center gap-4 flex-1">
             {duration > 0 && (
               <div className="text-sm text-gray-400">
-                {t('lectures.watched', { percent: Math.round((currentTime / duration) * 100) })}
+                {t("lectures.watched", {
+                  percent: Math.round((currentTime / duration) * 100),
+                })}
               </div>
             )}
             {isCompleted ? (
               <div className="flex items-center gap-2 text-emerald-300">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
-                <span className="font-semibold">{t('lectures.completed')}</span>
+                <span className="font-semibold">{t("lectures.completed")}</span>
               </div>
             ) : (
               <button
@@ -716,17 +921,37 @@ function VideoPlayerModal({
               >
                 {isMarkingAsSeen ? (
                   <>
-                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <svg
+                      className="w-4 h-4 animate-spin"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
                     </svg>
-                    {t('lectures.marking')}
+                    {t("lectures.marking")}
                   </>
                 ) : (
                   <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
-                    {t('lectures.markAsSeen')}
+                    {t("lectures.markAsSeen")}
                   </>
                 )}
               </button>
@@ -735,7 +960,14 @@ function VideoPlayerModal({
           <div className="text-xs text-gray-500">
             {duration > 0 && (
               <span>
-                {Math.floor(currentTime / 60)}:{(Math.floor(currentTime % 60)).toString().padStart(2, '0')} / {Math.floor(duration / 60)}:{(Math.floor(duration % 60)).toString().padStart(2, '0')}
+                {Math.floor(currentTime / 60)}:
+                {Math.floor(currentTime % 60)
+                  .toString()
+                  .padStart(2, "0")}{" "}
+                / {Math.floor(duration / 60)}:
+                {Math.floor(duration % 60)
+                  .toString()
+                  .padStart(2, "0")}
               </span>
             )}
           </div>
@@ -745,11 +977,23 @@ function VideoPlayerModal({
           <div className="p-4 bg-emerald-500/10 border-t border-emerald-500/20">
             <div className="flex items-center gap-3 text-emerald-300">
               <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
-              <span className="font-semibold">Video completed! You can now access the next video.</span>
+              <span className="font-semibold">
+                Video completed! You can now access the next video.
+              </span>
             </div>
           </div>
         )}
@@ -770,7 +1014,7 @@ function VideoEditModal({
 }) {
   const [formData, setFormData] = useState({
     title: video.title,
-    description: video.description || '',
+    description: video.description || "",
     displayOrder: video.displayOrder || 0,
     isPublished: video.isPublished ?? true,
   });
@@ -788,22 +1032,28 @@ function VideoEditModal({
 
       // Upload new thumbnail if provided
       if (thumbnailFile) {
-        const fileExt = thumbnailFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+        const fileExt =
+          thumbnailFile.name.split(".").pop()?.toLowerCase() || "jpg";
         const fileName = `thumbnail-${Date.now()}.${fileExt}`;
         const filePath = `${courseId}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('course-thumbnails')
-          .upload(filePath, thumbnailFile, { cacheControl: '3600', upsert: false });
+          .from("course-thumbnails")
+          .upload(filePath, thumbnailFile, {
+            cacheControl: "3600",
+            upsert: false,
+          });
 
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage.from('course-thumbnails').getPublicUrl(filePath);
+        const { data: urlData } = supabase.storage
+          .from("course-thumbnails")
+          .getPublicUrl(filePath);
         thumbnailUrl = urlData?.publicUrl ?? undefined;
       }
 
       const { error: updateError } = await supabase
-        .from('videos')
+        .from("videos")
         .update({
           title: formData.title,
           description: formData.description || null,
@@ -812,13 +1062,13 @@ function VideoEditModal({
           thumbnail_url: thumbnailUrl,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', video.id);
+        .eq("id", video.id);
 
       if (updateError) throw updateError;
 
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to update video');
+      setError(err.message || "Failed to update video");
     } finally {
       setIsSubmitting(false);
     }
@@ -840,13 +1090,29 @@ function VideoEditModal({
       >
         <div className="p-5 border-b border-navy-800/60 flex items-center justify-between bg-navy-950/70">
           <h3 className="text-white font-bold text-lg">Edit Video</h3>
-          <button onClick={onClose} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-navy-800/70 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-navy-800/70 transition-colors"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-5 overflow-y-auto chat-scrollbar flex-1 min-h-0">
+        <form
+          onSubmit={handleSubmit}
+          className="p-5 space-y-5 overflow-y-auto chat-scrollbar flex-1 min-h-0"
+        >
           {error && (
             <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm">
               {error}
@@ -854,22 +1120,30 @@ function VideoEditModal({
           )}
 
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-2">Title *</label>
+            <label className="block text-gray-300 text-sm font-medium mb-2">
+              Title *
+            </label>
             <input
               type="text"
               required
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
               className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400/40 transition-all"
               disabled={isSubmitting}
             />
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-2">Description</label>
+            <label className="block text-gray-300 text-sm font-medium mb-2">
+              Description
+            </label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               rows={3}
               className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400/40 transition-all resize-none"
               disabled={isSubmitting}
@@ -877,7 +1151,9 @@ function VideoEditModal({
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-2">New Thumbnail</label>
+            <label className="block text-gray-300 text-sm font-medium mb-2">
+              New Thumbnail
+            </label>
             <input
               type="file"
               accept="image/*"
@@ -886,27 +1162,43 @@ function VideoEditModal({
               disabled={isSubmitting}
             />
             {video.thumbnailUrl && !thumbnailFile && (
-              <p className="text-gray-500 text-xs mt-2">Current thumbnail will be kept if no new file is selected.</p>
+              <p className="text-gray-500 text-xs mt-2">
+                Current thumbnail will be kept if no new file is selected.
+              </p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-300 text-sm font-medium mb-2">Display Order</label>
+              <label className="block text-gray-300 text-sm font-medium mb-2">
+                Display Order
+              </label>
               <input
                 type="number"
                 min="0"
                 value={formData.displayOrder}
-                onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    displayOrder: parseInt(e.target.value) || 0,
+                  })
+                }
                 className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400/40 transition-all"
                 disabled={isSubmitting}
               />
             </div>
             <div>
-              <label className="block text-gray-300 text-sm font-medium mb-2">Visibility</label>
+              <label className="block text-gray-300 text-sm font-medium mb-2">
+                Visibility
+              </label>
               <select
-                value={formData.isPublished ? 'published' : 'draft'}
-                onChange={(e) => setFormData({ ...formData, isPublished: e.target.value === 'published' })}
+                value={formData.isPublished ? "published" : "draft"}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    isPublished: e.target.value === "published",
+                  })
+                }
                 className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400/40 transition-all"
                 disabled={isSubmitting}
               >
@@ -922,7 +1214,7 @@ function VideoEditModal({
               disabled={isSubmitting}
               className="flex-1 bg-emerald-500/90 text-white font-semibold px-6 py-3 rounded-xl hover:bg-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'Saving...' : 'Save Changes'}
+              {isSubmitting ? "Saving..." : "Save Changes"}
             </button>
             <button
               type="button"
@@ -951,21 +1243,23 @@ function VideoUploadModal({
 }) {
   const { t } = useI18n();
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
+    title: "",
+    description: "",
     displayOrder: 0,
   });
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStage, setUploadStage] = useState<'idle' | 'video' | 'thumbnail' | 'saving'>('idle');
+  const [uploadStage, setUploadStage] = useState<
+    "idle" | "video" | "thumbnail" | "saving"
+  >("idle");
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!videoFile) {
-      setError('Please select a video file');
+      setError("Please select a video file");
       return;
     }
 
@@ -974,17 +1268,25 @@ function VideoUploadModal({
     setUploadProgress(0);
 
     try {
-      setUploadStage('video');
-      const videoUrl = await uploadFileWithProgress(videoFile, 'course-videos', 'video');
+      setUploadStage("video");
+      const videoUrl = await uploadFileWithProgress(
+        videoFile,
+        "course-videos",
+        "video",
+      );
 
       let thumbnailUrl = null;
       if (thumbnailFile) {
-        setUploadStage('thumbnail');
+        setUploadStage("thumbnail");
         setUploadProgress(0);
-        thumbnailUrl = await uploadFileWithProgress(thumbnailFile, 'course-thumbnails', 'thumbnail');
+        thumbnailUrl = await uploadFileWithProgress(
+          thumbnailFile,
+          "course-thumbnails",
+          "thumbnail",
+        );
       }
 
-      setUploadStage('saving');
+      setUploadStage("saving");
       setUploadProgress(100);
 
       let videoDuration: number | null = null;
@@ -994,7 +1296,7 @@ function VideoUploadModal({
         // Duration extraction failed
       }
 
-      const { error: insertError } = await supabase.from('videos').insert([
+      const { error: insertError } = await supabase.from("videos").insert([
         {
           channel_id: channelId,
           course_id: courseId,
@@ -1012,85 +1314,103 @@ function VideoUploadModal({
 
       onClose();
     } catch (err: any) {
-      console.error('Upload error:', err);
-      setError(err.message || 'Failed to upload video');
+      console.error("Upload error:", err);
+      setError(err.message || "Failed to upload video");
     } finally {
       setIsUploading(false);
-      setUploadStage('idle');
+      setUploadStage("idle");
     }
   };
 
   const getVideoDuration = (file: File): Promise<number> => {
     return new Promise((resolve, reject) => {
-      const video = document.createElement('video');
-      video.preload = 'metadata';
+      const video = document.createElement("video");
+      video.preload = "metadata";
       video.onloadedmetadata = () => {
         window.URL.revokeObjectURL(video.src);
         resolve(Math.floor(video.duration));
       };
-      video.onerror = () => reject(new Error('Could not load video metadata'));
+      video.onerror = () => reject(new Error("Could not load video metadata"));
       video.src = URL.createObjectURL(file);
     });
   };
 
-  const uploadFileWithProgress = async (file: File, bucket: string, path: string): Promise<string> => {
-    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'bin';
+  const uploadFileWithProgress = async (
+    file: File,
+    bucket: string,
+    path: string,
+  ): Promise<string> => {
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || "bin";
     const fileName = `${path}-${Date.now()}.${fileExt}`;
     const filePath = `${courseId}/${fileName}`;
 
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData?.session?.access_token;
-    if (!accessToken) throw new Error('Not authenticated');
+    if (!accessToken) throw new Error("Not authenticated");
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl) throw new Error('Supabase URL not configured');
+    if (!supabaseUrl) throw new Error("Supabase URL not configured");
 
     const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${filePath}`;
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
-      xhr.upload.addEventListener('progress', (event) => {
+      xhr.upload.addEventListener("progress", (event) => {
         if (event.lengthComputable) {
-          const percentComplete = Math.round((event.loaded / event.total) * 100);
+          const percentComplete = Math.round(
+            (event.loaded / event.total) * 100,
+          );
           setUploadProgress(percentComplete);
         }
       });
 
-      xhr.addEventListener('load', () => {
+      xhr.addEventListener("load", () => {
         if (xhr.status >= 200 && xhr.status < 300) {
-          const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
+          const { data: urlData } = supabase.storage
+            .from(bucket)
+            .getPublicUrl(filePath);
           if (!urlData?.publicUrl) {
-            reject(new Error('Failed to get public URL'));
+            reject(new Error("Failed to get public URL"));
             return;
           }
           resolve(urlData.publicUrl);
         } else {
           try {
             const errorData = JSON.parse(xhr.responseText);
-            reject(new Error(errorData.message || `Upload failed: ${xhr.status}`));
+            reject(
+              new Error(errorData.message || `Upload failed: ${xhr.status}`),
+            );
           } catch {
             reject(new Error(`Upload failed: ${xhr.status}`));
           }
         }
       });
 
-      xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
-      xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+      xhr.addEventListener("error", () =>
+        reject(new Error("Network error during upload")),
+      );
+      xhr.addEventListener("abort", () =>
+        reject(new Error("Upload cancelled")),
+      );
 
-      xhr.open('POST', uploadUrl);
-      xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
-      xhr.setRequestHeader('x-upsert', 'false');
+      xhr.open("POST", uploadUrl);
+      xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
+      xhr.setRequestHeader("x-upsert", "false");
       xhr.send(file);
     });
   };
 
   const getStageText = () => {
     switch (uploadStage) {
-      case 'video': return t('lectures.uploadingVideo', { percent: uploadProgress });
-      case 'thumbnail': return t('lectures.uploadingThumbnail', { percent: uploadProgress });
-      case 'saving': return t('lectures.savingVideoRecord');
-      default: return t('lectures.uploadVideo');
+      case "video":
+        return t("lectures.uploadingVideo", { percent: uploadProgress });
+      case "thumbnail":
+        return t("lectures.uploadingThumbnail", { percent: uploadProgress });
+      case "saving":
+        return t("lectures.savingVideoRecord");
+      default:
+        return t("lectures.uploadVideo");
     }
   };
 
@@ -1110,52 +1430,93 @@ function VideoUploadModal({
       >
         <div className="p-5 border-b border-navy-800/60 flex items-center justify-between bg-navy-950/70">
           <div>
-            <h3 className="text-white font-bold text-lg">{t('lectures.uploadVideoLecture')}</h3>
-            <p className="text-gray-500 text-sm mt-0.5">{t('lectures.addNewVideoToCourse')}</p>
+            <h3 className="text-white font-bold text-lg">
+              {t("lectures.uploadVideoLecture")}
+            </h3>
+            <p className="text-gray-500 text-sm mt-0.5">
+              {t("lectures.addNewVideoToCourse")}
+            </p>
           </div>
-          <button onClick={onClose} disabled={isUploading} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-navy-800/70 transition-colors disabled:opacity-50">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <button
+            onClick={onClose}
+            disabled={isUploading}
+            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-navy-800/70 transition-colors disabled:opacity-50"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-5 overflow-y-auto chat-scrollbar flex-1 min-h-0">
+        <form
+          onSubmit={handleSubmit}
+          className="p-5 space-y-5 overflow-y-auto chat-scrollbar flex-1 min-h-0"
+        >
           {error && (
             <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
-              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-5 h-5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-2">{t('lectures.videoTitle')}</label>
+            <label className="block text-gray-300 text-sm font-medium mb-2">
+              {t("lectures.videoTitle")}
+            </label>
             <input
               type="text"
               required
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
               className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400/40 transition-all placeholder:text-gray-500"
-              placeholder={t('lectures.videoTitlePlaceholder')}
+              placeholder={t("lectures.videoTitlePlaceholder")}
               disabled={isUploading}
             />
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-2">{t('lectures.description')}</label>
+            <label className="block text-gray-300 text-sm font-medium mb-2">
+              {t("lectures.description")}
+            </label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               rows={2}
               className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400/40 transition-all placeholder:text-gray-500 resize-none"
-              placeholder={t('lectures.descriptionPlaceholder')}
+              placeholder={t("lectures.descriptionPlaceholder")}
               disabled={isUploading}
             />
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-2">{t('lectures.videoFile')}</label>
+            <label className="block text-gray-300 text-sm font-medium mb-2">
+              {t("lectures.videoFile")}
+            </label>
             <div className="relative">
               <input
                 type="file"
@@ -1168,17 +1529,33 @@ function VideoUploadModal({
             </div>
             {videoFile && (
               <div className="mt-2 px-3 py-2 bg-navy-900/50 border border-navy-800/60 rounded-lg flex items-center gap-2 text-sm">
-                <svg className="w-4 h-4 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                <svg
+                  className="w-4 h-4 text-emerald-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
                 </svg>
-                <span className="text-gray-300 truncate flex-1">{videoFile.name}</span>
-                <span className="text-gray-500">{(videoFile.size / (1024 * 1024)).toFixed(1)} MB</span>
+                <span className="text-gray-300 truncate flex-1">
+                  {videoFile.name}
+                </span>
+                <span className="text-gray-500">
+                  {(videoFile.size / (1024 * 1024)).toFixed(1)} MB
+                </span>
               </div>
             )}
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-2">{t('lectures.thumbnailOptional')}</label>
+            <label className="block text-gray-300 text-sm font-medium mb-2">
+              {t("lectures.thumbnailOptional")}
+            </label>
             <input
               type="file"
               accept="image/*"
@@ -1189,12 +1566,19 @@ function VideoUploadModal({
           </div>
 
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-2">Display Order</label>
+            <label className="block text-gray-300 text-sm font-medium mb-2">
+              Display Order
+            </label>
             <input
               type="number"
               min="0"
               value={formData.displayOrder}
-              onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 0 })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  displayOrder: parseInt(e.target.value) || 0,
+                })
+              }
               className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400/40 transition-all"
               disabled={isUploading}
             />
@@ -1204,8 +1588,12 @@ function VideoUploadModal({
           {isUploading && (
             <div className="space-y-3 p-4 bg-navy-900/50 border border-navy-800/60 rounded-xl">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-300 font-medium">{getStageText()}</span>
-                {uploadStage !== 'saving' && <span className="text-emerald-300">{uploadProgress}%</span>}
+                <span className="text-gray-300 font-medium">
+                  {getStageText()}
+                </span>
+                {uploadStage !== "saving" && (
+                  <span className="text-emerald-300">{uploadProgress}%</span>
+                )}
               </div>
               <div className="w-full bg-navy-800 rounded-full h-2 overflow-hidden">
                 <div
@@ -1213,9 +1601,13 @@ function VideoUploadModal({
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
-              {uploadStage === 'video' && videoFile && (
+              {uploadStage === "video" && videoFile && (
                 <p className="text-gray-500 text-xs">
-                  {((videoFile.size * uploadProgress) / (100 * 1024 * 1024)).toFixed(1)} MB of {(videoFile.size / (1024 * 1024)).toFixed(1)} MB
+                  {(
+                    (videoFile.size * uploadProgress) /
+                    (100 * 1024 * 1024)
+                  ).toFixed(1)}{" "}
+                  MB of {(videoFile.size / (1024 * 1024)).toFixed(1)} MB
                 </p>
               )}
             </div>
@@ -1227,7 +1619,7 @@ function VideoUploadModal({
               disabled={isUploading}
               className="flex-1 bg-emerald-500/90 text-white font-semibold px-6 py-3 rounded-xl hover:bg-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-soft"
             >
-              {isUploading ? getStageText() : t('lectures.uploadVideo')}
+              {isUploading ? getStageText() : t("lectures.uploadVideo")}
             </button>
             <button
               type="button"
@@ -1235,7 +1627,7 @@ function VideoUploadModal({
               disabled={isUploading}
               className="px-6 py-3 bg-navy-800/80 text-gray-300 font-semibold rounded-xl hover:bg-navy-700 transition-colors disabled:opacity-50"
             >
-              {t('common.cancel')}
+              {t("common.cancel")}
             </button>
           </div>
         </form>

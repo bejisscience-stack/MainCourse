@@ -22,6 +22,10 @@ function timingSafeCompare(a: string, b: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
+  // CSP-01: Generate per-request nonce for inline script allowlisting
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  request.headers.set("x-nonce", nonce);
+
   const { pathname, searchParams } = request.nextUrl;
 
   // Check if route should bypass coming soon
@@ -74,6 +78,22 @@ export async function middleware(request: NextRequest) {
   const response = await updateSession(request);
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
   response.headers.set("Pragma", "no-cache");
+
+  // CSP-01: Dynamic nonce-based Content-Security-Policy (replaces static 'unsafe-inline')
+  const cspHeader = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}'`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in",
+    "font-src 'self'",
+    "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.keepz.me https://app.posthog.com https://us.i.posthog.com",
+    "frame-src 'self' https://checkout.keepz.me",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ");
+  response.headers.set("Content-Security-Policy", cspHeader);
+
   return response;
 }
 

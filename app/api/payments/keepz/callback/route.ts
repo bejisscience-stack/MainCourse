@@ -1,13 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { decryptCallback } from "@/lib/keepz";
+import { paymentLimiter, getClientIP } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  // TODO: Add Keepz IP whitelist when they publish static IPs. Currently relying on encrypted payload verification only. See SECURITY_AUDIT.md PAY-01
-  // ALWAYS return 200 (Keepz expects this)
+  // ALWAYS return 200 (Keepz expects this — they retry on non-2xx)
   try {
+    const clientIP = getClientIP(request);
+
+    // IP allowlist check (graceful degradation: skip if not configured)
+    const allowedIPs = process.env.KEEPZ_ALLOWED_IPS;
+    if (allowedIPs) {
+      const whitelist = allowedIPs.split(",").map((ip) => ip.trim());
+      if (!whitelist.includes(clientIP)) {
+        console.warn("[Keepz Callback] BLOCKED: IP not in allowlist", {
+          ip: clientIP,
+        });
+        return NextResponse.json({ received: true }, { status: 200 });
+      }
+    }
+
+    // Rate limit check (return 200, not 429 — payment providers retry on non-2xx)
+    const { allowed } = await paymentLimiter.check(clientIP);
+    if (!allowed) {
+      console.warn("[Keepz Callback] Rate limited", { ip: clientIP });
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+
     const rawText = await request.text();
     console.log(
       "[Keepz Callback] Raw body received:",

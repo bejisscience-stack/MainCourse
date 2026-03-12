@@ -61,7 +61,7 @@ export async function POST(
     }
 
     // Rate limit
-    const { allowed, retryAfterMs } = adminLimiter.check(user.id);
+    const { allowed, retryAfterMs } = await adminLimiter.check(user.id);
     if (!allowed) return rateLimitResponse(retryAfterMs);
 
     console.log("[Approve API] Attempting to approve request:", id);

@@ -22,7 +22,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { allowed, retryAfterMs } = loginLimiter.check(getClientIP(request));
+    const { allowed, retryAfterMs } = await loginLimiter.check(
+      getClientIP(request),
+    );
     if (!allowed) return rateLimitResponse(retryAfterMs);
 
     const rawBody = await request.json();

@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   try {
     // Rate limit by IP
-    const { allowed, retryAfterMs } = referralLimiter.check(
+    const { allowed, retryAfterMs } = await referralLimiter.check(
       getClientIP(request),
     );
     if (!allowed) return rateLimitResponse(retryAfterMs);

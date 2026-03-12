@@ -1,8 +1,8 @@
-import type { Platform } from '@/types/view-scraper';
+import type { Platform } from "@/types/view-scraper";
 
 const PLATFORM_HOSTNAMES: Record<string, string[]> = {
-  tiktok: ['tiktok.com'],
-  instagram: ['instagram.com'],
+  tiktok: ["tiktok.com"],
+  instagram: ["instagram.com"],
 };
 
 /**
@@ -16,7 +16,7 @@ export function validatePlatformUrl(platform: string, url: string): boolean {
 
   try {
     const hostname = new URL(url).hostname.toLowerCase();
-    return allowedHostnames.some(allowed => hostname.includes(allowed));
+    return allowedHostnames.some((allowed) => hostname.includes(allowed));
   } catch {
     return false;
   }
@@ -28,12 +28,27 @@ export function validatePlatformUrl(platform: string, url: string): boolean {
 export function detectPlatform(url: string): Platform | null {
   try {
     const hostname = new URL(url).hostname.toLowerCase();
-    if (hostname.includes('tiktok.com')) return 'tiktok';
-    if (hostname.includes('instagram.com')) return 'instagram';
+    if (hostname.includes("tiktok.com")) return "tiktok";
+    if (hostname.includes("instagram.com")) return "instagram";
     return null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Extract the storage path from a Supabase public URL.
+ * e.g., "https://xxx.supabase.co/storage/v1/object/public/course-videos/abc/vid.mp4"
+ *   → "abc/vid.mp4"
+ */
+export function extractStoragePath(
+  publicUrl: string,
+  bucket: string,
+): string | null {
+  const marker = `/storage/v1/object/public/${bucket}/`;
+  const idx = publicUrl.indexOf(marker);
+  if (idx === -1) return null;
+  return publicUrl.substring(idx + marker.length);
 }
 
 interface ExtractedUrl {
@@ -54,7 +69,7 @@ export function extractVideoUrls(submission: {
   // Extract from platform_links JSONB
   if (submission.platform_links) {
     for (const [, url] of Object.entries(submission.platform_links)) {
-      if (typeof url === 'string' && url.trim()) {
+      if (typeof url === "string" && url.trim()) {
         const platform = detectPlatform(url);
         if (platform && !seen.has(url)) {
           seen.add(url);

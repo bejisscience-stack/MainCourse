@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Suspense } from "react";
+import { headers } from "next/headers";
 import "./globals.css";
 import { I18nProvider } from "@/contexts/I18nContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -93,6 +94,10 @@ export default async function RootLayout({
   // Use static default - cookies() can block/hang during dev. I18nProvider syncs from client on hydration.
   const initialLanguage: Language = defaultLanguage;
 
+  // CSP-01: Read per-request nonce from middleware for inline script allowlisting
+  const headersList = await headers();
+  const nonce = headersList.get("x-nonce") ?? "";
+
   return (
     <html
       lang={initialLanguage}
@@ -102,6 +107,7 @@ export default async function RootLayout({
       <head>
         {/* SECURITY: This script is hardcoded. NEVER insert user input here. */}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `
               (function() {

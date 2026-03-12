@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Rate limit
-    const { allowed, retryAfterMs } = paymentLimiter.check(user.id);
+    const { allowed, retryAfterMs } = await paymentLimiter.check(user.id);
     if (!allowed) return rateLimitResponse(retryAfterMs);
 
     // 2. Parse & validate body

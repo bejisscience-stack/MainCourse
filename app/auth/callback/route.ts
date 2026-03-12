@@ -1,28 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { sendWelcomeEmail } from '@/lib/email';
+import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { sendWelcomeEmail } from "@/lib/email";
+import { validateRedirectUrl } from "@/lib/validate-redirect";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get('code');
-  const token_hash = requestUrl.searchParams.get('token_hash');
-  const type = requestUrl.searchParams.get('type');
-  const next = requestUrl.searchParams.get('next') || '/my-courses';
+  const code = requestUrl.searchParams.get("code");
+  const token_hash = requestUrl.searchParams.get("token_hash");
+  const type = requestUrl.searchParams.get("type");
+  const next =
+    validateRedirectUrl(requestUrl.searchParams.get("next")) || "/my-courses";
 
   // Always use production URL - reverse proxy reports localhost even in production
-  const PRODUCTION_URL = 'https://swavleba.ge';
-  const baseUrl = process.env.NODE_ENV === 'development'
-    ? requestUrl.origin
-    : PRODUCTION_URL;
+  const PRODUCTION_URL = "https://swavleba.ge";
+  const baseUrl =
+    process.env.NODE_ENV === "development" ? requestUrl.origin : PRODUCTION_URL;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.redirect(new URL(`/login?error=Configuration error`, baseUrl));
+    return NextResponse.redirect(
+      new URL(`/login?error=Configuration error`, baseUrl),
+    );
   }
 
   const cookieStore = await cookies();
@@ -35,7 +38,7 @@ export async function GET(request: NextRequest) {
       setAll(cookiesToSet) {
         try {
           cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
+            cookieStore.set(name, value, options),
           );
         } catch {
           // Handle Server Component context
@@ -48,33 +51,40 @@ export async function GET(request: NextRequest) {
   if (token_hash && type) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash,
-      type: type as 'signup' | 'email' | 'recovery',
+      type: type as "signup" | "email" | "recovery",
     });
 
     if (error) {
+      const friendlyError = error.message?.includes("expired")
+        ? "link_expired"
+        : error.message?.includes("not found")
+          ? "not_found"
+          : "auth_error";
       return NextResponse.redirect(
-        new URL(`/login?error=${encodeURIComponent(error.message)}`, baseUrl)
+        new URL("/login?error=" + friendlyError, baseUrl),
       );
     }
 
     // For password recovery, skip profile/role logic and go straight to reset page
-    if (type === 'recovery') {
-      return NextResponse.redirect(new URL('/reset-password', baseUrl));
+    if (type === "recovery") {
+      return NextResponse.redirect(new URL("/reset-password", baseUrl));
     }
 
     // Successfully verified - get user and redirect
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (user) {
       const { data: profile } = await supabase
-        .from('profiles')
-        .select('role, username, profile_completed')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("role, username, profile_completed")
+        .eq("id", user.id)
         .single();
 
       // Redirect OAuth users who haven't completed their profile
       if (profile?.profile_completed === false) {
-        return NextResponse.redirect(new URL('/complete-profile', baseUrl));
+        return NextResponse.redirect(new URL("/complete-profile", baseUrl));
       }
 
       const role = profile?.role || user.user_metadata?.role;
@@ -88,15 +98,15 @@ export async function GET(request: NextRequest) {
         if (confirmedAt > fiveMinutesAgo) {
           try {
             await sendWelcomeEmail(user.email, username);
-            console.log('Welcome email sent to:', user.email);
+            console.log("Welcome email sent to:", user.email);
           } catch (emailError) {
-            console.error('Failed to send welcome email:', emailError);
+            console.error("Failed to send welcome email:", emailError);
           }
         }
       }
 
-      if (role === 'lecturer') {
-        return NextResponse.redirect(new URL('/lecturer/dashboard', baseUrl));
+      if (role === "lecturer") {
+        return NextResponse.redirect(new URL("/lecturer/dashboard", baseUrl));
       }
     }
 
@@ -108,27 +118,32 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       // Detect password recovery: check type param, next param, or recent recovery_sent_at
-      const isRecovery = type === 'recovery'
-        || next === '/reset-password'
-        || (user?.recovery_sent_at && (Date.now() - new Date(user.recovery_sent_at).getTime()) < 60 * 60 * 1000);
+      const isRecovery =
+        type === "recovery" ||
+        next === "/reset-password" ||
+        (user?.recovery_sent_at &&
+          Date.now() - new Date(user.recovery_sent_at).getTime() <
+            60 * 60 * 1000);
 
       if (isRecovery) {
-        return NextResponse.redirect(new URL('/reset-password', baseUrl));
+        return NextResponse.redirect(new URL("/reset-password", baseUrl));
       }
 
       if (user) {
         const { data: profile } = await supabase
-          .from('profiles')
-          .select('role, username, profile_completed')
-          .eq('id', user.id)
+          .from("profiles")
+          .select("role, username, profile_completed")
+          .eq("id", user.id)
           .single();
 
         // Redirect OAuth users who haven't completed their profile
         if (profile?.profile_completed === false) {
-          return NextResponse.redirect(new URL('/complete-profile', baseUrl));
+          return NextResponse.redirect(new URL("/complete-profile", baseUrl));
         }
 
         const role = profile?.role || user.user_metadata?.role;
@@ -141,26 +156,31 @@ export async function GET(request: NextRequest) {
           if (confirmedAt > fiveMinutesAgo) {
             try {
               await sendWelcomeEmail(user.email, username);
-              console.log('Welcome email sent to:', user.email);
+              console.log("Welcome email sent to:", user.email);
             } catch (emailError) {
-              console.error('Failed to send welcome email:', emailError);
+              console.error("Failed to send welcome email:", emailError);
             }
           }
         }
 
-        if (role === 'lecturer') {
-          return NextResponse.redirect(new URL('/lecturer/dashboard', baseUrl));
+        if (role === "lecturer") {
+          return NextResponse.redirect(new URL("/lecturer/dashboard", baseUrl));
         }
       }
 
       return NextResponse.redirect(new URL(next, baseUrl));
     }
 
+    const friendlyError = error.message?.includes("expired")
+      ? "link_expired"
+      : error.message?.includes("not found")
+        ? "not_found"
+        : "auth_error";
     return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(error.message)}`, baseUrl)
+      new URL("/login?error=" + friendlyError, baseUrl),
     );
   }
 
   // If no code or token_hash, redirect to login
-  return NextResponse.redirect(new URL('/login', baseUrl));
+  return NextResponse.redirect(new URL("/login", baseUrl));
 }

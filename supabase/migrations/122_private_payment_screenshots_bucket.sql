@@ -35,7 +35,7 @@ CREATE POLICY "payment_screenshots_select_admin"
 ON storage.objects FOR SELECT TO authenticated
 USING (
   bucket_id = 'payment-screenshots'
-  AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true)
+  AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
 -- NOTE: course-videos bucket is also public with guessable URLs.
