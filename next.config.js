@@ -13,9 +13,9 @@ const nextConfig = {
     minimumCacheTTL: 60,
     // SECURITY (CSP-02): dangerouslyAllowSVG enabled for next/image SVG rendering.
     // Mitigated by restrictive contentSecurityPolicy below (script-src 'none', sandbox).
-    // Current status: No user-uploaded SVGs exist. All SVGs are admin-controlled React components.
-    // If user SVG uploads are added in future, add server-side sanitization (DOMPurify)
-    // to the upload flow before storage.
+    // Current SVG sources: admin-uploaded course thumbnails and platform assets only.
+    // No user-uploaded SVGs are accepted. If user SVG uploads are added in the future,
+    // implement DOMPurify sanitization in the upload handler before storage.
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [

@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-// Use Upstash Redis if configured, otherwise fall back to in-memory (resets on deploy)
+// PRODUCTION REQUIREMENT: Ensure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are set.
+// Without Redis, rate limiting is ephemeral and can be bypassed by waiting for deploys.
 const hasRedis =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
 
 if (!hasRedis) {
   console.warn(
-    "UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN not set — using ephemeral in-memory rate limiting",
+    "[Rate Limit] WARNING: Upstash Redis not configured. Using in-memory fallback. Rate limits reset on deploy and are per-instance. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN for persistent rate limiting.",
   );
 }
 
