@@ -231,8 +231,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Process referral - first try provided referral code, then check signup referral code
-    if (enrollmentRequest.id) {
+    // Referral commissions only apply to first-time enrollments.
+    // Re-enrollments skip referral processing to prevent gaming.
+    if (!isReEnrollment && enrollmentRequest.id) {
       try {
         let referralProcessed = false;
 

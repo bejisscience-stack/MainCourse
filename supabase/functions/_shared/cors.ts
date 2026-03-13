@@ -3,12 +3,19 @@
  * Checks Origin against an allowlist instead of using wildcard '*'
  */
 
-const ALLOWED_ORIGINS = [
+const PRODUCTION_ORIGINS = [
   "https://swavleba.ge",
   "https://www.swavleba.ge",
   "https://plankton-app-wpsym.ondigitalocean.app",
-  "http://localhost:3000",
 ];
+
+// localhost is included unless ENVIRONMENT is explicitly set to "production".
+// Risk is low: edge functions require valid auth tokens regardless of origin,
+// and localhost only matches actual local dev servers.
+const ALLOWED_ORIGINS =
+  Deno.env.get("ENVIRONMENT") === "production"
+    ? PRODUCTION_ORIGINS
+    : [...PRODUCTION_ORIGINS, "http://localhost:3000"];
 
 /**
  * Build CORS headers for the given request.
