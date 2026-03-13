@@ -29,6 +29,7 @@ A modern, responsive landing page for a course platform with a clean navy + whit
 ### Installation
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
@@ -36,6 +37,7 @@ npm install
 2. The Supabase configuration is already set up in `.env.local`
 
 3. Run the development server:
+
 ```bash
 npm run dev
 ```
@@ -76,6 +78,7 @@ The project uses [Resend](https://resend.com) for transactional email.
 ### Environment Variables
 
 Add to `.env.local`:
+
 ```
 RESEND_API_KEY=your_resend_api_key_here
 EMAIL_FROM="Swavleba <no-reply@swavleba.ge>"
@@ -85,23 +88,14 @@ EMAIL_REPLY_TO=support@swavleba.ge  # optional
 ### Usage
 
 ```typescript
-import { sendEmail } from '@/lib/email';
+import { sendEmail } from "@/lib/email";
 
 await sendEmail({
-  to: 'user@example.com',
-  subject: 'Welcome!',
-  html: '<p>Hello from Swavleba!</p>',
-  text: 'Hello from Swavleba!',  // optional
+  to: "user@example.com",
+  subject: "Welcome!",
+  html: "<p>Hello from Swavleba!</p>",
+  text: "Hello from Swavleba!", // optional
 });
-```
-
-### Testing
-
-With the dev server running:
-```bash
-curl -X POST http://localhost:3000/api/notifications/test-email \
-  -H "Content-Type: application/json" \
-  -d '{"to":"your-email@example.com","subject":"Test","html":"<p>Test email</p>"}'
 ```
 
 ## Build for Production
@@ -116,18 +110,3 @@ npm start
 MIT
 
 # Swavleba
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
