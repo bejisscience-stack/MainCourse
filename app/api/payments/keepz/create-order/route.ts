@@ -4,7 +4,7 @@ import {
   createServiceRoleClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
-import { createKeepzOrder, KeepzError } from "@/lib/keepz";
+import { createKeepzOrder, getOrderStatus, KeepzError } from "@/lib/keepz";
 import { randomUUID } from "crypto";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { paymentLimiter, rateLimitResponse } from "@/lib/rate-limit";
@@ -116,14 +116,14 @@ export async function POST(request: NextRequest) {
     // 4. Idempotency check — existing active payment for this reference
     const { data: existing } = await supabase
       .from("keepz_payments")
-      .select("id, checkout_url, status, created_at")
+      .select("id, checkout_url, status, created_at, keepz_order_id")
       .eq("payment_type", paymentType)
       .eq("reference_id", referenceId)
       .in("status", ["pending", "created"])
       .maybeSingle();
 
     if (existing) {
-      // Keepz orders expire after 5 minutes — expire stale payments so we create a fresh one
+      // Keepz orders expire after 5 minutes — but first verify if user actually paid
       const ageMs = Date.now() - new Date(existing.created_at).getTime();
       const FIVE_MINUTES = 5 * 60 * 1000;
 
@@ -134,11 +134,67 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Mark stale payment as expired before creating a new one
-      await adminSupabase
-        .from("keepz_payments")
-        .update({ status: "expired", updated_at: new Date().toISOString() })
-        .eq("id", existing.id);
+      // Before expiring, verify with Keepz — the user may have paid but callback never arrived
+      if (existing.status === "created" && existing.keepz_order_id) {
+        try {
+          const keepzStatus = await getOrderStatus(existing.keepz_order_id);
+          const orderStatus =
+            (keepzStatus.orderStatus as string) ||
+            (keepzStatus.status as string);
+
+          if (orderStatus === "SUCCESS") {
+            // Payment was actually successful — complete enrollment now
+            const { data: rpcResult, error: rpcError } =
+              await adminSupabase.rpc("complete_keepz_payment", {
+                p_keepz_order_id: existing.keepz_order_id,
+                p_callback_payload: keepzStatus,
+              });
+
+            if (!rpcError && rpcResult?.success !== false) {
+              console.log(
+                "[Create Order] Recovered lost payment via Keepz verification:",
+                { paymentId: existing.id },
+              );
+              return NextResponse.json({
+                paymentId: existing.id,
+                recovered: true,
+                status: "success",
+              });
+            }
+            console.error(
+              "[Create Order] Keepz verified SUCCESS but RPC failed:",
+              { rpcError, rpcResult },
+            );
+          } else if (
+            orderStatus === "FAILED" ||
+            orderStatus === "REJECTED" ||
+            orderStatus === "CANCELLED"
+          ) {
+            await adminSupabase
+              .from("keepz_payments")
+              .update({
+                status: "failed",
+                callback_payload: keepzStatus,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existing.id);
+          }
+        } catch (verifyErr) {
+          console.warn(
+            "[Create Order] Keepz verification failed (non-fatal):",
+            verifyErr,
+          );
+        }
+      }
+
+      // Expire the stale payment if it wasn't recovered above
+      if (existing.status !== "success") {
+        await adminSupabase
+          .from("keepz_payments")
+          .update({ status: "expired", updated_at: new Date().toISOString() })
+          .eq("id", existing.id)
+          .in("status", ["pending", "created"]);
+      }
     }
 
     // 5. Create keepz_payments row (status: pending) with keepz_order_id pre-set

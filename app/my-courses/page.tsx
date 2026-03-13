@@ -8,6 +8,7 @@ import CourseEnrollmentCard from "@/components/CourseEnrollmentCard";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import { useEnrollments } from "@/hooks/useEnrollments";
+import { usePaymentRecovery } from "@/hooks/usePaymentRecovery";
 import useSWR from "swr";
 import type { Course } from "@/hooks/useCourses";
 import type { Course as CourseCardCourse } from "@/components/CourseCard";
@@ -22,6 +23,10 @@ export default function MyCoursesPage() {
     getEnrollmentInfo,
     mutate: mutateEnrollments,
   } = useEnrollments(user?.id || null);
+
+  // Recover stuck payments when user visits My Courses
+  usePaymentRecovery(user?.id || null, () => mutateEnrollments());
+
   // Redirect lecturers immediately
   useEffect(() => {
     if (!userLoading && userRole === "lecturer") {
