@@ -12,6 +12,16 @@ import { useProjectCountdown } from "@/hooks/useProjectCountdown";
 import { useProjectBudget } from "@/hooks/useProjectBudget";
 import { useProjectAccess } from "@/hooks/useProjectAccess";
 
+/** SEC-10: Only allow http/https URLs to prevent javascript: protocol XSS */
+function isSafeUrl(url: string): boolean {
+  try {
+    const p = new URL(url);
+    return ["http:", "https:"].includes(p.protocol);
+  } catch {
+    return false;
+  }
+}
+
 export interface ProjectCriteria {
   id: string;
   text: string;
@@ -1110,14 +1120,20 @@ export default function ProjectCard({
                                         {PLATFORM_CONFIG[platform.toLowerCase()]
                                           ?.name || platform}
                                       </span>
-                                      <a
-                                        href={link as string}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sm text-emerald-400 hover:text-emerald-300 truncate flex-1"
-                                      >
-                                        {link as string}
-                                      </a>
+                                      {isSafeUrl(link as string) ? (
+                                        <a
+                                          href={link as string}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-sm text-emerald-400 hover:text-emerald-300 truncate flex-1"
+                                        >
+                                          {link as string}
+                                        </a>
+                                      ) : (
+                                        <span className="text-sm text-gray-500 truncate flex-1">
+                                          {link as string}
+                                        </span>
+                                      )}
                                     </div>
                                   ),
                                 )}
@@ -1126,7 +1142,8 @@ export default function ProjectCard({
 
                             {/* Legacy video URL */}
                             {submissionData.videoUrl &&
-                              Object.keys(platformLinks).length === 0 && (
+                              Object.keys(platformLinks).length === 0 &&
+                              (isSafeUrl(submissionData.videoUrl) ? (
                                 <a
                                   href={submissionData.videoUrl}
                                   target="_blank"
@@ -1135,7 +1152,11 @@ export default function ProjectCard({
                                 >
                                   {submissionData.videoUrl}
                                 </a>
-                              )}
+                              ) : (
+                                <span className="text-sm text-gray-500 block">
+                                  {submissionData.videoUrl}
+                                </span>
+                              ))}
 
                             {/* Submission Comment (visible to lecturers) */}
                             {isLecturer && submissionData.message && (

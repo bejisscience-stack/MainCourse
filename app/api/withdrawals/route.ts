@@ -74,14 +74,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate bank account
-    if (
-      !bankAccountNumber ||
-      typeof bankAccountNumber !== "string" ||
-      bankAccountNumber.trim().length < 10
-    ) {
+    // Validate bank account — Georgian IBAN format (SEC-15)
+    if (!bankAccountNumber || typeof bankAccountNumber !== "string") {
       return NextResponse.json(
-        { error: "Valid bank account number is required" },
+        { error: "Bank account number is required" },
+        { status: 400 },
+      );
+    }
+
+    const ibanUpper = bankAccountNumber.trim().toUpperCase();
+    const georgianIbanPattern = /^GE[0-9]{2}[A-Z]{2}[0-9]{16}$/;
+
+    if (!georgianIbanPattern.test(ibanUpper)) {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid Georgian IBAN format. Must be 22 characters: GE + 2 digits + 2 letters + 16 digits",
+        },
         { status: 400 },
       );
     }

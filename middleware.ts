@@ -104,6 +104,7 @@ export async function middleware(request: NextRequest) {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
+    "frame-ancestors 'self'",
   ].join("; ");
   response.headers.set("Content-Security-Policy", cspHeader);
 

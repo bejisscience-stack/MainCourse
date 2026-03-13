@@ -4,6 +4,16 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import type { ProjectCriteria } from "./ProjectCard";
 
+/** SEC-10: Only allow http/https URLs to prevent javascript: protocol XSS */
+function isSafeUrl(url: string): boolean {
+  try {
+    const p = new URL(url);
+    return ["http:", "https:"].includes(p.protocol);
+  } catch {
+    return false;
+  }
+}
+
 interface SubmissionReviewDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -385,14 +395,20 @@ export default function SubmissionReviewDialog({
               </p>
               <p className="text-xs text-gray-400 mt-1">
                 Link:{" "}
-                <a
-                  href={platformLinks[selectedPlatform]}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-emerald-300 hover:underline"
-                >
-                  {platformLinks[selectedPlatform]}
-                </a>
+                {isSafeUrl(platformLinks[selectedPlatform]) ? (
+                  <a
+                    href={platformLinks[selectedPlatform]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-300 hover:underline"
+                  >
+                    {platformLinks[selectedPlatform]}
+                  </a>
+                ) : (
+                  <span className="text-gray-500">
+                    {platformLinks[selectedPlatform]}
+                  </span>
+                )}
               </p>
             </div>
           )}
