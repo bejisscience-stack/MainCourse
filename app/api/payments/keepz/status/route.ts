@@ -51,7 +51,6 @@ export async function GET(request: NextRequest) {
           paymentId,
           keepzOrderId: payment.keepz_order_id,
           keepzStatus: orderStatus,
-          rawKeys: Object.keys(keepzStatus).join(","),
         });
 
         if (orderStatus === "SUCCESS" || orderStatus === "COMPLETED") {
@@ -74,11 +73,42 @@ export async function GET(request: NextRequest) {
                 paymentId,
               },
             );
+            // Audit log the failure
+            serviceClient
+              .from("payment_audit_log")
+              .insert({
+                keepz_payment_id: paymentId,
+                keepz_order_id: payment.keepz_order_id,
+                user_id: user.id,
+                event_type: "status_poll_rpc_failed",
+                event_data: { rpcError: rpcError?.message, rpcResult },
+              })
+              .then(
+                () => {},
+                () => {},
+              );
           } else {
             console.log(
               "[Keepz Status] Payment completed via verification fallback:",
               { paymentId },
             );
+            // Audit log the recovery
+            serviceClient
+              .from("payment_audit_log")
+              .insert({
+                keepz_payment_id: paymentId,
+                keepz_order_id: payment.keepz_order_id,
+                user_id: user.id,
+                event_type: "status_poll_recovered",
+                event_data: {
+                  keepzStatus: orderStatus,
+                  warning: rpcResult?.warning || null,
+                },
+              })
+              .then(
+                () => {},
+                () => {},
+              );
             return NextResponse.json({
               status: "success",
               paymentType: payment.payment_type,

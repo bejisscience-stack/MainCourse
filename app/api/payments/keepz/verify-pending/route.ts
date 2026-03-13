@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
  * Self-healing endpoint: finds all "created" keepz_payments for the
  * authenticated user that are older than 2 minutes, verifies each with
  * the Keepz API, and completes any that were actually paid.
+ * Also expires truly abandoned payments older than 1 hour.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
 
     let verified = 0;
     let recovered = 0;
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
     for (const payment of stalePayments) {
       verified++;
@@ -70,12 +72,46 @@ export async function GET(request: NextRequest) {
               paymentId: payment.id,
               type: payment.payment_type,
             });
+            // Audit log the recovery
+            await supabase
+              .from("payment_audit_log")
+              .insert({
+                keepz_payment_id: payment.id,
+                keepz_order_id: payment.keepz_order_id,
+                user_id: user.id,
+                event_type: "verify_pending_recovered",
+                event_data: {
+                  paymentType: payment.payment_type,
+                  keepzStatus: orderStatus,
+                  warning: rpcResult?.warning || null,
+                },
+              })
+              .then(
+                () => {},
+                () => {},
+              );
           } else {
             console.error("[Verify Pending] RPC failed for verified payment:", {
               paymentId: payment.id,
               rpcError,
               rpcResult,
             });
+            await supabase
+              .from("payment_audit_log")
+              .insert({
+                keepz_payment_id: payment.id,
+                keepz_order_id: payment.keepz_order_id,
+                user_id: user.id,
+                event_type: "verify_pending_rpc_failed",
+                event_data: {
+                  rpcError: rpcError?.message,
+                  rpcResult,
+                },
+              })
+              .then(
+                () => {},
+                () => {},
+              );
           }
         } else if (
           orderStatus === "FAILED" ||
