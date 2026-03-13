@@ -4,6 +4,7 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import { notificationLimiter, rateLimitResponse } from "@/lib/rate-limit";
 import { isValidUUID } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,11 @@ export async function PATCH(
 
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { allowed, retryAfterMs } = await notificationLimiter.check(user.id);
+    if (!allowed) {
+      return rateLimitResponse(retryAfterMs);
     }
 
     // Await params (Next.js 15 requirement)

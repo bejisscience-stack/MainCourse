@@ -4,6 +4,7 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import { notificationLimiter, rateLimitResponse } from "@/lib/rate-limit";
 import type { UnreadCountResponse } from "@/types/notification";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,11 @@ export async function GET(request: NextRequest) {
 
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { allowed, retryAfterMs } = await notificationLimiter.check(user.id);
+    if (!allowed) {
+      return rateLimitResponse(retryAfterMs);
     }
 
     const supabase = createServerSupabaseClient(token);
