@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useI18n } from "@/contexts/I18nContext";
 import { supabase } from "@/lib/supabase";
@@ -10,11 +10,13 @@ function PaymentSuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const paymentId = searchParams.get("paymentId");
+  const recoveryAttempted = useRef(false);
 
   const [status, setStatus] = useState<
     "loading" | "success" | "failed" | "timeout"
   >("loading");
   const [paymentType, setPaymentType] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   const checkStatus = useCallback(async () => {
     if (!paymentId) {
@@ -75,22 +77,67 @@ function PaymentSuccessContent() {
     let attempts = 0;
     const maxAttempts = 30;
 
-    const poll = async () => {
-      if (cancelled) return;
-      attempts++;
-      const done = await checkStatus();
-      if (!done && !cancelled && attempts < maxAttempts) {
-        setTimeout(poll, 2000);
-      } else if (!done && attempts >= maxAttempts) {
-        setStatus("timeout");
+    const startPolling = async () => {
+      // Recovery: call verify-pending BEFORE polling to catch missed callbacks
+      if (!recoveryAttempted.current) {
+        recoveryAttempted.current = true;
+        try {
+          let {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (!session?.access_token) {
+            const {
+              data: { session: refreshed },
+            } = await supabase.auth.refreshSession();
+            session = refreshed;
+          }
+          if (session?.access_token) {
+            await fetch("/api/payments/keepz/verify-pending", {
+              headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+          }
+        } catch {
+          // Non-fatal — proceed to polling
+        }
       }
+
+      const poll = async () => {
+        if (cancelled) return;
+        attempts++;
+        const done = await checkStatus();
+        if (!done && !cancelled && attempts < maxAttempts) {
+          setTimeout(poll, 2000);
+        } else if (!done && attempts >= maxAttempts) {
+          setStatus("timeout");
+        }
+      };
+      poll();
     };
 
-    poll();
+    startPolling();
     return () => {
       cancelled = true;
     };
   }, [paymentId, checkStatus]);
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    setStatus("loading");
+    let attempts = 0;
+    const poll = async () => {
+      attempts++;
+      const done = await checkStatus();
+      if (!done && attempts < 10) {
+        setTimeout(poll, 2000);
+      } else if (!done) {
+        setStatus("timeout");
+        setRetrying(false);
+      } else {
+        setRetrying(false);
+      }
+    };
+    poll();
+  };
 
   return (
     <div className="min-h-screen bg-navy-950 flex items-center justify-center p-4">
@@ -199,12 +246,23 @@ function PaymentSuccessContent() {
             <p className="text-gray-400 mb-6">
               {t("paymentMethod.checkLater")}
             </p>
-            <button
-              onClick={() => router.push("/my-courses")}
-              className="w-full px-4 py-3 bg-navy-800 text-gray-300 rounded-lg hover:bg-navy-700 font-semibold"
-            >
-              {t("paymentMethod.goToCourses")}
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={handleRetry}
+                disabled={retrying}
+                className="w-full px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold disabled:opacity-50"
+              >
+                {retrying
+                  ? t("paymentMethod.processingPayment")
+                  : t("paymentMethod.tryAgain")}
+              </button>
+              <button
+                onClick={() => router.push("/my-courses")}
+                className="w-full px-4 py-3 bg-navy-800 text-gray-300 rounded-lg hover:bg-navy-700 font-semibold"
+              >
+                {t("paymentMethod.goToCourses")}
+              </button>
+            </div>
           </>
         )}
       </div>
