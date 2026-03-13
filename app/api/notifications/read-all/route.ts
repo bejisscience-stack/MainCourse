@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  createServiceRoleClient,
+  createServerSupabaseClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
@@ -20,8 +20,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Use service role client to bypass RLS and ensure the update succeeds
-    const supabase = createServiceRoleClient(token);
+    const supabase = createServerSupabaseClient(token);
 
     console.log(
       "[Mark All Read API] Marking all notifications as read for user:",

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  createServiceRoleClient,
+  createServerSupabaseClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
@@ -31,8 +31,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
-    // Use service role client to bypass RLS and ensure update succeeds
-    const supabase = createServiceRoleClient(token);
+    const supabase = createServerSupabaseClient(token);
 
     console.log(
       "[Mark Read API] Marking notification as read:",

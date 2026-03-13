@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  createServiceRoleClient,
+  createServerSupabaseClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
@@ -21,8 +21,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Use service role client to bypass RLS and get accurate count
-    const supabase = createServiceRoleClient(token);
+    const supabase = createServerSupabaseClient(token);
 
     // Direct count query instead of RPC for more reliable execution
     const { count, error: countError } = await supabase
