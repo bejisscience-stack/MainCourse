@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       paymentId,
     });
     return NextResponse.json(
-      { error: "Failed to complete payment", details: rpcError?.message },
+      { error: "Failed to complete payment" },
       { status: 500 },
     );
   }

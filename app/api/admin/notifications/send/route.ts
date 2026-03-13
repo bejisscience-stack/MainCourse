@@ -48,11 +48,16 @@ async function resolveUserIds(
       const { data, error } = await serviceSupabase
         .from("profiles")
         .select("id");
-      if (error)
+      if (error) {
+        console.error(
+          "[Admin Notifications API] Failed to fetch users:",
+          error,
+        );
         return {
           userIds: [],
-          error: `Failed to fetch users: ${error.message}`,
+          error: "Failed to resolve target users",
         };
+      }
       return { userIds: data?.map((p: any) => p.id) || [] };
     }
 
@@ -66,11 +71,16 @@ async function resolveUserIds(
         "get_user_ids_by_role",
         { p_role: target_role },
       );
-      if (error)
+      if (error) {
+        console.error(
+          "[Admin Notifications API] Failed to fetch users by role:",
+          error,
+        );
         return {
           userIds: [],
-          error: `Failed to fetch users by role: ${error.message}`,
+          error: "Failed to resolve target users",
         };
+      }
       return { userIds: data || [] };
     }
 
@@ -84,11 +94,16 @@ async function resolveUserIds(
         "get_enrolled_user_ids",
         { p_course_id: target_course_id },
       );
-      if (error)
+      if (error) {
+        console.error(
+          "[Admin Notifications API] Failed to fetch enrolled users:",
+          error,
+        );
         return {
           userIds: [],
-          error: `Failed to fetch enrolled users: ${error.message}`,
+          error: "Failed to resolve target users",
         };
+      }
       return { userIds: data || [] };
     }
 
@@ -135,11 +150,16 @@ async function resolveEmails(
         .select("email")
         .in("id", userIds);
 
-      if (profileError)
+      if (profileError) {
+        console.error(
+          "[Admin Notifications API] Failed to fetch profile emails:",
+          profileError,
+        );
         return {
           emails: [],
-          error: `Failed to fetch profile emails: ${profileError.message}`,
+          error: "Failed to resolve email recipients",
         };
+      }
       profiles?.forEach((p: any) => {
         if (p.email) allEmails.add(p.email.toLowerCase());
       });
@@ -152,11 +172,16 @@ async function resolveEmails(
       .from("coming_soon_emails")
       .select("email");
 
-    if (csError)
+    if (csError) {
+      console.error(
+        "[Admin Notifications API] Failed to fetch coming soon emails:",
+        csError,
+      );
       return {
         emails: [],
-        error: `Failed to fetch coming soon emails: ${csError.message}`,
+        error: "Failed to resolve email recipients",
       };
+    }
     comingSoon?.forEach((row: any) => {
       if (row.email) allEmails.add(row.email.toLowerCase());
     });
@@ -416,8 +441,7 @@ export async function POST(request: NextRequest) {
       in_app_count: inAppCount,
       email_count: emailSent,
       email_failed_count: emailFailed,
-      email_error:
-        emailFailed > 0 ? lastEmailError || "Unknown email error" : undefined,
+      email_error: emailFailed > 0 ? "Some emails failed to send" : undefined,
       message: `Sent ${inAppCount} in-app notification(s), ${emailSent} email(s)${emailFailed > 0 ? `, ${emailFailed} email(s) failed` : ""}`,
     });
   } catch (error: any) {

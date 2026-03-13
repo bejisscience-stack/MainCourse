@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
         userError?.message,
       );
       return NextResponse.json(
-        { error: "Unauthorized", details: userError?.message, requestId },
+        { error: "Unauthorized", requestId },
         { status: 401 },
       );
     }
@@ -243,9 +243,8 @@ export async function GET(request: NextRequest) {
       console.error("[Admin API] Failed to fetch requests:", requestsError);
       return NextResponse.json(
         {
-          error: "Failed to fetch enrollment requests",
-          details: requestsError.message || "Database query failed",
-          code: requestsError.code,
+          error: "An error occurred",
+          requestId,
         },
         { status: 500 },
       );
@@ -407,10 +406,8 @@ export async function GET(request: NextRequest) {
     console.error(`[Admin API ${requestId}] Error stack:`, error.stack);
     return NextResponse.json(
       {
-        error: "Internal server error",
-        details: error.message || "An unexpected error occurred",
+        error: "An error occurred",
         requestId,
-        timestamp: new Date().toISOString(),
       },
       { status: 500 },
     );

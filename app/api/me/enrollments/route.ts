@@ -1,29 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, verifyTokenAndGetUser } from '@/lib/supabase-server';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  createServerSupabaseClient,
+  verifyTokenAndGetUser,
+} from "@/lib/supabase-server";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
     // Get auth token from Authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    
+    const token = authHeader.replace("Bearer ", "");
+
     // Verify token and get user
     const { user, error: userError } = await verifyTokenAndGetUser(token);
     if (userError || !user) {
-      console.error('Auth error:', userError);
-      return NextResponse.json(
-        { error: 'Unauthorized', details: userError?.message || 'Invalid or expired token' },
-        { status: 401 }
-      );
+      console.error("Auth error:", userError);
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Create Supabase client for database operations
@@ -31,8 +28,9 @@ export async function GET(request: NextRequest) {
 
     // Fetch enrollments with course details
     const { data: enrollments, error } = await supabase
-      .from('enrollments')
-      .select(`
+      .from("enrollments")
+      .select(
+        `
         id,
         course_id,
         created_at,
@@ -44,24 +42,25 @@ export async function GET(request: NextRequest) {
           price,
           thumbnail_url
         )
-      `)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+      `,
+      )
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
     if (error) {
-      console.error('Error fetching enrollments:', error);
+      console.error("Error fetching enrollments:", error);
       return NextResponse.json(
-        { error: 'Failed to fetch enrollments' },
-        { status: 500 }
+        { error: "Failed to fetch enrollments" },
+        { status: 500 },
       );
     }
 
     return NextResponse.json({ enrollments: enrollments || [] });
   } catch (error: any) {
-    console.error('Error in GET /api/me/enrollments:', error);
+    console.error("Error in GET /api/me/enrollments:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }
