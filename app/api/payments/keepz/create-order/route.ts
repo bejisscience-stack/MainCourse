@@ -90,10 +90,10 @@ export async function POST(request: NextRequest) {
         );
       }
     } else {
-      // project_subscription — fixed price
+      // project_subscription — price stored per subscription record
       const { data: sub, error } = await supabase
         .from("project_subscriptions")
-        .select("id, status, user_id")
+        .select("id, status, user_id, price")
         .eq("id", referenceId)
         .eq("user_id", user.id)
         .eq("status", "pending")
@@ -104,7 +104,13 @@ export async function POST(request: NextRequest) {
           { status: 404 },
         );
       }
-      amount = 10.0;
+      amount = (sub as any).price || 10.0;
+      if (amount <= 0) {
+        return NextResponse.json(
+          { error: "Invalid subscription price" },
+          { status: 400 },
+        );
+      }
     }
 
     // 4. Idempotency check — existing active payment for this reference
