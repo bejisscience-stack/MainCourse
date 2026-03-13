@@ -37,6 +37,7 @@ const _referralLimiter = createLimiter("referral", 10, 60);
 const _passwordResetLimiter = createLimiter("password-reset", 3, 900);
 const _adminLimiter = createLimiter("admin", 30, 60);
 const _subscribeLimiter = createLimiter("subscribe", 3, 60);
+const _callbackLimiter = createLimiter("callback", 30, 60);
 
 // Wrap Upstash limiter to match existing { allowed, retryAfterMs } interface
 function wrapLimiter(limiter: Ratelimit) {
@@ -61,6 +62,7 @@ export const referralLimiter = wrapLimiter(_referralLimiter);
 export const passwordResetLimiter = wrapLimiter(_passwordResetLimiter);
 export const adminLimiter = wrapLimiter(_adminLimiter);
 export const subscribeLimiter = wrapLimiter(_subscribeLimiter);
+export const callbackLimiter = wrapLimiter(_callbackLimiter);
 
 // INFRA-04: DigitalOcean App Platform sets X-Forwarded-For with the real client IP as the first entry
 export function getClientIP(request: NextRequest): string {

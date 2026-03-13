@@ -42,15 +42,19 @@ export async function GET(request: NextRequest) {
     if (payment.status === "created" && payment.keepz_order_id) {
       try {
         const keepzStatus = await getOrderStatus(payment.keepz_order_id);
-        const orderStatus =
-          (keepzStatus.orderStatus as string) || (keepzStatus.status as string);
+        const orderStatus = (
+          (keepzStatus.orderStatus as string) ||
+          (keepzStatus.status as string) ||
+          ""
+        ).toUpperCase();
         console.log("[Keepz Status] Verification result:", {
           paymentId,
           keepzOrderId: payment.keepz_order_id,
           keepzStatus: orderStatus,
+          rawKeys: Object.keys(keepzStatus).join(","),
         });
 
-        if (orderStatus === "SUCCESS") {
+        if (orderStatus === "SUCCESS" || orderStatus === "COMPLETED") {
           // Payment confirmed by Keepz — complete enrollment via service role
           const serviceClient = createServiceRoleClient();
           const { data: rpcResult, error: rpcError } = await serviceClient.rpc(

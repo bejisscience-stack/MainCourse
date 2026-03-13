@@ -1,12 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { decryptCallback } from "@/lib/keepz";
-import { paymentLimiter, getClientIP } from "@/lib/rate-limit";
+import { callbackLimiter, getClientIP } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
+/** Write to payment_audit_log (best-effort, never throws) */
+async function auditLog(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  keepzPaymentId: string | null,
+  keepzOrderId: string | null,
+  userId: string | null,
+  eventType: string,
+  eventData: Record<string, unknown> = {},
+) {
+  try {
+    await supabase.from("payment_audit_log").insert({
+      keepz_payment_id: keepzPaymentId,
+      keepz_order_id: keepzOrderId,
+      user_id: userId,
+      event_type: eventType,
+      event_data: eventData,
+    });
+  } catch {
+    // Never let audit logging break the callback
+  }
+}
+
 export async function POST(request: NextRequest) {
   // ALWAYS return 200 (Keepz expects this — they retry on non-2xx)
+  const supabase = createServiceRoleClient();
   try {
     const clientIP = getClientIP(request);
 
@@ -18,28 +41,35 @@ export async function POST(request: NextRequest) {
         console.warn("[Keepz Callback] BLOCKED: IP not in allowlist", {
           ip: clientIP,
         });
+        await auditLog(supabase, null, null, null, "callback_ip_blocked", {
+          ip: clientIP,
+        });
         return NextResponse.json({ received: true }, { status: 200 });
       }
     }
 
     // Rate limit check (return 200, not 429 — payment providers retry on non-2xx)
-    const { allowed } = await paymentLimiter.check(clientIP);
+    const { allowed } = await callbackLimiter.check(clientIP);
     if (!allowed) {
       console.warn("[Keepz Callback] Rate limited", { ip: clientIP });
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
     const rawText = await request.text();
-    console.log(
-      "[Keepz Callback] Raw body received:",
-      rawText.substring(0, 1000),
-    );
+    console.log("[Keepz Callback] Body received", {
+      length: rawText.length,
+      ip: clientIP,
+    });
 
     let body: any;
     try {
       body = JSON.parse(rawText);
     } catch (parseError) {
       console.error("[Keepz Callback] Failed to parse JSON body:", parseError);
+      await auditLog(supabase, null, null, null, "callback_parse_error", {
+        ip: clientIP,
+        bodyLength: rawText.length,
+      });
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
@@ -53,6 +83,14 @@ export async function POST(request: NextRequest) {
           integratorOrderId: body.integratorOrderId || "unknown",
         },
       );
+      await auditLog(
+        supabase,
+        null,
+        body.integratorOrderId || null,
+        null,
+        "callback_plaintext_rejected",
+        { ip: clientIP },
+      );
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
@@ -64,16 +102,22 @@ export async function POST(request: NextRequest) {
         "[Keepz Callback] REJECTED: Decryption failed:",
         decryptError,
       );
+      await auditLog(
+        supabase,
+        null,
+        body.integratorOrderId || null,
+        null,
+        "callback_decrypt_failed",
+        { ip: clientIP, error: String(decryptError) },
+      );
       // Try to save the raw encrypted body for debugging
-      const supabaseForLog = createServiceRoleClient();
       if (body.integratorOrderId) {
-        await supabaseForLog
+        await supabase
           .from("keepz_payments")
           .update({
             callback_payload: {
               raw_encrypted: true,
               error: String(decryptError),
-              body,
             },
             updated_at: new Date().toISOString(),
           })
@@ -82,25 +126,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
-    console.log(
-      "[Keepz Callback] Decrypted data:",
-      JSON.stringify(callbackData).substring(0, 500),
-    );
+    const callbackStatus = callbackData.status || callbackData.orderStatus;
+    console.log("[Keepz Callback] Decrypted callback", {
+      integratorOrderId: callbackData.integratorOrderId,
+      status: callbackStatus,
+      hasAmount: callbackData.amount != null,
+      hasCardInfo: !!callbackData.cardInfo,
+    });
 
     const { integratorOrderId } = callbackData;
     if (!integratorOrderId) {
       console.error(
         "[Keepz Callback] Missing integratorOrderId in decrypted data",
       );
+      await auditLog(supabase, null, null, null, "callback_missing_order_id", {
+        ip: clientIP,
+      });
       return NextResponse.json({ received: true }, { status: 200 });
     }
-
-    const supabase = createServiceRoleClient();
 
     // Look up payment
     const { data: payment, error: lookupError } = await supabase
       .from("keepz_payments")
-      .select("id, status, amount, user_id")
+      .select("id, status, amount, user_id, payment_type")
       .eq("keepz_order_id", integratorOrderId)
       .single();
 
@@ -109,26 +157,69 @@ export async function POST(request: NextRequest) {
         integratorOrderId,
         lookupError,
       });
+      await auditLog(
+        supabase,
+        null,
+        integratorOrderId,
+        null,
+        "callback_payment_not_found",
+        { ip: clientIP, error: lookupError?.message },
+      );
       return NextResponse.json({ received: true }, { status: 200 });
     }
+
+    // Log the callback receipt
+    await auditLog(
+      supabase,
+      payment.id,
+      integratorOrderId,
+      payment.user_id,
+      "callback_received",
+      {
+        ip: clientIP,
+        callbackStatus,
+        paymentType: payment.payment_type,
+        currentStatus: payment.status,
+        amount: callbackData.amount,
+      },
+    );
 
     console.log("[Keepz Callback] Processing payment:", {
       integratorOrderId,
       paymentId: payment.id,
       currentStatus: payment.status,
-      callbackStatus: callbackData.status || callbackData.orderStatus,
+      callbackStatus,
     });
 
-    // Validate amount if present
-    if (
-      callbackData.amount &&
-      Number(callbackData.amount) !== Number(payment.amount)
-    ) {
-      console.error("[Keepz Callback] Amount mismatch:", {
+    // Validate amount — reject if missing or mismatched
+    if (callbackData.amount == null) {
+      console.error("[Keepz Callback] REJECTED: Missing amount in callback", {
+        integratorOrderId,
+      });
+      await auditLog(
+        supabase,
+        payment.id,
+        integratorOrderId,
+        payment.user_id,
+        "callback_missing_amount",
+        {},
+      );
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+    if (Number(callbackData.amount) !== Number(payment.amount)) {
+      console.error("[Keepz Callback] REJECTED: Amount mismatch", {
         expected: payment.amount,
         received: callbackData.amount,
         integratorOrderId,
       });
+      await auditLog(
+        supabase,
+        payment.id,
+        integratorOrderId,
+        payment.user_id,
+        "callback_amount_mismatch",
+        { expected: payment.amount, received: callbackData.amount },
+      );
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
@@ -149,12 +240,32 @@ export async function POST(request: NextRequest) {
           rpcError,
           rpcResult,
           integratorOrderId,
-          callbackStatus: callbackData.status || callbackData.orderStatus,
+          callbackStatus,
         });
+        await auditLog(
+          supabase,
+          payment.id,
+          integratorOrderId,
+          payment.user_id,
+          "callback_rpc_failed",
+          { rpcError: rpcError?.message, rpcResult },
+        );
       } else {
         console.log("[Keepz Callback] Payment completed successfully:", {
           integratorOrderId,
+          warning: rpcResult?.warning,
         });
+        await auditLog(
+          supabase,
+          payment.id,
+          integratorOrderId,
+          payment.user_id,
+          "callback_success",
+          {
+            warning: rpcResult?.warning || null,
+            alreadyCompleted: rpcResult?.already_completed || false,
+          },
+        );
       }
 
       // Save card info if present (from saveCard: true payments)
@@ -181,12 +292,6 @@ export async function POST(request: NextRequest) {
             cardError,
             integratorOrderId,
           });
-        } else {
-          console.log("[Keepz Callback] Card saved successfully:", {
-            integratorOrderId,
-            cardMask: cardInfo.cardMask,
-            cardBrand: cardInfo.cardBrand,
-          });
         }
       }
     } else {
@@ -198,11 +303,23 @@ export async function POST(request: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq("keepz_order_id", integratorOrderId);
+
+      await auditLog(
+        supabase,
+        payment.id,
+        integratorOrderId,
+        payment.user_id,
+        "callback_failed",
+        { callbackStatus },
+      );
     }
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
     console.error("[Keepz Callback] Unhandled error:", error);
+    await auditLog(supabase, null, null, null, "callback_unhandled_error", {
+      error: String(error),
+    });
     return NextResponse.json({ received: true }, { status: 200 });
   }
 }
