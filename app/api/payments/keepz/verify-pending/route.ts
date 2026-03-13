@@ -29,14 +29,16 @@ export async function GET(request: NextRequest) {
 
     const supabase = createServiceRoleClient();
 
-    // Find stale "created" payments (older than 2 minutes)
-    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+    // Find stale "created" payments (older than 30 seconds)
+    // Lowered from 2 minutes: when the success page calls verify-pending immediately
+    // after redirect, the payment needs to be checkable within seconds.
+    const thirtySecondsAgo = new Date(Date.now() - 30 * 1000).toISOString();
     const { data: stalePayments, error: fetchError } = await supabase
       .from("keepz_payments")
       .select("id, keepz_order_id, payment_type, reference_id, amount")
       .eq("user_id", user.id)
       .eq("status", "created")
-      .lt("created_at", twoMinutesAgo)
+      .lt("created_at", thirtySecondsAgo)
       .not("keepz_order_id", "is", null);
 
     if (fetchError || !stalePayments?.length) {
@@ -133,6 +135,23 @@ export async function GET(request: NextRequest) {
           paymentId: payment.id,
           error: err,
         });
+        // Audit log the failure for debugging
+        await supabase
+          .from("payment_audit_log")
+          .insert({
+            keepz_payment_id: payment.id,
+            keepz_order_id: payment.keepz_order_id,
+            user_id: user.id,
+            event_type: "verify_pending_api_failed",
+            event_data: {
+              error: String(err),
+              stack: err instanceof Error ? err.stack : undefined,
+            },
+          })
+          .then(
+            () => {},
+            () => {},
+          );
       }
     }
 

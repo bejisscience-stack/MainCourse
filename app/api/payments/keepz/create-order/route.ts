@@ -184,6 +184,23 @@ export async function POST(request: NextRequest) {
             "[Create Order] Keepz verification failed (non-fatal):",
             verifyErr,
           );
+          // Audit log so we know why self-healing failed
+          adminSupabase
+            .from("payment_audit_log")
+            .insert({
+              keepz_payment_id: existing.id,
+              keepz_order_id: existing.keepz_order_id,
+              user_id: user.id,
+              event_type: "create_order_verify_failed",
+              event_data: {
+                error: String(verifyErr),
+                stack: verifyErr instanceof Error ? verifyErr.stack : undefined,
+              },
+            })
+            .then(
+              () => {},
+              () => {},
+            );
         }
       }
 
@@ -233,6 +250,12 @@ export async function POST(request: NextRequest) {
       failRedirectUri: `${appUrl}/payment/failed?paymentId=${paymentRow.id}`,
       callbackUri: `${appUrl}/api/payments/keepz/callback`,
     };
+
+    console.log("[Create Order] Callback URL configured:", {
+      callbackUri: orderOptions.callbackUri,
+      successRedirect: orderOptions.successRedirectUri,
+      appUrl,
+    });
 
     // Saved card: look up card_token if savedCardId is provided
     if (savedCardId) {

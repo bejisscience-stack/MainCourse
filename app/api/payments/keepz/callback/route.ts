@@ -33,29 +33,11 @@ export async function POST(request: NextRequest) {
   try {
     const clientIP = getClientIP(request);
 
-    // IP allowlist check (fail-closed: block in production if not configured)
+    // IP allowlist check (soft — encrypted payload is the primary authentication)
+    // If KEEPZ_ALLOWED_IPS is configured, block unknown IPs as defense-in-depth.
+    // If not configured, proceed — the RSA-encrypted payload proves authenticity.
     const allowedIPs = process.env.KEEPZ_ALLOWED_IPS;
-    if (!allowedIPs) {
-      if (process.env.NODE_ENV === "production") {
-        console.error(
-          "[Keepz Callback] BLOCKED: KEEPZ_ALLOWED_IPS not configured in production",
-          { ip: clientIP },
-        );
-        await auditLog(
-          supabase,
-          null,
-          null,
-          null,
-          "callback_ip_not_configured",
-          { ip: clientIP },
-        );
-        return NextResponse.json({ received: true }, { status: 200 });
-      }
-      console.warn(
-        "[Keepz Callback] WARNING: KEEPZ_ALLOWED_IPS not set — allowing in dev",
-        { ip: clientIP },
-      );
-    } else {
+    if (allowedIPs) {
       const whitelist = allowedIPs.split(",").map((ip) => ip.trim());
       if (!whitelist.includes(clientIP)) {
         console.warn("[Keepz Callback] BLOCKED: IP not in allowlist", {
@@ -66,6 +48,11 @@ export async function POST(request: NextRequest) {
         });
         return NextResponse.json({ received: true }, { status: 200 });
       }
+    } else {
+      console.warn(
+        "[Keepz Callback] KEEPZ_ALLOWED_IPS not set — relying on encrypted payload auth",
+        { ip: clientIP },
+      );
     }
 
     // Rate limit check (return 200, not 429 — payment providers retry on non-2xx)

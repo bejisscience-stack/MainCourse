@@ -7,6 +7,9 @@ const TEAM_ACCESS_COOKIE = "team_session_access";
 // Routes that should bypass the coming soon check
 const BYPASS_ROUTES = ["/coming-soon", "/api/", "/_next/", "/favicon.ico"];
 
+// Routes that should skip middleware entirely (external webhooks, server-to-server)
+const SKIP_MIDDLEWARE_ROUTES = ["/api/payments/keepz/callback"];
+
 /** Constant-time string comparison safe for Edge Runtime (no Node.js crypto).
  *  Pads both inputs to the same length to avoid leaking length information. */
 function timingSafeCompare(a: string, b: string): boolean {
@@ -27,6 +30,11 @@ export async function middleware(request: NextRequest) {
   request.headers.set("x-nonce", nonce);
 
   const { pathname, searchParams } = request.nextUrl;
+
+  // Skip middleware entirely for external webhooks (no auth processing, no CSP)
+  if (SKIP_MIDDLEWARE_ROUTES.some((route) => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
 
   // Check if route should bypass coming soon
   const shouldBypass = BYPASS_ROUTES.some((route) =>

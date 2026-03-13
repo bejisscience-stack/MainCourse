@@ -146,6 +146,25 @@ export async function GET(request: NextRequest) {
           "[Keepz Status] Verification error (non-fatal):",
           verifyError,
         );
+        // Audit log the failure so we can diagnose self-healing issues
+        const serviceClient = createServiceRoleClient();
+        serviceClient
+          .from("payment_audit_log")
+          .insert({
+            keepz_payment_id: paymentId,
+            keepz_order_id: payment.keepz_order_id,
+            user_id: user.id,
+            event_type: "status_poll_verify_failed",
+            event_data: {
+              error: String(verifyError),
+              stack:
+                verifyError instanceof Error ? verifyError.stack : undefined,
+            },
+          })
+          .then(
+            () => {},
+            () => {},
+          );
       }
     }
 
