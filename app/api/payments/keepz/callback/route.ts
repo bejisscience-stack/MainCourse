@@ -185,10 +185,15 @@ export async function POST(request: NextRequest) {
     );
 
     console.log("[Keepz Callback] Processing payment:", {
+      timestamp: new Date().toISOString(),
       integratorOrderId,
       paymentId: payment.id,
+      userId: payment.user_id,
+      paymentType: payment.payment_type,
       currentStatus: payment.status,
       callbackStatus,
+      amount: payment.amount,
+      ip: clientIP,
     });
 
     // Validate amount — reject if missing or mismatched
@@ -252,7 +257,12 @@ export async function POST(request: NextRequest) {
         );
       } else {
         console.log("[Keepz Callback] Payment completed successfully:", {
+          timestamp: new Date().toISOString(),
           integratorOrderId,
+          userId: payment.user_id,
+          paymentType: payment.payment_type,
+          amount: payment.amount,
+          alreadyCompleted: rpcResult?.already_completed || false,
           warning: rpcResult?.warning,
         });
         await auditLog(
@@ -316,9 +326,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
-    console.error("[Keepz Callback] Unhandled error:", error);
+    console.error("[Keepz Callback] Unhandled error:", {
+      timestamp: new Date().toISOString(),
+      error: String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     await auditLog(supabase, null, null, null, "callback_unhandled_error", {
       error: String(error),
+      stack: error instanceof Error ? error.stack : undefined,
     });
     return NextResponse.json({ received: true }, { status: 200 });
   }

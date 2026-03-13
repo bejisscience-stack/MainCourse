@@ -8,6 +8,7 @@ import { useUser } from "@/hooks/useUser";
 import { supabase } from "@/lib/supabase";
 import { getReferral } from "@/lib/referral-storage";
 import { useSavedCards, type SavedCard } from "@/hooks/useSavedCards";
+import { usePaymentRecovery } from "@/hooks/usePaymentRecovery";
 
 type KeepzMethod = "all";
 
@@ -45,6 +46,9 @@ export default function EnrollmentModal({
     mutate: mutateSavedCards,
   } = useSavedCards();
   const [mounted, setMounted] = useState(false);
+
+  // Recover any stuck payments when modal opens
+  usePaymentRecovery(isOpen ? profile?.id || null : null, onSuccess);
 
   const [referralCode, setReferralCode] = useState("");
   const [referralValidation, setReferralValidation] = useState<
