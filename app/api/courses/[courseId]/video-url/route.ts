@@ -20,6 +20,10 @@ export async function GET(
     );
   }
 
+  if (!videoPath.startsWith(courseId + "/")) {
+    return NextResponse.json({ error: "Invalid video path" }, { status: 400 });
+  }
+
   // Auth
   const token = getTokenFromHeader(request);
   if (!token) {
@@ -61,7 +65,7 @@ export async function GET(
   const serviceSupabase = createServiceRoleClient(token);
   const { data, error } = await serviceSupabase.storage
     .from("course-videos")
-    .createSignedUrl(videoPath, 7200); // 2 hours
+    .createSignedUrl(videoPath, 3600); // 1 hour expiry for paid content protection
 
   if (error || !data?.signedUrl) {
     console.error("[video-url] Signed URL error:", error);
