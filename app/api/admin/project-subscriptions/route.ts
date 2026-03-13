@@ -45,7 +45,11 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (subsError) {
-      return NextResponse.json({ error: subsError.message }, { status: 500 });
+      console.error("Subscription fetch error:", subsError);
+      return NextResponse.json(
+        { error: "Failed to fetch subscriptions" },
+        { status: 500 },
+      );
     }
 
     // Fetch profiles for all user_ids
