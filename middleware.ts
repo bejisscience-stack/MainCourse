@@ -79,7 +79,12 @@ export async function middleware(request: NextRequest) {
   response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
   response.headers.set("Pragma", "no-cache");
 
-  // CSP-01: Dynamic nonce-based Content-Security-Policy (replaces static 'unsafe-inline')
+  // SECURITY NOTE (CSP-01): style-src 'unsafe-inline' is required for Tailwind CSS which generates
+  // inline styles at runtime. Removing it breaks all Tailwind styling. This is an accepted risk because:
+  // 1. CSS injection is lower impact than script injection (no code execution)
+  // 2. script-src uses nonce-based allowlisting which prevents XSS script execution
+  // 3. Migrating to nonce-based styles requires Tailwind config changes and is tracked as a future improvement
+  // To migrate: configure Tailwind to use CSS-in-JS with nonce support, or extract all styles to external stylesheets
   const cspHeader = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}'`,
