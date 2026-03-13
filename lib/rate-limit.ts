@@ -8,9 +8,15 @@ const hasRedis =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
 
 if (!hasRedis) {
-  console.warn(
-    "[Rate Limit] WARNING: Upstash Redis not configured. Using in-memory fallback. Rate limits reset on deploy and are per-instance. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN for persistent rate limiting.",
-  );
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      "[Rate Limit] CRITICAL: Upstash Redis not configured in production. Rate limits are ephemeral and per-instance. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.",
+    );
+  } else {
+    console.warn(
+      "[Rate Limit] Upstash Redis not configured — using in-memory fallback (dev only)",
+    );
+  }
 }
 
 const redisOrMemory = hasRedis ? Redis.fromEnv() : new Map<string, number>();

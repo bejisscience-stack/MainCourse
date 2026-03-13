@@ -19,8 +19,8 @@ const nextConfig = {
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
-      { protocol: "https", hostname: "**.supabase.co" },
-      { protocol: "https", hostname: "**.supabase.in" },
+      { protocol: "https", hostname: "bvptqdmhuumjbyfnjxdt.supabase.co" },
+      { protocol: "https", hostname: "nbecbsbuerdtakxkrduw.supabase.co" },
     ],
   },
 

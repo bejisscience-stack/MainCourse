@@ -42,16 +42,10 @@ export async function verifyAdminRequest(
       user_id: user.id,
     });
     if (error || data !== true) {
-      return NextResponse.json(
-        { error: "Access denied. Admin only." },
-        { status: 403 },
-      );
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
   } catch {
-    return NextResponse.json(
-      { error: "Access denied. Admin only." },
-      { status: 403 },
-    );
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
   return {
