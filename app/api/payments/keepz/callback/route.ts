@@ -33,9 +33,29 @@ export async function POST(request: NextRequest) {
   try {
     const clientIP = getClientIP(request);
 
-    // IP allowlist check (graceful degradation: skip if not configured)
+    // IP allowlist check (fail-closed: block in production if not configured)
     const allowedIPs = process.env.KEEPZ_ALLOWED_IPS;
-    if (allowedIPs) {
+    if (!allowedIPs) {
+      if (process.env.NODE_ENV === "production") {
+        console.error(
+          "[Keepz Callback] BLOCKED: KEEPZ_ALLOWED_IPS not configured in production",
+          { ip: clientIP },
+        );
+        await auditLog(
+          supabase,
+          null,
+          null,
+          null,
+          "callback_ip_not_configured",
+          { ip: clientIP },
+        );
+        return NextResponse.json({ received: true }, { status: 200 });
+      }
+      console.warn(
+        "[Keepz Callback] WARNING: KEEPZ_ALLOWED_IPS not set — allowing in dev",
+        { ip: clientIP },
+      );
+    } else {
       const whitelist = allowedIPs.split(",").map((ip) => ip.trim());
       if (!whitelist.includes(clientIP)) {
         console.warn("[Keepz Callback] BLOCKED: IP not in allowlist", {
