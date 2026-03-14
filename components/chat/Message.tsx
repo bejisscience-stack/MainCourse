@@ -781,7 +781,9 @@ const Message = memo(function Message({
               className={
                 isOwn
                   ? `bg-emerald-600/80 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[75%] inline-block text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? "opacity-50" : isFailed ? "opacity-70" : ""}`
-                  : `text-gray-100 text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? "opacity-50" : isFailed ? "opacity-70" : ""}`
+                  : isAuthorLecturer
+                    ? `bg-amber-500/10 border border-amber-500/20 text-gray-100 rounded-2xl rounded-tl-sm px-4 py-2 max-w-[75%] inline-block text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? "opacity-50" : isFailed ? "opacity-70" : ""}`
+                    : `text-gray-100 text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? "opacity-50" : isFailed ? "opacity-70" : ""}`
               }
             >
               {message.content}

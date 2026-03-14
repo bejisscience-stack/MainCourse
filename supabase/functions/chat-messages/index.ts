@@ -116,7 +116,7 @@ Deno.serve(async (req: Request) => {
       // Get user profile
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id, username")
+        .select("id, username, avatar_url")
         .eq("id", user.id)
         .single();
 
@@ -153,7 +153,7 @@ Deno.serve(async (req: Request) => {
         user: {
           id: message.user_id,
           username: profile?.username || "User",
-          avatarUrl: "",
+          avatarUrl: profile?.avatar_url || "",
           ...(isMessageAuthorLecturer && { role: "lecturer" }),
         },
         content: message.content,
@@ -261,7 +261,7 @@ Deno.serve(async (req: Request) => {
       await Promise.all([
         supabase
           .from("profiles")
-          .select("id, username, email")
+          .select("id, username, email, avatar_url")
           .in("id", userIds),
         replyIds.length > 0
           ? supabase
@@ -330,7 +330,7 @@ Deno.serve(async (req: Request) => {
         user: {
           id: msg.user_id,
           username: profile?.username || "User",
-          avatarUrl: "",
+          avatarUrl: profile?.avatar_url || "",
           ...(lecturerId === msg.user_id && { role: "lecturer" }),
         },
         content: msg.content,
