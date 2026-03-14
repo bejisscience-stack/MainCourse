@@ -241,10 +241,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Create Keepz order with optional payment method pre-selection
-    // Use request origin so staging/production URLs are always correct
+    // NEXT_PUBLIC_APP_URL is reliable per-environment; request.nextUrl.origin
+    // returns localhost:8080 behind DigitalOcean's reverse proxy.
+    const forwardedHost =
+      request.headers.get("x-forwarded-host") || request.headers.get("host");
+    const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
     const appUrl =
-      request.nextUrl.origin ||
       process.env.NEXT_PUBLIC_APP_URL ||
+      (forwardedHost ? `${forwardedProto}://${forwardedHost}` : null) ||
       "https://swavleba.ge";
     const orderOptions: Parameters<typeof createKeepzOrder>[0] = {
       amount,
