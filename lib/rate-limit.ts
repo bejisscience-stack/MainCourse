@@ -46,19 +46,31 @@ const _subscribeLimiter = createLimiter("subscribe", 3, 60);
 const _callbackLimiter = createLimiter("callback", 30, 60);
 const _notificationLimiter = createLimiter("notification", 60, 60);
 
-// Wrap Upstash limiter to match existing { allowed, retryAfterMs } interface
+// Wrap Upstash limiter to match existing { allowed, retryAfterMs } interface.
+// When Redis is not configured, the Ratelimit constructor receives a Map which
+// does not implement the Redis command interface. Calling limiter.limit() on it
+// throws (e.g. "redis.eval is not a function"), so we catch and allow through.
 function wrapLimiter(limiter: Ratelimit) {
   return {
     async check(
       identifier: string,
     ): Promise<{ allowed: boolean; retryAfterMs: number }> {
-      const result = await limiter.limit(identifier);
-      return {
-        allowed: result.success,
-        retryAfterMs: result.success
-          ? 0
-          : Math.max(0, result.reset - Date.now()),
-      };
+      try {
+        const result = await limiter.limit(identifier);
+        return {
+          allowed: result.success,
+          retryAfterMs: result.success
+            ? 0
+            : Math.max(0, result.reset - Date.now()),
+        };
+      } catch (err) {
+        // Redis not available — allow the request through (fail-open)
+        console.warn(
+          "[Rate Limit] limiter.limit() failed, allowing request:",
+          err,
+        );
+        return { allowed: true, retryAfterMs: 0 };
+      }
     },
   };
 }

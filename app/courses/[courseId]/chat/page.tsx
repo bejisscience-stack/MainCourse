@@ -548,7 +548,7 @@ export default function CourseChatPage() {
                   onSendMessage={handleSendMessage}
                   onReaction={handleReaction}
                   showDMButton={false}
-                  isEnrolledInCourse={isEnrolled}
+                  isEnrolledInCourse={isEnrolled || userRole === "admin"}
                   enrollmentInfo={enrollmentInfo}
                   onReEnrollRequest={mutateEnrollments}
                 />

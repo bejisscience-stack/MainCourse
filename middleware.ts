@@ -99,6 +99,7 @@ export async function middleware(request: NextRequest) {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in",
     "font-src 'self'",
+    "media-src 'self' blob: https://*.supabase.co https://*.supabase.in",
     "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.keepz.me https://app.posthog.com https://us.i.posthog.com",
     "frame-src 'self' https://checkout.keepz.me",
     "object-src 'none'",
