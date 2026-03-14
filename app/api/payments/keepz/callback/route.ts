@@ -49,26 +49,19 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true }, { status: 200 });
       }
     } else {
-      if (process.env.NODE_ENV === "production") {
-        console.error(
-          "[Keepz Callback] BLOCKED: KEEPZ_ALLOWED_IPS not configured in production",
-          { ip: clientIP },
-        );
-        await auditLog(
-          supabase,
-          null,
-          null,
-          null,
-          "callback_ip_allowlist_missing",
-          {
-            ip: clientIP,
-          },
-        );
-        return NextResponse.json({ received: true }, { status: 200 });
-      }
       console.warn(
         "[Keepz Callback] KEEPZ_ALLOWED_IPS not set — relying on encrypted payload auth",
         { ip: clientIP },
+      );
+      await auditLog(
+        supabase,
+        null,
+        null,
+        null,
+        "callback_ip_allowlist_missing",
+        {
+          ip: clientIP,
+        },
       );
     }
 

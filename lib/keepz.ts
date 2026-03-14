@@ -1,4 +1,4 @@
-import * as crypto from 'crypto';
+import * as crypto from "crypto";
 
 // ---------------------------------------------------------------------------
 // Environment helpers
@@ -20,7 +20,7 @@ export class KeepzError extends Error {
 
   constructor(message: string, statusCode: number, exceptionGroup: number) {
     super(message);
-    this.name = 'KeepzError';
+    this.name = "KeepzError";
     this.statusCode = statusCode;
     this.exceptionGroup = exceptionGroup;
   }
@@ -50,43 +50,46 @@ export class KeepzCrypto {
     const aesKey = crypto.randomBytes(32);
     const iv = crypto.randomBytes(16);
 
-    const cipher = crypto.createCipheriv('aes-256-cbc', aesKey, iv);
+    const cipher = crypto.createCipheriv("aes-256-cbc", aesKey, iv);
     const encryptedData = Buffer.concat([
-      cipher.update(Buffer.from(JSON.stringify(data), 'utf8')),
+      cipher.update(Buffer.from(JSON.stringify(data), "utf8")),
       cipher.final(),
     ]);
 
-    const concat = `${aesKey.toString('base64')}.${iv.toString('base64')}`;
+    const concat = `${aesKey.toString("base64")}.${iv.toString("base64")}`;
 
     const rsaPublicKey = crypto.createPublicKey({
-      key: Buffer.from(this.keepzRsaPublicKeyB64, 'base64'),
-      format: 'der',
-      type: 'spki',
+      key: Buffer.from(this.keepzRsaPublicKeyB64, "base64"),
+      format: "der",
+      type: "spki",
     });
 
     const encryptedKeys = crypto.publicEncrypt(
       {
         key: rsaPublicKey,
         padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-        oaepHash: 'sha256',
+        oaepHash: "sha256",
       },
-      Buffer.from(concat, 'utf8'),
+      Buffer.from(concat, "utf8"),
     );
 
     return {
-      encryptedData: encryptedData.toString('base64'),
-      encryptedKeys: encryptedKeys.toString('base64'),
+      encryptedData: encryptedData.toString("base64"),
+      encryptedKeys: encryptedKeys.toString("base64"),
     };
   }
 
   /**
    * Decrypt a response / callback that was encrypted by Keepz.
    */
-  decrypt(encryptedDataB64: string, encryptedKeysB64: string): Record<string, unknown> {
+  decrypt(
+    encryptedDataB64: string,
+    encryptedKeysB64: string,
+  ): Record<string, unknown> {
     const rsaPrivateKey = crypto.createPrivateKey({
-      key: Buffer.from(this.myRsaPrivateKeyB64, 'base64'),
-      format: 'der',
-      type: 'pkcs8',
+      key: Buffer.from(this.myRsaPrivateKeyB64, "base64"),
+      format: "der",
+      type: "pkcs8",
     });
 
     const decryptedConcat = crypto
@@ -94,23 +97,23 @@ export class KeepzCrypto {
         {
           key: rsaPrivateKey,
           padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-          oaepHash: 'sha256',
+          oaepHash: "sha256",
         },
-        Buffer.from(encryptedKeysB64, 'base64'),
+        Buffer.from(encryptedKeysB64, "base64"),
       )
-      .toString('utf8');
+      .toString("utf8");
 
-    const [encodedKey, encodedIV] = decryptedConcat.split('.');
-    const aesKey = Buffer.from(encodedKey, 'base64');
-    const iv = Buffer.from(encodedIV, 'base64');
+    const [encodedKey, encodedIV] = decryptedConcat.split(".");
+    const aesKey = Buffer.from(encodedKey, "base64");
+    const iv = Buffer.from(encodedIV, "base64");
 
-    const decipher = crypto.createDecipheriv('aes-256-cbc', aesKey, iv);
+    const decipher = crypto.createDecipheriv("aes-256-cbc", aesKey, iv);
     const decryptedData = Buffer.concat([
-      decipher.update(Buffer.from(encryptedDataB64, 'base64')),
+      decipher.update(Buffer.from(encryptedDataB64, "base64")),
       decipher.final(),
     ]);
 
-    return JSON.parse(decryptedData.toString('utf8'));
+    return JSON.parse(decryptedData.toString("utf8"));
   }
 }
 
@@ -123,8 +126,8 @@ let _crypto: KeepzCrypto | null = null;
 function getKeepzCrypto(): KeepzCrypto {
   if (!_crypto) {
     _crypto = new KeepzCrypto(
-      env('KEEPZ_RSA_PUBLIC_KEY'),
-      env('MY_RSA_PRIVATE_KEY'),
+      env("KEEPZ_RSA_PUBLIC_KEY"),
+      env("MY_RSA_PRIVATE_KEY"),
     );
   }
   return _crypto;
@@ -143,26 +146,26 @@ export interface CreateOrderOptions {
   callbackUri?: string;
   language?: string;
   // Keepz provider parameters — skip method selection on checkout page
-  directLinkProvider?: string;       // BOG | TBC | CREDO | DEFAULT — card payments
-  openBankingLinkProvider?: string;  // BOG | TBC | CREDO | LIBERTY — online banking
-  cryptoPaymentProvider?: string;    // CITYPAY — crypto payments
+  directLinkProvider?: string; // BOG | TBC | CREDO | DEFAULT — card payments
+  openBankingLinkProvider?: string; // BOG | TBC | CREDO | LIBERTY — online banking
+  cryptoPaymentProvider?: string; // CITYPAY — crypto payments
   installmentPaymentProvider?: string; // CREDO — installment payments
   // Saved card parameters
-  saveCard?: boolean;                // tokenize card for future payments (requires directLinkProvider)
-  cardToken?: string;                // charge a previously saved card (no redirect, server-to-server)
+  saveCard?: boolean; // tokenize card for future payments (requires directLinkProvider)
+  cardToken?: string; // charge a previously saved card (no redirect, server-to-server)
 }
 
 export interface CreateOrderResult {
   integratorOrderId: string;
-  checkoutUrl: string | null;  // null when charging a saved card (no redirect)
+  checkoutUrl: string | null; // null when charging a saved card (no redirect)
 }
 
 export async function createKeepzOrder(
   options: CreateOrderOptions,
 ): Promise<CreateOrderResult> {
-  const BASE_URL = env('KEEPZ_BASE_URL');
-  const integratorId = env('KEEPZ_INTEGRATOR_ID');
-  const receiverId = env('KEEPZ_RECEIVER_ID');
+  const BASE_URL = env("KEEPZ_BASE_URL");
+  const integratorId = env("KEEPZ_INTEGRATOR_ID");
+  const receiverId = env("KEEPZ_RECEIVER_ID");
   const keepzCrypto = getKeepzCrypto();
 
   const integratorOrderId = options.integratorOrderId ?? crypto.randomUUID();
@@ -170,35 +173,46 @@ export async function createKeepzOrder(
   const payload: Record<string, unknown> = {
     amount: options.amount,
     receiverId,
-    receiverType: 'BRANCH',
+    receiverType: "BRANCH",
     integratorId,
     integratorOrderId,
   };
 
   if (options.currency !== undefined) payload.currency = options.currency;
-  if (options.successRedirectUri !== undefined) payload.successRedirectUri = options.successRedirectUri;
-  if (options.failRedirectUri !== undefined) payload.failRedirectUri = options.failRedirectUri;
-  if (options.callbackUri !== undefined) payload.callbackUri = options.callbackUri;
+  if (options.successRedirectUri !== undefined)
+    payload.successRedirectUri = options.successRedirectUri;
+  if (options.failRedirectUri !== undefined)
+    payload.failRedirectUri = options.failRedirectUri;
+  if (options.callbackUri !== undefined)
+    payload.callbackUri = options.callbackUri;
   if (options.language !== undefined) payload.language = options.language;
-  if (options.directLinkProvider !== undefined) payload.directLinkProvider = options.directLinkProvider;
-  if (options.openBankingLinkProvider !== undefined) payload.openBankingLinkProvider = options.openBankingLinkProvider;
-  if (options.cryptoPaymentProvider !== undefined) payload.cryptoPaymentProvider = options.cryptoPaymentProvider;
-  if (options.installmentPaymentProvider !== undefined) payload.installmentPaymentProvider = options.installmentPaymentProvider;
+  if (options.directLinkProvider !== undefined)
+    payload.directLinkProvider = options.directLinkProvider;
+  if (options.openBankingLinkProvider !== undefined)
+    payload.openBankingLinkProvider = options.openBankingLinkProvider;
+  if (options.cryptoPaymentProvider !== undefined)
+    payload.cryptoPaymentProvider = options.cryptoPaymentProvider;
+  if (options.installmentPaymentProvider !== undefined)
+    payload.installmentPaymentProvider = options.installmentPaymentProvider;
   if (options.cardToken !== undefined) payload.cardToken = options.cardToken;
   if (options.saveCard) {
     payload.saveCard = true;
     // saveCard requires directLinkProvider — default to 'DEFAULT' if not set
-    if (!payload.directLinkProvider) payload.directLinkProvider = 'DEFAULT';
+    if (!payload.directLinkProvider) payload.directLinkProvider = "DEFAULT";
   }
 
   const { encryptedData, encryptedKeys } = keepzCrypto.encrypt(payload);
 
   const url = `${BASE_URL}/api/integrator/order`;
-  console.log('[Keepz] Creating order:', { url, integratorOrderId, amount: options.amount });
+  console.log("[Keepz] Creating order:", {
+    url,
+    integratorOrderId,
+    amount: options.amount,
+  });
 
   const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       identifier: integratorId,
       encryptedData,
@@ -213,7 +227,11 @@ export async function createKeepzOrder(
   try {
     body = JSON.parse(rawText);
   } catch {
-    console.error('[Keepz] Non-JSON response:', response.status, rawText.substring(0, 500));
+    console.error(
+      "[Keepz] Non-JSON response:",
+      response.status,
+      rawText.substring(0, 500),
+    );
     throw new KeepzError(
       `Keepz returned non-JSON response (HTTP ${response.status})`,
       response.status,
@@ -222,19 +240,19 @@ export async function createKeepzOrder(
   }
 
   // Error responses from Keepz are plaintext JSON with a statusCode field
-  if (body.statusCode && typeof body.statusCode === 'number') {
-    console.error('[Keepz] API error response:', JSON.stringify(body));
+  if (body.statusCode && typeof body.statusCode === "number") {
+    console.error("[Keepz] API error response:", JSON.stringify(body));
     throw new KeepzError(
-      (body.message as string) ?? 'Keepz API error',
+      (body.message as string) ?? "Keepz API error",
       body.statusCode as number,
       (body.exceptionGroup as number) ?? 0,
     );
   }
 
   if (!response.ok) {
-    console.error('[Keepz] HTTP error:', response.status, JSON.stringify(body));
+    console.error("[Keepz] HTTP error:", response.status, JSON.stringify(body));
     throw new KeepzError(
-      body.message as string || `Keepz API error (HTTP ${response.status})`,
+      (body.message as string) || `Keepz API error (HTTP ${response.status})`,
       response.status,
       0,
     );
@@ -242,8 +260,15 @@ export async function createKeepzOrder(
 
   // Success responses are encrypted
   if (!body.encryptedData || !body.encryptedKeys) {
-    console.error('[Keepz] Missing encrypted fields in response:', JSON.stringify(body));
-    throw new KeepzError('Invalid Keepz response: missing encryptedData or encryptedKeys', 0, 0);
+    console.error(
+      "[Keepz] Missing encrypted fields in response:",
+      JSON.stringify(body),
+    );
+    throw new KeepzError(
+      "Invalid Keepz response: missing encryptedData or encryptedKeys",
+      0,
+      0,
+    );
   }
 
   const decrypted = keepzCrypto.decrypt(
@@ -251,7 +276,10 @@ export async function createKeepzOrder(
     body.encryptedKeys as string,
   );
 
-  console.log('[Keepz] Order created successfully:', { integratorOrderId, hasCheckoutUrl: !!decrypted.urlForQR });
+  console.log("[Keepz] Order created successfully:", {
+    integratorOrderId,
+    hasCheckoutUrl: !!decrypted.urlForQR,
+  });
 
   return {
     integratorOrderId,
@@ -266,8 +294,8 @@ export async function createKeepzOrder(
 export async function getOrderStatus(
   integratorOrderId: string,
 ): Promise<Record<string, unknown>> {
-  const BASE_URL = env('KEEPZ_BASE_URL');
-  const integratorId = env('KEEPZ_INTEGRATOR_ID');
+  const BASE_URL = env("KEEPZ_BASE_URL");
+  const integratorId = env("KEEPZ_INTEGRATOR_ID");
   const keepzCrypto = getKeepzCrypto();
 
   const { encryptedData, encryptedKeys } = keepzCrypto.encrypt({
@@ -278,12 +306,12 @@ export async function getOrderStatus(
     identifier: integratorId,
     encryptedData,
     encryptedKeys,
-    aes: 'true',
+    aes: "true",
   });
 
   const response = await fetch(
     `${BASE_URL}/api/integrator/order/status?${params.toString()}`,
-    { method: 'GET' },
+    { method: "GET" },
   );
 
   if (!response.ok) {
@@ -295,9 +323,9 @@ export async function getOrderStatus(
       // not JSON
     }
 
-    if (parsed && typeof parsed.statusCode === 'number') {
+    if (parsed && typeof parsed.statusCode === "number") {
       throw new KeepzError(
-        (parsed.message as string) ?? 'Keepz API error',
+        (parsed.message as string) ?? "Keepz API error",
         parsed.statusCode as number,
         (parsed.exceptionGroup as number) ?? 0,
       );
@@ -311,6 +339,15 @@ export async function getOrderStatus(
   }
 
   const body = await response.json();
+
+  if (!body.encryptedData || !body.encryptedKeys) {
+    throw new KeepzError(
+      "Invalid Keepz status response: missing encryptedData or encryptedKeys",
+      0,
+      0,
+    );
+  }
+
   return keepzCrypto.decrypt(
     body.encryptedData as string,
     body.encryptedKeys as string,
@@ -338,8 +375,8 @@ export function decryptCallback(
 export async function getSavedCardsFromKeepz(
   integratorOrderId: string,
 ): Promise<Record<string, unknown>> {
-  const BASE_URL = env('KEEPZ_BASE_URL');
-  const integratorId = env('KEEPZ_INTEGRATOR_ID');
+  const BASE_URL = env("KEEPZ_BASE_URL");
+  const integratorId = env("KEEPZ_INTEGRATOR_ID");
   const keepzCrypto = getKeepzCrypto();
 
   const { encryptedData, encryptedKeys } = keepzCrypto.encrypt({
@@ -350,12 +387,12 @@ export async function getSavedCardsFromKeepz(
     identifier: integratorId,
     encryptedData,
     encryptedKeys,
-    aes: 'true',
+    aes: "true",
   });
 
   const response = await fetch(
     `${BASE_URL}/api/v1/integrator/card/order-id?${params.toString()}`,
-    { method: 'GET' },
+    { method: "GET" },
   );
 
   if (!response.ok) {
@@ -367,9 +404,9 @@ export async function getSavedCardsFromKeepz(
       // not JSON
     }
 
-    if (parsed && typeof parsed.statusCode === 'number') {
+    if (parsed && typeof parsed.statusCode === "number") {
       throw new KeepzError(
-        (parsed.message as string) ?? 'Keepz API error',
+        (parsed.message as string) ?? "Keepz API error",
         parsed.statusCode as number,
         (parsed.exceptionGroup as number) ?? 0,
       );
@@ -383,6 +420,15 @@ export async function getSavedCardsFromKeepz(
   }
 
   const body = await response.json();
+
+  if (!body.encryptedData || !body.encryptedKeys) {
+    throw new KeepzError(
+      "Invalid Keepz saved cards response: missing encryptedData or encryptedKeys",
+      0,
+      0,
+    );
+  }
+
   return keepzCrypto.decrypt(
     body.encryptedData as string,
     body.encryptedKeys as string,

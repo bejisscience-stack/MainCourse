@@ -241,7 +241,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Create Keepz order with optional payment method pre-selection
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://swavleba.ge";
+    // Use request origin so staging/production URLs are always correct
+    const appUrl =
+      request.nextUrl.origin ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      "https://swavleba.ge";
     const orderOptions: Parameters<typeof createKeepzOrder>[0] = {
       amount,
       currency: "GEL",
