@@ -2,7 +2,15 @@
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Volume2, Volume1, VolumeX, Maximize, Minimize } from "lucide-react";
+import {
+  Play,
+  Pause,
+  Volume2,
+  Volume1,
+  VolumeX,
+  Maximize,
+  Minimize,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +33,7 @@ const CustomSlider = ({
     <motion.div
       className={cn(
         "relative w-full h-1 bg-white/20 rounded-full cursor-pointer",
-        className
+        className,
       )}
       onClick={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -156,10 +164,15 @@ const VideoPlayer = ({ src }: { src: string }) => {
 
   const showControlsTemporarily = useCallback(() => {
     setShowControls(true);
-    if (hideControlsTimerRef.current) clearTimeout(hideControlsTimerRef.current);
-    hideControlsTimerRef.current = setTimeout(() => setShowControls(false), 3000);
+    if (hideControlsTimerRef.current)
+      clearTimeout(hideControlsTimerRef.current);
+    hideControlsTimerRef.current = setTimeout(
+      () => setShowControls(false),
+      3000,
+    );
   }, []);
 
+  // Fullscreen change listener
   useEffect(() => {
     const handleFullscreenChange = () => {
       const fsActive = !!document.fullscreenElement;
@@ -170,7 +183,64 @@ const VideoPlayer = ({ src }: { src: string }) => {
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      if (hideControlsTimerRef.current) clearTimeout(hideControlsTimerRef.current);
+      if (hideControlsTimerRef.current)
+        clearTimeout(hideControlsTimerRef.current);
+    };
+  }, []);
+
+  // Pause video when tab becomes hidden (deters screen recording via tab switch)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && videoRef.current && !videoRef.current.paused) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  // Block Ctrl+S / Cmd+S save shortcut when video container is focused
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        const container = containerRef.current;
+        if (container && container.contains(document.activeElement)) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  // Detect screen capture via getDisplayMedia and pause video
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices) return;
+
+    const originalGetDisplayMedia =
+      navigator.mediaDevices.getDisplayMedia?.bind(navigator.mediaDevices);
+    if (!originalGetDisplayMedia) return;
+
+    navigator.mediaDevices.getDisplayMedia = async function (
+      constraints?: DisplayMediaStreamOptions,
+    ) {
+      // Pause video when screen sharing starts
+      if (videoRef.current && !videoRef.current.paused) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+      return originalGetDisplayMedia(constraints);
+    };
+
+    return () => {
+      navigator.mediaDevices.getDisplayMedia = originalGetDisplayMedia;
     };
   }, []);
 
@@ -187,164 +257,185 @@ const VideoPlayer = ({ src }: { src: string }) => {
           isFullscreen || isCssFullscreen
             ? "w-screen h-screen bg-black rounded-none"
             : "overflow-hidden w-full max-w-4xl mx-auto rounded-xl",
-          isCssFullscreen && "fixed inset-0 z-[9999]"
+          isCssFullscreen && "fixed inset-0 z-[9999]",
         )}
         onMouseEnter={() => setShowControls(true)}
         onMouseLeave={() => setShowControls(false)}
         onTouchStart={showControlsTemporarily}
+        onContextMenu={(e) => e.preventDefault()}
       >
-      <video
-        ref={videoRef}
-        className={cn(
-          "w-full",
-          (isFullscreen || isCssFullscreen) && "h-full object-contain"
-        )}
-        onTimeUpdate={handleTimeUpdate}
-        onEnded={handleEnded}
-        src={src}
-        playsInline
-        onClick={togglePlay}
-      />
+        <video
+          ref={videoRef}
+          className={cn(
+            "w-full",
+            (isFullscreen || isCssFullscreen) && "h-full object-contain",
+          )}
+          style={
+            {
+              WebkitUserDrag: "none",
+              userSelect: "none",
+              WebkitTouchCallout: "none",
+            } as React.CSSProperties
+          }
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={handleEnded}
+          src={src}
+          playsInline
+          onClick={togglePlay}
+          onContextMenu={(e) => e.preventDefault()}
+          controlsList="nodownload noremoteplayback"
+          disablePictureInPicture
+        />
 
-      {/* Big center play button when not playing */}
-      <AnimatePresence>
-        {!isPlaying && (
-          <motion.button
-            className="absolute inset-0 flex items-center justify-center z-10"
-            onClick={togglePlay}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.3 }}
-            aria-label="Play video"
-          >
-            <div className="w-16 h-16 md:w-20 md:h-20 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-xl transform transition-transform duration-300 hover:scale-110 active:scale-95">
-              <svg
-                className="w-7 h-7 md:w-9 md:h-9 text-emerald-500 ml-1"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </div>
-          </motion.button>
-        )}
-      </AnimatePresence>
+        {/* Transparent overlay to interfere with screen capture tools */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          aria-hidden="true"
+        />
 
-      {/* Custom controls overlay */}
-      <AnimatePresence>
-        {showControls && (
-          <motion.div
-            className="absolute bottom-0 mx-auto max-w-xl left-0 right-0 p-2 md:p-4 m-2 bg-[#11111198] backdrop-blur-md rounded-2xl"
-            initial={{ y: 20, opacity: 0, filter: "blur(10px)" }}
-            animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
-            exit={{ y: 20, opacity: 0, filter: "blur(10px)" }}
-            transition={{ duration: 0.6, ease: "circInOut", type: "spring" }}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-white text-sm">
-                {formatTime(currentTime)}
-              </span>
-              <CustomSlider
-                value={progress}
-                onChange={handleSeek}
-                className="flex-1"
-              />
-              <span className="text-white text-sm">{formatTime(duration)}</span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 md:gap-4">
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+        {/* Big center play button when not playing */}
+        <AnimatePresence>
+          {!isPlaying && (
+            <motion.button
+              className="absolute inset-0 flex items-center justify-center z-10"
+              onClick={togglePlay}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.3 }}
+              aria-label="Play video"
+            >
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-xl transform transition-transform duration-300 hover:scale-110 active:scale-95">
+                <svg
+                  className="w-7 h-7 md:w-9 md:h-9 text-emerald-500 ml-1"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <Button
-                    onClick={togglePlay}
-                    variant="ghost"
-                    size="icon"
-                    className="text-white hover:bg-[#111111d1] hover:text-white"
-                  >
-                    {isPlaying ? (
-                      <Pause className="h-5 w-5" />
-                    ) : (
-                      <Play className="h-5 w-5" />
-                    )}
-                  </Button>
-                </motion.div>
-                <div className="flex items-center gap-x-1">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* Custom controls overlay */}
+        <AnimatePresence>
+          {showControls && (
+            <motion.div
+              className="absolute bottom-0 mx-auto max-w-xl left-0 right-0 p-2 md:p-4 m-2 bg-[#11111198] backdrop-blur-md rounded-2xl"
+              initial={{ y: 20, opacity: 0, filter: "blur(10px)" }}
+              animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+              exit={{ y: 20, opacity: 0, filter: "blur(10px)" }}
+              transition={{ duration: 0.6, ease: "circInOut", type: "spring" }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-white text-sm">
+                  {formatTime(currentTime)}
+                </span>
+                <CustomSlider
+                  value={progress}
+                  onChange={handleSeek}
+                  className="flex-1"
+                />
+                <span className="text-white text-sm">
+                  {formatTime(duration)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 md:gap-4">
                   <motion.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                   >
                     <Button
-                      onClick={toggleMute}
+                      onClick={togglePlay}
                       variant="ghost"
                       size="icon"
                       className="text-white hover:bg-[#111111d1] hover:text-white"
                     >
-                      {isMuted ? (
-                        <VolumeX className="h-5 w-5" />
-                      ) : volume > 0.5 ? (
-                        <Volume2 className="h-5 w-5" />
+                      {isPlaying ? (
+                        <Pause className="h-5 w-5" />
                       ) : (
-                        <Volume1 className="h-5 w-5" />
+                        <Play className="h-5 w-5" />
                       )}
                     </Button>
                   </motion.div>
+                  <div className="flex items-center gap-x-1">
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <Button
+                        onClick={toggleMute}
+                        variant="ghost"
+                        size="icon"
+                        className="text-white hover:bg-[#111111d1] hover:text-white"
+                      >
+                        {isMuted ? (
+                          <VolumeX className="h-5 w-5" />
+                        ) : volume > 0.5 ? (
+                          <Volume2 className="h-5 w-5" />
+                        ) : (
+                          <Volume1 className="h-5 w-5" />
+                        )}
+                      </Button>
+                    </motion.div>
 
-                  <div className="hidden md:block w-24">
-                    <CustomSlider
-                      value={volume * 100}
-                      onChange={handleVolumeChange}
-                    />
+                    <div className="hidden md:block w-24">
+                      <CustomSlider
+                        value={volume * 100}
+                        onChange={handleVolumeChange}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-1 md:gap-2">
-                {[0.5, 1, 1.5, 2].map((speed) => (
+                <div className="flex items-center gap-1 md:gap-2">
+                  {[0.5, 1, 1.5, 2].map((speed) => (
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      key={speed}
+                    >
+                      <Button
+                        onClick={() => setSpeed(speed)}
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                          "text-white hover:bg-[#111111d1] hover:text-white",
+                          playbackSpeed === speed && "bg-[#111111d1]",
+                        )}
+                      >
+                        {speed}x
+                      </Button>
+                    </motion.div>
+                  ))}
                   <motion.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    key={speed}
                   >
                     <Button
-                      onClick={() => setSpeed(speed)}
+                      onClick={toggleFullscreen}
                       variant="ghost"
                       size="icon"
-                      className={cn(
-                        "text-white hover:bg-[#111111d1] hover:text-white",
-                        playbackSpeed === speed && "bg-[#111111d1]"
-                      )}
+                      className="text-white hover:bg-[#111111d1] hover:text-white"
+                      aria-label={
+                        isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
+                      }
                     >
-                      {speed}x
+                      {isFullscreen || isCssFullscreen ? (
+                        <Minimize className="h-5 w-5" />
+                      ) : (
+                        <Maximize className="h-5 w-5" />
+                      )}
                     </Button>
                   </motion.div>
-                ))}
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Button
-                    onClick={toggleFullscreen}
-                    variant="ghost"
-                    size="icon"
-                    className="text-white hover:bg-[#111111d1] hover:text-white"
-                    aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-                  >
-                    {isFullscreen || isCssFullscreen ? (
-                      <Minimize className="h-5 w-5" />
-                    ) : (
-                      <Maximize className="h-5 w-5" />
-                    )}
-                  </Button>
-                </motion.div>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
