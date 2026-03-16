@@ -16,6 +16,7 @@ function PaymentSuccessContent() {
     "loading" | "success" | "failed" | "timeout"
   >("loading");
   const [paymentType, setPaymentType] = useState<string | null>(null);
+  const [courseId, setCourseId] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
 
   const checkStatus = useCallback(async () => {
@@ -52,6 +53,7 @@ function PaymentSuccessContent() {
 
       const data = await res.json();
       setPaymentType(data.paymentType);
+      setCourseId(data.courseId || null);
 
       if (data.status === "success") {
         setStatus("success");
@@ -139,6 +141,42 @@ function PaymentSuccessContent() {
     poll();
   };
 
+  const getRedirectPath = () => {
+    switch (paymentType) {
+      case "course_enrollment":
+        return courseId ? `/courses/${courseId}/chat` : "/my-courses";
+      case "bundle_enrollment":
+        return "/my-courses";
+      case "project_subscription":
+        return "/courses";
+      case "project_budget":
+        return courseId
+          ? `/courses/${courseId}/chat?channel=projects`
+          : "/courses";
+      default:
+        return "/courses";
+    }
+  };
+
+  const getButtonText = () => {
+    switch (paymentType) {
+      case "course_enrollment":
+        return courseId
+          ? t("paymentMethod.goToChat")
+          : t("paymentMethod.goToCourses");
+      case "bundle_enrollment":
+        return t("paymentMethod.goToCourses");
+      case "project_subscription":
+        return t("paymentMethod.goToCourses");
+      case "project_budget":
+        return courseId
+          ? t("paymentMethod.goToProjects")
+          : t("paymentMethod.goToCourses");
+      default:
+        return t("paymentMethod.goToCourses");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-navy-950 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-navy-900/95 border border-navy-800/60 rounded-2xl shadow-soft-xl p-8 text-center">
@@ -175,20 +213,10 @@ function PaymentSuccessContent() {
               {t("paymentMethod.paymentConfirmed")}
             </p>
             <button
-              onClick={() =>
-                router.push(
-                  paymentType === "course_enrollment" ||
-                    paymentType === "bundle_enrollment"
-                    ? "/my-courses"
-                    : "/chat",
-                )
-              }
+              onClick={() => router.push(getRedirectPath())}
               className="w-full px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold"
             >
-              {paymentType === "course_enrollment" ||
-              paymentType === "bundle_enrollment"
-                ? t("paymentMethod.goToCourses")
-                : t("paymentMethod.goToProjects")}
+              {getButtonText()}
             </button>
           </>
         )}
@@ -257,10 +285,10 @@ function PaymentSuccessContent() {
                   : t("paymentMethod.tryAgain")}
               </button>
               <button
-                onClick={() => router.push("/my-courses")}
+                onClick={() => router.push(getRedirectPath())}
                 className="w-full px-4 py-3 bg-navy-800 text-gray-300 rounded-lg hover:bg-navy-700 font-semibold"
               >
-                {t("paymentMethod.goToCourses")}
+                {getButtonText()}
               </button>
             </div>
           </>

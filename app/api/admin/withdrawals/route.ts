@@ -179,10 +179,9 @@ export async function GET(request: NextRequest) {
     try {
       if (userIds.length > 0) {
         const { data: profilesData, error: profilesError } =
-          await createServiceRoleClient(token)
-            .from("profiles")
-            .select("id, username, email, role, balance")
-            .in("id", userIds);
+          await createServiceRoleClient(token).rpc("get_decrypted_profiles", {
+            p_user_ids: userIds,
+          });
 
         if (!profilesError && profilesData) {
           profiles = profilesData;

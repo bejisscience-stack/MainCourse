@@ -134,6 +134,32 @@ function getKeepzCrypto(): KeepzCrypto {
 }
 
 // ---------------------------------------------------------------------------
+// calculateKeepzCommission
+// ---------------------------------------------------------------------------
+
+export function calculateKeepzCommission(
+  amount: number,
+  paymentMethodType: string,
+): number {
+  let fee: number;
+  switch (paymentMethodType) {
+    case "card":
+      fee = amount * 0.025;
+      break;
+    case "bank":
+      fee = amount <= 10000 ? amount * 0.01 : Math.min(amount * 0.006, 100);
+      break;
+    case "split":
+      fee = amount * 0.03;
+      break;
+    default:
+      fee = amount * 0.025; // conservative card rate
+      break;
+  }
+  return Math.round(fee * 100) / 100;
+}
+
+// ---------------------------------------------------------------------------
 // createKeepzOrder
 // ---------------------------------------------------------------------------
 
@@ -148,7 +174,6 @@ export interface CreateOrderOptions {
   // Keepz provider parameters — skip method selection on checkout page
   directLinkProvider?: string; // BOG | TBC | CREDO | DEFAULT — card payments
   openBankingLinkProvider?: string; // BOG | TBC | CREDO | LIBERTY — online banking
-  cryptoPaymentProvider?: string; // CITYPAY — crypto payments
   installmentPaymentProvider?: string; // CREDO — installment payments
   // Saved card parameters
   saveCard?: boolean; // tokenize card for future payments (requires directLinkProvider)
@@ -190,8 +215,6 @@ export async function createKeepzOrder(
     payload.directLinkProvider = options.directLinkProvider;
   if (options.openBankingLinkProvider !== undefined)
     payload.openBankingLinkProvider = options.openBankingLinkProvider;
-  if (options.cryptoPaymentProvider !== undefined)
-    payload.cryptoPaymentProvider = options.cryptoPaymentProvider;
   if (options.installmentPaymentProvider !== undefined)
     payload.installmentPaymentProvider = options.installmentPaymentProvider;
   if (options.cardToken !== undefined) payload.cardToken = options.cardToken;

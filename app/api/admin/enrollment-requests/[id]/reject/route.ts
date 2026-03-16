@@ -117,14 +117,14 @@ export async function POST(
 
       // Send email
       try {
-        const { data: userProfile } = await serviceSupabase
-          .from("profiles")
-          .select("email")
-          .eq("id", enrollmentRequest.user_id)
-          .single();
+        const { data: userProfile } = await serviceSupabase.rpc(
+          "get_decrypted_profile",
+          { p_user_id: enrollmentRequest.user_id },
+        );
 
-        if (userProfile?.email) {
-          await sendEnrollmentRejectedEmail(userProfile.email, courseTitle);
+        const decryptedEmail = userProfile?.[0]?.email ?? userProfile?.email;
+        if (decryptedEmail) {
+          await sendEnrollmentRejectedEmail(decryptedEmail, courseTitle);
           console.log(
             "[Reject API] Email sent to user:",
             enrollmentRequest.user_id,

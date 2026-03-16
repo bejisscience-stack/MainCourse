@@ -227,7 +227,10 @@ export default function LecturerChatPage() {
     setShowCourseModal(false);
   }, [mutateCourses, loadChannelsAndMembers]);
 
-  const handleSendMessage = async (channelId: string, content: string) => {
+  const handleSendMessage = async (
+    channelId: string,
+    content: string | null,
+  ) => {
     // Message sending is now handled by ChatArea component via API
     // This callback is kept for compatibility but doesn't need to do anything
   };

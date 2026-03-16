@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import LayoutContainer from "@/components/chat/LayoutContainer";
 import ChatNavigation from "@/components/chat/ChatNavigation";
@@ -18,7 +18,9 @@ import type { Message as MessageType } from "@/types/message";
 export default function CourseChatPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const courseId = params?.courseId as string;
+  const channelParam = searchParams.get("channel");
   const { user, role: userRole, isLoading: userLoading } = useUser();
   const {
     enrolledCourseIds,
@@ -364,6 +366,20 @@ export default function CourseChatPage() {
       const server = servers[0];
       const allChannels = server.channels.flatMap((cat) => cat.channels);
 
+      // If a channel query param is present, use it (e.g. ?channel=projects)
+      if (channelParam) {
+        const paramChannel = allChannels.find(
+          (ch) => ch.name.toLowerCase() === channelParam.toLowerCase(),
+        );
+        if (paramChannel) {
+          setActiveChannelId(paramChannel.id);
+          setHasAutoSelectedChannel(true);
+          // Clean the URL to avoid re-triggering on refresh
+          window.history.replaceState({}, "", window.location.pathname);
+          return;
+        }
+      }
+
       // Pick the right default channel
       const targetChannel = isProjectAccessOnly
         ? allChannels.find((ch) => ch.name.toLowerCase() === "projects")
@@ -391,9 +407,13 @@ export default function CourseChatPage() {
     hasAutoSelectedChannel,
     setActiveChannelId,
     isProjectAccessOnly,
+    channelParam,
   ]);
 
-  const handleSendMessage = async (channelId: string, content: string) => {
+  const handleSendMessage = async (
+    channelId: string,
+    content: string | null,
+  ) => {
     // Message sending is now handled by ChatArea component via API
     // This callback is kept for compatibility but doesn't need to do anything
   };

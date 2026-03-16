@@ -17,6 +17,7 @@ export function useSignedVideoUrl(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const fetchIdRef = useRef(0);
+  const blobUrlRef = useRef<string | null>(null);
 
   const fetchSignedUrl = useCallback(async () => {
     if (!videoUrl || !courseId) return;
@@ -30,6 +31,12 @@ export function useSignedVideoUrl(
     setIsLoading(true);
     setError(null);
     const currentFetchId = ++fetchIdRef.current;
+
+    // Revoke previous blob URL to free memory
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
 
     try {
       const {
@@ -53,9 +60,22 @@ export function useSignedVideoUrl(
 
       const { signedUrl: url } = await res.json();
 
-      // Only update state if this is still the latest request
+      if (currentFetchId !== fetchIdRef.current) return;
+
+      // Fetch the video as a blob and create a blob URL to prevent URL copying
+      const videoRes = await fetch(url);
+      if (!videoRes.ok) {
+        throw new Error(`Video fetch failed: HTTP ${videoRes.status}`);
+      }
+
+      if (currentFetchId !== fetchIdRef.current) return;
+
+      const blob = await videoRes.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      blobUrlRef.current = blobUrl;
+
       if (currentFetchId === fetchIdRef.current) {
-        setSignedUrl(url);
+        setSignedUrl(blobUrl);
       }
     } catch (err) {
       if (currentFetchId === fetchIdRef.current) {
@@ -72,6 +92,16 @@ export function useSignedVideoUrl(
   useEffect(() => {
     fetchSignedUrl();
   }, [fetchSignedUrl]);
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+    };
+  }, []);
 
   return { signedUrl, isLoading, error, refresh: fetchSignedUrl };
 }
