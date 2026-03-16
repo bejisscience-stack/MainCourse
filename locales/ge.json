@@ -891,7 +891,8 @@
     "pay": "გადახდა",
     "paid": "გადახდილი",
     "paying": "იხდის...",
-    "notScraped": "ჯერ ბოტი გაუშვით"
+    "notScraped": "ჯერ ბოტი გაუშვით",
+    "insufficientBudget": "პროექტის ბიუჯეტი არასაკმარისია"
   },
   "paymentMethod": {
     "cardPayment": "ბარათით გადახდა",

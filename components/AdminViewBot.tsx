@@ -41,6 +41,7 @@ export default function AdminViewBot() {
     isLoading: subsLoading,
     filters,
     setFilters,
+    mutate: mutateSubmissions,
   } = useViewScraperSubmissions();
   const { progress, isActive: isLiveActive } = useViewScraperLive(
     activeRun?.id || null,
@@ -198,14 +199,15 @@ export default function AdminViewBot() {
           return;
         }
 
-        // Realtime subscription on submission_reviews will trigger a refresh
+        // Refresh submissions list immediately
+        await mutateSubmissions();
       } catch {
         alert("Payment failed. Please try again.");
       } finally {
         setPayingId(null);
       }
     },
-    [],
+    [mutateSubmissions],
   );
 
   // Auto-dismiss error after 8 seconds

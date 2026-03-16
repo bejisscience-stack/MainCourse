@@ -891,7 +891,8 @@
     "pay": "Pay",
     "paid": "Paid",
     "paying": "Paying...",
-    "notScraped": "Run bot first"
+    "notScraped": "Run bot first",
+    "insufficientBudget": "Insufficient project budget"
   },
   "paymentMethod": {
     "cardPayment": "Pay with Card",

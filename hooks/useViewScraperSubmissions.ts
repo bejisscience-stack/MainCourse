@@ -44,7 +44,7 @@ export function useViewScraperSubmissions(): ViewScraperSubmissionsResult {
       if (!response.ok) return { submissions: [] };
       return response.json();
     },
-    { revalidateOnFocus: false, dedupingInterval: 30000 },
+    { revalidateOnFocus: false, dedupingInterval: 5000 },
   );
 
   const allSubmissions: SubmissionWithViews[] = data?.submissions || [];

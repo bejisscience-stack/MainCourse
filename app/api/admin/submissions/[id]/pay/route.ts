@@ -84,7 +84,7 @@ export async function POST(
     // Step 2: Get student user_id from submission
     const { data: submission } = await serviceClient
       .from("project_submissions")
-      .select("user_id")
+      .select("user_id, project_id")
       .eq("id", submissionId)
       .single();
 
@@ -92,6 +92,31 @@ export async function POST(
       return NextResponse.json(
         { error: "Submission not found" },
         { status: 404 },
+      );
+    }
+
+    // Step 2b: Check project budget
+    const projectId = review.project_id || submission.project_id;
+    const { data: project } = await serviceClient
+      .from("projects")
+      .select("budget, spent")
+      .eq("id", projectId)
+      .single();
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    const projectBudget = parseFloat(project.budget) || 0;
+    const projectSpent = parseFloat(project.spent) || 0;
+    const remaining = Math.round((projectBudget - projectSpent) * 100) / 100;
+
+    if (remaining < payout_amount) {
+      return NextResponse.json(
+        {
+          error: `Insufficient project budget (remaining: ₾${remaining.toFixed(2)})`,
+        },
+        { status: 400 },
       );
     }
 
@@ -163,10 +188,22 @@ export async function POST(
       console.error("[Pay API] Review paid_at update failed:", paidError);
     }
 
+    // Step 7: Deduct from project budget
+    const newSpent = Math.round((projectSpent + roundedPayout) * 100) / 100;
+    const { error: spentError } = await serviceClient
+      .from("projects")
+      .update({ spent: newSpent })
+      .eq("id", projectId);
+
+    if (spentError) {
+      console.error("[Pay API] Project spent update failed:", spentError);
+    }
+
     return NextResponse.json({
       success: true,
       payout_amount: roundedPayout,
       balance_after: balanceAfter,
+      project_remaining: Math.round((projectBudget - newSpent) * 100) / 100,
       review_id: review.id,
     });
   } catch (err) {
