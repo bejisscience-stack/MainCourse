@@ -336,7 +336,11 @@
     "addCriteriaDescription": "Add criteria that student videos should match. You can add criteria for all platforms or specific platforms. Set RPM (Rate Per Match) for each criteria.",
     "submitting": "Submitting...",
     "submitted": "Submitted!",
-    "submitProject": "Submit Project"
+    "submitProject": "Submit Project",
+    "payAndPublish": "Pay & Publish ₾{{amount}}",
+    "pendingPayment": "Pending Payment",
+    "retryPayment": "Retry Payment",
+    "processingPayment": "Processing Payment..."
   },
   "videoSubmission": {
     "submitYourVideo": "Submit Your Video",

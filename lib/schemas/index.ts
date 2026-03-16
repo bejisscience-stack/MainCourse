@@ -5,6 +5,7 @@ export const paymentOrderSchema = z.object({
     "course_enrollment",
     "project_subscription",
     "bundle_enrollment",
+    "project_budget",
   ]),
   referenceId: z.string().uuid(),
   keepzMethod: z.string().optional(),

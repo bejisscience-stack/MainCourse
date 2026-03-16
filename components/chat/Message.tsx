@@ -508,7 +508,7 @@ const Message = memo(function Message({
         const { data, error } = await supabase
           .from("projects")
           .select(
-            "name, description, video_link, budget, min_views, max_views, platforms, start_date, end_date",
+            "name, description, video_link, budget, min_views, max_views, platforms, start_date, end_date, status",
           )
           .eq("message_id", message.id)
           .single();
@@ -565,6 +565,7 @@ const Message = memo(function Message({
             timestamp: message.timestamp,
             startDate: projectData.start_date,
             endDate: projectData.end_date,
+            status: projectData.status,
           }}
           currentUserId={currentUserId}
           isLecturer={isLecturer}

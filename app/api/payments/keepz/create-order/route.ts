@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
           { status: 400 },
         );
       }
-    } else {
+    } else if (paymentType === "project_subscription") {
       // project_subscription — price stored per subscription record
       const { data: sub, error } = await supabase
         .from("project_subscriptions")
@@ -108,6 +108,28 @@ export async function POST(request: NextRequest) {
       if (amount <= 0) {
         return NextResponse.json(
           { error: "Invalid subscription price" },
+          { status: 400 },
+        );
+      }
+    } else {
+      // project_budget — lecturer pays the project budget amount
+      const { data: project, error } = await supabase
+        .from("projects")
+        .select("id, status, user_id, budget")
+        .eq("id", referenceId)
+        .eq("user_id", user.id)
+        .eq("status", "pending_payment")
+        .single();
+      if (error || !project) {
+        return NextResponse.json(
+          { error: "Project not found or not pending payment" },
+          { status: 404 },
+        );
+      }
+      amount = Number((project as any).budget) || 0;
+      if (amount <= 0) {
+        return NextResponse.json(
+          { error: "Invalid project budget" },
           { status: 400 },
         );
       }

@@ -258,10 +258,10 @@ export default function VideoUploadDialog({
         "Please provide either a video link or upload a video file";
     }
 
-    // Budget validation: must be a positive number
+    // Budget validation: must be a non-negative number
     const budgetNum = parseFloat(budget);
-    if (!budget || isNaN(budgetNum) || budgetNum <= 0) {
-      newErrors.budget = "Budget must be a positive number";
+    if (budget === "" || isNaN(budgetNum) || budgetNum < 0) {
+      newErrors.budget = "Budget must be 0 or a positive number";
     }
 
     // Minimum views validation: must be at least 5,000
@@ -1132,7 +1132,10 @@ export default function VideoUploadDialog({
                 ) : (
                   <span>
                     {isLastStep
-                      ? t("projects.submitProject") || "Submit project"
+                      ? Number(budget) > 0
+                        ? t("projects.payAndPublish", { amount: budget }) ||
+                          `Pay & Publish ₾${budget}`
+                        : t("projects.submitProject") || "Submit project"
                       : "Next"}
                   </span>
                 )}
