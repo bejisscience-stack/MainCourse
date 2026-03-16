@@ -23,7 +23,10 @@ interface UploadingFile {
 }
 
 interface MessageInputProps {
-  onSend: (content: string, attachments?: MessageAttachment[]) => Promise<void>;
+  onSend: (
+    content: string | null,
+    attachments?: MessageAttachment[],
+  ) => Promise<void>;
   onTyping?: () => void;
   replyTo?: { id: string; username: string; content: string };
   onCancelReply?: () => void;
@@ -143,7 +146,7 @@ export default function MessageInput({
 
     try {
       await onSend(
-        contentToSend || "",
+        contentToSend || null,
         attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
       );
 

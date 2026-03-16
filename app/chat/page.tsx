@@ -197,7 +197,10 @@ export default function StudentChatPage() {
     }
   }, [enrollmentsLoading, user, loadEnrolledCoursesAndChannels]);
 
-  const handleSendMessage = async (channelId: string, content: string) => {
+  const handleSendMessage = async (
+    channelId: string,
+    content: string | null,
+  ) => {
     // Message sending is handled by ChatArea component via API
   };
 

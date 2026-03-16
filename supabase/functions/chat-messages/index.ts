@@ -22,15 +22,28 @@ Deno.serve(async (req: Request) => {
   if (req.method === "POST") {
     try {
       const body = await req.json();
-      const { chatId, content, replyTo } = body;
+      const { chatId, content, replyTo, attachments } = body;
 
       if (!chatId) return errorResponse("chatId is required", 400, cors);
-      if (
-        !content ||
-        typeof content !== "string" ||
-        content.trim().length === 0
-      ) {
-        return errorResponse("Message content is required", 400, cors);
+
+      const hasContent =
+        content && typeof content === "string" && content.trim().length > 0;
+      const hasAttachments =
+        Array.isArray(attachments) && attachments.length > 0;
+
+      if (!hasContent && !hasAttachments) {
+        return errorResponse(
+          "Message content or attachments required",
+          400,
+          cors,
+        );
+      }
+      if (hasContent && content.trim().length > 4000) {
+        return errorResponse(
+          "Message content too long (max 4000 chars)",
+          400,
+          cors,
+        );
       }
 
       const { data: channel, error: channelError } = await supabase
@@ -104,7 +117,7 @@ Deno.serve(async (req: Request) => {
           channel_id: chatId,
           course_id: channel.course_id,
           user_id: user.id,
-          content: content.trim(),
+          content: hasContent ? content.trim() : null,
           reply_to_id: replyTo || null,
         })
         .select("id, content, user_id, reply_to_id, edited_at, created_at")
@@ -138,10 +151,11 @@ Deno.serve(async (req: Request) => {
           replyPreview = {
             id: replyMessage.id,
             username: replyProfile?.username || "User",
-            content:
-              replyMessage.content.length > 100
+            content: replyMessage.content
+              ? replyMessage.content.length > 100
                 ? replyMessage.content.substring(0, 100) + "..."
-                : replyMessage.content,
+                : replyMessage.content
+              : "",
           };
         }
       }
@@ -295,10 +309,11 @@ Deno.serve(async (req: Request) => {
         replyMap.set(reply.id, {
           id: reply.id,
           username: replyProfile?.username || "User",
-          content:
-            reply.content.length > 100
+          content: reply.content
+            ? reply.content.length > 100
               ? reply.content.substring(0, 100) + "..."
-              : reply.content,
+              : reply.content
+            : "",
         });
       }
     }

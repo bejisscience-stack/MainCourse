@@ -25,7 +25,7 @@ interface ChatAreaProps {
   channel: Channel | null;
   currentUserId: string;
   isLecturer?: boolean;
-  onSendMessage: (channelId: string, content: string) => void;
+  onSendMessage: (channelId: string, content: string | null) => void;
   onReply?: (messageId: string) => void;
   onReaction?: (messageId: string, emoji: string) => void;
   isEnrolledInCourse?: boolean;
@@ -226,7 +226,7 @@ export default function ChatArea({
   }, [handleScroll]);
 
   const handleSend = useCallback(
-    async (content: string, attachments?: MessageAttachment[]) => {
+    async (content: string | null, attachments?: MessageAttachment[]) => {
       if (!channel) {
         console.error("Cannot send message: channel is null");
         return;

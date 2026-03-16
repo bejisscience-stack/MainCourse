@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useI18n } from '@/contexts/I18nContext';
-import ServerSidebar from './ServerSidebar';
-import ChannelSidebar from './ChannelSidebar';
-import ChatArea from './ChatArea';
-import ChatErrorBoundary from './ChatErrorBoundary';
-import { useActiveServer } from '@/hooks/useActiveServer';
-import { useActiveChannel } from '@/hooks/useActiveChannel';
-import { useUser } from '@/hooks/useUser';
-import { supabase } from '@/lib/supabase';
-import type { Server, Channel } from '@/types/server';
-import type { EnrollmentInfo } from '@/hooks/useEnrollments';
+import { useState, useEffect } from "react";
+import { useI18n } from "@/contexts/I18nContext";
+import ServerSidebar from "./ServerSidebar";
+import ChannelSidebar from "./ChannelSidebar";
+import ChatArea from "./ChatArea";
+import ChatErrorBoundary from "./ChatErrorBoundary";
+import { useActiveServer } from "@/hooks/useActiveServer";
+import { useActiveChannel } from "@/hooks/useActiveChannel";
+import { useUser } from "@/hooks/useUser";
+import { supabase } from "@/lib/supabase";
+import type { Server, Channel } from "@/types/server";
+import type { EnrollmentInfo } from "@/hooks/useEnrollments";
 
 interface LayoutContainerProps {
   servers: Server[];
@@ -19,10 +19,13 @@ interface LayoutContainerProps {
   isLecturer?: boolean;
   enrolledCourseIds?: Set<string>;
   onAddCourse?: () => void;
-  onSendMessage?: (channelId: string, content: string) => void;
+  onSendMessage?: (channelId: string, content: string | null) => void;
   onReaction?: (messageId: string, emoji: string) => void;
-  onChannelCreate?: (channel: Omit<Channel, 'id'>) => Promise<void>;
-  onChannelUpdate?: (channelId: string, updates: Partial<Channel>) => Promise<void>;
+  onChannelCreate?: (channel: Omit<Channel, "id">) => Promise<void>;
+  onChannelUpdate?: (
+    channelId: string,
+    updates: Partial<Channel>,
+  ) => Promise<void>;
   onChannelDelete?: (channelId: string) => Promise<void>;
   showDMButton?: boolean;
   isEnrolledInCourse?: boolean;
@@ -49,22 +52,23 @@ export default function LayoutContainer({
   const [activeServerId, setActiveServerId] = useActiveServer();
   const [activeChannelId, setActiveChannelId] = useActiveChannel();
   const [channelsCollapsed, setChannelsCollapsed] = useState(false);
-  const [userName, setUserName] = useState<string>('');
+  const [userName, setUserName] = useState<string>("");
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Mobile menu state
   const { user } = useUser();
   const { t } = useI18n();
 
-  const activeServer = activeServerId && activeServerId !== 'home'
-    ? servers.find((s) => s.id === activeServerId) || null
-    : null;
+  const activeServer =
+    activeServerId && activeServerId !== "home"
+      ? servers.find((s) => s.id === activeServerId) || null
+      : null;
   const activeChannel =
     activeServer?.channels
       .flatMap((cat) => cat.channels)
       .find((ch) => ch.id === activeChannelId) || null;
 
   // Check if we're in DM mode (home)
-  const isDMMode = activeServerId === 'home';
+  const isDMMode = activeServerId === "home";
 
   // Load current user's username
   useEffect(() => {
@@ -73,9 +77,9 @@ export default function LayoutContainer({
 
       try {
         const { data: profile } = await supabase
-          .from('profiles')
-          .select('username, avatar_url')
-          .eq('id', user.id)
+          .from("profiles")
+          .select("username, avatar_url")
+          .eq("id", user.id)
           .single();
 
         // Always use profiles.username (required field in database)
@@ -89,19 +93,19 @@ export default function LayoutContainer({
         } else {
           // Fallback only if profile doesn't exist (shouldn't happen in normal flow)
           const metadataUsername = user.user_metadata?.username?.trim();
-          const emailUsername = user.email?.split('@')[0];
+          const emailUsername = user.email?.split("@")[0];
 
           if (metadataUsername && metadataUsername.length > 0) {
             setUserName(metadataUsername);
           } else if (emailUsername && emailUsername.length > 0) {
             setUserName(emailUsername);
           } else {
-            setUserName('User');
+            setUserName("User");
           }
         }
       } catch (error) {
-        console.error('Error loading username:', error);
-        setUserName('User');
+        console.error("Error loading username:", error);
+        setUserName("User");
       }
     };
 
@@ -120,8 +124,10 @@ export default function LayoutContainer({
       // Prefer lectures channel first, then text channels
       const allChannels = activeServer.channels.flatMap((cat) => cat.channels);
       if (allChannels.length > 0) {
-        const lecturesChannel = allChannels.find((ch) => ch.type === 'lectures');
-        const textChannel = allChannels.find((ch) => ch.type === 'text');
+        const lecturesChannel = allChannels.find(
+          (ch) => ch.type === "lectures",
+        );
+        const textChannel = allChannels.find((ch) => ch.type === "text");
         const firstChannel = lecturesChannel || textChannel || allChannels[0];
         if (firstChannel) {
           setActiveChannelId(firstChannel.id);
@@ -137,7 +143,9 @@ export default function LayoutContainer({
     // Try to find a matching channel in the new server before clearing
     if (newServer && activeChannelId) {
       const allChannels = newServer.channels.flatMap((cat) => cat.channels);
-      const matchingChannel = allChannels.find((ch) => ch.id === activeChannelId);
+      const matchingChannel = allChannels.find(
+        (ch) => ch.id === activeChannelId,
+      );
       if (matchingChannel) {
         // Keep the same channel if it exists in the new server
         return;
@@ -160,7 +168,6 @@ export default function LayoutContainer({
 
   return (
     <div className="flex w-full h-full bg-navy-950/40 backdrop-blur-sm text-white overflow-hidden relative">
-
       {/* Mobile Menu Overlay / Backdrop */}
       {mobileMenuOpen && (
         <div
@@ -170,10 +177,12 @@ export default function LayoutContainer({
       )}
 
       {/* Sidebar Container (Responsive) */}
-      <div className={`
+      <div
+        className={`
         fixed inset-y-0 left-0 z-50 flex h-full transition-transform duration-300 ease-in-out md:relative md:translate-x-0
-        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:transform-none'}
-      `}>
+        ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:transform-none"}
+      `}
+      >
         {/* Server sidebar */}
         <ServerSidebar
           servers={servers}
@@ -189,11 +198,15 @@ export default function LayoutContainer({
         {!isDMMode && activeServer && (
           <div className="w-60 bg-navy-950/95 md:bg-navy-950/70 border-r border-navy-800/60 flex flex-col h-full shadow-2xl md:shadow-none">
             {/* Channels Section */}
-            <div className={`flex flex-col transition-all ${channelsCollapsed ? 'flex-shrink-0' : 'flex-1 min-h-0'}`}>
+            <div
+              className={`flex flex-col transition-all ${channelsCollapsed ? "flex-shrink-0" : "flex-1 min-h-0"}`}
+            >
               {/* Channels Header with Collapse Button - shown when collapsed */}
               {channelsCollapsed ? (
                 <div className="h-12 px-4 border-b border-navy-800/60 flex items-center justify-between bg-navy-950/60 flex-shrink-0">
-                  <span className="text-gray-400 text-xs font-semibold tracking-wider">CHANNELS</span>
+                  <span className="text-gray-400 text-xs font-semibold tracking-wider">
+                    CHANNELS
+                  </span>
                   <button
                     onClick={() => setChannelsCollapsed(!channelsCollapsed)}
                     className="text-gray-400 hover:text-emerald-300 transition-colors p-1 rounded-md hover:bg-navy-800/60"
@@ -233,29 +246,60 @@ export default function LayoutContainer({
             {/* User profile footer - at the very bottom */}
             <div className="h-14 bg-navy-950/80 px-2 py-2 flex items-center gap-2 border-t border-navy-800/60 flex-shrink-0 mt-auto">
               {userAvatarUrl ? (
-                <img src={userAvatarUrl} alt={userName} className="w-8 h-8 rounded-full object-cover shadow-soft" />
+                <img
+                  src={userAvatarUrl}
+                  alt={userName}
+                  className="w-8 h-8 rounded-full object-cover shadow-soft"
+                />
               ) : (
                 <div className="w-8 h-8 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold shadow-soft">
-                  {userName ? userName.charAt(0).toUpperCase() : 'U'}
+                  {userName ? userName.charAt(0).toUpperCase() : "U"}
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="text-gray-100 text-sm font-medium truncate">{userName || 'User'}</div>
+                <div className="text-gray-100 text-sm font-medium truncate">
+                  {userName || "User"}
+                </div>
                 <div className="text-emerald-300 text-xs flex items-center gap-1">
                   <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
-                  {t('chat.online')}
+                  {t("chat.online")}
                 </div>
               </div>
               <div className="flex gap-0.5">
                 <button className="h-9 w-9 inline-flex items-center justify-center text-gray-400 hover:text-emerald-200 rounded-lg border border-navy-800/60 bg-navy-900/50 hover:bg-navy-800/70 hover:border-emerald-400/40 transition-colors">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                    />
                   </svg>
                 </button>
                 <button className="h-9 w-9 inline-flex items-center justify-center text-gray-400 hover:text-emerald-200 rounded-lg border border-navy-800/60 bg-navy-900/50 hover:bg-navy-800/70 hover:border-emerald-400/40 transition-colors">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
                   </svg>
                 </button>
               </div>
@@ -270,7 +314,7 @@ export default function LayoutContainer({
           channel={activeChannel}
           currentUserId={currentUserId}
           isLecturer={isLecturer}
-          onSendMessage={onSendMessage || (() => { })}
+          onSendMessage={onSendMessage || (() => {})}
           onReaction={onReaction}
           isEnrolledInCourse={isEnrolledInCourse}
           enrollmentInfo={enrollmentInfo}
