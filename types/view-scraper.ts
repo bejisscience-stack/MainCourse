@@ -1,7 +1,7 @@
-export type Platform = 'tiktok' | 'instagram';
+export type Platform = "tiktok" | "instagram";
 
-export type ScrapeRunStatus = 'running' | 'completed' | 'failed';
-export type ScrapeTriggerType = 'scheduled' | 'manual';
+export type ScrapeRunStatus = "running" | "completed" | "failed";
+export type ScrapeTriggerType = "scheduled" | "manual";
 
 export interface ViewScrapeRun {
   id: string;
@@ -35,6 +35,15 @@ export interface ViewScrapeResult {
   scraped_at: string;
 }
 
+export interface SubmissionReviewData {
+  id: string;
+  platform: string | null;
+  payment_amount: number; // RPM (sum of matched criteria)
+  payout_amount: number; // Calculated: (views/1000) * RPM
+  paid_at: string | null;
+  paid_by: string | null;
+}
+
 export interface SubmissionWithViews {
   id: string;
   user_id: string;
@@ -53,6 +62,7 @@ export interface SubmissionWithViews {
   min_views: number | null;
   max_views: number | null;
   platforms: string[] | null;
+  reviews: SubmissionReviewData[];
 }
 
 export interface ViewScrapeResultEnriched extends ViewScrapeResult {

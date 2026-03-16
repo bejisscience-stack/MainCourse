@@ -518,7 +518,7 @@ export default function SubmissionReviewDialog({
                           )}
                         </div>
                         <span className="text-emerald-300 text-sm font-semibold">
-                          ${criterion.rpm.toFixed(2)} RPM
+                          ₾{criterion.rpm.toFixed(2)} RPM
                         </span>
                       </label>
                     );
@@ -530,7 +530,7 @@ export default function SubmissionReviewDialog({
                   <p className="text-sm text-gray-300">
                     <span className="font-semibold">Total RPM:</span>{" "}
                     <span className="text-emerald-300 font-bold">
-                      ${currentPaymentAmount.toFixed(2)}
+                      ₾{currentPaymentAmount.toFixed(2)}
                     </span>
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
@@ -600,7 +600,7 @@ export default function SubmissionReviewDialog({
               <p className="text-sm text-gray-300">
                 <span className="font-semibold">Saved RPM:</span>{" "}
                 <span className="text-emerald-300 font-bold">
-                  ${currentLastSavedRPM.toFixed(2)}
+                  ₾{currentLastSavedRPM.toFixed(2)}
                 </span>
               </p>
               <p className="text-xs text-gray-500 mt-1">

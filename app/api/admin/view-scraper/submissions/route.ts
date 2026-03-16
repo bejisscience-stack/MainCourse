@@ -98,13 +98,34 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Filter to only submissions that have video URLs
+    // Fetch accepted reviews for these submissions
+    const submissionIds = (submissions || []).map((s: any) => s.id);
+    const reviewMap = new Map<string, any[]>();
+
+    if (submissionIds.length > 0) {
+      const { data: reviews } = await serviceClient
+        .from("submission_reviews")
+        .select(
+          "id, submission_id, platform, status, payment_amount, payout_amount, paid_at, paid_by",
+        )
+        .in("submission_id", submissionIds)
+        .eq("status", "accepted");
+
+      for (const r of reviews || []) {
+        const existing = reviewMap.get(r.submission_id) || [];
+        existing.push(r);
+        reviewMap.set(r.submission_id, existing);
+      }
+    }
+
+    // Filter to submissions with video URLs AND at least one accepted review
     const withVideos = (submissions || [])
       .filter((s: any) => {
         const hasVideoUrl = s.video_url && s.video_url.trim();
         const hasPlatformLinks =
           s.platform_links && Object.keys(s.platform_links).length > 0;
-        return hasVideoUrl || hasPlatformLinks;
+        const hasAcceptedReview = reviewMap.has(s.id);
+        return (hasVideoUrl || hasPlatformLinks) && hasAcceptedReview;
       })
       .map((s: any) => {
         const profile = profileMap.get(s.user_id);
@@ -126,6 +147,7 @@ export async function GET(request: NextRequest) {
           min_views: s.projects?.min_views || null,
           max_views: s.projects?.max_views || null,
           platforms: s.projects?.platforms || null,
+          reviews: reviewMap.get(s.id) || [],
         };
       });
 

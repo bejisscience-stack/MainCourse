@@ -25,6 +25,10 @@ const AdminAnalytics = dynamic(() => import("@/components/AdminAnalytics"), {
 const AdminViewBot = dynamic(() => import("@/components/AdminViewBot"), {
   ssr: false,
 });
+const AdminWithdrawals = dynamic(
+  () => import("@/components/AdminWithdrawals"),
+  { ssr: false },
+);
 import { useUser } from "@/hooks/useUser";
 import { useCourses } from "@/hooks/useCourses";
 import { supabase } from "@/lib/supabase";
@@ -33,6 +37,7 @@ import type { Course } from "@/components/CourseCard";
 type TabType =
   | "overview"
   | "view-bot"
+  | "withdrawals"
   | "courses"
   | "notifications"
   | "analytics";
@@ -310,6 +315,16 @@ export default function AdminDashboard() {
               View Bot
             </button>
             <button
+              onClick={() => setActiveTab("withdrawals")}
+              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
+                activeTab === "withdrawals"
+                  ? "text-navy-900 border-navy-900"
+                  : "text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300"
+              }`}
+            >
+              Withdrawals
+            </button>
+            <button
               onClick={() => setActiveTab("courses")}
               className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
                 activeTab === "courses"
@@ -420,6 +435,19 @@ export default function AdminDashboard() {
               }
             >
               <AdminViewBot />
+            </ErrorBoundary>
+          )}
+
+          {activeTab === "withdrawals" && (
+            <ErrorBoundary
+              onError={(error) =>
+                console.error(
+                  "[Admin Dashboard] Withdrawals section error:",
+                  error,
+                )
+              }
+            >
+              <AdminWithdrawals />
             </ErrorBoundary>
           )}
 

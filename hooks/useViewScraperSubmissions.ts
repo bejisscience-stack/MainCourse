@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import useSWR from 'swr';
-import { useEffect, useState, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { SubmissionWithViews, Platform } from '@/types/view-scraper';
+import useSWR from "swr";
+import { useEffect, useState, useMemo } from "react";
+import { supabase } from "@/lib/supabase";
+import type { SubmissionWithViews, Platform } from "@/types/view-scraper";
 
 export interface SubmissionFilters {
   projectId: string | null;
@@ -26,21 +26,25 @@ export function useViewScraperSubmissions(): ViewScraperSubmissionsResult {
   });
 
   const { data, isLoading, mutate } = useSWR(
-    '/api/admin/view-scraper/submissions',
+    "/api/admin/view-scraper/submissions",
     async (url) => {
-      let { data: { session } } = await supabase.auth.getSession();
+      let {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        const {
+          data: { session: refreshed },
+        } = await supabase.auth.refreshSession();
         session = refreshed;
       }
       if (!session?.access_token) return { submissions: [] };
       const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (!response.ok) return { submissions: [] };
       return response.json();
     },
-    { revalidateOnFocus: false, dedupingInterval: 30000 }
+    { revalidateOnFocus: false, dedupingInterval: 30000 },
   );
 
   const allSubmissions: SubmissionWithViews[] = data?.submissions || [];
@@ -48,15 +52,31 @@ export function useViewScraperSubmissions(): ViewScraperSubmissionsResult {
   // Realtime subscription for latest_views updates
   useEffect(() => {
     const channel = supabase
-      .channel('view_scraper_submissions')
+      .channel("view_scraper_submissions")
       .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'project_submissions' },
-        () => { mutate(); }
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "project_submissions" },
+        () => {
+          mutate();
+        },
       )
       .subscribe();
 
-    return () => { channel.unsubscribe(); };
+    const reviewChannel = supabase
+      .channel("view_scraper_reviews")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "submission_reviews" },
+        () => {
+          mutate();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+      reviewChannel.unsubscribe();
+    };
   }, [mutate]);
 
   // Client-side filtering
@@ -68,30 +88,48 @@ export function useViewScraperSubmissions(): ViewScraperSubmissionsResult {
     }
 
     if (filters.platform) {
-      const matchesPlatform = (hostname: string, platform: Platform): boolean => {
+      const matchesPlatform = (
+        hostname: string,
+        platform: Platform,
+      ): boolean => {
         switch (platform) {
-          case 'tiktok': return hostname.includes('tiktok.com');
-          case 'instagram': return hostname.includes('instagram.com');
-          default: return false;
+          case "tiktok":
+            return hostname.includes("tiktok.com");
+          case "instagram":
+            return hostname.includes("instagram.com");
+          default:
+            return false;
         }
       };
 
       filtered = filtered.filter((s) => {
         // Check platform_links keys
         if (s.platform_links) {
-          const hasMatchingLink = Object.values(s.platform_links).some((url) => {
-            try {
-              return matchesPlatform(new URL(url).hostname.toLowerCase(), filters.platform!);
-            } catch { /* skip invalid urls */ }
-            return false;
-          });
+          const hasMatchingLink = Object.values(s.platform_links).some(
+            (url) => {
+              try {
+                return matchesPlatform(
+                  new URL(url).hostname.toLowerCase(),
+                  filters.platform!,
+                );
+              } catch {
+                /* skip invalid urls */
+              }
+              return false;
+            },
+          );
           if (hasMatchingLink) return true;
         }
         // Check video_url
         if (s.video_url) {
           try {
-            return matchesPlatform(new URL(s.video_url).hostname.toLowerCase(), filters.platform!);
-          } catch { /* skip */ }
+            return matchesPlatform(
+              new URL(s.video_url).hostname.toLowerCase(),
+              filters.platform!,
+            );
+          } catch {
+            /* skip */
+          }
         }
         return false;
       });
