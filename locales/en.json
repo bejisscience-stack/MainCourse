@@ -996,5 +996,35 @@
     "rejectionReason": "Reason: {{reason}}",
     "processedAt": "Processed: {{date}}",
     "unknown": "Unknown"
+  },
+  "adminLecturers": {
+    "filterAll": "All",
+    "filterPending": "Pending",
+    "filterApproved": "Approved",
+    "noLecturers": "No lecturer accounts found",
+    "name": "Name",
+    "email": "Email",
+    "username": "Username",
+    "status": "Status",
+    "signupDate": "Signup Date",
+    "actions": "Actions",
+    "pending": "Pending",
+    "approved": "Approved",
+    "approve": "Approve",
+    "reject": "Reject",
+    "processing": "Processing...",
+    "alreadyApproved": "Approved",
+    "approveError": "Failed to approve lecturer",
+    "rejectError": "Failed to reject lecturer",
+    "rejectTitle": "Reject Lecturer Account",
+    "rejectMessage": "Are you sure you want to reject this lecturer account?",
+    "rejectReasonLabel": "Reason",
+    "rejectReasonPlaceholder": "Explain why this account was rejected (optional, visible to user)",
+    "confirmReject": "Confirm Reject"
+  },
+  "lecturerPending": {
+    "title": "Account Pending Approval",
+    "description": "Your lecturer account has been created and is pending admin approval. Once your account is reviewed and approved, you will be able to access the lecturer dashboard and create courses.",
+    "emailNotice": "You will receive an email notification once your account has been reviewed."
   }
 }

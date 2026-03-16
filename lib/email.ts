@@ -1,6 +1,6 @@
-import { getResend } from './resend';
-import { emailTemplates, EmailLanguage } from './email-templates';
-import type { MultilingualText } from '@/types/notification';
+import { getResend } from "./resend";
+import { emailTemplates, EmailLanguage } from "./email-templates";
+import type { MultilingualText } from "@/types/notification";
 
 export interface SendEmailParams {
   to: string | string[];
@@ -15,8 +15,13 @@ export interface SendEmailParams {
  * @returns The message ID from Resend
  * @throws Error if email sending fails
  */
-export async function sendEmail({ to, subject, html, text }: SendEmailParams): Promise<string> {
-  const from = process.env.EMAIL_FROM || 'Swavleba <no-reply@swavleba.ge>';
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+}: SendEmailParams): Promise<string> {
+  const from = process.env.EMAIL_FROM || "Swavleba <no-reply@swavleba.ge>";
   const replyTo = process.env.EMAIL_REPLY_TO;
 
   const { data, error } = await getResend().emails.send({
@@ -45,7 +50,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams): P
 export async function sendWelcomeEmail(
   to: string,
   username?: string,
-  lang: EmailLanguage = 'en'
+  lang: EmailLanguage = "en",
 ): Promise<string> {
   const template = emailTemplates.welcome;
   return sendEmail({
@@ -62,7 +67,7 @@ export async function sendWelcomeEmail(
 export async function sendEnrollmentApprovedEmail(
   to: string,
   courseName: string,
-  lang: EmailLanguage = 'en'
+  lang: EmailLanguage = "en",
 ): Promise<string> {
   const template = emailTemplates.enrollmentApproved;
   return sendEmail({
@@ -80,7 +85,7 @@ export async function sendEnrollmentRejectedEmail(
   to: string,
   courseName: string,
   reason?: string,
-  lang: EmailLanguage = 'en'
+  lang: EmailLanguage = "en",
 ): Promise<string> {
   const template = emailTemplates.enrollmentRejected;
   return sendEmail({
@@ -97,7 +102,7 @@ export async function sendEnrollmentRejectedEmail(
 export async function sendWithdrawalApprovedEmail(
   to: string,
   amount: number,
-  lang: EmailLanguage = 'en'
+  lang: EmailLanguage = "en",
 ): Promise<string> {
   const template = emailTemplates.withdrawalApproved;
   return sendEmail({
@@ -115,7 +120,7 @@ export async function sendWithdrawalRejectedEmail(
   to: string,
   amount: number,
   reason?: string,
-  lang: EmailLanguage = 'en'
+  lang: EmailLanguage = "en",
 ): Promise<string> {
   const template = emailTemplates.withdrawalRejected;
   return sendEmail({
@@ -132,7 +137,7 @@ export async function sendWithdrawalRejectedEmail(
 export async function sendBundleEnrollmentApprovedEmail(
   to: string,
   bundleName: string,
-  lang: EmailLanguage = 'en'
+  lang: EmailLanguage = "en",
 ): Promise<string> {
   const template = emailTemplates.bundleEnrollmentApproved;
   return sendEmail({
@@ -150,7 +155,7 @@ export async function sendBundleEnrollmentRejectedEmail(
   to: string,
   bundleName: string,
   reason?: string,
-  lang: EmailLanguage = 'en'
+  lang: EmailLanguage = "en",
 ): Promise<string> {
   const template = emailTemplates.bundleEnrollmentRejected;
   return sendEmail({
@@ -162,32 +167,70 @@ export async function sendBundleEnrollmentRejectedEmail(
 }
 
 /**
+ * Send lecturer account approved email
+ */
+export async function sendLecturerApprovedEmail(
+  to: string,
+  username?: string,
+  lang: EmailLanguage = "en",
+): Promise<string> {
+  const template = emailTemplates.lecturerApproved;
+  return sendEmail({
+    to,
+    subject: template.subject[lang],
+    html: template.html({ username }),
+    text: template.text({ username }),
+  });
+}
+
+/**
+ * Send lecturer account rejected email
+ */
+export async function sendLecturerRejectedEmail(
+  to: string,
+  username?: string,
+  reason?: string,
+  lang: EmailLanguage = "en",
+): Promise<string> {
+  const template = emailTemplates.lecturerRejected;
+  return sendEmail({
+    to,
+    subject: template.subject[lang],
+    html: template.html({ username, reason }),
+    text: template.text({ username, reason }),
+  });
+}
+
+/**
  * Send admin notification email (supports EN only, GE only, or both)
  */
 export async function sendAdminNotificationEmail(
   to: string | string[],
   title: MultilingualText,
   message: MultilingualText,
-  language: 'en' | 'ge' | 'both' = 'both'
+  language: "en" | "ge" | "both" = "both",
 ): Promise<string> {
   const template = emailTemplates.adminNotification;
-  const subject = language === 'en' ? title.en
-    : language === 'ge' ? title.ge
-    : `${title.en} | ${title.ge}`;
+  const subject =
+    language === "en"
+      ? title.en
+      : language === "ge"
+        ? title.ge
+        : `${title.en} | ${title.ge}`;
   return sendEmail({
     to,
     subject,
     html: template.html({
-      titleEn: language === 'ge' ? '' : title.en,
-      titleGe: language === 'en' ? '' : title.ge,
-      messageEn: language === 'ge' ? '' : message.en,
-      messageGe: language === 'en' ? '' : message.ge,
+      titleEn: language === "ge" ? "" : title.en,
+      titleGe: language === "en" ? "" : title.ge,
+      messageEn: language === "ge" ? "" : message.en,
+      messageGe: language === "en" ? "" : message.ge,
     }),
     text: template.text({
-      titleEn: language === 'ge' ? '' : title.en,
-      titleGe: language === 'en' ? '' : title.ge,
-      messageEn: language === 'ge' ? '' : message.en,
-      messageGe: language === 'en' ? '' : message.ge,
+      titleEn: language === "ge" ? "" : title.en,
+      titleGe: language === "en" ? "" : title.ge,
+      messageEn: language === "ge" ? "" : message.en,
+      messageGe: language === "en" ? "" : message.ge,
     }),
   });
 }
