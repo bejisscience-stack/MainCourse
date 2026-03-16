@@ -65,7 +65,28 @@ export async function signUp({
 
   if (error) {
     console.error("[Auth] Signup error:", error.message);
-    throw new Error("Check your email to continue.");
+    const msg = error.message || "";
+    if (
+      msg.includes("already registered") ||
+      msg.includes("already been registered")
+    ) {
+      throw new Error(
+        "An account with this email already exists. Try signing in instead.",
+      );
+    }
+    if (msg.includes("rate limit") || msg.includes("too many requests")) {
+      throw new Error(
+        "Too many signup attempts. Please wait a few minutes and try again.",
+      );
+    }
+    throw new Error(msg || "Failed to create account. Please try again.");
+  }
+
+  // Guard against Supabase "fake success" — existing email returns user with empty identities
+  if (data.user && data.user.identities && data.user.identities.length === 0) {
+    throw new Error(
+      "An account with this email already exists. Try signing in instead.",
+    );
   }
 
   return data;
