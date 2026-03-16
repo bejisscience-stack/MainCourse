@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
           { status: 404 },
         );
       }
-      amount = (sub as any).price || 10.0;
+      amount = (sub as any).price || 0.1;
       if (amount <= 0) {
         return NextResponse.json(
           { error: "Invalid subscription price" },

@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: user.id,
         payment_screenshot: null,
-        price: 10.0,
+        price: 0.1,
         status: "pending",
         payment_method: payment_method || "keepz",
       })

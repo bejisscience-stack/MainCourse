@@ -15,7 +15,7 @@ interface ProjectSubscriptionModalProps {
   courseId?: string;
 }
 
-const SUBSCRIPTION_PRICE = 10.0;
+const SUBSCRIPTION_PRICE = 0.1;
 
 function formatCardMask(mask: string): string {
   const last4 = mask.replace(/\*/g, "").slice(-4);
@@ -289,7 +289,7 @@ export default function ProjectSubscriptionModal({
 
   const isPayDisabled = isRedirecting || tokenPaymentStatus === "processing";
   const hasSavedCards = cards.length > 0;
-  const priceFormatted = `₾${SUBSCRIPTION_PRICE.toFixed(0)}`;
+  const priceFormatted = `₾${SUBSCRIPTION_PRICE.toFixed(1)}`;
 
   // Status view for existing subscriptions
   const renderStatusView = () => {
