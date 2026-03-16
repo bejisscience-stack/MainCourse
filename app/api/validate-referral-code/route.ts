@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  createServerSupabaseClient,
+  createServiceRoleClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
@@ -47,10 +47,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createServerSupabaseClient(token);
+    const supabase = createServiceRoleClient();
 
     // Normalize referral code (uppercase, trim)
     const normalizedCode = referralCode.trim().toUpperCase();
+
+    // Check if this is the user's own referral code
+    const { data: ownProfile } = await supabase
+      .from("profiles")
+      .select("referral_code")
+      .eq("id", user.id)
+      .single();
+
+    if (ownProfile?.referral_code === normalizedCode) {
+      return NextResponse.json({
+        valid: false,
+        error: "You cannot use your own referral code",
+      });
+    }
 
     // Check if referral code exists in profiles table
     const { data: profile, error } = await supabase

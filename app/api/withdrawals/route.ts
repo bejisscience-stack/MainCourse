@@ -67,9 +67,9 @@ export async function POST(request: NextRequest) {
     const { amount, bankAccountNumber } = body;
 
     // Validate amount
-    if (!amount || typeof amount !== "number" || amount < 20) {
+    if (!amount || typeof amount !== "number" || amount < 0.1) {
       return NextResponse.json(
-        { error: "Minimum withdrawal amount is 20 GEL" },
+        { error: "Minimum withdrawal amount is 0.10 GEL" },
         { status: 400 },
       );
     }
