@@ -4,11 +4,13 @@
 -- Dual-column approach: encrypted_* columns alongside existing plaintext columns.
 -- Auto-encrypt trigger writes to both on INSERT/UPDATE. Zero downtime.
 --
--- IMPORTANT: After applying this migration, you must set the encryption key:
---   ALTER DATABASE postgres SET app.pii_encryption_key = 'your-secret-key-here';
--- Then run a one-time backfill:
---   UPDATE profiles SET email = email WHERE email IS NOT NULL;
--- This triggers the auto-encrypt trigger to populate encrypted_* columns.
+-- IMPORTANT: After applying this migration:
+-- 1. Store encryption key in Supabase Vault:
+--    SELECT vault.create_secret('your-secret-key-here', 'pii_encryption_key', 'PII encryption key');
+-- 2. Run one-time backfill:
+--    UPDATE profiles SET encrypted_email = public.encrypt_pii(email),
+--      encrypted_full_name = public.encrypt_pii(full_name),
+--      encrypted_bank_account_number = public.encrypt_pii(bank_account_number);
 
 -- ============================================
 -- PART 1: Enable pgcrypto extension
@@ -25,7 +27,6 @@ CREATE OR REPLACE FUNCTION public.encrypt_pii(p_value TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
 SECURITY DEFINER
-STABLE
 AS $$
 DECLARE
   v_key TEXT;
@@ -34,9 +35,8 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  v_key := current_setting('app.pii_encryption_key', true);
+  SELECT decrypted_secret INTO v_key FROM vault.decrypted_secrets WHERE name = 'pii_encryption_key' LIMIT 1;
   IF v_key IS NULL OR v_key = '' THEN
-    -- No key configured, return NULL (plaintext column remains as fallback)
     RETURN NULL;
   END IF;
 
@@ -49,7 +49,6 @@ CREATE OR REPLACE FUNCTION public.decrypt_pii(p_encrypted TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
 SECURITY DEFINER
-STABLE
 AS $$
 DECLARE
   v_key TEXT;
@@ -59,9 +58,8 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  v_key := current_setting('app.pii_encryption_key', true);
+  SELECT decrypted_secret INTO v_key FROM vault.decrypted_secrets WHERE name = 'pii_encryption_key' LIMIT 1;
   IF v_key IS NULL OR v_key = '' THEN
-    -- No key configured, return as-is (may be plaintext during migration)
     RETURN p_encrypted;
   END IF;
 
@@ -69,7 +67,6 @@ BEGIN
     v_result := pgp_sym_decrypt(decode(p_encrypted, 'base64'), v_key);
     RETURN v_result;
   EXCEPTION WHEN OTHERS THEN
-    -- If decryption fails (e.g. value is not encrypted), return as-is
     RETURN p_encrypted;
   END;
 END;
