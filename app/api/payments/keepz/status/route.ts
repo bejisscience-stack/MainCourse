@@ -29,13 +29,36 @@ export async function GET(request: NextRequest) {
     const supabase = createServerSupabaseClient(token);
     const { data: payment, error } = await supabase
       .from("keepz_payments")
-      .select("status, payment_type, paid_at, amount, keepz_order_id")
+      .select(
+        "status, payment_type, paid_at, amount, keepz_order_id, reference_id",
+      )
       .eq("id", paymentId)
       .eq("user_id", user.id)
       .single();
 
     if (error || !payment) {
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+    }
+
+    // Resolve courseId based on payment type
+    let courseId: string | null = null;
+    if (payment.reference_id) {
+      const serviceClient = createServiceRoleClient();
+      if (payment.payment_type === "course_enrollment") {
+        const { data: enrollment } = await serviceClient
+          .from("enrollment_requests")
+          .select("course_id")
+          .eq("id", payment.reference_id)
+          .single();
+        courseId = enrollment?.course_id || null;
+      } else if (payment.payment_type === "project_budget") {
+        const { data: project } = await serviceClient
+          .from("projects")
+          .select("course_id")
+          .eq("id", payment.reference_id)
+          .single();
+        courseId = project?.course_id || null;
+      }
     }
 
     // Self-healing: if callback hasn't arrived yet, verify directly with Keepz API
@@ -114,6 +137,7 @@ export async function GET(request: NextRequest) {
               paymentType: payment.payment_type,
               paidAt: new Date().toISOString(),
               amount: payment.amount,
+              courseId,
             });
           }
         } else if (
@@ -137,6 +161,7 @@ export async function GET(request: NextRequest) {
             paymentType: payment.payment_type,
             paidAt: null,
             amount: payment.amount,
+            courseId,
           });
         }
         // Otherwise (PENDING, CREATED, etc.) — keep polling
@@ -173,6 +198,7 @@ export async function GET(request: NextRequest) {
       paymentType: payment.payment_type,
       paidAt: payment.paid_at,
       amount: payment.amount,
+      courseId,
     });
   } catch (error) {
     console.error("Payment status error:", error);

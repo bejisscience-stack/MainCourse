@@ -250,6 +250,7 @@ export async function POST(request: NextRequest) {
         status: "pending",
         keepz_order_id: integratorOrderId,
         price_at_order_time: amount,
+        payment_method_type: "card",
       })
       .select("id")
       .single();
