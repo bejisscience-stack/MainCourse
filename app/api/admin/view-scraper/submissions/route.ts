@@ -49,7 +49,6 @@ export async function GET(request: NextRequest) {
         latest_views,
         last_scraped_at,
         created_at,
-        status,
         projects!project_submissions_project_id_fkey (
           name,
           course_id,
@@ -138,7 +137,6 @@ export async function GET(request: NextRequest) {
           latest_views: s.latest_views || {},
           last_scraped_at: s.last_scraped_at,
           created_at: s.created_at,
-          status: s.status,
           username: profile?.username || "Unknown",
           avatar_url: profile?.avatar_url || null,
           project_title: s.projects?.name || "Unknown Project",
