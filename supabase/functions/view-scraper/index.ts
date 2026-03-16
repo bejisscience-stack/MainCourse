@@ -265,12 +265,23 @@ Deno.serve(async (req: Request) => {
     }
 
     // Extract all video URLs grouped by platform
+    console.log(
+      `[view-scraper] Submissions fetched: ${(submissions || []).length}`,
+    );
     const videoEntries: VideoEntry[] = [];
     for (const sub of submissions || []) {
       const project = (sub as any).projects;
-      // Skip if project has ended
-      if (project?.end_date && new Date(project.end_date) < new Date())
-        continue;
+      // Skip if project has ended (compare end-of-day so projects stay active on their end date)
+      if (project?.end_date) {
+        const endOfDay = new Date(project.end_date);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+        if (endOfDay < new Date()) {
+          console.log(
+            `[view-scraper] Skipping submission ${sub.id}: project end_date ${project.end_date} expired`,
+          );
+          continue;
+        }
+      }
 
       // Extract from platform_links
       if (sub.platform_links && typeof sub.platform_links === "object") {
@@ -314,7 +325,17 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    console.log(
+      `[view-scraper] Video entries extracted: ${videoEntries.length}`,
+      videoEntries.map((e) => ({
+        sub: e.submissionId,
+        platform: e.platform,
+        url: e.originalUrl.substring(0, 60),
+      })),
+    );
+
     if (videoEntries.length === 0) {
+      console.log("[view-scraper] No video URLs found — completing with 0");
       await adminClient
         .from("view_scrape_runs")
         .update({
