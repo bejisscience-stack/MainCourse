@@ -38,10 +38,9 @@ export async function prefetchProfiles(userIds: string[]) {
   console.log("📥 Prefetching profiles for user IDs:", uncachedIds);
 
   try {
-    const { data: profiles, error } = await supabase
-      .from("profiles")
-      .select("id, username, email, avatar_url")
-      .in("id", uncachedIds);
+    const { data: profiles, error } = await supabase.rpc("get_safe_profiles", {
+      user_ids: uncachedIds,
+    });
 
     // Store profiles in a variable to avoid type narrowing issues
     const profilesArray = profiles || [];
@@ -54,7 +53,7 @@ export async function prefetchProfiles(userIds: string[]) {
         `✅ Prefetched ${profilesArray.length} profiles out of ${uncachedIds.length} requested`,
       );
 
-      profilesArray.forEach((profile) => {
+      profilesArray.forEach((profile: any) => {
         // Always use profiles.username (required field in database)
         const username = normalizeProfileUsername(profile);
 
@@ -81,7 +80,7 @@ export async function prefetchProfiles(userIds: string[]) {
       });
 
       // Log missing profiles
-      const fetchedIds = new Set(profilesArray.map((p) => p.id));
+      const fetchedIds = new Set(profilesArray.map((p: any) => p.id));
       const missingIds = uncachedIds.filter((id) => !fetchedIds.has(id));
       if (missingIds.length > 0) {
         console.warn(
@@ -127,11 +126,10 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
   }
 
   try {
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("id, username, email, avatar_url")
-      .eq("id", userId)
-      .single();
+    const { data: profiles, error } = await supabase.rpc("get_safe_profiles", {
+      user_ids: [userId],
+    });
+    const profile = profiles?.[0] ?? null;
 
     // Store error in a variable to avoid type narrowing issues
     const fetchError = error;

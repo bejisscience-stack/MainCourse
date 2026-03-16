@@ -162,13 +162,12 @@ export default function StudentChatPage() {
           });
 
           if (userIds.size > 0) {
-            const { data: profiles } = await supabase
-              .from("profiles")
-              .select("id, username, email, role, avatar_url")
-              .in("id", Array.from(userIds));
+            const { data: profiles } = await supabase.rpc("get_safe_profiles", {
+              user_ids: Array.from(userIds),
+            });
 
             const membersData: Member[] =
-              profiles?.map((profile) => {
+              profiles?.map((profile: any) => {
                 const username = normalizeProfileUsername(profile);
                 return {
                   id: profile.id,

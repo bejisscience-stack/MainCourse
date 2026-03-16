@@ -272,10 +272,9 @@ export default function ProjectCard({
       ];
       const profilesMap = new Map();
       if (userIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, username, email, avatar_url")
-          .in("id", userIds);
+        const { data: profiles } = await supabase.rpc("get_safe_profiles", {
+          user_ids: userIds,
+        });
         profiles?.forEach((p: any) => profilesMap.set(p.id, p));
       }
 
