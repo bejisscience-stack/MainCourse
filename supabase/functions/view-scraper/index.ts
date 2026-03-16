@@ -229,23 +229,19 @@ Deno.serve(async (req: Request) => {
     const runId = run.id;
 
     // Fetch active submissions
-    let query = adminClient
-      .from("project_submissions")
-      .select(
-        `
+    let query = adminClient.from("project_submissions").select(
+      `
         id,
         user_id,
         project_id,
         video_url,
         platform_links,
-        status,
         projects!inner (
           id,
           end_date
         )
       `,
-      )
-      .in("status", ["approved", "pending"]);
+    );
 
     if (submissionIdFilter) {
       query = query.eq("id", submissionIdFilter);
