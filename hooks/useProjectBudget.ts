@@ -1,8 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useRealtimeSubmissionReviews } from './useRealtimeProjects';
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
 
 export interface BudgetResult {
   totalBudget: number;
@@ -12,35 +11,50 @@ export interface BudgetResult {
   percentageSpent: number;
   isLoading: boolean;
   error: Error | null;
-  status: 'healthy' | 'low' | 'critical' | 'depleted';
+  status: "healthy" | "low" | "critical" | "depleted";
 }
 
 /**
- * Custom hook for calculating project budget progress with real-time updates
- * @param projectId - The project ID to fetch budget data for
- * @param totalBudget - The total budget amount for the project
+ * Custom hook for calculating project budget progress with real-time updates.
+ * Reads the `spent` column from the `projects` table (updated only when admin pays).
  */
 export function useProjectBudget(
   projectId: string,
-  totalBudget: number
+  totalBudget: number,
 ): BudgetResult {
   const [totalSpent, setTotalSpent] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState<number>(0);
 
-  // Callback to trigger a refresh
   const refreshBudget = useCallback(() => {
-    console.log('[useProjectBudget] Real-time update triggered, refreshing budget data');
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey((prev) => prev + 1);
   }, []);
 
-  // Set up real-time subscription for submission_reviews
-  useRealtimeSubmissionReviews({
-    projectId,
-    enabled: !!projectId,
-    onChange: refreshBudget,
-  });
+  // Real-time subscription on the projects table for spent changes
+  useEffect(() => {
+    if (!projectId) return;
+
+    const channel = supabase
+      .channel(`project_budget_${projectId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "projects",
+          filter: `id=eq.${projectId}`,
+        },
+        () => {
+          refreshBudget();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [projectId, refreshBudget]);
 
   useEffect(() => {
     let isMounted = true;
@@ -55,29 +69,28 @@ export function useProjectBudget(
         setIsLoading(true);
         setError(null);
 
-        // Query submission_reviews to get total payment_amount for this project
+        // Read spent directly from the projects table
         const { data, error: queryError } = await supabase
-          .from('submission_reviews')
-          .select('payment_amount')
-          .eq('project_id', projectId)
-          .eq('status', 'accepted');
+          .from("projects")
+          .select("spent")
+          .eq("id", projectId)
+          .single();
 
         if (queryError) {
           throw new Error(queryError.message);
         }
 
         if (isMounted) {
-          // Sum up all payment amounts
-          const spent = data?.reduce((sum, review) => {
-            return sum + (parseFloat(review.payment_amount) || 0);
-          }, 0) || 0;
-
-          setTotalSpent(spent);
+          setTotalSpent(parseFloat(data?.spent) || 0);
           setIsLoading(false);
         }
       } catch (err) {
         if (isMounted) {
-          setError(err instanceof Error ? err : new Error('Failed to fetch budget data'));
+          setError(
+            err instanceof Error
+              ? err
+              : new Error("Failed to fetch budget data"),
+          );
           setIsLoading(false);
         }
       }
@@ -92,21 +105,19 @@ export function useProjectBudget(
 
   return useMemo(() => {
     const remainingBudget = Math.max(0, totalBudget - totalSpent);
-    const percentageSpent = totalBudget > 0
-      ? Math.min(100, (totalSpent / totalBudget) * 100)
-      : 0;
+    const percentageSpent =
+      totalBudget > 0 ? Math.min(100, (totalSpent / totalBudget) * 100) : 0;
     const percentageRemaining = 100 - percentageSpent;
 
-    // Determine budget status based on remaining percentage
-    let status: 'healthy' | 'low' | 'critical' | 'depleted';
+    let status: "healthy" | "low" | "critical" | "depleted";
     if (percentageRemaining <= 0) {
-      status = 'depleted';
+      status = "depleted";
     } else if (percentageRemaining <= 15) {
-      status = 'critical';
+      status = "critical";
     } else if (percentageRemaining <= 35) {
-      status = 'low';
+      status = "low";
     } else {
-      status = 'healthy';
+      status = "healthy";
     }
 
     return {
