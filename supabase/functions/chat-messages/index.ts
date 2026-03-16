@@ -130,11 +130,11 @@ Deno.serve(async (req: Request) => {
           .single();
 
         if (replyMessage) {
-          const { data: replyProfile } = await supabase
-            .from("profiles")
-            .select("username")
-            .eq("id", replyMessage.user_id)
-            .single();
+          const { data: replyProfiles } = await supabase.rpc(
+            "get_safe_profiles",
+            { user_ids: [replyMessage.user_id] },
+          );
+          const replyProfile = replyProfiles?.[0] ?? null;
           replyPreview = {
             id: replyMessage.id,
             username: replyProfile?.username || "User",
@@ -259,10 +259,7 @@ Deno.serve(async (req: Request) => {
 
     const [profilesResult, replyMessagesResult, attachmentsResult] =
       await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, username, email, avatar_url")
-          .in("id", userIds),
+        supabase.rpc("get_safe_profiles", { user_ids: userIds }),
         replyIds.length > 0
           ? supabase
               .from("messages")
@@ -286,10 +283,9 @@ Deno.serve(async (req: Request) => {
       const replyUserIds = [
         ...new Set(replyMessagesResult.data.map((m) => m.user_id)),
       ];
-      const { data: replyProfiles } = await supabase
-        .from("profiles")
-        .select("id, username")
-        .in("id", replyUserIds);
+      const { data: replyProfiles } = await supabase.rpc("get_safe_profiles", {
+        user_ids: replyUserIds,
+      });
       const replyProfileMap = new Map(
         replyProfiles?.map((p) => [p.id, p]) || [],
       );

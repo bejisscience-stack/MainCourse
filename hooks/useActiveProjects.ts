@@ -84,10 +84,10 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
     ];
 
     // Fetch lecturer profiles
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id, username, full_name")
-      .in("id", lecturerIds);
+    const { data: profiles, error: profilesError } = await supabase.rpc(
+      "get_safe_profiles",
+      { user_ids: lecturerIds },
+    );
 
     if (profilesError) {
       console.error(
@@ -97,7 +97,7 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
       // Continue without profiles - not critical
     }
 
-    const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
+    const profileMap = new Map(profiles?.map((p: any) => [p.id, p]) || []);
 
     // Get all project IDs to fetch criteria
     const projectIds = projects.map((p: any) => p.id);
@@ -134,7 +134,7 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
 
     // Map projects to ActiveProject interface
     const activeProjects: ActiveProject[] = projects.map((p: any) => {
-      const lecturerProfile = profileMap.get(p.courses.lecturer_id);
+      const lecturerProfile: any = profileMap.get(p.courses.lecturer_id);
       return {
         id: p.id,
         message_id: p.message_id,
