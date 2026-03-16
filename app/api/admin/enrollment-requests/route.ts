@@ -273,10 +273,9 @@ export async function GET(request: NextRequest) {
     try {
       if (userIds.length > 0) {
         const { data: profilesData, error: profilesError } =
-          await createServiceRoleClient(token)
-            .from("profiles")
-            .select("id, username, email")
-            .in("id", userIds);
+          await createServiceRoleClient(token).rpc("get_decrypted_profiles", {
+            p_user_ids: userIds,
+          });
 
         if (!profilesError && profilesData) {
           profiles = profilesData;
@@ -321,10 +320,10 @@ export async function GET(request: NextRequest) {
     try {
       if (referralCodes.length > 0) {
         const { data: referrerData, error: referrerError } =
-          await createServiceRoleClient(token)
-            .from("profiles")
-            .select("id, username, email, referral_code")
-            .in("referral_code", referralCodes);
+          await createServiceRoleClient(token).rpc(
+            "get_decrypted_profiles_by_referral",
+            { p_referral_codes: referralCodes },
+          );
 
         if (!referrerError && referrerData) {
           referrerProfiles = referrerData;

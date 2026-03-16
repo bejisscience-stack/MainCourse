@@ -151,14 +151,14 @@ export async function POST(
 
         // Send email notification
         try {
-          const { data: userProfile } = await serviceSupabase
-            .from("profiles")
-            .select("email")
-            .eq("id", updatedRequest.user_id)
-            .single();
+          const { data: userProfile } = await serviceSupabase.rpc(
+            "get_decrypted_profile",
+            { p_user_id: updatedRequest.user_id },
+          );
 
-          if (userProfile?.email) {
-            await sendEnrollmentApprovedEmail(userProfile.email, courseTitle);
+          const decryptedEmail = userProfile?.[0]?.email ?? userProfile?.email;
+          if (decryptedEmail) {
+            await sendEnrollmentApprovedEmail(decryptedEmail, courseTitle);
             console.log(
               "[Approve API] Email sent to user:",
               updatedRequest.user_id,

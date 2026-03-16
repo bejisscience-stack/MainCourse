@@ -164,15 +164,15 @@ export async function POST(
 
     // Send email notification
     try {
-      const { data: userProfile } = await serviceSupabase
-        .from("profiles")
-        .select("email")
-        .eq("id", withdrawalRequest.user_id)
-        .single();
+      const { data: userProfile } = await serviceSupabase.rpc(
+        "get_decrypted_profile",
+        { p_user_id: withdrawalRequest.user_id },
+      );
 
-      if (userProfile?.email) {
+      const decryptedEmail = userProfile?.[0]?.email ?? userProfile?.email;
+      if (decryptedEmail) {
         await sendWithdrawalApprovedEmail(
-          userProfile.email,
+          decryptedEmail,
           withdrawalRequest.amount,
         );
         console.log(
