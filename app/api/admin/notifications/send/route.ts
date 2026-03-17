@@ -7,6 +7,8 @@ import {
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { sendAdminNotificationEmail } from "@/lib/email";
 import { logAdminAction } from "@/lib/audit-log";
+import { isValidUUID } from "@/lib/validation";
+import { adminLimiter, rateLimitResponse } from "@/lib/rate-limit";
 import type { AdminNotificationPayload } from "@/types/notification";
 
 export const dynamic = "force-dynamic";
@@ -231,6 +233,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Rate limit
+    const { allowed, retryAfterMs } = await adminLimiter.check(user.id);
+    if (!allowed) return rateLimitResponse(retryAfterMs);
+
     const body: AdminNotificationPayload = await request.json();
     const {
       target_type,
@@ -270,6 +276,67 @@ export async function POST(request: NextRequest) {
     if ((language === "ge" || language === "both") && !message?.ge) {
       return NextResponse.json(
         { error: "Georgian message is required" },
+        { status: 400 },
+      );
+    }
+
+    // Length bounds on text fields
+    if (title?.en && title.en.length > 200) {
+      return NextResponse.json(
+        { error: "English title must be 200 characters or fewer" },
+        { status: 400 },
+      );
+    }
+    if (title?.ge && title.ge.length > 200) {
+      return NextResponse.json(
+        { error: "Georgian title must be 200 characters or fewer" },
+        { status: 400 },
+      );
+    }
+    if (message?.en && message.en.length > 5000) {
+      return NextResponse.json(
+        { error: "English message must be 5000 characters or fewer" },
+        { status: 400 },
+      );
+    }
+    if (message?.ge && message.ge.length > 5000) {
+      return NextResponse.json(
+        { error: "Georgian message must be 5000 characters or fewer" },
+        { status: 400 },
+      );
+    }
+
+    // Validate target_user_ids when targeting specific users (API-04)
+    if (target_type === "specific") {
+      if (!Array.isArray(target_user_ids) || target_user_ids.length === 0) {
+        return NextResponse.json(
+          {
+            error:
+              'target_user_ids must be a non-empty array when target_type is "specific"',
+          },
+          { status: 400 },
+        );
+      }
+      if (target_user_ids.length > 100) {
+        return NextResponse.json(
+          { error: "target_user_ids cannot exceed 100 entries" },
+          { status: 400 },
+        );
+      }
+      for (const id of target_user_ids) {
+        if (!isValidUUID(id)) {
+          return NextResponse.json(
+            { error: `Invalid UUID in target_user_ids: ${id}` },
+            { status: 400 },
+          );
+        }
+      }
+    }
+
+    // Cap target_emails at 100 entries
+    if (target_emails && target_emails.length > 100) {
+      return NextResponse.json(
+        { error: "target_emails cannot exceed 100 entries" },
         { status: 400 },
       );
     }
