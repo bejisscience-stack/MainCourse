@@ -114,7 +114,7 @@ export async function POST(
 
     // Use authenticated client (not service role) so auth.uid() works in the database function
     // The reject_withdrawal_request function uses auth.uid() to verify admin status
-    // Note: No balance refund needed since balance is not deducted when creating a pending request
+    // Note: Balance refund is handled atomically by the reject_withdrawal_request RPC
     const { error: rejectError } = await supabase.rpc(
       "reject_withdrawal_request",
       {

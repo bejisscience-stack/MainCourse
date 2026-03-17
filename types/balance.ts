@@ -1,12 +1,23 @@
 export interface BalanceTransaction {
   id: string;
   user_id: string;
-  user_type: 'student' | 'lecturer' | 'admin';
+  user_type: "student" | "lecturer" | "admin";
   amount: number;
-  transaction_type: 'credit' | 'debit';
-  source: 'referral_commission' | 'course_purchase' | 'withdrawal' | 'admin_adjustment';
+  transaction_type: "credit" | "debit";
+  source:
+    | "referral_commission"
+    | "course_purchase"
+    | "withdrawal"
+    | "admin_adjustment"
+    | "submission_payout"
+    | "withdrawal_hold"
+    | "withdrawal_refund";
   reference_id: string | null;
-  reference_type: 'enrollment_request' | 'withdrawal_request' | 'admin_action' | null;
+  reference_type:
+    | "enrollment_request"
+    | "withdrawal_request"
+    | "admin_action"
+    | null;
   description: string | null;
   balance_before: number | null;
   balance_after: number | null;
@@ -16,10 +27,10 @@ export interface BalanceTransaction {
 export interface WithdrawalRequest {
   id: string;
   user_id: string;
-  user_type: 'student' | 'lecturer';
+  user_type: "student" | "lecturer";
   amount: number;
   bank_account_number: string;
-  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  status: "pending" | "approved" | "rejected" | "completed";
   admin_notes: string | null;
   processed_at: string | null;
   processed_by: string | null;
@@ -42,4 +53,3 @@ export interface BalanceInfo {
   totalWithdrawn: number;
   transactions: BalanceTransaction[];
 }
-
