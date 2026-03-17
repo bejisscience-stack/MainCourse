@@ -8,11 +8,15 @@ const hasRedis =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
 
 if (!hasRedis) {
-  if (process.env.NODE_ENV === "production") {
-    console.error(
+  // SEC-06: crash-fast in production runtime (skip during next build)
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.NEXT_PHASE !== "phase-production-build"
+  ) {
+    throw new Error(
       "[Rate Limit] CRITICAL: Upstash Redis not configured in production. Rate limits are ephemeral and per-instance. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.",
     );
-  } else {
+  } else if (process.env.NODE_ENV !== "production") {
     console.warn(
       "[Rate Limit] Upstash Redis not configured — using in-memory fallback (dev only)",
     );
@@ -64,12 +68,12 @@ function wrapLimiter(limiter: Ratelimit) {
             : Math.max(0, result.reset - Date.now()),
         };
       } catch (err) {
-        // Redis not available — allow the request through (fail-open)
-        console.warn(
-          "[Rate Limit] limiter.limit() failed, allowing request:",
+        // Redis not available — deny the request (fail-closed)
+        console.error(
+          "[Rate Limit] limiter.limit() failed, blocking request:",
           err,
         );
-        return { allowed: true, retryAfterMs: 0 };
+        return { allowed: false, retryAfterMs: 60000 };
       }
     },
   };

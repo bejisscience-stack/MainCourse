@@ -85,6 +85,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (avatar_url !== undefined) {
+      if (
+        avatar_url !== null &&
+        !/^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\//.test(avatar_url)
+      ) {
+        return NextResponse.json(
+          { error: "Invalid avatar URL" },
+          { status: 400 },
+        );
+      }
       updateData.avatar_url = avatar_url; // can be null to remove
     }
 

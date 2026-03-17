@@ -40,7 +40,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate referralCode format
-    if (typeof referralCode !== "string" || referralCode.length > 20) {
+    if (
+      typeof referralCode !== "string" ||
+      referralCode.length > 20 ||
+      !/^[A-Za-z0-9]{1,20}$/.test(referralCode)
+    ) {
       return NextResponse.json(
         { valid: false, error: "Invalid referral code format" },
         { status: 200 },

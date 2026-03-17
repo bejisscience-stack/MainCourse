@@ -46,6 +46,14 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      const sanitizedContent = hasContent
+        ? content
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#x27;")
+        : null;
+
       const { data: channel, error: channelError } = await supabase
         .from("channels")
         .select("id, course_id, name")
@@ -117,7 +125,7 @@ Deno.serve(async (req: Request) => {
           channel_id: chatId,
           course_id: channel.course_id,
           user_id: user.id,
-          content: hasContent ? content.trim() : null,
+          content: sanitizedContent ? sanitizedContent.trim() : null,
           reply_to_id: replyTo || null,
         })
         .select("id, content, user_id, reply_to_id, edited_at, created_at")

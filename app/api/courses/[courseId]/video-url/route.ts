@@ -20,7 +20,11 @@ export async function GET(
     );
   }
 
-  if (!videoPath.startsWith(courseId + "/")) {
+  const normalizedPath = videoPath
+    .split("/")
+    .filter((s) => s !== "." && s !== "..")
+    .join("/");
+  if (!normalizedPath.startsWith(courseId + "/")) {
     return NextResponse.json({ error: "Invalid video path" }, { status: 400 });
   }
 
@@ -65,7 +69,7 @@ export async function GET(
   const serviceSupabase = createServiceRoleClient(token);
   const { data, error } = await serviceSupabase.storage
     .from("course-videos")
-    .createSignedUrl(videoPath, 3600); // 1 hour expiry for paid content protection
+    .createSignedUrl(normalizedPath, 3600); // 1 hour expiry for paid content protection
 
   if (error || !data?.signedUrl) {
     console.error("[video-url] Signed URL error:", error);

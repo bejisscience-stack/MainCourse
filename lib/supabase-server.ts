@@ -49,7 +49,9 @@ export function createServiceRoleClient(fallbackToken?: string) {
       });
     }
     console.warn(
-      "SUPABASE_SERVICE_ROLE_KEY not set and no fallback token provided. Using anon key (RLS will apply, may fail for admin operations).",
+      "\n⚠️⚠️⚠️ SUPABASE_SERVICE_ROLE_KEY not set and no fallback token provided.\n" +
+        "⚠️ Using anon key — RLS will apply, admin operations WILL fail.\n" +
+        "⚠️ Set SUPABASE_SERVICE_ROLE_KEY in your environment.\n",
     );
     return createClient(safeSupabaseUrl, safeSupabaseAnonKey);
   }

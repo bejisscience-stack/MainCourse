@@ -43,7 +43,7 @@ export async function getAuthenticatedUser(
   }
 
   // Extract token
-  const token = authHeader.replace("Bearer ", "");
+  const token = authHeader.replace("Bearer ", "").trim();
   if (!token || token === authHeader) {
     return {
       response: errorResponse("Unauthorized", 401, cors),

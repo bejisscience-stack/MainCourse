@@ -3,18 +3,16 @@ import {
   createServerSupabaseClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
+import { getTokenFromHeader } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
-    // Get auth token from Authorization header
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const token = getTokenFromHeader(request);
+    if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const token = authHeader.replace("Bearer ", "");
 
     // Verify token and get user
     const { user, error: userError } = await verifyTokenAndGetUser(token);

@@ -402,7 +402,9 @@ export async function GET(request: NextRequest) {
       `[Admin API ${requestId}] Unhandled exception after ${duration}ms:`,
       error,
     );
-    console.error(`[Admin API ${requestId}] Error stack:`, error.stack);
+    if (process.env.NODE_ENV !== "production") {
+      console.error(`[Admin API ${requestId}] Error stack:`, error.stack);
+    }
     return NextResponse.json(
       {
         error: "An error occurred",

@@ -286,7 +286,9 @@ export async function GET(request: NextRequest) {
     );
   } catch (error: any) {
     console.error("[Admin Bundle API] Unhandled exception:", error);
-    console.error("[Admin Bundle API] Error stack:", error.stack);
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[Admin Bundle API] Error stack:", error.stack);
+    }
     return NextResponse.json(
       {
         error: "An error occurred",

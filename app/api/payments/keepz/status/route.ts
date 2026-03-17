@@ -182,8 +182,6 @@ export async function GET(request: NextRequest) {
             event_type: "status_poll_verify_failed",
             event_data: {
               error: String(verifyError),
-              stack:
-                verifyError instanceof Error ? verifyError.stack : undefined,
             },
           })
           .then(

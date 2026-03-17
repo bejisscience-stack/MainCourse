@@ -48,9 +48,9 @@ export async function POST(request: NextRequest) {
         });
         return NextResponse.json({ received: true }, { status: 200 });
       }
-    } else {
-      console.warn(
-        "[Keepz Callback] KEEPZ_ALLOWED_IPS not set — relying on encrypted payload auth",
+    } else if (process.env.NODE_ENV === "production") {
+      console.error(
+        "[Keepz Callback] FATAL: KEEPZ_ALLOWED_IPS not configured in production — silently rejecting",
         { ip: clientIP },
       );
       await auditLog(
@@ -58,10 +58,14 @@ export async function POST(request: NextRequest) {
         null,
         null,
         null,
-        "callback_ip_allowlist_missing",
-        {
-          ip: clientIP,
-        },
+        "callback_ip_allowlist_missing_production",
+        { ip: clientIP },
+      );
+      return NextResponse.json({ received: true }, { status: 200 });
+    } else {
+      console.warn(
+        "[Keepz Callback] KEEPZ_ALLOWED_IPS not set — relying on encrypted payload auth (dev mode)",
+        { ip: clientIP },
       );
     }
 
@@ -343,14 +347,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
-    console.error("[Keepz Callback] Unhandled error:", {
-      timestamp: new Date().toISOString(),
-      error: String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    console.error("[Keepz Callback] Unhandled error:", String(error));
+    if (process.env.NODE_ENV !== "production" && error instanceof Error) {
+      console.error("[Keepz Callback] Stack trace:", error.stack);
+    }
     await auditLog(supabase, null, null, null, "callback_unhandled_error", {
       error: String(error),
-      stack: error instanceof Error ? error.stack : undefined,
     });
     return NextResponse.json({ received: true }, { status: 200 });
   }

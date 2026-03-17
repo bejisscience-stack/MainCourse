@@ -31,10 +31,15 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const safePage = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const safeLimit = Math.max(
+      1,
+      Math.min(parseInt(searchParams.get("limit") || "20", 10), 100),
+    );
     const unreadOnly = searchParams.get("unread") === "true";
 
+    const page = safePage;
+    const limit = safeLimit;
     const offset = (page - 1) * limit;
 
     console.log(

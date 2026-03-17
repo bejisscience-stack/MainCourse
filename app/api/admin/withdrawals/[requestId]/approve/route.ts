@@ -76,7 +76,7 @@ export async function POST(
     if (!allowed) return rateLimitResponse(retryAfterMs);
 
     const body = await request.json().catch(() => ({}));
-    const { adminNotes } = body;
+    const adminNotes = body.adminNotes?.substring(0, 500) || null;
 
     console.log(
       "[Approve Withdrawal API] Processing approval for request:",

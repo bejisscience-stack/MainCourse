@@ -145,7 +145,6 @@ export async function GET(request: NextRequest) {
             event_type: "verify_pending_api_failed",
             event_data: {
               error: String(err),
-              stack: err instanceof Error ? err.stack : undefined,
             },
           })
           .then(
