@@ -94,7 +94,7 @@ function SignUpForm() {
         // Redirect based on role and redirect URL
         setTimeout(() => {
           if (role === "lecturer") {
-            router.push("/lecturer");
+            router.push("/lecturer/pending");
           } else {
             // Priority: redirect URL (from pending enrollment) > referral flow > default
             if (redirectUrl) {

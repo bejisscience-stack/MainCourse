@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { getCurrentUser } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 
 export default function LecturerRootPage() {
   const router = useRouter();
@@ -13,27 +13,32 @@ export default function LecturerRootPage() {
       try {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
-          router.push('/login');
+          router.push("/login");
           return;
         }
 
-        // Fetch profile to check role
+        // Fetch profile to check role and approval status
         const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', currentUser.id)
+          .from("profiles")
+          .select("role, is_approved")
+          .eq("id", currentUser.id)
           .single();
 
         const resolvedRole = profile?.role || currentUser.user_metadata?.role;
 
-        if (resolvedRole === 'lecturer') {
-          router.push('/lecturer/dashboard');
+        if (resolvedRole === "lecturer") {
+          // Check if lecturer is approved
+          if (profile?.is_approved === true) {
+            router.push("/lecturer/dashboard");
+          } else {
+            router.push("/lecturer/pending");
+          }
         } else {
-          router.push('/');
+          router.push("/");
         }
       } catch (error) {
-        console.error('Error checking user:', error);
-        router.push('/');
+        console.error("Error checking user:", error);
+        router.push("/");
       }
     };
 
@@ -49,4 +54,3 @@ export default function LecturerRootPage() {
     </div>
   );
 }
-
