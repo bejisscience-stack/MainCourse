@@ -86,13 +86,15 @@ export const subscribeLimiter = wrapLimiter(_subscribeLimiter);
 export const callbackLimiter = wrapLimiter(_callbackLimiter);
 export const notificationLimiter = wrapLimiter(_notificationLimiter);
 
-// INFRA-04: DigitalOcean App Platform sets X-Forwarded-For with the real client IP as the first entry
+// INFRA-04: DigitalOcean App Platform appends the real client IP as the rightmost entry
+// in X-Forwarded-For. Clients can prepend fake entries but cannot control the last one.
 export function getClientIP(request: NextRequest): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
+  const xff = request.headers.get("x-forwarded-for");
+  if (xff) {
+    const parts = xff.split(",");
+    return parts[parts.length - 1].trim() || "unknown";
+  }
+  return request.headers.get("x-real-ip") || "127.0.0.1";
 }
 
 export function rateLimitResponse(retryAfterMs: number): NextResponse {
