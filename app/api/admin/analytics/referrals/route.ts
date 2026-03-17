@@ -1,8 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyAdminRequest, isAuthError, internalError } from '@/lib/admin-auth';
-import type { ReferralStats, ReferralByCourse, TopReferrer } from '@/types/analytics';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  verifyAdminRequest,
+  isAuthError,
+  internalError,
+} from "@/lib/admin-auth";
+import type {
+  ReferralStats,
+  ReferralByCourse,
+  TopReferrer,
+} from "@/types/analytics";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,13 +21,15 @@ export async function GET(request: NextRequest) {
 
     const [referralsResult, commissionsResult] = await Promise.all([
       serviceSupabase
-        .from('referrals')
-        .select('id, referrer_id, referred_user_id, referral_code, course_id, created_at, courses(id, title)'),
+        .from("referrals")
+        .select(
+          "id, referrer_id, referred_user_id, referral_code, course_id, created_at, courses(id, title)",
+        ),
 
       serviceSupabase
-        .from('balance_transactions')
-        .select('user_id, amount')
-        .eq('source', 'referral_commission'),
+        .from("balance_transactions")
+        .select("user_id, amount")
+        .eq("source", "referral_commission"),
     ]);
 
     const referrals = referralsResult.data || [];
@@ -35,7 +45,8 @@ export async function GET(request: NextRequest) {
       } else {
         byCourseMap.set(courseId, {
           courseId,
-          courseTitle: (ref as Record<string, any>).courses?.title || 'Unknown Course',
+          courseTitle:
+            (ref as Record<string, any>).courses?.title || "Unknown Course",
           count: 1,
         });
       }
@@ -49,7 +60,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Aggregate referrals by referrer
-    const referrerMap = new Map<string, { count: number; referralCode: string }>();
+    const referrerMap = new Map<
+      string,
+      { count: number; referralCode: string }
+    >();
     for (const ref of referrals) {
       const existing = referrerMap.get(ref.referrer_id);
       if (existing) {
@@ -66,22 +80,24 @@ export async function GET(request: NextRequest) {
     const referrerIds = Array.from(referrerMap.keys());
     let profiles: Array<{ id: string; username: string; email: string }> = [];
     if (referrerIds.length > 0) {
-      const { data: profilesData } = await serviceSupabase
-        .from('profiles')
-        .select('id, username, email')
-        .in('id', referrerIds);
-      profiles = profilesData || [];
+      const { data: profilesData, error: profilesError } =
+        await serviceSupabase.rpc("get_decrypted_profiles", {
+          p_user_ids: referrerIds,
+        });
+      if (!profilesError && profilesData) {
+        profiles = profilesData;
+      }
     }
 
-    const profilesMap = new Map(profiles.map(p => [p.id, p]));
+    const profilesMap = new Map(profiles.map((p) => [p.id, p]));
 
     const topReferrers: TopReferrer[] = Array.from(referrerMap.entries())
       .map(([userId, data]) => {
         const profile = profilesMap.get(userId);
         return {
           userId,
-          username: profile?.username || 'Unknown',
-          email: profile?.email || '',
+          username: profile?.username || "Unknown",
+          email: profile?.email || "",
           referralCode: data.referralCode,
           activationCount: data.count,
           totalCommission: commissionMap.get(userId) || 0,
@@ -92,18 +108,19 @@ export async function GET(request: NextRequest) {
 
     const stats: ReferralStats = {
       totalActivations: referrals.length,
-      referralsByCourse: Array.from(byCourseMap.values())
-        .sort((a, b) => b.count - a.count),
+      referralsByCourse: Array.from(byCourseMap.values()).sort(
+        (a, b) => b.count - a.count,
+      ),
       topReferrers,
     };
 
     return NextResponse.json(stats, {
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
-        'Pragma': 'no-cache',
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        Pragma: "no-cache",
       },
     });
   } catch (error) {
-    return internalError('Analytics Referrals API', error);
+    return internalError("Analytics Referrals API", error);
   }
 }
