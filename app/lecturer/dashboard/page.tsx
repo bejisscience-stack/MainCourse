@@ -566,12 +566,10 @@ export default function LecturerDashboard() {
       !validVideoTypes.includes(file.type) &&
       !validExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))
     ) {
-      console.warn("File type validation:", {
-        type: file.type,
-        name: file.name,
-        ext: fileExt,
-      });
-      // Still allow upload, but warn
+      setError(
+        "Invalid file type. Please upload a video file (MP4, WebM, OGG, MOV, AVI, or MKV).",
+      );
+      return;
     }
 
     setVideoFile(file);

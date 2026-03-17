@@ -58,6 +58,15 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    if (file.size > MAX_FILE_SIZE) {
+      return errorResponse(
+        `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is 10 MB.`,
+        413,
+        cors,
+      );
+    }
+
     let fileType: "image" | "video" | "gif" = "image";
     if (ALLOWED_VIDEO_TYPES.includes(mimeType)) fileType = "video";
     else if (mimeType === "image/gif") fileType = "gif";
