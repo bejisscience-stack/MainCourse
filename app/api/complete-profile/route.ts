@@ -4,7 +4,6 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
-import { loginLimiter, getClientIP, rateLimitResponse } from "@/lib/rate-limit";
 import { completeProfileSchema } from "@/lib/schemas";
 
 export const dynamic = "force-dynamic";
@@ -21,11 +20,6 @@ export async function POST(request: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const { allowed, retryAfterMs } = await loginLimiter.check(
-      getClientIP(request),
-    );
-    if (!allowed) return rateLimitResponse(retryAfterMs);
 
     const rawBody = await request.json();
     const parsed = completeProfileSchema.safeParse(rawBody);
