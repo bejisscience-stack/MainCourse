@@ -4,6 +4,7 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import { isValidUUID } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,10 @@ export async function DELETE(request: NextRequest) {
         { error: "cardId is required" },
         { status: 400 },
       );
+    }
+
+    if (!isValidUUID(cardId)) {
+      return NextResponse.json({ error: "Invalid card ID" }, { status: 400 });
     }
 
     const supabase = createServerSupabaseClient(token);

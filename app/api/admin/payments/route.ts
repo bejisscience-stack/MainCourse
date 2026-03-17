@@ -5,6 +5,7 @@ import {
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { logAdminAction } from "@/lib/audit-log";
+import { isValidUUID } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -85,6 +86,10 @@ export async function POST(request: NextRequest) {
       { error: 'Invalid request. Required: paymentId and action "complete"' },
       { status: 400 },
     );
+  }
+
+  if (!isValidUUID(paymentId)) {
+    return NextResponse.json({ error: "Invalid payment ID" }, { status: 400 });
   }
 
   // Look up the payment

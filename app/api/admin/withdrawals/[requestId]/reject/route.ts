@@ -85,6 +85,8 @@ export async function POST(
       );
     }
 
+    const truncatedNotes = adminNotes.substring(0, 500);
+
     console.log(
       "[Reject Withdrawal API] Processing rejection for request:",
       requestId,
@@ -119,7 +121,7 @@ export async function POST(
       "reject_withdrawal_request",
       {
         p_request_id: requestId,
-        p_admin_notes: adminNotes,
+        p_admin_notes: truncatedNotes,
       },
     );
 
@@ -142,12 +144,12 @@ export async function POST(
           p_type: "withdrawal_rejected",
           p_title_en: "Withdrawal Request Update",
           p_title_ge: "თანხის გატანის მოთხოვნის განახლება",
-          p_message_en: `Your withdrawal request for ₾${withdrawalRequest.amount.toFixed(2)} was not approved. Reason: ${adminNotes}`,
-          p_message_ge: `თქვენი თანხის გატანის მოთხოვნა ₾${withdrawalRequest.amount.toFixed(2)}-ზე არ დამტკიცდა. მიზეზი: ${adminNotes}`,
+          p_message_en: `Your withdrawal request for ₾${withdrawalRequest.amount.toFixed(2)} was not approved. Reason: ${truncatedNotes}`,
+          p_message_ge: `თქვენი თანხის გატანის მოთხოვნა ₾${withdrawalRequest.amount.toFixed(2)}-ზე არ დამტკიცდა. მიზეზი: ${truncatedNotes}`,
           p_metadata: {
             request_id: requestId,
             amount: withdrawalRequest.amount,
-            reason: adminNotes,
+            reason: truncatedNotes,
           },
           p_created_by: user.id,
         },
@@ -183,7 +185,7 @@ export async function POST(
         await sendWithdrawalRejectedEmail(
           decryptedEmail,
           withdrawalRequest.amount,
-          adminNotes,
+          truncatedNotes,
         );
         console.log(
           "[Reject Withdrawal API] Email sent to user:",

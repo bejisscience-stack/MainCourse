@@ -98,8 +98,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ subscriptions, counts });
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[Project Subscriptions API] Unhandled exception:", err);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

@@ -5,12 +5,18 @@ import {
   createServiceRoleClient,
   createServerSupabaseClient,
 } from "@/lib/supabase-server";
+import { isValidUUID } from "@/lib/validation";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ courseId: string }> },
 ) {
   const { courseId } = await params;
+
+  if (!isValidUUID(courseId)) {
+    return NextResponse.json({ error: "Invalid course ID" }, { status: 400 });
+  }
+
   const videoPath = request.nextUrl.searchParams.get("videoPath");
 
   if (!videoPath) {

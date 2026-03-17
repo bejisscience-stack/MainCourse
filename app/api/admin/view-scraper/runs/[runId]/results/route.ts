@@ -18,12 +18,6 @@ export async function GET(
   { params }: { params: Promise<{ runId: string }> },
 ) {
   try {
-    const { runId } = await params;
-
-    if (!isValidUUID(runId)) {
-      return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
-    }
-
     const token = getTokenFromHeader(request);
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -40,6 +34,12 @@ export async function GET(
     );
     if (adminError || !isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { runId } = await params;
+
+    if (!isValidUUID(runId)) {
+      return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
     const serviceClient = createServiceRoleClient(token);

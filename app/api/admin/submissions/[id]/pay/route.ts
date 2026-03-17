@@ -4,6 +4,7 @@ import {
   isAuthError,
   internalError,
 } from "@/lib/admin-auth";
+import { isValidUUID } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,13 @@ export async function POST(
 
     const { userId, serviceSupabase } = auth;
     const submissionId = params.id;
+
+    if (!isValidUUID(submissionId)) {
+      return NextResponse.json(
+        { error: "Invalid submission ID" },
+        { status: 400 },
+      );
+    }
 
     const body = await request.json();
     const { review_id, payout_amount } = body;

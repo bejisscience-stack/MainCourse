@@ -4,6 +4,7 @@ import {
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { logAdminAction } from "@/lib/audit-log";
+import { isValidUUID } from "@/lib/validation";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +35,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
+
+    if (body.project_id && !isValidUUID(body.project_id)) {
+      return NextResponse.json(
+        { error: "Invalid project_id" },
+        { status: 400 },
+      );
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
     const response = await fetch(`${supabaseUrl}/functions/v1/view-scraper`, {

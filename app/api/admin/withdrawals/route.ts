@@ -66,6 +66,15 @@ export async function GET(request: NextRequest) {
     // Parse status filter from query params
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get("status");
+
+    const ALLOWED_STATUSES = ["pending", "approved", "rejected", "all"];
+    if (statusFilter && !ALLOWED_STATUSES.includes(statusFilter)) {
+      return NextResponse.json(
+        { error: "Invalid status filter" },
+        { status: 400 },
+      );
+    }
+
     const filterStatus =
       statusFilter && statusFilter !== "all" && statusFilter.trim() !== ""
         ? statusFilter

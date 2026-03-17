@@ -22,7 +22,7 @@ export const enrollmentRequestSchema = z.object({
     .optional()
     .nullable(),
   isReEnrollment: z.boolean().optional(),
-  payment_method: z.string().optional(),
+  payment_method: z.enum(["keepz", "bank_transfer"]).optional(),
 });
 
 export const bundleEnrollmentRequestSchema = z.object({
@@ -33,7 +33,7 @@ export const bundleEnrollmentRequestSchema = z.object({
     .regex(/^[a-zA-Z0-9]*$/)
     .optional()
     .nullable(),
-  payment_method: z.string().optional(),
+  payment_method: z.enum(["keepz", "bank_transfer"]).optional(),
 });
 
 export const completeProfileSchema = z.object({

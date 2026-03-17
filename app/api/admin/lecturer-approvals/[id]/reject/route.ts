@@ -65,7 +65,7 @@ export async function POST(
     let reason: string | undefined;
     try {
       const body = await request.json();
-      reason = body.reason;
+      reason = body.reason?.substring(0, 500);
     } catch {
       // No body is fine — reason is optional
     }

@@ -130,6 +130,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status"); // 'pending', 'approved', 'rejected', or null for all
 
+    const ALLOWED_STATUSES = ["pending", "approved", "rejected", "all"];
+    if (status && !ALLOWED_STATUSES.includes(status)) {
+      return NextResponse.json(
+        { error: "Invalid status filter", requestId },
+        { status: 400 },
+      );
+    }
+
     // Ensure we pass null instead of empty string for "all" requests
     const filterStatus =
       status && status !== "all" && status.trim() !== "" ? status : null;

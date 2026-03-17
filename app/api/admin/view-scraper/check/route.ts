@@ -3,6 +3,7 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import { isValidUUID } from "@/lib/validation";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,13 @@ export async function POST(request: NextRequest) {
     if (!body.submission_id) {
       return NextResponse.json(
         { error: "submission_id required" },
+        { status: 400 },
+      );
+    }
+
+    if (!isValidUUID(body.submission_id)) {
+      return NextResponse.json(
+        { error: "Invalid submission_id" },
         { status: 400 },
       );
     }
