@@ -475,8 +475,7 @@ export default function ProjectCard({
     !isProjectExpired &&
     hasProjectStarted &&
     hasBudgetAvailable &&
-    ((isEnrolledInCourse && hasProjectAccess) ||
-      (!isEnrolledInCourse && hasProjectAccess));
+    (isEnrolledInCourse || hasProjectAccess);
 
   const showLockIcon = !isEnrolledInCourse && !hasProjectAccess;
 
@@ -486,8 +485,6 @@ export default function ProjectCard({
     if (isProjectOwner) return "You cannot submit to your own project";
     if (!hasProjectAccess && !isEnrolledInCourse)
       return "Subscribe to projects to submit";
-    if (!hasProjectAccess && isEnrolledInCourse)
-      return "Your project access has expired";
     if (isProjectExpired) return "This project has expired";
     if (!hasProjectStarted)
       return countdown.formattedTime || "Project has not started yet";
