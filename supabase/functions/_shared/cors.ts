@@ -9,13 +9,14 @@ const PRODUCTION_ORIGINS = [
   "https://plankton-app-wpsym.ondigitalocean.app",
 ];
 
-// localhost is included unless ENVIRONMENT is explicitly set to "production".
-// Risk is low: edge functions require valid auth tokens regardless of origin,
-// and localhost only matches actual local dev servers.
+// Expected ENVIRONMENT values: "development", "local", "staging", "production"
+// If ENVIRONMENT is unset or any other value, defaults to production behavior
+// (localhost NOT included in CORS allowlist).
+const env = Deno.env.get("ENVIRONMENT") ?? "";
 const ALLOWED_ORIGINS =
-  Deno.env.get("ENVIRONMENT") === "production"
-    ? PRODUCTION_ORIGINS
-    : [...PRODUCTION_ORIGINS, "http://localhost:3000"];
+  env === "development" || env === "local"
+    ? [...PRODUCTION_ORIGINS, "http://localhost:3000"]
+    : PRODUCTION_ORIGINS;
 
 /**
  * Build CORS headers for the given request.
