@@ -123,7 +123,10 @@ Deno.serve(async (req: Request) => {
       const userEmail = profileData?.[0]?.email;
       if (userEmail) {
         await sendWithdrawalApprovedEmail(userEmail, withdrawalRequest.amount);
-        console.log("[Approve Withdrawal API] Email sent to:", userEmail);
+        console.log(
+          "[Approve Withdrawal API] Email sent to:",
+          userEmail.replace(/(.{2}).*(@.*)/, "$1***$2"),
+        );
       }
     } catch (emailError) {
       console.error(

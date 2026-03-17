@@ -93,7 +93,10 @@ Deno.serve(async (req: Request) => {
         const userEmail = profileData?.[0]?.email;
         if (userEmail) {
           await sendEnrollmentRejectedEmail(userEmail, courseTitle, reason);
-          console.log("[Reject API] Email sent to:", userEmail);
+          console.log(
+            "[Reject API] Email sent to:",
+            userEmail.replace(/(.{2}).*(@.*)/, "$1***$2"),
+          );
         }
       } catch (emailError) {
         console.error("[Reject API] Email error:", emailError);

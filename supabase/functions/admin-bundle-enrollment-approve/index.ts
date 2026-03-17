@@ -101,7 +101,10 @@ Deno.serve(async (req: Request) => {
           const userEmail = profileData?.[0]?.email;
           if (userEmail) {
             await sendBundleEnrollmentApprovedEmail(userEmail, bundleTitle);
-            console.log("[Approve API] Email sent to:", userEmail);
+            console.log(
+              "[Approve API] Email sent to:",
+              userEmail.replace(/(.{2}).*(@.*)/, "$1***$2"),
+            );
           }
         } catch (emailError) {
           console.error("[Approve API] Email error:", emailError);

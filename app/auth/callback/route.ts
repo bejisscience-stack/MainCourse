@@ -98,7 +98,10 @@ export async function GET(request: NextRequest) {
         if (confirmedAt > fiveMinutesAgo) {
           try {
             await sendWelcomeEmail(user.email, username);
-            console.log("Welcome email sent to:", user.email);
+            console.log(
+              "Welcome email sent to:",
+              user.email?.replace(/(.{2}).*(@.*)/, "$1***$2") ?? "unknown",
+            );
           } catch (emailError) {
             console.error("Failed to send welcome email:", emailError);
           }
@@ -156,7 +159,10 @@ export async function GET(request: NextRequest) {
           if (confirmedAt > fiveMinutesAgo) {
             try {
               await sendWelcomeEmail(user.email, username);
-              console.log("Welcome email sent to:", user.email);
+              console.log(
+                "Welcome email sent to:",
+                user.email?.replace(/(.{2}).*(@.*)/, "$1***$2") ?? "unknown",
+              );
             } catch (emailError) {
               console.error("Failed to send welcome email:", emailError);
             }
