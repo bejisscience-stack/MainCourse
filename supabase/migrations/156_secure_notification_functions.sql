@@ -7,17 +7,13 @@
 -- ============================================
 -- Step 1: Revoke EXECUTE on admin-only functions from authenticated and anon
 -- ============================================
-REVOKE EXECUTE ON FUNCTION public.create_notification(UUID, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, UUID) FROM authenticated;
-REVOKE EXECUTE ON FUNCTION public.create_notification(UUID, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, UUID) FROM anon;
-
-REVOKE EXECUTE ON FUNCTION public.send_bulk_notifications(UUID[], TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, UUID) FROM authenticated;
-REVOKE EXECUTE ON FUNCTION public.send_bulk_notifications(UUID[], TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, UUID) FROM anon;
-
-REVOKE EXECUTE ON FUNCTION public.get_user_ids_by_role(TEXT) FROM authenticated;
-REVOKE EXECUTE ON FUNCTION public.get_user_ids_by_role(TEXT) FROM anon;
-
-REVOKE EXECUTE ON FUNCTION public.get_enrolled_user_ids(UUID) FROM authenticated;
-REVOKE EXECUTE ON FUNCTION public.get_enrolled_user_ids(UUID) FROM anon;
+-- IMPORTANT: Must revoke from PUBLIC (not just authenticated/anon) because PostgreSQL
+-- grants EXECUTE on all functions to PUBLIC by default. Without this, authenticated
+-- users inherit EXECUTE from PUBLIC even after revoking from authenticated directly.
+REVOKE ALL ON FUNCTION public.create_notification(UUID, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.send_bulk_notifications(UUID[], TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_user_ids_by_role(TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_enrolled_user_ids(UUID) FROM PUBLIC;
 
 -- ============================================
 -- Step 2: Grant EXECUTE on admin-only functions to service_role only

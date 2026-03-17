@@ -121,6 +121,24 @@ export class KeepzCrypto {
 // Singleton crypto instance (lazily initialised)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Timeout helper — prevents hanging when Keepz API is slow/down
+// ---------------------------------------------------------------------------
+
+const KEEPZ_TIMEOUT_MS = 15_000; // 15 seconds
+
+function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs = KEEPZ_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+    clearTimeout(timer),
+  );
+}
+
 let _crypto: KeepzCrypto | null = null;
 
 function getKeepzCrypto(): KeepzCrypto {
@@ -233,16 +251,24 @@ export async function createKeepzOrder(
     amount: options.amount,
   });
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      identifier: integratorId,
-      encryptedData,
-      encryptedKeys,
-      aes: true,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        identifier: integratorId,
+        encryptedData,
+        encryptedKeys,
+        aes: true,
+      }),
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new KeepzError("Keepz API request timed out", 504, 0);
+    }
+    throw err;
+  }
 
   // Read raw text first to handle both JSON and non-JSON responses
   const rawText = await response.text();
@@ -332,10 +358,18 @@ export async function getOrderStatus(
     aes: "true",
   });
 
-  const response = await fetch(
-    `${BASE_URL}/api/integrator/order/status?${params.toString()}`,
-    { method: "GET" },
-  );
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(
+      `${BASE_URL}/api/integrator/order/status?${params.toString()}`,
+      { method: "GET" },
+    );
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new KeepzError("Keepz status API request timed out", 504, 0);
+    }
+    throw err;
+  }
 
   if (!response.ok) {
     const text = await response.text();
@@ -413,10 +447,18 @@ export async function getSavedCardsFromKeepz(
     aes: "true",
   });
 
-  const response = await fetch(
-    `${BASE_URL}/api/v1/integrator/card/order-id?${params.toString()}`,
-    { method: "GET" },
-  );
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(
+      `${BASE_URL}/api/v1/integrator/card/order-id?${params.toString()}`,
+      { method: "GET" },
+    );
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new KeepzError("Keepz saved cards API request timed out", 504, 0);
+    }
+    throw err;
+  }
 
   if (!response.ok) {
     const text = await response.text();

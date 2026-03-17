@@ -101,7 +101,7 @@ export async function middleware(request: NextRequest) {
     "font-src 'self'",
     "media-src 'self' blob: https://*.supabase.co https://*.supabase.in",
     "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.keepz.me https://app.posthog.com https://us.i.posthog.com",
-    "frame-src 'self' https://checkout.keepz.me",
+    "frame-src 'self' https://checkout.keepz.me https://www.youtube.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

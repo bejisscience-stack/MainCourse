@@ -379,7 +379,15 @@ export async function POST(request: NextRequest) {
         "exceptionGroup:",
         error.exceptionGroup,
       );
-      return NextResponse.json({ error: "An error occurred" }, { status: 502 });
+      const isTimeout = error.statusCode === 504;
+      return NextResponse.json(
+        {
+          error: isTimeout
+            ? "Payment gateway is temporarily unreachable. Please try again in a moment."
+            : "An error occurred",
+        },
+        { status: 502 },
+      );
     }
     console.error("Create order error:", error);
     return NextResponse.json({ error: "An error occurred" }, { status: 500 });

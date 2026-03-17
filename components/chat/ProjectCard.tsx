@@ -12,6 +12,28 @@ import { useProjectCountdown } from "@/hooks/useProjectCountdown";
 import { useProjectBudget } from "@/hooks/useProjectBudget";
 import { useProjectAccess } from "@/hooks/useProjectAccess";
 
+/** Extract YouTube video ID from various URL formats, or null if not YouTube */
+function getYouTubeId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (
+      u.hostname === "www.youtube.com" ||
+      u.hostname === "youtube.com" ||
+      u.hostname === "m.youtube.com"
+    ) {
+      if (u.pathname === "/watch") return u.searchParams.get("v");
+      const embedMatch = u.pathname.match(/^\/embed\/([a-zA-Z0-9_-]+)/);
+      if (embedMatch) return embedMatch[1];
+    }
+    if (u.hostname === "youtu.be") {
+      return u.pathname.slice(1).split("/")[0] || null;
+    }
+  } catch {
+    // not a valid URL
+  }
+  return null;
+}
+
 /** SEC-10: Only allow http/https URLs to prevent javascript: protocol XSS */
 function isSafeUrl(url: string): boolean {
   try {
@@ -965,36 +987,78 @@ export default function ProjectCard({
                   {t("projects.referenceVideo") || "Reference Video"}
                 </h4>
                 <div className="bg-navy-900/50 rounded-lg border border-navy-800/60 overflow-hidden">
-                  <video
-                    src={project.videoLink}
-                    controls
-                    preload="metadata"
-                    className="w-full max-h-[400px] bg-black"
-                  >
-                    Your browser does not support the video tag.
-                  </video>
-                  <div className="p-3 flex justify-end">
-                    <a
-                      href={project.videoLink}
-                      download
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-navy-800/70 hover:bg-navy-700 text-white text-sm font-medium rounded-lg transition-colors"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                        />
-                      </svg>
-                      Download
-                    </a>
-                  </div>
+                  {(() => {
+                    const ytId = getYouTubeId(project.videoLink!);
+                    if (ytId) {
+                      return (
+                        <>
+                          <iframe
+                            src={`https://www.youtube.com/embed/${ytId}`}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            className="w-full aspect-video bg-black"
+                          />
+                          <div className="p-3 flex justify-end">
+                            <a
+                              href={project.videoLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-navy-800/70 hover:bg-navy-700 text-white text-sm font-medium rounded-lg transition-colors"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                />
+                              </svg>
+                              YouTube
+                            </a>
+                          </div>
+                        </>
+                      );
+                    }
+                    return (
+                      <>
+                        <video
+                          src={project.videoLink}
+                          controls
+                          preload="metadata"
+                          className="w-full max-h-[400px] bg-black"
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                        <div className="p-3 flex justify-end">
+                          <a
+                            href={project.videoLink}
+                            download
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-navy-800/70 hover:bg-navy-700 text-white text-sm font-medium rounded-lg transition-colors"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                              />
+                            </svg>
+                            Download
+                          </a>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
