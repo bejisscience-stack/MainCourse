@@ -328,6 +328,10 @@ function AdminNotificationSender() {
         body: JSON.stringify(payload),
       });
 
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error(`Server error (${response.status})`);
+      }
       const data = await response.json();
 
       if (!response.ok) {

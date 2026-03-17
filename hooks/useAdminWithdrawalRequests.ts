@@ -31,6 +31,10 @@ async function fetchAdminWithdrawalRequests(
   });
 
   if (!response.ok) {
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error(`Server error (${response.status})`);
+    }
     const errorData = await response.json();
     // If withdrawal system isn't configured yet, return empty array instead of error
     if (
