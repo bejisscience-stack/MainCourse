@@ -144,10 +144,7 @@ Deno.serve(async (req: Request) => {
 
     const [profilesResult, bundlesResult] = await Promise.all([
       userIds.length > 0
-        ? serviceSupabase
-            .from("profiles")
-            .select("id, username, email")
-            .in("id", userIds)
+        ? serviceSupabase.rpc("get_decrypted_profiles", { p_user_ids: userIds })
         : Promise.resolve({ data: [] }),
       bundleIds.length > 0
         ? serviceSupabase

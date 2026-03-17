@@ -145,10 +145,10 @@ async function resolveEmails(
     if (error) return { emails: [], error };
 
     if (userIds.length > 0) {
-      const { data: profiles, error: profileError } = await serviceSupabase
-        .from("profiles")
-        .select("email")
-        .in("id", userIds);
+      const { data: profiles, error: profileError } = await serviceSupabase.rpc(
+        "get_decrypted_profiles",
+        { p_user_ids: userIds },
+      );
 
       if (profileError) {
         console.error(

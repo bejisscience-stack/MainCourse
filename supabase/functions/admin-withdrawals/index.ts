@@ -126,18 +126,12 @@ Deno.serve(async (req: Request) => {
       ...new Set(requests.map((r) => r.user_id).filter(Boolean)),
     ];
 
-    let profiles: {
-      id: string;
-      username: string;
-      email: string;
-      role: string;
-      balance: number;
-    }[] = [];
+    let profiles: any[] = [];
     if (userIds.length > 0) {
-      const { data: profilesData, error: profilesError } = await serviceSupabase
-        .from("profiles")
-        .select("id, username, email, role, balance")
-        .in("id", userIds);
+      const { data: profilesData, error: profilesError } =
+        await serviceSupabase.rpc("get_decrypted_profiles", {
+          p_user_ids: userIds,
+        });
 
       if (!profilesError && profilesData) {
         profiles = profilesData;

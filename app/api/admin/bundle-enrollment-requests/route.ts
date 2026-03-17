@@ -196,12 +196,11 @@ export async function GET(request: NextRequest) {
 
     try {
       if (userIds.length > 0) {
-        // Use service role client for profiles too to ensure consistency
+        // Use decrypt RPC to get email from encrypted storage
         const { data: profilesData, error: profilesError } =
-          await createServiceRoleClient(token)
-            .from("profiles")
-            .select("id, username, email")
-            .in("id", userIds);
+          await createServiceRoleClient(token).rpc("get_decrypted_profiles", {
+            p_user_ids: userIds,
+          });
 
         if (!profilesError && profilesData) {
           profiles = profilesData;

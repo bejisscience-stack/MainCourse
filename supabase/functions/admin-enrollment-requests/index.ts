@@ -132,12 +132,22 @@ Deno.serve(async (req: Request) => {
       ...new Set(requests.map((r) => r.referral_code).filter(Boolean)),
     ];
 
+    // Fetch referrer IDs by referral code (needed to call decrypt RPC)
+    let referrerIdMap: Map<string, string> = new Map();
+    if (referralCodes.length > 0) {
+      const { data: refData } = await serviceSupabase
+        .from("profiles")
+        .select("id, referral_code")
+        .in("referral_code", referralCodes);
+      (refData || []).forEach((r: any) =>
+        referrerIdMap.set(r.id, r.referral_code),
+      );
+    }
+    const referrerUserIds = [...referrerIdMap.keys()];
+
     const [profilesResult, coursesResult, referrersResult] = await Promise.all([
       userIds.length > 0
-        ? serviceSupabase
-            .from("profiles")
-            .select("id, username, email")
-            .in("id", userIds)
+        ? serviceSupabase.rpc("get_decrypted_profiles", { p_user_ids: userIds })
         : Promise.resolve({ data: [] }),
       courseIds.length > 0
         ? serviceSupabase
@@ -145,22 +155,24 @@ Deno.serve(async (req: Request) => {
             .select("id, title, thumbnail_url")
             .in("id", courseIds)
         : Promise.resolve({ data: [] }),
-      referralCodes.length > 0
-        ? serviceSupabase
-            .from("profiles")
-            .select("id, username, email, referral_code")
-            .in("referral_code", referralCodes)
+      referrerUserIds.length > 0
+        ? serviceSupabase.rpc("get_decrypted_profiles", {
+            p_user_ids: referrerUserIds,
+          })
         : Promise.resolve({ data: [] }),
     ]);
 
     const profilesMap = new Map(
-      (profilesResult.data || []).map((p) => [p.id, p]),
+      (profilesResult.data || []).map((p: any) => [p.id, p]),
     );
     const coursesMap = new Map(
-      (coursesResult.data || []).map((c) => [c.id, c]),
+      (coursesResult.data || []).map((c: any) => [c.id, c]),
     );
     const referrerMap = new Map(
-      (referrersResult.data || []).map((p) => [p.referral_code, p]),
+      (referrersResult.data || []).map((p: any) => [
+        referrerIdMap.get(p.id),
+        { ...p, referral_code: referrerIdMap.get(p.id) },
+      ]),
     );
 
     const requestsWithRelations = requests.map((request) => ({
