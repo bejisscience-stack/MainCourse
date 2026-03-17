@@ -19,7 +19,19 @@ interface HealthStatus {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // If HEALTH_CHECK_SECRET is configured, require matching header for full details
+  const secret = process.env.HEALTH_CHECK_SECRET;
+  if (secret && request.headers.get("x-health-secret") !== secret) {
+    return NextResponse.json(
+      { status: "ok" },
+      {
+        status: 200,
+        headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+      },
+    );
+  }
+
   const startTime = Date.now();
   const healthStatus: HealthStatus = {
     status: "healthy",
