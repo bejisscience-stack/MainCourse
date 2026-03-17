@@ -1,10 +1,13 @@
 import { NextRequest } from "next/server";
-import { createServiceRoleClient } from "@/lib/supabase-server";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { getClientIP } from "@/lib/rate-limit";
 
 /**
  * Log an admin action to the audit_log table.
  * Best-effort: failures are logged but never throw.
+ *
+ * Uses the caller's JWT so auth.uid() is set in the RPC,
+ * preventing admin ID spoofing (RLS-12).
  */
 export async function logAdminAction(
   request: NextRequest,
@@ -15,10 +18,19 @@ export async function logAdminAction(
   metadata?: Record<string, unknown>,
 ): Promise<void> {
   try {
-    const serviceSupabase = createServiceRoleClient();
+    const token = request.headers.get("Authorization")?.replace("Bearer ", "");
+    if (!token) {
+      console.error(
+        "[AuditLog] No Authorization header — cannot log action:",
+        action,
+      );
+      return;
+    }
+
+    const supabase = createServerSupabaseClient(token);
     const ip = getClientIP(request);
 
-    await serviceSupabase.rpc("insert_audit_log", {
+    await supabase.rpc("insert_audit_log", {
       p_admin_user_id: adminUserId,
       p_action: action,
       p_target_table: targetTable,
