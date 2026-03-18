@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createServerSupabaseClient,
-  createServiceRoleClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
@@ -49,9 +48,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status"); // 'pending', 'approved', 'rejected', or null for all
 
-    // Use RPC function to get all lecturers (bypasses RLS, marked VOLATILE)
-    const serviceSupabase = createServiceRoleClient(token);
-    const { data: lecturers, error: rpcError } = await serviceSupabase.rpc(
+    // Use RPC function to get all lecturers (SECURITY DEFINER bypasses RLS, VOLATILE prevents caching)
+    // Must use user-scoped client so auth.uid() works inside the RPC's admin check
+    const { data: lecturers, error: rpcError } = await supabase.rpc(
       "get_pending_lecturers",
     );
 
