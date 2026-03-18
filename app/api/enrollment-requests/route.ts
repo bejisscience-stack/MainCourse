@@ -117,7 +117,33 @@ export async function POST(request: NextRequest) {
     }
 
     if (existingRequest) {
-      // Reuse existing pending request instead of blocking — allows payment retries
+      // Reuse existing pending request — allows payment retries.
+      // If a referral code is provided now but wasn't on the original request,
+      // update the request and process the referral so it isn't silently lost.
+      if (referralCode && !isReEnrollment) {
+        try {
+          // Update referral_code on the existing request if it was null
+          await supabase
+            .from("enrollment_requests")
+            .update({ referral_code: referralCode.trim().toUpperCase() })
+            .eq("id", existingRequest.id)
+            .is("referral_code", null);
+
+          // Process referral if not already linked
+          await supabase.rpc("process_referral", {
+            p_referral_code: referralCode.trim().toUpperCase(),
+            p_referred_user_id: user.id,
+            p_enrollment_request_id: existingRequest.id,
+            p_course_id: courseId,
+          });
+        } catch (refErr) {
+          console.error(
+            "Error attaching referral to existing request:",
+            refErr,
+          );
+          // Non-blocking — enrollment should still proceed
+        }
+      }
       return NextResponse.json({ request: existingRequest }, { status: 200 });
     }
 
