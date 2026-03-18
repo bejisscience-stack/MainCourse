@@ -119,7 +119,7 @@ function LoginForm() {
         if (resolvedRole === "lecturer" && profile?.role !== "lecturer") {
           await supabase
             .from("profiles")
-            .update({ role: "lecturer" })
+            .update({ role: "lecturer", is_approved: false })
             .eq("id", user.id);
         }
       } catch {

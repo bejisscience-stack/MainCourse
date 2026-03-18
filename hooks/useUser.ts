@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
-import useSWR from 'swr';
-import { supabase } from '@/lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { useEffect } from "react";
+import useSWR from "swr";
+import { supabase } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
 
 interface Profile {
   id: string;
@@ -22,7 +22,9 @@ interface UserData {
 
 // Fetcher function for user session
 async function fetchUserSession(): Promise<User | null> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   return session?.user || null;
 }
 
@@ -30,15 +32,18 @@ async function fetchUserSession(): Promise<User | null> {
 async function fetchProfile(userId: string): Promise<Profile | null> {
   try {
     const { data, error } = await supabase
-      .from('profiles')
-      .select('id, role, username, avatar_url, signup_referral_code, referred_for_course_id, first_login_completed, profile_completed')
-      .eq('id', userId)
+      .from("profiles")
+      .select(
+        "id, role, username, avatar_url, signup_referral_code, referred_for_course_id, first_login_completed, profile_completed",
+      )
+      .eq("id", userId)
       .maybeSingle();
 
     if (error) {
       // Don't throw for missing profiles (user might not have profile yet)
       // Only throw for actual database errors
-      if (error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      if (error.code !== "PGRST116") {
+        // PGRST116 = no rows returned
         throw error;
       }
       return null;
@@ -80,11 +85,11 @@ async function fetchUserData(): Promise<UserData> {
 
     // Normalize role if needed (non-blocking) - but only if role is lecturer
     // Don't update if it's admin
-    if (role === 'lecturer' && profile && profile.role !== 'lecturer') {
+    if (role === "lecturer" && profile && profile.role !== "lecturer") {
       supabase
-        .from('profiles')
-        .update({ role: 'lecturer' })
-        .eq('id', user.id)
+        .from("profiles")
+        .update({ role: "lecturer", is_approved: false })
+        .eq("id", user.id)
         .then(() => {
           // Silently handle role update
         });
@@ -99,7 +104,7 @@ async function fetchUserData(): Promise<UserData> {
 
 export function useUser() {
   const { data, error, isLoading, mutate } = useSWR<UserData>(
-    'user-data',
+    "user-data",
     fetchUserData,
     {
       revalidateOnFocus: true, // Re-fetch when tab regains focus to recover from timeout
@@ -110,8 +115,10 @@ export function useUser() {
       errorRetryInterval: 1000, // Wait 1 second between retries
       shouldRetryOnError: (error) => {
         // Don't retry on authentication errors or missing env vars
-        if (error?.message?.includes('Missing Supabase') || 
-            error?.code === 'PGRST301') {
+        if (
+          error?.message?.includes("Missing Supabase") ||
+          error?.code === "PGRST301"
+        ) {
           return false;
         }
         return true;
@@ -119,12 +126,12 @@ export function useUser() {
       onError: () => {
         // Silently handle SWR errors
       },
-    }
+    },
   );
 
   // Listen for auth changes - properly set up in useEffect with cleanup
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
     let debounceTimer: NodeJS.Timeout | null = null;
     let isMounted = true;
@@ -145,10 +152,14 @@ export function useUser() {
           // where the initial SWR fetch runs before auth token is fully initialized
           const profile = await fetchProfile(session.user.id);
           if (!isMounted) return;
-          const role = profile?.role || session.user.user_metadata?.role || null;
+          const role =
+            profile?.role || session.user.user_metadata?.role || null;
           mutate({ user: session.user, profile, role }, { revalidate: false });
         } else {
-          mutate({ user: null, profile: null, role: null }, { revalidate: false });
+          mutate(
+            { user: null, profile: null, role: null },
+            { revalidate: false },
+          );
         }
       }, 100); // Small delay to batch rapid changes
     });
