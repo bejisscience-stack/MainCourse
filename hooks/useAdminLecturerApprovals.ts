@@ -80,10 +80,6 @@ export function useAdminLecturerApprovals(status?: string) {
     return all;
   })();
 
-  const mutateAll = async () => {
-    await mutate(undefined, { revalidate: true });
-  };
-
   const approveLecturer = async (lecturerId: string) => {
     const token = (await supabase.auth.getSession()).data.session?.access_token;
 
@@ -117,7 +113,7 @@ export function useAdminLecturerApprovals(status?: string) {
       throw new Error(responseData.error || "Failed to approve lecturer");
     }
 
-    // Optimistic update
+    // Optimistic update — refreshInterval (5s) will confirm from DB
     await mutate((currentData) => {
       if (!currentData) return currentData;
       return currentData.map((l) =>
@@ -127,7 +123,6 @@ export function useAdminLecturerApprovals(status?: string) {
       );
     }, false);
 
-    await mutateAll();
     return responseData;
   };
 
@@ -165,7 +160,7 @@ export function useAdminLecturerApprovals(status?: string) {
       throw new Error(responseData.error || "Failed to reject lecturer");
     }
 
-    // Optimistic update — keep in list but mark as not approved
+    // Optimistic update — refreshInterval (5s) will confirm from DB
     await mutate((currentData) => {
       if (!currentData) return currentData;
       return currentData.map((l) =>
@@ -175,7 +170,6 @@ export function useAdminLecturerApprovals(status?: string) {
       );
     }, false);
 
-    await mutateAll();
     return responseData;
   };
 
