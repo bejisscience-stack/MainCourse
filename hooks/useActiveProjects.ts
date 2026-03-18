@@ -43,8 +43,10 @@ export interface ActiveProject {
 
 async function fetchActiveProjects(): Promise<ActiveProject[]> {
   try {
-    // Get current date in YYYY-MM-DD format
-    const today = new Date().toISOString().split("T")[0];
+    // Get current date in Georgia timezone (UTC+4) as YYYY-MM-DD
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Tbilisi",
+    }).format(new Date());
 
     // Fetch active projects with course and lecturer info
     const { data: projects, error: projectsError } = await supabase
@@ -60,6 +62,7 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
         )
       `,
       )
+      .eq("status", "active")
       .not("start_date", "is", null)
       .not("end_date", "is", null)
       .lte("start_date", today)
