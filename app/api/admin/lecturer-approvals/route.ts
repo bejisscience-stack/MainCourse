@@ -57,30 +57,7 @@ export async function GET(request: NextRequest) {
 
     if (rpcError) {
       console.error("[Lecturer Approvals API] RPC error:", rpcError);
-      // Fallback to direct query
-      let queryBuilder = serviceSupabase
-        .from("profiles")
-        .select(
-          "id, email, full_name, username, is_approved, created_at, updated_at",
-        )
-        .eq("role", "lecturer")
-        .order("created_at", { ascending: false });
-
-      const { data: fallbackData, error: fallbackError } = await queryBuilder;
-
-      if (fallbackError) {
-        console.error(
-          "[Lecturer Approvals API] Fallback error:",
-          fallbackError,
-        );
-        return NextResponse.json(
-          { error: "An error occurred" },
-          { status: 500 },
-        );
-      }
-
-      const filtered = filterByStatus(fallbackData || [], status);
-      return respondWithLecturers(filtered);
+      return NextResponse.json({ error: "An error occurred" }, { status: 500 });
     }
 
     const filtered = filterByStatus(lecturers || [], status);

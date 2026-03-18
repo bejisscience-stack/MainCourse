@@ -176,8 +176,9 @@ function AdminNotificationSender() {
       setFilteredUsers(
         users.filter(
           (u) =>
-            u.email.toLowerCase().includes(query) ||
-            (u.username?.toLowerCase().includes(query) ?? false),
+            u.email &&
+            (u.email.toLowerCase().includes(query) ||
+              (u.username?.toLowerCase().includes(query) ?? false)),
         ),
       );
     }
@@ -206,10 +207,12 @@ function AdminNotificationSender() {
   };
 
   const filteredComingSoonEmails = emailSearchQuery.trim()
-    ? comingSoonEmails.filter((e) =>
-        e.email.toLowerCase().includes(emailSearchQuery.toLowerCase()),
+    ? comingSoonEmails.filter(
+        (e) =>
+          e.email &&
+          e.email.toLowerCase().includes(emailSearchQuery.toLowerCase()),
       )
-    : comingSoonEmails;
+    : comingSoonEmails.filter((e) => e.email);
 
   const showInAppTargeting = channel === "in_app" || channel === "both";
   const showEmailTargeting = channel === "email" || channel === "both";
@@ -969,10 +972,11 @@ function AdminNotificationSender() {
                       {users
                         .filter(
                           (u) =>
-                            !emailSearchQuery.trim() ||
-                            u.email
-                              .toLowerCase()
-                              .includes(emailSearchQuery.toLowerCase()),
+                            u.email &&
+                            (!emailSearchQuery.trim() ||
+                              u.email
+                                .toLowerCase()
+                                .includes(emailSearchQuery.toLowerCase())),
                         )
                         .map((user) => (
                           <label

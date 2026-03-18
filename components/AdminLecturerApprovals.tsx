@@ -26,7 +26,7 @@ export default function AdminLecturerApprovals() {
   const filteredLecturers = (() => {
     if (statusFilter === "all") return allLecturers;
     if (statusFilter === "pending")
-      return allLecturers.filter((l) => l.is_approved === false);
+      return allLecturers.filter((l) => l.is_approved !== true);
     if (statusFilter === "approved")
       return allLecturers.filter((l) => l.is_approved === true);
     return allLecturers;
@@ -34,7 +34,7 @@ export default function AdminLecturerApprovals() {
 
   const counts = {
     all: allLecturers.length,
-    pending: allLecturers.filter((l) => l.is_approved === false).length,
+    pending: allLecturers.filter((l) => l.is_approved !== true).length,
     approved: allLecturers.filter((l) => l.is_approved === true).length,
   };
 
@@ -214,7 +214,7 @@ export default function AdminLecturerApprovals() {
                       {formatDate(lecturer.created_at)}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {lecturer.is_approved === false ? (
+                      {lecturer.is_approved !== true ? (
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => handleApprove(lecturer.id)}
