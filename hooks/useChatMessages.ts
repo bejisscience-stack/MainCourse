@@ -1,8 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { edgeFunctionUrl } from '@/lib/api-client';
-import type { Message, MessageAttachment } from '@/types/message';
-import { useRealtimeMessages, prefetchProfiles, getCachedUsername, getCachedAvatarUrl } from './useRealtimeMessages';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { edgeFunctionUrl } from "@/lib/api-client";
+import type { Message, MessageAttachment } from "@/types/message";
+import {
+  useRealtimeMessages,
+  prefetchProfiles,
+  getCachedUsername,
+  getCachedAvatarUrl,
+} from "./useRealtimeMessages";
 
 interface UseChatMessagesOptions {
   channelId: string | null;
@@ -25,17 +30,20 @@ type ChatMessage = Message | PendingMessage | FailedMessage;
 // Dedupe pending message matching
 function findMatchingPending(
   pendingMap: Map<string, PendingMessage>,
-  message: Message
+  message: Message,
 ): PendingMessage | undefined {
   return Array.from(pendingMap.values()).find((p) => {
-    const contentMatches = p.content.trim() === message.content.trim();
+    const contentMatches = (p.content || "") === (message.content || "");
     const userMatches = p.user.id === message.user.id;
     const timeClose = Math.abs(p.timestamp - message.timestamp) < 15000;
     return contentMatches && userMatches && timeClose;
   });
 }
 
-export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOptions) {
+export function useChatMessages({
+  channelId,
+  enabled = true,
+}: UseChatMessagesOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,75 +55,83 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
   const channelIdRef = useRef<string | null>(null);
 
   // Fetch messages - optimized for speed
-  const fetchMessages = useCallback(async (
-    targetChannelId: string,
-    before?: string,
-    signal?: AbortSignal
-  ) => {
-    try {
-      // Get session quickly - use cached session first
-      let { data: { session } } = await supabase.auth.getSession();
+  const fetchMessages = useCallback(
+    async (targetChannelId: string, before?: string, signal?: AbortSignal) => {
+      try {
+        // Get session quickly - use cached session first
+        let {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (!session?.access_token) {
-        // Try refresh only if no session
-        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
-        session = refreshed;
-      }
-
-      if (!session?.access_token) {
-        throw new Error('Not authenticated. Please log in again.');
-      }
-
-      const token = session.access_token;
-
-      const url = new URL(edgeFunctionUrl('chat-messages'));
-      url.searchParams.set('chatId', targetChannelId);
-      if (before) {
-        url.searchParams.set('before', before);
-      }
-      url.searchParams.set('limit', '50');
-
-      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      const response = await fetch(url.toString(), {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          ...(anonKey && { 'apikey': anonKey }),
-        },
-        signal,
-      });
-
-      if (signal?.aborted) return null;
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Try one refresh and retry
-          const { data: { session: newSession } } = await supabase.auth.refreshSession();
-          if (newSession?.access_token) {
-            const retryResponse = await fetch(url.toString(), {
-              headers: {
-                'Authorization': `Bearer ${newSession.access_token}`,
-                'Content-Type': 'application/json',
-                ...(anonKey && { 'apikey': anonKey }),
-              },
-              signal,
-            });
-            if (retryResponse.ok) {
-              return retryResponse.json();
-            }
-          }
-          throw new Error('Session expired. Please refresh the page.');
+        if (!session?.access_token) {
+          // Try refresh only if no session
+          const {
+            data: { session: refreshed },
+          } = await supabase.auth.refreshSession();
+          session = refreshed;
         }
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to fetch messages: ${response.statusText}`);
-      }
 
-      return response.json();
-    } catch (err: any) {
-      if (err.name === 'AbortError') return null;
-      throw err;
-    }
-  }, []);
+        if (!session?.access_token) {
+          throw new Error("Not authenticated. Please log in again.");
+        }
+
+        const token = session.access_token;
+
+        const url = new URL(edgeFunctionUrl("chat-messages"));
+        url.searchParams.set("chatId", targetChannelId);
+        if (before) {
+          url.searchParams.set("before", before);
+        }
+        url.searchParams.set("limit", "50");
+
+        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        const response = await fetch(url.toString(), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            ...(anonKey && { apikey: anonKey }),
+          },
+          signal,
+        });
+
+        if (signal?.aborted) return null;
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            // Try one refresh and retry
+            const {
+              data: { session: newSession },
+            } = await supabase.auth.refreshSession();
+            if (newSession?.access_token) {
+              const retryResponse = await fetch(url.toString(), {
+                headers: {
+                  Authorization: `Bearer ${newSession.access_token}`,
+                  "Content-Type": "application/json",
+                  ...(anonKey && { apikey: anonKey }),
+                },
+                signal,
+              });
+              if (retryResponse.ok) {
+                return retryResponse.json();
+              }
+            }
+            throw new Error("Session expired. Please refresh the page.");
+          }
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            errorData.error ||
+              `Failed to fetch messages: ${response.statusText}`,
+          );
+        }
+
+        return response.json();
+      } catch (err: any) {
+        if (err.name === "AbortError") return null;
+        throw err;
+      }
+    },
+    [],
+  );
 
   // Main effect - handles channel changes and initial load
   useEffect(() => {
@@ -156,14 +172,18 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
     // Fetch immediately - no delay
     (async () => {
       try {
-        const result = await fetchMessages(channelId, undefined, abortController.signal);
+        const result = await fetchMessages(
+          channelId,
+          undefined,
+          abortController.signal,
+        );
 
         if (abortController.signal.aborted || !result) return;
 
         const fetchedMessages: Message[] = result.messages || [];
 
         // Update state immediately with fetched messages
-        messageIdsRef.current = new Set(fetchedMessages.map(m => m.id));
+        messageIdsRef.current = new Set(fetchedMessages.map((m) => m.id));
         setMessages(fetchedMessages);
         setHasMore(fetchedMessages.length === 50);
         setIsLoading(false);
@@ -171,32 +191,45 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
 
         // Prefetch profiles in background (non-blocking)
         if (fetchedMessages.length > 0) {
-          const userIds = [...new Set(fetchedMessages.map(m => m.user.id))];
-          prefetchProfiles(userIds).then(() => {
-            // Update messages with cached usernames after prefetch
-            if (channelIdRef.current === channelId) {
-              setMessages(prev => {
-                let hasUpdates = false;
-                const updated = prev.map(m => {
-                  const cached = getCachedUsername(m.user.id);
-                  const cachedAvatar = getCachedAvatarUrl(m.user.id);
-                  const needsUsername = !m.user.username || m.user.username === 'User';
-                  const needsAvatar = !m.user.avatarUrl && cachedAvatar;
-                  if ((needsUsername && cached && cached !== 'User') || needsAvatar) {
-                    hasUpdates = true;
-                    return { ...m, user: { ...m.user, username: needsUsername ? cached : m.user.username, avatarUrl: cachedAvatar || m.user.avatarUrl } };
-                  }
-                  return m;
+          const userIds = [...new Set(fetchedMessages.map((m) => m.user.id))];
+          prefetchProfiles(userIds)
+            .then(() => {
+              // Update messages with cached usernames after prefetch
+              if (channelIdRef.current === channelId) {
+                setMessages((prev) => {
+                  let hasUpdates = false;
+                  const updated = prev.map((m) => {
+                    const cached = getCachedUsername(m.user.id);
+                    const cachedAvatar = getCachedAvatarUrl(m.user.id);
+                    const needsUsername =
+                      !m.user.username || m.user.username === "User";
+                    const needsAvatar = !m.user.avatarUrl && cachedAvatar;
+                    if (
+                      (needsUsername && cached && cached !== "User") ||
+                      needsAvatar
+                    ) {
+                      hasUpdates = true;
+                      return {
+                        ...m,
+                        user: {
+                          ...m.user,
+                          username: needsUsername ? cached : m.user.username,
+                          avatarUrl: cachedAvatar || m.user.avatarUrl,
+                        },
+                      };
+                    }
+                    return m;
+                  });
+                  return hasUpdates ? updated : prev;
                 });
-                return hasUpdates ? updated : prev;
-              });
-            }
-          }).catch(() => {});
+              }
+            })
+            .catch(() => {});
         }
       } catch (err: any) {
         if (abortController.signal.aborted) return;
-        console.error('Error fetching messages:', err);
-        setError(err.message || 'Failed to load messages');
+        console.error("Error fetching messages:", err);
+        setError(err.message || "Failed to load messages");
         setIsLoading(false);
       }
     })();
@@ -215,13 +248,16 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
         const existing = prev[existingIdx];
         // Update if username improved or has new data
         const shouldUpdate =
-          ((!existing.user.username || existing.user.username === 'User') &&
-           message.user.username && message.user.username !== 'User') ||
+          ((!existing.user.username || existing.user.username === "User") &&
+            message.user.username &&
+            message.user.username !== "User") ||
           message.replyPreview ||
           message.attachments;
 
         if (shouldUpdate) {
-          return prev.map((m, idx) => idx === existingIdx ? { ...existing, ...message } : m);
+          return prev.map((m, idx) =>
+            idx === existingIdx ? { ...existing, ...message } : m,
+          );
         }
         return prev;
       }
@@ -232,7 +268,7 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
         pendingMessagesRef.current.delete(pending.tempId);
         messageIdsRef.current.add(message.id);
         return prev.map((m) =>
-          ('tempId' in m && m.tempId === pending.tempId) ? message : m
+          "tempId" in m && m.tempId === pending.tempId ? message : m,
         );
       }
 
@@ -247,7 +283,7 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
   }, []);
 
   const handleMessageUpdate = useCallback((message: Message) => {
-    setMessages((prev) => prev.map((m) => m.id === message.id ? message : m));
+    setMessages((prev) => prev.map((m) => (m.id === message.id ? message : m)));
   }, []);
 
   const handleMessageDelete = useCallback((messageId: string) => {
@@ -265,15 +301,18 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
   });
 
   // Broadcast a message to other clients via Supabase Broadcast (instant, bypasses RLS)
-  const broadcastMessage = useCallback((message: Message) => {
-    if (channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'new_message',
-        payload: message,
-      });
-    }
-  }, [channelRef]);
+  const broadcastMessage = useCallback(
+    (message: Message) => {
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: "broadcast",
+          event: "new_message",
+          payload: message,
+        });
+      }
+    },
+    [channelRef],
+  );
 
   // Sync latest messages (catch-up after tab hidden or as periodic safety net)
   const syncLatestMessages = useCallback(async () => {
@@ -291,7 +330,9 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
 
         missing.forEach((m) => messageIdsRef.current.add(m.id));
         // Merge and sort by timestamp
-        const merged = [...prev, ...missing].sort((a, b) => a.timestamp - b.timestamp);
+        const merged = [...prev, ...missing].sort(
+          (a, b) => a.timestamp - b.timestamp,
+        );
         return merged;
       });
     } catch {
@@ -304,13 +345,14 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
     if (!enabled || !channelId) return;
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         syncLatestMessages();
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [enabled, channelId, syncLatestMessages]);
 
   // Periodic sync every 30s as a safety net (only when tab is visible)
@@ -318,7 +360,7 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
     if (!enabled || !channelId) return;
 
     const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         syncLatestMessages();
       }
     }, 30000);
@@ -327,72 +369,82 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
   }, [enabled, channelId, syncLatestMessages]);
 
   // Add optimistic message
-  const addPendingMessage = useCallback((
-    content: string,
-    replyTo?: string,
-    userId?: string,
-    attachments?: MessageAttachment[],
-    replyPreview?: { id: string; username: string; content: string }
-  ): string => {
-    const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const addPendingMessage = useCallback(
+    (
+      content: string,
+      replyTo?: string,
+      userId?: string,
+      attachments?: MessageAttachment[],
+      replyPreview?: { id: string; username: string; content: string },
+    ): string => {
+      const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-    const pendingMessage: PendingMessage = {
-      id: tempId,
-      tempId,
-      content,
-      replyTo,
-      replyPreview,
-      attachments,
-      timestamp: Date.now(),
-      pending: true,
-      user: {
-        id: userId || '',
-        username: getCachedUsername(userId || '') || 'You',
-        avatarUrl: getCachedAvatarUrl(userId || ''),
-      },
-    };
+      const pendingMessage: PendingMessage = {
+        id: tempId,
+        tempId,
+        content,
+        replyTo,
+        replyPreview,
+        attachments,
+        timestamp: Date.now(),
+        pending: true,
+        user: {
+          id: userId || "",
+          username: getCachedUsername(userId || "") || "You",
+          avatarUrl: getCachedAvatarUrl(userId || ""),
+        },
+      };
 
-    pendingMessagesRef.current.set(tempId, pendingMessage);
-    setMessages((prev) => [...prev, pendingMessage]);
-    return tempId;
-  }, []);
+      pendingMessagesRef.current.set(tempId, pendingMessage);
+      setMessages((prev) => [...prev, pendingMessage]);
+      return tempId;
+    },
+    [],
+  );
 
   const markMessageFailed = useCallback((tempId: string, errorMsg?: string) => {
     setMessages((prev) =>
       prev.map((m) => {
-        if ('tempId' in m && m.tempId === tempId) {
+        if ("tempId" in m && m.tempId === tempId) {
           const failed: FailedMessage = { ...m, failed: true, error: errorMsg };
           delete (failed as any).pending;
           return failed;
         }
         return m;
-      })
+      }),
     );
   }, []);
 
   const removePendingMessage = useCallback((tempId: string) => {
     pendingMessagesRef.current.delete(tempId);
-    setMessages((prev) => prev.filter((m) => !('tempId' in m && m.tempId === tempId)));
+    setMessages((prev) =>
+      prev.filter((m) => !("tempId" in m && m.tempId === tempId)),
+    );
   }, []);
 
-  const replacePendingMessage = useCallback((tempId: string, realMessage: Message) => {
-    pendingMessagesRef.current.delete(tempId);
-    messageIdsRef.current.add(realMessage.id);
+  const replacePendingMessage = useCallback(
+    (tempId: string, realMessage: Message) => {
+      pendingMessagesRef.current.delete(tempId);
+      messageIdsRef.current.add(realMessage.id);
 
-    setMessages((prev) => {
-      if (prev.some((m) => m.id === realMessage.id)) {
-        return prev.filter((m) => !('tempId' in m && m.tempId === tempId));
-      }
-      return prev.map((m) => ('tempId' in m && m.tempId === tempId) ? realMessage : m);
-    });
-  }, []);
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === realMessage.id)) {
+          return prev.filter((m) => !("tempId" in m && m.tempId === tempId));
+        }
+        return prev.map((m) =>
+          "tempId" in m && m.tempId === tempId ? realMessage : m,
+        );
+      });
+    },
+    [],
+  );
 
   // Load more messages (pagination)
   const loadMore = useCallback(async () => {
     if (!hasMore || isLoading || messages.length === 0 || !channelId) return;
 
-    const oldestMessage = messages.find(m => !('pending' in m));
-    if (!oldestMessage || !('timestamp' in oldestMessage)) return;
+    const oldestMessage = messages.find((m) => !("pending" in m));
+    if (!oldestMessage || !("timestamp" in oldestMessage)) return;
 
     setIsLoading(true);
 
@@ -407,56 +459,82 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
       if (olderMessages.length > 0) {
         setMessages((prev) => {
           const existingIds = new Set(prev.map((m) => m.id));
-          const newMessages = olderMessages.filter(m => !existingIds.has(m.id));
-          newMessages.forEach(m => messageIdsRef.current.add(m.id));
+          const newMessages = olderMessages.filter(
+            (m) => !existingIds.has(m.id),
+          );
+          newMessages.forEach((m) => messageIdsRef.current.add(m.id));
           return [...newMessages, ...prev];
         });
       }
 
       setHasMore(olderMessages.length === 50);
     } catch (err: any) {
-      console.error('Error loading more messages:', err);
+      console.error("Error loading more messages:", err);
     } finally {
       setIsLoading(false);
     }
   }, [hasMore, isLoading, messages, channelId, fetchMessages]);
 
-  const updateMessage = useCallback((messageId: string, updates: Partial<Message>) => {
-    setMessages((prev) => prev.map((msg) => msg.id === messageId ? { ...msg, ...updates } : msg));
-  }, []);
+  const updateMessage = useCallback(
+    (messageId: string, updates: Partial<Message>) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId ? { ...msg, ...updates } : msg,
+        ),
+      );
+    },
+    [],
+  );
 
-  const addReaction = useCallback((messageId: string, emoji: string, userId: string) => {
-    setMessages((prev) =>
-      prev.map((msg) => {
-        if (msg.id !== messageId) return msg;
+  const addReaction = useCallback(
+    (messageId: string, emoji: string, userId: string) => {
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id !== messageId) return msg;
 
-        const existingReaction = msg.reactions?.find((r) => r.emoji === emoji);
-        const hasReacted = existingReaction?.users.includes(userId);
+          const existingReaction = msg.reactions?.find(
+            (r) => r.emoji === emoji,
+          );
+          const hasReacted = existingReaction?.users.includes(userId);
 
-        if (hasReacted) {
-          const updatedReactions = msg.reactions
-            ?.map((r) => {
-              if (r.emoji === emoji) {
-                const newUsers = r.users.filter((id) => id !== userId);
-                return newUsers.length > 0 ? { ...r, users: newUsers, count: newUsers.length } : null;
-              }
-              return r;
-            })
-            .filter((r): r is NonNullable<typeof r> => r !== null) || [];
+          if (hasReacted) {
+            const updatedReactions =
+              msg.reactions
+                ?.map((r) => {
+                  if (r.emoji === emoji) {
+                    const newUsers = r.users.filter((id) => id !== userId);
+                    return newUsers.length > 0
+                      ? { ...r, users: newUsers, count: newUsers.length }
+                      : null;
+                  }
+                  return r;
+                })
+                .filter((r): r is NonNullable<typeof r> => r !== null) || [];
 
-          return { ...msg, reactions: updatedReactions.length > 0 ? updatedReactions : undefined };
-        } else {
-          const updatedReactions = existingReaction
-            ? msg.reactions?.map((r) =>
-                r.emoji === emoji ? { ...r, users: [...r.users, userId], count: r.count + 1 } : r
-              )
-            : [...(msg.reactions || []), { emoji, count: 1, users: [userId] }];
+            return {
+              ...msg,
+              reactions:
+                updatedReactions.length > 0 ? updatedReactions : undefined,
+            };
+          } else {
+            const updatedReactions = existingReaction
+              ? msg.reactions?.map((r) =>
+                  r.emoji === emoji
+                    ? { ...r, users: [...r.users, userId], count: r.count + 1 }
+                    : r,
+                )
+              : [
+                  ...(msg.reactions || []),
+                  { emoji, count: 1, users: [userId] },
+                ];
 
-          return { ...msg, reactions: updatedReactions };
-        }
-      })
-    );
-  }, []);
+            return { ...msg, reactions: updatedReactions };
+          }
+        }),
+      );
+    },
+    [],
+  );
 
   const refetch = useCallback(() => {
     if (!channelId) return;
@@ -476,17 +554,21 @@ export function useChatMessages({ channelId, enabled = true }: UseChatMessagesOp
 
     (async () => {
       try {
-        const result = await fetchMessages(channelId, undefined, abortController.signal);
+        const result = await fetchMessages(
+          channelId,
+          undefined,
+          abortController.signal,
+        );
         if (abortController.signal.aborted || !result) return;
 
         const fetchedMessages: Message[] = result.messages || [];
-        messageIdsRef.current = new Set(fetchedMessages.map(m => m.id));
+        messageIdsRef.current = new Set(fetchedMessages.map((m) => m.id));
         setMessages(fetchedMessages);
         setHasMore(fetchedMessages.length === 50);
         setIsLoading(false);
       } catch (err: any) {
         if (abortController.signal.aborted) return;
-        setError(err.message || 'Failed to load messages');
+        setError(err.message || "Failed to load messages");
         setIsLoading(false);
       }
     })();

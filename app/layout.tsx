@@ -30,6 +30,14 @@ const ReferralCapture = dynamic(() => import("@/components/ReferralCapture"), {
   loading: () => null,
 });
 
+const ProfileCompletionGuard = dynamic(
+  () => import("@/components/ProfileCompletionGuard"),
+  {
+    ssr: false,
+    loading: () => null,
+  },
+);
+
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
@@ -131,6 +139,7 @@ export default async function RootLayout({
                   <PostHogPageView />
                 </Suspense>
                 <ScrollPrevention />
+                <ProfileCompletionGuard />
                 <GlobalBackgroundManager />
                 <Suspense fallback={null}>
                   <ReferralCapture />

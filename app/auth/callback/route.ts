@@ -76,14 +76,28 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (user) {
-      const { data: profile } = await supabase
+      const isOAuth =
+        user.app_metadata?.provider && user.app_metadata.provider !== "email";
+
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("role, username, profile_completed")
         .eq("id", user.id)
         .single();
 
-      // Redirect OAuth users who haven't completed their profile
-      if (profile?.profile_completed === false) {
+      if (profileError) {
+        console.error(
+          "[auth/callback] Profile query failed (token_hash):",
+          profileError.message,
+        );
+      }
+
+      // Redirect to /complete-profile if profile is incomplete
+      if (
+        profile?.profile_completed === false ||
+        (isOAuth && !profile) ||
+        (isOAuth && profile?.profile_completed !== true)
+      ) {
         return NextResponse.redirect(new URL("/complete-profile", baseUrl));
       }
 
@@ -138,14 +152,30 @@ export async function GET(request: NextRequest) {
       }
 
       if (user) {
-        const { data: profile } = await supabase
+        const isOAuth =
+          user.app_metadata?.provider && user.app_metadata.provider !== "email";
+
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("role, username, profile_completed")
           .eq("id", user.id)
           .single();
 
-        // Redirect OAuth users who haven't completed their profile
-        if (profile?.profile_completed === false) {
+        if (profileError) {
+          console.error(
+            "[auth/callback] Profile query failed:",
+            profileError.message,
+          );
+        }
+
+        // Redirect to /complete-profile if:
+        // - profile_completed is explicitly false (trigger set it), OR
+        // - OAuth user and profile query failed (safety net)
+        if (
+          profile?.profile_completed === false ||
+          (isOAuth && !profile) ||
+          (isOAuth && profile?.profile_completed !== true)
+        ) {
           return NextResponse.redirect(new URL("/complete-profile", baseUrl));
         }
 

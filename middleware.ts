@@ -5,7 +5,14 @@ const TEAM_ACCESS_KEY = process.env.TEAM_ACCESS_KEY;
 const TEAM_ACCESS_COOKIE = "team_session_access";
 
 // Routes that should bypass the coming soon check
-const BYPASS_ROUTES = ["/coming-soon", "/api/", "/_next/", "/favicon.ico"];
+const BYPASS_ROUTES = [
+  "/coming-soon",
+  "/api/",
+  "/_next/",
+  "/favicon.ico",
+  "/auth/",
+  "/complete-profile",
+];
 
 // Routes that should skip middleware entirely (external webhooks, server-to-server)
 const SKIP_MIDDLEWARE_ROUTES = ["/api/payments/keepz/callback"];

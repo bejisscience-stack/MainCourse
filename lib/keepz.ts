@@ -165,7 +165,8 @@ export function calculateKeepzCommission(
       fee = amount * 0.025;
       break;
     case "bank":
-      fee = amount <= 10000 ? amount * 0.01 : Math.min(amount * 0.006, 100);
+      // BUG-31: For amounts >10000, fee is 0.6% but never less than 100 GEL
+      fee = amount <= 10000 ? amount * 0.01 : Math.max(amount * 0.006, 100);
       break;
     case "split":
       fee = amount * 0.03;

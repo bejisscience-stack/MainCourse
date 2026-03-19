@@ -103,19 +103,21 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        // Check if user is muted
-        const { data: mutedUser } = await supabase
-          .from("muted_users")
-          .select("id")
-          .eq("lecturer_id", course?.lecturer_id)
-          .eq("user_id", user.id)
-          .single();
-        if (mutedUser)
-          return errorResponse(
-            "You have been muted and cannot send messages",
-            403,
-            cors,
-          );
+        // Check if user is muted (only when course/lecturer is known)
+        if (course?.lecturer_id) {
+          const { data: mutedUser } = await supabase
+            .from("muted_users")
+            .select("id")
+            .eq("lecturer_id", course.lecturer_id)
+            .eq("user_id", user.id)
+            .single();
+          if (mutedUser)
+            return errorResponse(
+              "You have been muted and cannot send messages",
+              403,
+              cors,
+            );
+        }
       }
 
       // Insert message
@@ -133,6 +135,55 @@ Deno.serve(async (req: Request) => {
 
       if (insertError)
         return errorResponse("Failed to send message", 500, cors);
+
+      // Insert attachments if present
+      if (hasAttachments && message) {
+        const attachmentRows = attachments.map((att: any) => ({
+          message_id: message.id,
+          channel_id: chatId,
+          course_id: channel.course_id,
+          file_url: att.fileUrl || att.url || att.file_url,
+          file_name: att.fileName || att.name || att.file_name || "attachment",
+          file_type: att.fileType || att.type || att.file_type || "image",
+          file_size: att.fileSize || att.size || att.file_size || 0,
+          mime_type:
+            att.mimeType || att.mime_type || "application/octet-stream",
+        }));
+        const { error: attError } = await supabase
+          .from("message_attachments")
+          .insert(attachmentRows);
+        if (attError) {
+          console.error("[Chat] Failed to save attachments:", attError);
+          // Return message with warning so client knows attachments weren't saved
+          return jsonResponse(
+            {
+              message: { ...message, content: message.content },
+              warning: "Message sent but attachments failed to save",
+            },
+            201,
+            cors,
+          );
+        }
+      }
+
+      // Fetch saved attachments for the response
+      let savedAttachments: any[] | undefined;
+      if (hasAttachments && message) {
+        const { data: attData } = await supabase
+          .from("message_attachments")
+          .select("id, file_url, file_name, file_type, file_size, mime_type")
+          .eq("message_id", message.id);
+        if (attData && attData.length > 0) {
+          savedAttachments = attData.map((a) => ({
+            id: a.id,
+            fileUrl: a.file_url,
+            fileName: a.file_name,
+            fileType: a.file_type,
+            fileSize: a.file_size,
+            mimeType: a.mime_type,
+          }));
+        }
+      }
 
       // Get user profile
       const { data: profile } = await supabase
@@ -183,6 +234,7 @@ Deno.serve(async (req: Request) => {
         edited: false,
         replyTo: message.reply_to_id || undefined,
         replyPreview,
+        attachments: savedAttachments,
         reactions: [],
       };
 

@@ -24,9 +24,9 @@ export default function CompleteProfilePage() {
     }
   }, [isLoading, user, router]);
 
-  // Redirect if profile is already complete
+  // Redirect if profile is already complete (only when explicitly true)
   useEffect(() => {
-    if (!isLoading && profile && profile.profile_completed !== false) {
+    if (!isLoading && profile && profile.profile_completed === true) {
       const dest =
         profile.role === "lecturer" ? "/lecturer/dashboard" : "/my-courses";
       router.replace(dest);
