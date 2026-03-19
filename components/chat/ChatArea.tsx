@@ -315,7 +315,7 @@ export default function ChatArea({
             content: serverMessage.content,
             replyTo: serverMessage.replyTo,
             replyPreview: serverMessage.replyPreview,
-            attachments: serverMessage.attachments,
+            attachments: serverMessage.attachments || attachments,
             edited: serverMessage.edited,
             timestamp: serverMessage.timestamp,
             user: serverMessage.user,
@@ -424,8 +424,8 @@ export default function ChatArea({
           id: message.id,
           username: message.user.username,
           content:
-            message.content.substring(0, 50) +
-            (message.content.length > 50 ? "..." : ""),
+            (message.content || "").substring(0, 50) +
+            ((message.content?.length || 0) > 50 ? "..." : ""),
         });
       }
     },
