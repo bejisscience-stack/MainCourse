@@ -84,11 +84,11 @@ export async function GET(request: NextRequest) {
 function filterByStatus(lecturers: any[], status: string | null) {
   if (!status || status === "all") return lecturers;
   if (status === "pending")
-    return lecturers.filter((l) => l.is_approved === false);
+    return lecturers.filter((l) => l.lecturer_status === "pending");
   if (status === "approved")
-    return lecturers.filter((l) => l.is_approved === true);
+    return lecturers.filter((l) => l.lecturer_status === "approved");
   if (status === "rejected")
-    return lecturers.filter((l) => l.is_approved === false);
+    return lecturers.filter((l) => l.lecturer_status === "rejected");
   return lecturers;
 }
 

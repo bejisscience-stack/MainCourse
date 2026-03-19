@@ -7,6 +7,7 @@ export interface LecturerApproval {
   full_name: string;
   username: string;
   is_approved: boolean | null;
+  lecturer_status: "pending" | "approved" | "rejected" | null;
   created_at: string;
   updated_at: string;
 }
@@ -75,8 +76,12 @@ export function useAdminLecturerApprovals(status?: string) {
   const filteredLecturers = (() => {
     const all = data || [];
     if (!status || status === "all") return all;
-    if (status === "pending") return all.filter((l) => l.is_approved === false);
-    if (status === "approved") return all.filter((l) => l.is_approved === true);
+    if (status === "pending")
+      return all.filter((l) => l.lecturer_status === "pending");
+    if (status === "approved")
+      return all.filter((l) => l.lecturer_status === "approved");
+    if (status === "rejected")
+      return all.filter((l) => l.lecturer_status === "rejected");
     return all;
   })();
 
@@ -118,7 +123,12 @@ export function useAdminLecturerApprovals(status?: string) {
       if (!currentData) return currentData;
       return currentData.map((l) =>
         l.id === lecturerId
-          ? { ...l, is_approved: true, updated_at: new Date().toISOString() }
+          ? {
+              ...l,
+              is_approved: true,
+              lecturer_status: "approved" as const,
+              updated_at: new Date().toISOString(),
+            }
           : l,
       );
     }, false);
@@ -165,7 +175,12 @@ export function useAdminLecturerApprovals(status?: string) {
       if (!currentData) return currentData;
       return currentData.map((l) =>
         l.id === lecturerId
-          ? { ...l, is_approved: false, updated_at: new Date().toISOString() }
+          ? {
+              ...l,
+              is_approved: false,
+              lecturer_status: "rejected" as const,
+              updated_at: new Date().toISOString(),
+            }
           : l,
       );
     }, false);

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { useAdminLecturerApprovals } from "@/hooks/useAdminLecturerApprovals";
 
-type StatusFilter = "all" | "pending" | "approved";
+type StatusFilter = "all" | "pending" | "approved" | "rejected";
 
 export default function AdminLecturerApprovals() {
   const { t } = useI18n();
@@ -26,16 +26,21 @@ export default function AdminLecturerApprovals() {
   const filteredLecturers = (() => {
     if (statusFilter === "all") return allLecturers;
     if (statusFilter === "pending")
-      return allLecturers.filter((l) => l.is_approved !== true);
+      return allLecturers.filter((l) => l.lecturer_status === "pending");
     if (statusFilter === "approved")
-      return allLecturers.filter((l) => l.is_approved === true);
+      return allLecturers.filter((l) => l.lecturer_status === "approved");
+    if (statusFilter === "rejected")
+      return allLecturers.filter((l) => l.lecturer_status === "rejected");
     return allLecturers;
   })();
 
   const counts = {
     all: allLecturers.length,
-    pending: allLecturers.filter((l) => l.is_approved !== true).length,
-    approved: allLecturers.filter((l) => l.is_approved === true).length,
+    pending: allLecturers.filter((l) => l.lecturer_status === "pending").length,
+    approved: allLecturers.filter((l) => l.lecturer_status === "approved")
+      .length,
+    rejected: allLecturers.filter((l) => l.lecturer_status === "rejected")
+      .length,
   };
 
   const handleApprove = async (lecturerId: string) => {
@@ -83,11 +88,18 @@ export default function AdminLecturerApprovals() {
       minute: "2-digit",
     });
 
-  const statusBadge = (isApproved: boolean | null) => {
-    if (isApproved === true) {
+  const statusBadge = (lecturerStatus: string | null) => {
+    if (lecturerStatus === "approved") {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
           {t("adminLecturers.approved")}
+        </span>
+      );
+    }
+    if (lecturerStatus === "rejected") {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          {t("adminLecturers.rejected")}
         </span>
       );
     }
@@ -143,6 +155,7 @@ export default function AdminLecturerApprovals() {
             ["all", t("adminLecturers.filterAll")],
             ["pending", t("adminLecturers.filterPending")],
             ["approved", t("adminLecturers.filterApproved")],
+            ["rejected", t("adminLecturers.filterRejected")],
           ] as [StatusFilter, string][]
         ).map(([key, label]) => (
           <button
@@ -208,13 +221,13 @@ export default function AdminLecturerApprovals() {
                       {lecturer.username || "—"}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {statusBadge(lecturer.is_approved)}
+                      {statusBadge(lecturer.lecturer_status)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500">
                       {formatDate(lecturer.created_at)}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {lecturer.is_approved !== true ? (
+                      {lecturer.lecturer_status === "pending" ? (
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => handleApprove(lecturer.id)}
@@ -237,9 +250,13 @@ export default function AdminLecturerApprovals() {
                             {t("adminLecturers.reject")}
                           </button>
                         </div>
-                      ) : (
+                      ) : lecturer.lecturer_status === "approved" ? (
                         <span className="text-xs text-gray-400">
                           {t("adminLecturers.alreadyApproved")}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-red-400">
+                          {t("adminLecturers.rejected")}
                         </span>
                       )}
                     </td>
