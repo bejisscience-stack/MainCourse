@@ -28,6 +28,20 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
+  // SEC-11: Gate detailed health info behind a secret header
+  const healthSecret = Deno.env.get("HEALTH_CHECK_SECRET");
+  if (healthSecret && req.headers.get("x-health-secret") !== healthSecret) {
+    // Return minimal status without exposing internals
+    return new Response(JSON.stringify({ status: "ok" }), {
+      status: 200,
+      headers: {
+        ...cors,
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
+    });
+  }
+
   const startTime = Date.now();
   const healthStatus: HealthStatus = {
     status: "healthy",

@@ -48,11 +48,30 @@ export async function POST(request: NextRequest) {
         });
         return NextResponse.json({ received: true }, { status: 200 });
       }
+    } else if (process.env.NODE_ENV === "production") {
+      // SEC-09: In production, IP allowlist is mandatory — reject if not configured
+      console.error(
+        "[Keepz Callback] CRITICAL: KEEPZ_ALLOWED_IPS not set in production — rejecting callback",
+        { ip: clientIP },
+      );
+      await auditLog(
+        supabase,
+        null,
+        null,
+        null,
+        "callback_no_ip_allowlist_prod",
+        {
+          ip: clientIP,
+        },
+      );
+      return NextResponse.json(
+        { error: "Service misconfigured" },
+        { status: 503 },
+      );
     } else {
-      // No IP allowlist configured — proceed with encrypted payload as sole authentication.
-      // Log for visibility but do NOT block — blocking here silently drops real payments.
+      // Dev/test: warn and continue — encrypted payload is sufficient for local testing
       console.warn(
-        "[Keepz Callback] KEEPZ_ALLOWED_IPS not set — relying on encrypted payload auth",
+        "[Keepz Callback] KEEPZ_ALLOWED_IPS not set — relying on encrypted payload auth (dev mode)",
         { ip: clientIP },
       );
       await auditLog(supabase, null, null, null, "callback_no_ip_allowlist", {
@@ -253,20 +272,45 @@ export async function POST(request: NextRequest) {
         },
       );
       if (rpcError || rpcResult?.success === false) {
-        console.error("[Keepz Callback] Payment processing failed:", {
-          rpcError,
-          rpcResult,
-          integratorOrderId,
-          callbackStatus,
-        });
-        await auditLog(
-          supabase,
-          payment.id,
-          integratorOrderId,
-          payment.user_id,
-          "callback_rpc_failed",
-          { rpcError: rpcError?.message, rpcResult },
-        );
+        if (rpcResult?.payment_recorded === true) {
+          console.error(
+            "[CRITICAL] Payment recorded as success but enrollment/subscription failed — needs manual admin intervention",
+            {
+              integratorOrderId,
+              userId: payment.user_id,
+              paymentType: payment.payment_type,
+              amount: payment.amount,
+              error: rpcResult?.error,
+            },
+          );
+          await auditLog(
+            supabase,
+            payment.id,
+            integratorOrderId,
+            payment.user_id,
+            "callback_payment_recorded_enrollment_failed",
+            {
+              error: rpcResult?.error,
+              paymentType: payment.payment_type,
+              amount: payment.amount,
+            },
+          );
+        } else {
+          console.error("[Keepz Callback] Payment processing failed:", {
+            rpcError,
+            rpcResult,
+            integratorOrderId,
+            callbackStatus,
+          });
+          await auditLog(
+            supabase,
+            payment.id,
+            integratorOrderId,
+            payment.user_id,
+            "callback_rpc_failed",
+            { rpcError: rpcError?.message, rpcResult },
+          );
+        }
       } else {
         console.log("[Keepz Callback] Payment completed successfully:", {
           timestamp: new Date().toISOString(),
@@ -291,7 +335,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Save card info if present (from saveCard: true payments)
-      if (callbackData.cardInfo) {
+      if (callbackData.cardInfo && callbackData.cardInfo.token) {
         const cardInfo = callbackData.cardInfo;
         const { error: cardError } = await supabase.from("saved_cards").upsert(
           {
@@ -317,6 +361,8 @@ export async function POST(request: NextRequest) {
         }
       }
     } else {
+      // Never overwrite a successful payment — duplicate/delayed FAILED callbacks
+      // must not corrupt completed transactions
       await supabase
         .from("keepz_payments")
         .update({
@@ -324,7 +370,8 @@ export async function POST(request: NextRequest) {
           callback_payload: callbackData,
           updated_at: new Date().toISOString(),
         })
-        .eq("keepz_order_id", integratorOrderId);
+        .eq("keepz_order_id", integratorOrderId)
+        .in("status", ["created", "pending", "processing"]);
 
       await auditLog(
         supabase,
