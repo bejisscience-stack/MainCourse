@@ -387,10 +387,10 @@ export default function SettingsPage() {
 
     const amount = parseFloat(withdrawalAmount);
 
-    if (!amount || amount < 50) {
+    if (!amount || amount < 0.1) {
       setWithdrawalError(
         t("settings.minimumWithdrawal") ||
-          "Minimum withdrawal amount is 50 GEL",
+          "Minimum withdrawal amount is 0.10 GEL",
       );
       return;
     }
@@ -986,7 +986,7 @@ export default function SettingsPage() {
                       )}
                     </div>
 
-                    {balance < 50 && (
+                    {balance < 0.1 && (
                       <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
                         <p className="text-sm text-yellow-800 dark:text-yellow-300">
                           {t("settings.minimumBalanceRequired") ||

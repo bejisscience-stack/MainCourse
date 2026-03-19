@@ -61,8 +61,8 @@ async function handlePost(
     const { amount, bankAccountNumber } = body;
 
     // Validate amount
-    if (!amount || typeof amount !== "number" || amount < 50) {
-      return errorResponse("Minimum withdrawal amount is 50 GEL", 400);
+    if (!amount || typeof amount !== "number" || amount < 0.1) {
+      return errorResponse("Minimum withdrawal amount is 0.10 GEL", 400);
     }
 
     // Validate bank account
