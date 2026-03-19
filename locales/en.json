@@ -216,7 +216,14 @@
     "statusCompleted": "Completed",
     "statusRejected": "Rejected",
     "statusApproved": "Approved",
-    "noEnrolledCourses": "You need to enroll in courses to generate course-specific referral links."
+    "noEnrolledCourses": "You need to enroll in courses to generate course-specific referral links.",
+    "deleteAccount": "Delete Account",
+    "deleteAccountWarning": "This action is permanent and cannot be undone. All your data, enrollments, and progress will be permanently deleted.",
+    "typeDeleteToConfirm": "Type \"Delete\" to confirm",
+    "deleteAccountConfirmButton": "Permanently Delete Account",
+    "deleteAccountLecturerBlocked": "Lecturers and administrators cannot delete their accounts directly. Please contact an administrator.",
+    "accountDeleted": "Your account has been deleted.",
+    "deleteAccountError": "Failed to delete account. Please try again."
   },
   "courseCard": {
     "bestseller": "Bestseller",
