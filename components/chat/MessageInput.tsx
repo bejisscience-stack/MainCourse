@@ -52,6 +52,7 @@ const ALLOWED_VIDEO_TYPES = [
   "video/x-matroska",
 ];
 const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export default function MessageInput({
   onSend,
@@ -359,6 +360,12 @@ export default function MessageInput({
       for (const file of fileArray) {
         if (!ALLOWED_TYPES.includes(file.type)) {
           errors.push(`"${file.name}" - invalid file type`);
+          continue;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+          errors.push(
+            `"${file.name}" - too large (${(file.size / 1024 / 1024).toFixed(1)} MB, max 10 MB)`,
+          );
           continue;
         }
         validFiles.push(file);
