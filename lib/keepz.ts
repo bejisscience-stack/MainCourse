@@ -343,6 +343,7 @@ export async function createKeepzOrder(
 
 export async function getOrderStatus(
   integratorOrderId: string,
+  timeoutMs?: number,
 ): Promise<Record<string, unknown>> {
   const BASE_URL = env("KEEPZ_BASE_URL");
   const integratorId = env("KEEPZ_INTEGRATOR_ID");
@@ -364,6 +365,7 @@ export async function getOrderStatus(
     response = await fetchWithTimeout(
       `${BASE_URL}/api/integrator/order/status?${params.toString()}`,
       { method: "GET" },
+      timeoutMs,
     );
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
