@@ -110,10 +110,11 @@ export async function PUT(request: NextRequest) {
       updateData.subscription_price_gel = Number(subscription_price_gel);
     }
 
-    // Update the singleton row
+    // Update the singleton row (filter required by PostgREST)
     const { data, error } = await serviceSupabase
       .from("platform_settings")
       .update(updateData)
+      .not("id", "is", null)
       .select(
         "min_withdrawal_gel, subscription_price_gel, updated_at, updated_by",
       )
