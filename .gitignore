@@ -32,6 +32,7 @@ yarn-error.log*
 .env*.local
 .env
 .env.staging
+.env.production
 
 # MCP config (contains access tokens)
 .mcp.json
@@ -76,3 +77,9 @@ dist/
 .next/cache*
 .env.supabase
 .env.supabase.local
+
+# DB exports / schema dumps
+production-schema-export.json
+
+# Playwright MCP test artifacts
+.playwright-mcp/
