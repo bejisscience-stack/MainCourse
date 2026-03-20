@@ -111,7 +111,14 @@ export async function POST(request: NextRequest) {
           { status: 404 },
         );
       }
-      amount = (sub as any).price || 10;
+      // Fetch dynamic fallback from platform_settings
+      const { data: platformSettings } = await supabase
+        .from("platform_settings")
+        .select("subscription_price_gel")
+        .limit(1)
+        .single();
+      const fallbackPrice = platformSettings?.subscription_price_gel ?? 10;
+      amount = (sub as any).price || fallbackPrice;
       if (amount <= 0) {
         return NextResponse.json(
           { error: "Invalid subscription price" },

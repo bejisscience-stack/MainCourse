@@ -69,9 +69,21 @@ async function handlePost(
     const body = await req.json();
     const { amount, bankAccountNumber } = body;
 
+    // Fetch dynamic minimum withdrawal from platform_settings
+    const { data: settings } = await supabase
+      .from("platform_settings")
+      .select("min_withdrawal_gel")
+      .limit(1)
+      .single();
+    const minWithdrawal = settings?.min_withdrawal_gel ?? 50;
+
     // Validate amount
-    if (!amount || typeof amount !== "number" || amount < 50) {
-      return errorResponse("Minimum withdrawal amount is 50 GEL", 400, cors);
+    if (!amount || typeof amount !== "number" || amount < minWithdrawal) {
+      return errorResponse(
+        `Minimum withdrawal amount is ${minWithdrawal} GEL`,
+        400,
+        cors,
+      );
     }
 
     // Validate bank account

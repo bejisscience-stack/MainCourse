@@ -63,13 +63,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const supabase = createServerSupabaseClient(token);
+
     const body = await request.json();
     const { amount, bankAccountNumber } = body;
 
+    // Fetch dynamic minimum withdrawal from platform_settings
+    const { data: settings } = await supabase
+      .from("platform_settings")
+      .select("min_withdrawal_gel")
+      .limit(1)
+      .single();
+    const minWithdrawal = settings?.min_withdrawal_gel ?? 50;
+
     // Validate amount
-    if (!amount || typeof amount !== "number" || amount < 50) {
+    if (!amount || typeof amount !== "number" || amount < minWithdrawal) {
       return NextResponse.json(
-        { error: "Minimum withdrawal amount is 50 GEL" },
+        { error: `Minimum withdrawal amount is ${minWithdrawal} GEL` },
         { status: 400 },
       );
     }
@@ -94,8 +104,6 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-
-    const supabase = createServerSupabaseClient(token);
 
     // Call the RPC function to create withdrawal request
     const { data: requestId, error: rpcError } = await supabase.rpc(

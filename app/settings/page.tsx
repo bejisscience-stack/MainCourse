@@ -11,6 +11,7 @@ import { useBalance } from "@/hooks/useBalance";
 import { useWithdrawalRequests } from "@/hooks/useWithdrawalRequests";
 import { useRealtimeWithdrawalRequests } from "@/hooks/useRealtimeWithdrawalRequests";
 import { useRealtimeUserProfile } from "@/hooks/useRealtimeUserProfile";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
@@ -41,6 +42,8 @@ export default function SettingsPage() {
 
   const { requests: withdrawalRequests, mutate: mutateWithdrawals } =
     useWithdrawalRequests(user?.id || null);
+
+  const { minWithdrawal } = usePlatformSettings();
 
   // Real-time subscription for withdrawal request updates
   const { isConnected: withdrawalRtConnected } = useRealtimeWithdrawalRequests({
@@ -387,10 +390,10 @@ export default function SettingsPage() {
 
     const amount = parseFloat(withdrawalAmount);
 
-    if (!amount || amount < 50) {
+    if (!amount || amount < minWithdrawal) {
       setWithdrawalError(
-        t("settings.minimumWithdrawal") ||
-          "Minimum withdrawal amount is 50 GEL",
+        t("settings.minimumWithdrawal", { min: minWithdrawal }) ||
+          `Minimum withdrawal amount is ${minWithdrawal} GEL`,
       );
       return;
     }
@@ -986,11 +989,13 @@ export default function SettingsPage() {
                       )}
                     </div>
 
-                    {balance < 50 && (
+                    {balance < minWithdrawal && (
                       <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
                         <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                          {t("settings.minimumBalanceRequired") ||
-                            "Minimum balance of ₾20.00 is required to request a withdrawal."}
+                          {t("settings.minimumBalanceRequired", {
+                            min: minWithdrawal,
+                          }) ||
+                            `Minimum balance of ₾${minWithdrawal} is required to request a withdrawal.`}
                         </p>
                       </div>
                     )}
@@ -1033,6 +1038,7 @@ export default function SettingsPage() {
                             <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">
                               {t("settings.availableBalance", {
                                 balance: balance.toFixed(2),
+                                min: minWithdrawal,
                               })}
                             </p>
                           </div>

@@ -83,13 +83,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Fetch dynamic subscription price from platform_settings
+    const { data: settings } = await supabase
+      .from("platform_settings")
+      .select("subscription_price_gel")
+      .limit(1)
+      .single();
+    const subscriptionPrice = settings?.subscription_price_gel ?? 10;
+
     // Create new subscription request
     const { data, error } = await supabase
       .from("project_subscriptions")
       .insert({
         user_id: user.id,
         payment_screenshot: null,
-        price: 0.1,
+        price: subscriptionPrice,
         status: "pending",
         payment_method: payment_method || "keepz",
       })
