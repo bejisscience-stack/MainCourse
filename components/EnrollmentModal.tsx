@@ -341,8 +341,15 @@ export default function EnrollmentModal({
         });
 
         if (!orderResponse.ok) {
-          const errData = await orderResponse.json();
-          throw new Error(errData.error || "Failed to process payment");
+          let errMsg = "Failed to process payment";
+          try {
+            const errData = await orderResponse.json();
+            errMsg = errData.error || errMsg;
+          } catch {
+            if (orderResponse.status === 504)
+              errMsg = "Payment gateway timed out. Please try again.";
+          }
+          throw new Error(errMsg);
         }
 
         const orderData = await orderResponse.json();
@@ -461,8 +468,15 @@ export default function EnrollmentModal({
           }),
         });
         if (!orderResponse.ok) {
-          const errData = await orderResponse.json();
-          throw new Error(errData.error || "Failed to create payment");
+          let errMsg = "Failed to create payment";
+          try {
+            const errData = await orderResponse.json();
+            errMsg = errData.error || errMsg;
+          } catch {
+            if (orderResponse.status === 504)
+              errMsg = "Payment gateway timed out. Please try again.";
+          }
+          throw new Error(errMsg);
         }
         const { checkoutUrl } = await orderResponse.json();
 

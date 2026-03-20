@@ -172,9 +172,13 @@ export async function POST(request: NextRequest) {
       }
 
       // Before expiring, verify with Keepz — the user may have paid but callback never arrived
+      // Use short 5s timeout — this is best-effort, and we need time budget for createKeepzOrder
       if (existing.status === "created" && existing.keepz_order_id) {
         try {
-          const keepzStatus = await getOrderStatus(existing.keepz_order_id);
+          const keepzStatus = await getOrderStatus(
+            existing.keepz_order_id,
+            5_000,
+          );
           const orderStatus =
             (keepzStatus.orderStatus as string) ||
             (keepzStatus.status as string);
