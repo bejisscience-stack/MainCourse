@@ -8,6 +8,7 @@ import { useUser } from "@/hooks/useUser";
 import { supabase } from "@/lib/supabase";
 import { getReferral } from "@/lib/referral-storage";
 import { useSavedCards, type SavedCard } from "@/hooks/useSavedCards";
+import { calculateStudentPrice } from "@/lib/currency";
 import { usePaymentRecovery } from "@/hooks/usePaymentRecovery";
 
 type KeepzMethod = "all";
@@ -492,7 +493,7 @@ export default function EnrollmentModal({
 
   if (!isOpen || !mounted || typeof document === "undefined") return null;
 
-  const price = course.price || 0;
+  const price = calculateStudentPrice(course.price || 0);
   const isPayDisabled =
     isSubmitting ||
     referralValidation === "validating" ||

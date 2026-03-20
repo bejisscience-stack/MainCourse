@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
+import {
+  calculateStudentPrice,
+  PLATFORM_COMMISSION_PERCENT,
+} from "@/lib/currency";
 
 interface CourseCreationModalProps {
   isOpen: boolean;
@@ -479,6 +483,15 @@ export default function CourseCreationModal({
                   }
                   className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
+                {formData.price && parseFloat(formData.price) > 0 && (
+                  <p className="mt-1.5 text-xs text-amber-400">
+                    პლატფორმის საკომისიო: {PLATFORM_COMMISSION_PERCENT}% —
+                    სტუდენტი გადაიხდის: ₾
+                    {calculateStudentPrice(parseFloat(formData.price)).toFixed(
+                      2,
+                    )}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">

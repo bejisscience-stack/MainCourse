@@ -8,6 +8,7 @@ import EnrollmentModal from "@/components/EnrollmentModal";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import { useI18n } from "@/contexts/I18nContext";
+import { calculateStudentPrice } from "@/lib/currency";
 
 export default function BundleEnrollmentPage() {
   const router = useRouter();
@@ -269,7 +270,7 @@ export default function BundleEnrollmentPage() {
                           </p>
                         )}
                         <p className="text-sm font-semibold text-charcoal-700 dark:text-gray-300 mt-2">
-                          ${(course.price ?? 0).toFixed(2)}
+                          ₾{calculateStudentPrice(course.price ?? 0).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -285,17 +286,20 @@ export default function BundleEnrollmentPage() {
                     {t("bundles.bundlePrice")}
                   </p>
                   <p className="text-3xl font-bold text-charcoal-950 dark:text-white">
-                    ${bundle.price.toFixed(2)}
+                    ₾{calculateStudentPrice(bundle.price).toFixed(2)}
                   </p>
                   {totalOriginalPrice > bundle.price && (
                     <p className="text-sm text-charcoal-400 dark:text-gray-500 line-through mt-1">
-                      ${totalOriginalPrice.toFixed(2)}{" "}
+                      ₾{calculateStudentPrice(totalOriginalPrice).toFixed(2)}{" "}
                       {t("bundles.ifPurchasedSeparately")}
                     </p>
                   )}
                   <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-2 font-semibold">
                     {t("bundles.saveAmount", {
-                      amount: (totalOriginalPrice - bundle.price).toFixed(2),
+                      amount: (
+                        calculateStudentPrice(totalOriginalPrice) -
+                        calculateStudentPrice(bundle.price)
+                      ).toFixed(2),
                     })}
                   </p>
                 </div>
