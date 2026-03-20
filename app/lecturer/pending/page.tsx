@@ -24,11 +24,11 @@ export default function LecturerPendingPage() {
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role, is_approved")
+          .select("role, is_approved, lecturer_status")
           .eq("id", currentUser.id)
           .single();
 
-        if (!profile || profile.role !== "lecturer") {
+        if (!profile || !profile.lecturer_status) {
           router.push("/");
           return;
         }

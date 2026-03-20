@@ -1,4 +1,9 @@
-import { handleCors, jsonResponse, errorResponse } from "../_shared/cors.ts";
+import {
+  handleCors,
+  getCorsHeaders,
+  jsonResponse,
+  errorResponse,
+} from "../_shared/cors.ts";
 import { getAuthenticatedUser, checkIsAdmin } from "../_shared/auth.ts";
 import { createServiceRoleClient } from "../_shared/supabase.ts";
 import { sendBundleEnrollmentRejectedEmail } from "../_shared/email.ts";
@@ -6,9 +11,10 @@ import { sendBundleEnrollmentRejectedEmail } from "../_shared/email.ts";
 Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
+  const cors = getCorsHeaders(req);
 
   if (req.method !== "POST") {
-    return errorResponse("Method not allowed", 405);
+    return errorResponse("Method not allowed", 405, cors);
   }
 
   const auth = await getAuthenticatedUser(req);
@@ -17,7 +23,7 @@ Deno.serve(async (req: Request) => {
 
   const isAdmin = await checkIsAdmin(supabase, user.id);
   if (!isAdmin) {
-    return errorResponse("Forbidden: Admin access required", 403);
+    return errorResponse("Forbidden: Admin access required", 403, cors);
   }
 
   try {
@@ -25,7 +31,7 @@ Deno.serve(async (req: Request) => {
     const { requestId, reason } = body;
 
     if (!requestId) {
-      return errorResponse("requestId is required", 400);
+      return errorResponse("requestId is required", 400, cors);
     }
 
     console.log("[Reject API] Attempting to reject bundle request:", requestId);
@@ -54,6 +60,7 @@ Deno.serve(async (req: Request) => {
           code: rejectError.code,
         },
         500,
+        cors,
       );
     }
 
@@ -105,12 +112,16 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    return jsonResponse({
-      message: "Bundle enrollment request rejected successfully",
-      success: true,
-    });
+    return jsonResponse(
+      {
+        message: "Bundle enrollment request rejected successfully",
+        success: true,
+      },
+      200,
+      cors,
+    );
   } catch (error) {
     console.error("[Reject API] Error:", error);
-    return errorResponse("Internal server error", 500);
+    return errorResponse("Internal server error", 500, cors);
   }
 });

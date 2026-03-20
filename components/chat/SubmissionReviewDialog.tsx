@@ -59,6 +59,10 @@ export default function SubmissionReviewDialog({
     Record<string, "accepted" | "rejected">
   >({});
 
+  // Keep a ref to reviewStatus so saveReviewForPlatform doesn't re-create on every status change
+  const reviewStatusRef = useRef(reviewStatus);
+  reviewStatusRef.current = reviewStatus;
+
   // Get criteria for current platform (platform-specific + all-platform criteria)
   const getCriteriaForPlatform = useCallback(
     (platform: string) => {
@@ -183,7 +187,7 @@ export default function SubmissionReviewDialog({
         let reviewData;
         let reviewError;
 
-        const currentStatus = reviewStatus[platform] || "accepted";
+        const currentStatus = reviewStatusRef.current[platform] || "accepted";
 
         if (existingReview) {
           // Update existing review
@@ -306,6 +310,7 @@ export default function SubmissionReviewDialog({
   const currentLastSavedRPM = lastSavedRPM[selectedPlatform] || 0;
   const currentIsSaving = isSaving[selectedPlatform] || false;
   const currentSaveSuccess = saveSuccess[selectedPlatform] || false;
+  const currentReviewStatus = reviewStatus[selectedPlatform] || "accepted";
 
   return (
     <div
@@ -626,7 +631,11 @@ export default function SubmissionReviewDialog({
               onClick={async () => {
                 await saveReviewForPlatform(selectedPlatform);
               }}
-              disabled={currentIsSaving || currentSelectedCriteria.length === 0}
+              disabled={
+                currentIsSaving ||
+                (currentReviewStatus !== "rejected" &&
+                  currentSelectedCriteria.length === 0)
+              }
               className="px-6 py-2 text-sm font-semibold text-white bg-emerald-500/90 rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {currentIsSaving ? (

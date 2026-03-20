@@ -128,9 +128,16 @@ export async function POST(
     }
 
     // Audit log
-    logAdminAction(request, user.id, "lecturer_rejected", "profiles", id, {
-      reason,
-    });
+    await logAdminAction(
+      request,
+      user.id,
+      "lecturer_rejected",
+      "profiles",
+      id,
+      {
+        reason,
+      },
+    );
 
     return NextResponse.json({
       message: "Lecturer account rejected successfully",

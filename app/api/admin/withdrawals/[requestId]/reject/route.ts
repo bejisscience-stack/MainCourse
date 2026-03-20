@@ -78,7 +78,7 @@ export async function POST(
     const body = await request.json().catch(() => ({}));
     const { adminNotes } = body;
 
-    if (!adminNotes) {
+    if (!adminNotes || typeof adminNotes !== "string") {
       return NextResponse.json(
         { error: "Admin notes are required when rejecting a request" },
         { status: 400 },
@@ -197,7 +197,7 @@ export async function POST(
     }
 
     // Audit log
-    logAdminAction(
+    await logAdminAction(
       request,
       user.id,
       "withdrawal_rejected",

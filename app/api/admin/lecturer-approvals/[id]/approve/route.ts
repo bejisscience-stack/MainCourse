@@ -124,7 +124,7 @@ export async function POST(
     }
 
     // Audit log
-    logAdminAction(request, user.id, "lecturer_approved", "profiles", id);
+    await logAdminAction(request, user.id, "lecturer_approved", "profiles", id);
 
     return NextResponse.json({
       message: "Lecturer account approved successfully",

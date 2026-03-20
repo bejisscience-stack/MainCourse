@@ -66,12 +66,10 @@ export async function POST(
     console.log("[Bundle Approve API] Attempting to approve request:", id);
 
     // Use the RPC function to approve the bundle enrollment
-    // Pass the admin_user_id parameter so it works with service role
     const { error: approveError } = await supabase.rpc(
       "approve_bundle_enrollment_request",
       {
         request_id: id,
-        admin_user_id: user.id,
       },
     );
 
@@ -162,7 +160,7 @@ export async function POST(
     }
 
     // Audit log
-    logAdminAction(
+    await logAdminAction(
       request,
       user.id,
       "bundle_enrollment_approved",

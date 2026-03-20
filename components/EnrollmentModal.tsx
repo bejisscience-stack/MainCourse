@@ -23,6 +23,7 @@ interface EnrollmentModalProps {
 }
 
 function formatCardMask(mask: string): string {
+  if (!mask) return "•••• ••••";
   // "411111******1111" → "**** 1111"
   const last4 = mask.replace(/\*/g, "").slice(-4);
   return `•••• ${last4}`;
@@ -71,6 +72,7 @@ export default function EnrollmentModal({
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const paymentInFlightRef = useRef(false);
 
   useEffect(() => {
     setMounted(true);
@@ -88,6 +90,7 @@ export default function EnrollmentModal({
       setTokenPaymentStatus(null);
       setPayingWithCardId(null);
       setSaveCardChecked(false);
+      paymentInFlightRef.current = false;
 
       // Auto-fill referral code: props > persistent storage > profile
       let code = initialReferralCode || "";
@@ -217,6 +220,7 @@ export default function EnrollmentModal({
           if (data.status === "success") {
             clearInterval(pollIntervalRef.current!);
             pollIntervalRef.current = null;
+            paymentInFlightRef.current = false;
             setTokenPaymentStatus("success");
             // Auto-close and trigger success after brief delay
             setTimeout(() => {
@@ -228,6 +232,7 @@ export default function EnrollmentModal({
             pollIntervalRef.current = null;
             setTokenPaymentStatus("failed");
             setError(t("paymentMethod.savedCardFailed"));
+            paymentInFlightRef.current = false;
           }
         } catch {
           // Continue polling on network errors
@@ -236,6 +241,7 @@ export default function EnrollmentModal({
         if (attempts >= maxAttempts) {
           clearInterval(pollIntervalRef.current!);
           pollIntervalRef.current = null;
+          paymentInFlightRef.current = false;
           // Payment might still succeed via callback — redirect to status page
           window.location.href = `/payment/success?paymentId=${paymentId}`;
         }
@@ -247,11 +253,15 @@ export default function EnrollmentModal({
   // Pay with saved card (no redirect)
   const handlePayWithSavedCard = useCallback(
     async (savedCardId: string) => {
+      if (paymentInFlightRef.current) return;
+      paymentInFlightRef.current = true;
+
       setError(null);
       setPayingWithCardId(savedCardId);
       setTokenPaymentStatus("processing");
 
       try {
+        let enrollmentRequestId: string;
         let {
           data: { session },
         } = await supabase.auth.getSession();
@@ -263,8 +273,6 @@ export default function EnrollmentModal({
         }
         if (!session?.access_token) throw new Error("Not authenticated");
         const token = session.access_token;
-
-        let enrollmentRequestId: string;
 
         if (enrollmentMode === "bundle") {
           const enrollResponse = await fetch(
@@ -350,6 +358,7 @@ export default function EnrollmentModal({
         setError(err.message || "Something went wrong. Please try again.");
         setTokenPaymentStatus("failed");
         setPayingWithCardId(null);
+        paymentInFlightRef.current = false;
       }
     },
     [
@@ -364,11 +373,15 @@ export default function EnrollmentModal({
   // Regular pay (redirect flow)
   const handlePay = useCallback(
     async (method: KeepzMethod) => {
+      if (paymentInFlightRef.current) return;
+      paymentInFlightRef.current = true;
+
       setError(null);
       setIsSubmitting(true);
       setSelectedMethod(method);
 
       try {
+        let enrollmentRequestId: string;
         let {
           data: { session },
         } = await supabase.auth.getSession();
@@ -380,8 +393,6 @@ export default function EnrollmentModal({
         }
         if (!session?.access_token) throw new Error("Not authenticated");
         const token = session.access_token;
-
-        let enrollmentRequestId: string;
 
         if (enrollmentMode === "bundle") {
           const enrollResponse = await fetch(
@@ -460,6 +471,7 @@ export default function EnrollmentModal({
         setError(err.message || "Something went wrong. Please try again.");
         setIsSubmitting(false);
         setSelectedMethod(null);
+        paymentInFlightRef.current = false;
       }
     },
     [course.id, enrollmentMode, referralCode, isReEnrollment, saveCardChecked],
@@ -484,7 +496,8 @@ export default function EnrollmentModal({
   const isPayDisabled =
     isSubmitting ||
     referralValidation === "validating" ||
-    tokenPaymentStatus === "processing";
+    tokenPaymentStatus === "processing" ||
+    paymentInFlightRef.current;
   const hasSavedCards = cards.length > 0;
 
   const modalContent = (
@@ -971,6 +984,7 @@ export default function EnrollmentModal({
                     setError(null);
                     setTokenPaymentStatus(null);
                     setPayingWithCardId(null);
+                    paymentInFlightRef.current = false;
                   }}
                   className="text-sm font-medium text-red-600 dark:text-red-400 hover:underline mt-1"
                 >

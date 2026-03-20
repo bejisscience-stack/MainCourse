@@ -1,5 +1,5 @@
 /**
- * Bilingual email templates for Wavleba platform
+ * Bilingual email templates for Swavleba platform
  * Supports English (en) and Georgian (ge)
  */
 
@@ -29,7 +29,7 @@ interface EmailTemplate {
 
 // Brand colors
 const BRAND_COLOR = "#1e3a5f";
-const SITE_URL = "https://wavleba.ge";
+const SITE_URL = "https://swavleba.ge";
 
 // Shared email wrapper
 const emailWrapper = (content: string) => `
@@ -45,8 +45,8 @@ const emailWrapper = (content: string) => `
       ${content}
     </div>
     <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
-      <p>Wavleba - Online Learning Platform</p>
-      <p><a href="${SITE_URL}" style="color: ${BRAND_COLOR};">wavleba.ge</a></p>
+      <p>Swavleba - Online Learning Platform</p>
+      <p><a href="${SITE_URL}" style="color: ${BRAND_COLOR};">swavleba.ge</a></p>
     </div>
   </div>
 </body>
@@ -58,8 +58,8 @@ const buttonStyle = `background-color: ${BRAND_COLOR}; color: white; padding: 14
 export const emailTemplates: Record<string, EmailTemplate> = {
   welcome: {
     subject: {
-      en: "Welcome to Wavleba!",
-      ge: "კეთილი იყოს თქვენი მობრძანება Wavleba-ში!",
+      en: "Welcome to Swavleba!",
+      ge: "კეთილი იყოს თქვენი მობრძანება Swavleba-ში!",
     },
     html: (data) =>
       emailWrapper(`
@@ -295,7 +295,7 @@ export const emailTemplates: Record<string, EmailTemplate> = {
         If you believe this is an error or have questions, please contact our support team.
       </p>
       <p style="margin: 32px 0;">
-        <a href="${SITE_URL}" style="${buttonStyle}">Visit Wavleba</a>
+        <a href="${SITE_URL}" style="${buttonStyle}">Visit Swavleba</a>
       </p>
     `),
     text: (data) =>

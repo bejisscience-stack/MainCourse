@@ -136,7 +136,7 @@ export async function POST(
     }
 
     // Audit log
-    logAdminAction(
+    await logAdminAction(
       request,
       user.id,
       "enrollment_rejected",

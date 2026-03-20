@@ -1,4 +1,9 @@
-import { handleCors, jsonResponse, errorResponse } from "../_shared/cors.ts";
+import {
+  handleCors,
+  getCorsHeaders,
+  jsonResponse,
+  errorResponse,
+} from "../_shared/cors.ts";
 import { getAuthenticatedUser } from "../_shared/auth.ts";
 
 Deno.serve(async (req: Request) => {
@@ -6,9 +11,11 @@ Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
+  const cors = getCorsHeaders(req);
+
   // Only allow GET and POST
   if (req.method !== "GET" && req.method !== "POST") {
-    return errorResponse("Method not allowed", 405);
+    return errorResponse("Method not allowed", 405, cors);
   }
 
   // Authenticate user
@@ -19,9 +26,9 @@ Deno.serve(async (req: Request) => {
   const { user, supabase } = auth;
 
   if (req.method === "GET") {
-    return handleGet(supabase, user.id);
+    return handleGet(supabase, user.id, cors);
   } else {
-    return handlePost(req, supabase, user.id);
+    return handlePost(req, supabase, user.id, cors);
   }
 });
 
@@ -30,6 +37,7 @@ async function handleGet(
     typeof import("../_shared/supabase.ts").createServerSupabaseClient
   >,
   userId: string,
+  cors: Record<string, string>,
 ) {
   try {
     const { data: requests, error } = await supabase
@@ -53,13 +61,13 @@ async function handleGet(
 
     if (error) {
       console.error("Error fetching enrollment requests:", error);
-      return errorResponse("Failed to fetch enrollment requests", 500);
+      return errorResponse("Failed to fetch enrollment requests", 500, cors);
     }
 
-    return jsonResponse({ requests: requests || [] });
+    return jsonResponse({ requests: requests || [] }, 200, cors);
   } catch (error) {
     console.error("Error in GET /enrollment-requests:", error);
-    return errorResponse("Internal server error", 500);
+    return errorResponse("Internal server error", 500, cors);
   }
 }
 
@@ -69,18 +77,19 @@ async function handlePost(
     typeof import("../_shared/supabase.ts").createServerSupabaseClient
   >,
   userId: string,
+  cors: Record<string, string>,
 ) {
   try {
     const body = await req.json();
     const { courseId, paymentScreenshots, referralCode, isReEnrollment } = body;
 
     if (!courseId) {
-      return errorResponse("courseId is required", 400);
+      return errorResponse("courseId is required", 400, cors);
     }
 
     // Validate paymentScreenshots if provided
     if (paymentScreenshots && !Array.isArray(paymentScreenshots)) {
-      return errorResponse("paymentScreenshots must be an array", 400);
+      return errorResponse("paymentScreenshots must be an array", 400, cors);
     }
 
     // Validate referralCode if provided
@@ -91,6 +100,7 @@ async function handlePost(
       return errorResponse(
         "referralCode must be a string with max 20 characters",
         400,
+        cors,
       );
     }
 
@@ -111,6 +121,7 @@ async function handlePost(
           details: requestCheckError.message,
         },
         500,
+        cors,
       );
     }
 
@@ -118,6 +129,7 @@ async function handlePost(
       return errorResponse(
         "You already have a pending enrollment request for this course",
         400,
+        cors,
       );
     }
 
@@ -141,6 +153,7 @@ async function handlePost(
           details: enrollmentCheckError.message,
         },
         500,
+        cors,
       );
     }
 
@@ -155,15 +168,21 @@ async function handlePost(
           return errorResponse(
             "Your enrollment is still active. Re-enrollment is only available for expired enrollments.",
             400,
+            cors,
           );
         }
       } else {
-        return errorResponse("You are already enrolled in this course", 400);
+        return errorResponse(
+          "You are already enrolled in this course",
+          400,
+          cors,
+        );
       }
     } else if (isReEnrollment) {
       return errorResponse(
         "No previous enrollment found for re-enrollment",
         400,
+        cors,
       );
     }
 
@@ -179,11 +198,12 @@ async function handlePost(
       return jsonResponse(
         { error: "Failed to verify course", details: courseError.message },
         500,
+        cors,
       );
     }
 
     if (!course) {
-      return errorResponse("Course not found", 404);
+      return errorResponse("Course not found", 404, cors);
     }
 
     // Format payment screenshots
@@ -224,6 +244,7 @@ async function handlePost(
             details: insertError.message,
           },
           400,
+          cors,
         );
       }
 
@@ -231,6 +252,7 @@ async function handlePost(
         return jsonResponse(
           { error: "Invalid course or user", details: insertError.message },
           400,
+          cors,
         );
       }
 
@@ -242,6 +264,7 @@ async function handlePost(
             details: insertError.message,
           },
           403,
+          cors,
         );
       }
 
@@ -252,6 +275,7 @@ async function handlePost(
           code: insertError.code,
         },
         500,
+        cors,
       );
     }
 
@@ -259,6 +283,7 @@ async function handlePost(
       return errorResponse(
         "Failed to create enrollment request - no data returned",
         500,
+        cors,
       );
     }
 
@@ -309,7 +334,7 @@ async function handlePost(
       }
     }
 
-    return jsonResponse({ request: enrollmentRequest }, 201);
+    return jsonResponse({ request: enrollmentRequest }, 201, cors);
   } catch (error) {
     console.error("Error in POST /enrollment-requests:", error);
     return jsonResponse(
@@ -318,6 +343,7 @@ async function handlePost(
         details: "An unexpected error occurred",
       },
       500,
+      cors,
     );
   }
 }
