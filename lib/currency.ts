@@ -2,8 +2,11 @@
 // Prices are stored in GEL in the database (base price set by lecturer)
 // Students pay base price + platform commission
 
-/** Platform commission percentage added on top of lecturer's base price */
+/** Platform commission percentage added on top of lecturer's base price (courses/bundles) */
 export const PLATFORM_COMMISSION_PERCENT = 3;
+
+/** Platform commission percentage for project budgets */
+export const PROJECT_COMMISSION_PERCENT = 20;
 
 /**
  * Calculate the student-facing price (base price + platform commission)

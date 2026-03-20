@@ -347,7 +347,9 @@
     "payAndPublish": "გადახდა და გამოქვეყნება ₾{{amount}}",
     "pendingPayment": "გადახდა მოლოდინშია",
     "retryPayment": "გადახდის გამეორება",
-    "processingPayment": "გადახდა მიმდინარეობს..."
+    "processingPayment": "გადახდა მიმდინარეობს...",
+    "projectCommission": "პლატფორმის საკომისიო: {{percent}}%",
+    "projectCommissionHint": "გადაიხდით: ₾{{amount}}"
   },
   "videoSubmission": {
     "submitYourVideo": "წარადგინეთ თქვენი ვიდეო",

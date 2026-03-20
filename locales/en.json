@@ -347,7 +347,9 @@
     "payAndPublish": "Pay & Publish ₾{{amount}}",
     "pendingPayment": "Pending Payment",
     "retryPayment": "Retry Payment",
-    "processingPayment": "Processing Payment..."
+    "processingPayment": "Processing Payment...",
+    "projectCommission": "Platform commission: {{percent}}%",
+    "projectCommissionHint": "You will pay: ₾{{amount}}"
   },
   "videoSubmission": {
     "submitYourVideo": "Submit Your Video",

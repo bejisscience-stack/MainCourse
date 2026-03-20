@@ -2,6 +2,10 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useI18n } from "@/contexts/I18nContext";
+import {
+  calculateStudentPrice,
+  PROJECT_COMMISSION_PERCENT,
+} from "@/lib/currency";
 
 interface VideoUploadDialogProps {
   isOpen: boolean;
@@ -675,6 +679,22 @@ export default function VideoUploadDialog({
                   placeholder="0.00"
                   className="w-full px-4 py-2.5 bg-navy-900/60 text-white rounded-xl border border-navy-800/60 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:border-transparent"
                 />
+                {Number(budget) > 0 && (
+                  <p className="mt-1.5 text-xs text-amber-400">
+                    {t("projects.projectCommission", {
+                      percent: PROJECT_COMMISSION_PERCENT,
+                    }) ||
+                      `პლატფორმის საკომისიო: ${PROJECT_COMMISSION_PERCENT}%`}
+                    {" — "}
+                    {t("projects.projectCommissionHint", {
+                      amount: calculateStudentPrice(
+                        Number(budget),
+                        PROJECT_COMMISSION_PERCENT,
+                      ).toFixed(2),
+                    }) ||
+                      `გადაიხდით: ₾${calculateStudentPrice(Number(budget), PROJECT_COMMISSION_PERCENT).toFixed(2)}`}
+                  </p>
+                )}
                 {errors.budget && (
                   <p className="mt-1 text-sm text-red-400">{errors.budget}</p>
                 )}
@@ -1133,8 +1153,13 @@ export default function VideoUploadDialog({
                   <span>
                     {isLastStep
                       ? Number(budget) > 0
-                        ? t("projects.payAndPublish", { amount: budget }) ||
-                          `Pay & Publish ₾${budget}`
+                        ? t("projects.payAndPublish", {
+                            amount: calculateStudentPrice(
+                              Number(budget),
+                              PROJECT_COMMISSION_PERCENT,
+                            ).toFixed(2),
+                          }) ||
+                          `Pay & Publish ₾${calculateStudentPrice(Number(budget), PROJECT_COMMISSION_PERCENT).toFixed(2)}`
                         : t("projects.submitProject") || "Submit project"
                       : "Next"}
                   </span>

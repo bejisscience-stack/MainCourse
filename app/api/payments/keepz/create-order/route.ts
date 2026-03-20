@@ -9,7 +9,10 @@ import { randomUUID } from "crypto";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { paymentLimiter, rateLimitResponse } from "@/lib/rate-limit";
 import { paymentOrderSchema } from "@/lib/schemas";
-import { calculateStudentPrice } from "@/lib/currency";
+import {
+  calculateStudentPrice,
+  PROJECT_COMMISSION_PERCENT,
+} from "@/lib/currency";
 
 export const dynamic = "force-dynamic";
 
@@ -130,7 +133,8 @@ export async function POST(request: NextRequest) {
           { status: 404 },
         );
       }
-      amount = Number((project as any).budget) || 0;
+      const budgetBase = Number((project as any).budget) || 0;
+      amount = calculateStudentPrice(budgetBase, PROJECT_COMMISSION_PERCENT);
       if (amount <= 0) {
         return NextResponse.json(
           { error: "Invalid project budget" },
