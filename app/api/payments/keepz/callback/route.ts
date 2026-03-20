@@ -48,30 +48,12 @@ export async function POST(request: NextRequest) {
         });
         return NextResponse.json({ received: true }, { status: 200 });
       }
-    } else if (process.env.NODE_ENV === "production") {
-      // SEC-09: In production, IP allowlist is mandatory — reject if not configured
-      console.error(
-        "[Keepz Callback] CRITICAL: KEEPZ_ALLOWED_IPS not set in production — rejecting callback",
-        { ip: clientIP },
-      );
-      await auditLog(
-        supabase,
-        null,
-        null,
-        null,
-        "callback_no_ip_allowlist_prod",
-        {
-          ip: clientIP,
-        },
-      );
-      return NextResponse.json(
-        { error: "Service misconfigured" },
-        { status: 503 },
-      );
     } else {
-      // Dev/test: warn and continue — encrypted payload is sufficient for local testing
+      // IP allowlist not configured — warn and continue.
+      // RSA-encrypted payload decryption is the primary authentication;
+      // IP allowlist is defense-in-depth only (Keepz uses Cloudflare, IPs vary).
       console.warn(
-        "[Keepz Callback] KEEPZ_ALLOWED_IPS not set — relying on encrypted payload auth (dev mode)",
+        "[Keepz Callback] KEEPZ_ALLOWED_IPS not set — relying on encrypted payload auth",
         { ip: clientIP },
       );
       await auditLog(supabase, null, null, null, "callback_no_ip_allowlist", {
