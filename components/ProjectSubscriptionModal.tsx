@@ -7,6 +7,7 @@ import { useProjectAccess } from "@/hooks/useProjectAccess";
 import { useUser } from "@/hooks/useUser";
 import { supabase } from "@/lib/supabase";
 import { useSavedCards } from "@/hooks/useSavedCards";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 
 interface ProjectSubscriptionModalProps {
   isOpen: boolean;
@@ -14,8 +15,6 @@ interface ProjectSubscriptionModalProps {
   onSuccess?: () => void;
   courseId?: string;
 }
-
-const SUBSCRIPTION_PRICE = 10;
 
 function formatCardMask(mask: string): string {
   const last4 = mask.replace(/\*/g, "").slice(-4);
@@ -32,6 +31,7 @@ export default function ProjectSubscriptionModal({
   const { user } = useUser();
   const { subscription } = useProjectAccess(user?.id);
   const { cards, deleteCard } = useSavedCards();
+  const { subscriptionPrice } = usePlatformSettings();
 
   const [mounted, setMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -289,7 +289,7 @@ export default function ProjectSubscriptionModal({
 
   const isPayDisabled = isRedirecting || tokenPaymentStatus === "processing";
   const hasSavedCards = cards.length > 0;
-  const priceFormatted = `₾${SUBSCRIPTION_PRICE.toFixed(1)}`;
+  const priceFormatted = `₾${subscriptionPrice.toFixed(1)}`;
 
   // Status view for existing subscriptions
   const renderStatusView = () => {

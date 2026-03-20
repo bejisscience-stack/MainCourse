@@ -33,6 +33,9 @@ const AdminLecturerApprovals = dynamic(
   () => import("@/components/AdminLecturerApprovals"),
   { ssr: false },
 );
+const AdminSettings = dynamic(() => import("@/components/AdminSettings"), {
+  ssr: false,
+});
 import { useUser } from "@/hooks/useUser";
 import { useCourses } from "@/hooks/useCourses";
 import { supabase } from "@/lib/supabase";
@@ -45,7 +48,8 @@ type TabType =
   | "lecturers"
   | "courses"
   | "notifications"
-  | "analytics";
+  | "analytics"
+  | "settings";
 
 // Retry with exponential backoff utility
 async function retryWithBackoff<T>(
@@ -369,6 +373,16 @@ export default function AdminDashboard() {
             >
               Analytics
             </button>
+            <button
+              onClick={() => setActiveTab("settings")}
+              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
+                activeTab === "settings"
+                  ? "text-navy-900 border-navy-900"
+                  : "text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300"
+              }`}
+            >
+              Settings
+            </button>
           </div>
 
           {/* Messages */}
@@ -553,6 +567,19 @@ export default function AdminDashboard() {
               }
             >
               <AdminAnalytics />
+            </ErrorBoundary>
+          )}
+
+          {activeTab === "settings" && (
+            <ErrorBoundary
+              onError={(error) =>
+                console.error(
+                  "[Admin Dashboard] Settings section error:",
+                  error,
+                )
+              }
+            >
+              <AdminSettings />
             </ErrorBoundary>
           )}
         </div>

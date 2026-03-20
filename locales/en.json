@@ -195,11 +195,11 @@
     "saveBankAccount": "Save Bank Account",
     "withdrawFunds": "Withdraw Funds",
     "requestWithdrawal": "Request Withdrawal",
-    "minimumBalanceRequired": "Minimum balance of ₾50 is required to request a withdrawal.",
+    "minimumBalanceRequired": "Minimum balance of ₾{{min}} is required to request a withdrawal.",
     "pendingWithdrawalMessage": "You have a pending withdrawal request for ₾{{amount}}. Please wait for it to be processed.",
     "withdrawalAmount": "Withdrawal Amount (₾)",
-    "availableBalance": "Available balance: ₾{{balance}} | Minimum: ₾50",
-    "minimumWithdrawal": "Minimum withdrawal amount is 50 GEL",
+    "availableBalance": "Available balance: ₾{{balance}} | Minimum: ₾{{min}}",
+    "minimumWithdrawal": "Minimum withdrawal amount is {{min}} GEL",
     "insufficientBalance": "Insufficient balance",
     "bankAccountRequired": "Please enter a valid bank account number first",
     "failedToRequestWithdrawal": "Failed to request withdrawal",
@@ -1195,5 +1195,17 @@
     "title": "Account Pending Approval",
     "description": "Your lecturer account has been created and is pending admin approval. Once your account is reviewed and approved, you will be able to access the lecturer dashboard and create courses.",
     "emailNotice": "You will receive an email notification once your account has been reviewed."
+  },
+  "adminSettings": {
+    "title": "Platform Settings",
+    "minWithdrawal": "Minimum Withdrawal Amount",
+    "minWithdrawalHint": "Users must withdraw at least this amount (GEL)",
+    "subscriptionPrice": "Project Subscription Price",
+    "subscriptionPriceHint": "Monthly price for project access (GEL)",
+    "save": "Save Settings",
+    "saved": "Settings saved successfully",
+    "lastUpdated": "Last updated",
+    "invalidMinWithdrawal": "Minimum withdrawal must be a positive number",
+    "invalidSubscriptionPrice": "Subscription price must be a positive number"
   }
 }
