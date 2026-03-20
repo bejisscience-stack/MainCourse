@@ -289,6 +289,8 @@ export default function MessageInput({
 
           xhr.onerror = () => reject(new Error("Upload failed"));
           xhr.onabort = () => reject(new Error("Upload cancelled"));
+          xhr.ontimeout = () => reject(new Error("Upload timed out"));
+          xhr.timeout = 30000; // 30 second timeout
 
           xhr.open("POST", edgeFunctionUrl("chat-media"));
           xhr.setRequestHeader(
@@ -403,6 +405,11 @@ export default function MessageInput({
           prev.filter((f) => f.status !== "complete"),
         );
       }, 500);
+
+      // Clear errored uploads after 5 seconds
+      setTimeout(() => {
+        setUploadingFiles((prev) => prev.filter((f) => f.status !== "error"));
+      }, 5000);
     },
     [channelId, uploadFile],
   );
