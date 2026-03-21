@@ -80,6 +80,13 @@ function CourseEnrollmentCard({
       // Set flag to prevent multiple clicks
       isOpeningRef.current = true;
 
+      if (typeof window !== "undefined" && typeof window.fbq === "function") {
+        window.fbq("track", "Lead", {
+          content_name: "Course Registration",
+          content_category: "Course",
+        });
+      }
+
       // Immediately open the enrollment wizard
       setShowEnrollmentWizard(true);
 

@@ -47,6 +47,16 @@ function CoursesPageContent() {
 
   const { user, profile, role: userRole, isLoading: userLoading } = useUser();
 
+  // Meta Pixel: ViewContent event on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && typeof window.fbq === "function") {
+      window.fbq("track", "ViewContent", {
+        content_type: "product_group",
+        content_name: "Course Catalog",
+      });
+    }
+  }, []);
+
   // Read URL params for course, referral code, and pending enrollment
   useEffect(() => {
     const courseParam = searchParams.get("course");
@@ -712,6 +722,15 @@ function CoursesPageContent() {
                                 return;
                               }
                               setSelectedBundleId(bundle.id);
+                              if (
+                                typeof window !== "undefined" &&
+                                typeof window.fbq === "function"
+                              ) {
+                                window.fbq("track", "Lead", {
+                                  content_name: "Bundle Registration",
+                                  content_category: "Bundle",
+                                });
+                              }
                               setShowBundleEnrollmentWizard(true);
                             }}
                             className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-white bg-purple-600 dark:bg-purple-500 rounded-xl hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors"

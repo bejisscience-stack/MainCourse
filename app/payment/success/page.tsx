@@ -18,6 +18,7 @@ function PaymentSuccessContent() {
   const [paymentType, setPaymentType] = useState<string | null>(null);
   const [courseId, setCourseId] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const [amount, setAmount] = useState<number | null>(null);
 
   const checkStatus = useCallback(async () => {
     if (!paymentId) {
@@ -56,6 +57,7 @@ function PaymentSuccessContent() {
       setCourseId(data.courseId || null);
 
       if (data.status === "success") {
+        setAmount(data.amount ?? null);
         setStatus("success");
         return true;
       }
@@ -68,6 +70,20 @@ function PaymentSuccessContent() {
     }
     return false;
   }, [paymentId]);
+
+  useEffect(() => {
+    if (
+      status === "success" &&
+      typeof window !== "undefined" &&
+      typeof window.fbq === "function"
+    ) {
+      window.fbq("track", "Purchase", {
+        value: amount || 0,
+        currency: "GEL",
+        content_name: "Course Purchase",
+      });
+    }
+  }, [status, amount]);
 
   useEffect(() => {
     if (!paymentId) {
