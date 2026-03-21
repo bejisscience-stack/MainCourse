@@ -1047,19 +1047,44 @@ export default function EnrollmentModal({
                 )}
               </button>
 
-              <label className="relative z-10 flex items-center gap-2.5 mt-2.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={saveCardChecked}
-                  onChange={(e) => setSaveCardChecked(e.target.checked)}
-                  disabled={isSubmitting}
-                  className="w-4 h-4 shrink-0 cursor-pointer disabled:opacity-50"
-                  style={{ accentColor: "#10b981" }}
-                />
+              <div
+                role="checkbox"
+                aria-checked={saveCardChecked}
+                tabIndex={0}
+                onClick={() => {
+                  if (!isSubmitting) setSaveCardChecked((v) => !v);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === " " || e.key === "Enter") {
+                    e.preventDefault();
+                    if (!isSubmitting) setSaveCardChecked((v) => !v);
+                  }
+                }}
+                className={`relative z-10 flex items-center gap-2.5 mt-2.5 cursor-pointer select-none ${isSubmitting ? "opacity-50 pointer-events-none" : ""}`}
+              >
+                <div
+                  className={`w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center transition-colors ${saveCardChecked ? "bg-emerald-500 border-emerald-500" : "border-gray-400 dark:border-gray-500 bg-transparent"}`}
+                >
+                  {saveCardChecked && (
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth={3}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+                </div>
                 <span className="text-[11px] text-gray-500 dark:text-gray-400">
                   {t("paymentMethod.saveCardForFuture")}
                 </span>
-              </label>
+              </div>
 
               <div className="flex items-center justify-center gap-2.5 mt-3 pb-1">
                 <span className="text-[10px] text-gray-400 dark:text-gray-500">
