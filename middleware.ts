@@ -29,12 +29,12 @@ export async function middleware(request: NextRequest) {
   // To migrate: configure Tailwind to use CSS-in-JS with nonce support, or extract all styles to external stylesheets
   const cspHeader = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://us-assets.i.posthog.com`,
+    `script-src 'self' 'nonce-${nonce}' https://us-assets.i.posthog.com https://connect.facebook.net`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://bvptqdmhuumjbyfnjxdt.supabase.co https://nbecbsbuerdtakxkrduw.supabase.co https://*.supabase.in",
+    "img-src 'self' data: blob: https://bvptqdmhuumjbyfnjxdt.supabase.co https://nbecbsbuerdtakxkrduw.supabase.co https://*.supabase.in https://www.facebook.com",
     "font-src 'self'",
     "media-src 'self' blob: https://*.supabase.co https://*.supabase.in",
-    "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.keepz.me https://app.posthog.com https://us.i.posthog.com https://us-assets.i.posthog.com",
+    "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.keepz.me https://app.posthog.com https://us.i.posthog.com https://us-assets.i.posthog.com https://*.facebook.com https://*.facebook.net",
     "frame-src 'self' https://checkout.keepz.me https://www.youtube.com",
     "object-src 'none'",
     "base-uri 'self'",
