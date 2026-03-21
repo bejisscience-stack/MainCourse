@@ -17,10 +17,8 @@ const ALLOWED_VIDEO_TYPES = [
   "video/mp4",
   "video/webm",
   "video/ogg",
-  "video/quicktime",
   "video/x-msvideo",
   "video/x-matroska",
-  "video/mov",
 ];
 const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
 
