@@ -722,13 +722,14 @@ export default function ProjectSubscriptionModal({
               </button>
 
               {/* Save card checkbox */}
-              <label className="flex items-center gap-2.5 mt-3 cursor-pointer select-none">
+              <label className="relative z-10 flex items-center gap-2.5 mt-3 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={saveCardChecked}
                   onChange={(e) => setSaveCardChecked(e.target.checked)}
                   disabled={isRedirecting}
-                  className="w-4 h-4 rounded border-navy-600 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 bg-navy-800 disabled:opacity-50"
+                  className="w-4 h-4 shrink-0 cursor-pointer disabled:opacity-50"
+                  style={{ accentColor: "#10b981" }}
                 />
                 <span className="text-xs text-gray-400">
                   {t("paymentMethod.saveCardForFuture")}

@@ -1047,13 +1047,14 @@ export default function EnrollmentModal({
                 )}
               </button>
 
-              <label className="flex items-center gap-2 mt-2.5 cursor-pointer select-none">
+              <label className="relative z-10 flex items-center gap-2.5 mt-2.5 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={saveCardChecked}
                   onChange={(e) => setSaveCardChecked(e.target.checked)}
                   disabled={isSubmitting}
-                  className="w-3.5 h-3.5 rounded border-gray-300 dark:border-navy-600 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 bg-gray-50 dark:bg-navy-800 disabled:opacity-50"
+                  className="w-4 h-4 shrink-0 cursor-pointer disabled:opacity-50"
+                  style={{ accentColor: "#10b981" }}
                 />
                 <span className="text-[11px] text-gray-500 dark:text-gray-400">
                   {t("paymentMethod.saveCardForFuture")}
