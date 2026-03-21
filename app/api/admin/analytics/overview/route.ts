@@ -34,16 +34,20 @@ export async function GET(request: NextRequest) {
       .select("id, bundle_id, course_bundles(price)")
       .eq("status", "approved");
 
+    let projectQuery = serviceSupabase.from("projects").select("id, budget");
+
     if (fromDate) {
       enrollmentQuery = enrollmentQuery.gte("created_at", fromDate);
       referralQuery = referralQuery.gte("created_at", fromDate);
       bundleQuery = bundleQuery.gte("created_at", fromDate);
+      projectQuery = projectQuery.gte("created_at", fromDate);
     }
     if (toDate) {
       const toEnd = toDate + "T23:59:59Z";
       enrollmentQuery = enrollmentQuery.lte("created_at", toEnd);
       referralQuery = referralQuery.lte("created_at", toEnd);
       bundleQuery = bundleQuery.lte("created_at", toEnd);
+      projectQuery = projectQuery.lte("created_at", toEnd);
     }
 
     const [
@@ -58,7 +62,7 @@ export async function GET(request: NextRequest) {
         .select("*", { count: "exact", head: true }),
       enrollmentQuery,
       referralQuery,
-      serviceSupabase.from("projects").select("id, budget"),
+      projectQuery,
       bundleQuery,
     ]);
 

@@ -54,19 +54,23 @@ export async function GET(request: NextRequest) {
         .not("processed_at", "is", null),
     ]);
 
+    // Helper: find oldest created_at and compute age in hours
+    function oldestAgeHours(items: { created_at: string }[] | null): number {
+      if (!items || items.length === 0) return 0;
+      let oldest = items[0].created_at;
+      for (let i = 1; i < items.length; i++) {
+        if (items[i].created_at < oldest) oldest = items[i].created_at;
+      }
+      return (
+        Math.round(
+          ((Date.now() - new Date(oldest).getTime()) / (1000 * 60 * 60)) * 10,
+        ) / 10
+      );
+    }
+
     // --- Pending enrollments ---
     const pendingEnrollmentCount = pendingEnrollmentData?.length || 0;
-    const oldestEnrollment = pendingEnrollmentData?.reduce((oldest, e) => {
-      return e.created_at < oldest ? e.created_at : oldest;
-    }, pendingEnrollmentData?.[0]?.created_at || new Date().toISOString());
-    const enrollmentAgeHours =
-      pendingEnrollmentCount > 0
-        ? Math.round(
-            ((Date.now() - new Date(oldestEnrollment!).getTime()) /
-              (1000 * 60 * 60)) *
-              10,
-          ) / 10
-        : 0;
+    const enrollmentAgeHours = oldestAgeHours(pendingEnrollmentData);
 
     // --- Pending withdrawals ---
     const pendingWithdrawalCount = pendingWithdrawalData?.length || 0;
@@ -77,31 +81,11 @@ export async function GET(request: NextRequest) {
           0,
         ) * 100,
       ) / 100;
-    const oldestWithdrawal = pendingWithdrawalData?.reduce((oldest, w) => {
-      return w.created_at < oldest ? w.created_at : oldest;
-    }, pendingWithdrawalData?.[0]?.created_at || new Date().toISOString());
-    const withdrawalAgeHours =
-      pendingWithdrawalCount > 0
-        ? Math.round(
-            ((Date.now() - new Date(oldestWithdrawal!).getTime()) /
-              (1000 * 60 * 60)) *
-              10,
-          ) / 10
-        : 0;
+    const withdrawalAgeHours = oldestAgeHours(pendingWithdrawalData);
 
     // --- Pending lecturers ---
     const pendingLecturerCount = pendingLecturerData?.length || 0;
-    const oldestLecturer = pendingLecturerData?.reduce((oldest, l) => {
-      return l.created_at < oldest ? l.created_at : oldest;
-    }, pendingLecturerData?.[0]?.created_at || new Date().toISOString());
-    const lecturerAgeHours =
-      pendingLecturerCount > 0
-        ? Math.round(
-            ((Date.now() - new Date(oldestLecturer!).getTime()) /
-              (1000 * 60 * 60)) *
-              10,
-          ) / 10
-        : 0;
+    const lecturerAgeHours = oldestAgeHours(pendingLecturerData);
 
     // --- Average enrollment processing time ---
     let totalEnrollmentHours = 0;

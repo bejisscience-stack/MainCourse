@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     const fromDate =
       searchParams.get("from") || thirtyDaysAgo.toISOString().split("T")[0];
     const toDate = searchParams.get("to") || now.toISOString().split("T")[0];
+    const toEnd = toDate + "T23:59:59Z";
 
     // Run independent queries in parallel
     const [
@@ -48,14 +49,14 @@ export async function GET(request: NextRequest) {
         .from("enrollment_requests")
         .select("status")
         .gte("created_at", fromDate)
-        .lte("created_at", toDate + "T23:59:59Z"),
+        .lte("created_at", toEnd),
 
       // 2. Messages per day within date range
       serviceSupabase
         .from("messages")
         .select("created_at")
         .gte("created_at", fromDate)
-        .lte("created_at", toDate + "T23:59:59Z")
+        .lte("created_at", toEnd)
         .order("created_at", { ascending: true }),
 
       // 3. Messages by course within date range (for most active courses)
@@ -63,16 +64,24 @@ export async function GET(request: NextRequest) {
         .from("messages")
         .select("course_id")
         .gte("created_at", fromDate)
-        .lte("created_at", toDate + "T23:59:59Z"),
+        .lte("created_at", toEnd),
 
-      // 4. All enrollments (for avg enrollments per user)
-      serviceSupabase.from("enrollments").select("user_id"),
+      // 4. Enrollments in date range (for avg enrollments per user)
+      serviceSupabase
+        .from("enrollments")
+        .select("user_id")
+        .gte("created_at", fromDate)
+        .lte("created_at", toEnd),
 
-      // 5. All courses (for zero enrollment detection)
+      // 5. All courses (for zero enrollment detection — need full catalog)
       serviceSupabase.from("courses").select("id, title"),
 
-      // 6. Enrolled course IDs (for zero enrollment detection)
-      serviceSupabase.from("enrollments").select("course_id"),
+      // 6. Enrolled course IDs in date range (for zero enrollment detection)
+      serviceSupabase
+        .from("enrollments")
+        .select("course_id")
+        .gte("created_at", fromDate)
+        .lte("created_at", toEnd),
     ]);
 
     // --- Enrollment funnel ---
@@ -81,7 +90,8 @@ export async function GET(request: NextRequest) {
       if (r.status in funnel) funnel[r.status as keyof typeof funnel]++;
     }
 
-    // --- Conversion rate ---
+    // --- Conversion rate (approved / decided) ---
+    // Intentionally excludes pending: pending requests haven't been decided yet
     const totalDecided = funnel.approved + funnel.rejected;
     const conversionRate =
       totalDecided > 0
@@ -122,7 +132,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.messageCount - a.messageCount)
       .slice(0, 10);
 
-    // --- Average enrollments per user ---
+    // --- Average enrollments per user (date-filtered) ---
     const enrollments = enrollmentsResult.data || [];
     const uniqueUsers = new Set(enrollments.map((e) => e.user_id));
     const avgEnrollmentsPerUser =
@@ -130,7 +140,7 @@ export async function GET(request: NextRequest) {
         ? Math.round((enrollments.length / uniqueUsers.size) * 100) / 100
         : 0;
 
-    // --- Courses with zero enrollments ---
+    // --- Courses with zero enrollments in this period ---
     const enrolledSet = new Set(
       (enrolledCourseIdsResult.data || []).map((e) => e.course_id),
     );

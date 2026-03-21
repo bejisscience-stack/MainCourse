@@ -22,78 +22,61 @@ export async function GET(request: NextRequest) {
     const fromDate =
       searchParams.get("from") || thirtyDaysAgo.toISOString().split("T")[0];
     const toDate = searchParams.get("to") || now.toISOString().split("T")[0];
+    const toEnd = toDate + "T23:59:59Z";
 
-    // Run independent queries in parallel
+    // Run independent queries in parallel — ALL queries respect date range
     const [
       approvedEnrollmentsResult,
       approvedBundlesResult,
-      allApprovedResult,
       transactionsResult,
       balancesResult,
       withdrawalsResult,
-      allWithdrawalsResult,
-      allTimeApprovedResult,
     ] = await Promise.all([
-      // 1. Revenue over time — approved enrollment requests in date range
+      // 1. Approved enrollments in date range (for revenue over time + by lecturer + AOV + totalEarned)
       serviceSupabase
         .from("enrollment_requests")
-        .select("created_at, courses(price)")
+        .select("created_at, course_id, courses(price, lecturer_id)")
         .eq("status", "approved")
         .gte("created_at", fromDate)
-        .lte("created_at", toDate + "T23:59:59Z"),
+        .lte("created_at", toEnd),
 
-      // 1b. Revenue over time — approved bundle enrollments in date range
+      // 2. Approved bundle enrollments in date range
       serviceSupabase
         .from("bundle_enrollment_requests")
         .select("created_at, course_bundles(price)")
         .eq("status", "approved")
         .gte("created_at", fromDate)
-        .lte("created_at", toDate + "T23:59:59Z"),
+        .lte("created_at", toEnd),
 
-      // 2. Revenue by lecturer — all approved enrollment requests
-      serviceSupabase
-        .from("enrollment_requests")
-        .select("course_id, courses(price, lecturer_id)")
-        .eq("status", "approved"),
-
-      // 4. Balance flow — transactions in date range
+      // 3. Balance transactions in date range
       serviceSupabase
         .from("balance_transactions")
         .select("created_at, amount, source")
         .gte("created_at", fromDate)
-        .lte("created_at", toDate + "T23:59:59Z"),
+        .lte("created_at", toEnd),
 
-      // 5. Outstanding balances — all profiles with positive balance
+      // 4. Outstanding balances — all profiles with positive balance (intentionally all-time: current liability)
       serviceSupabase.from("profiles").select("balance").gt("balance", 0),
 
-      // 6. Withdrawal trend — withdrawals in date range
+      // 5. Withdrawals in date range (for trend + avg amount + total paid out)
       serviceSupabase
         .from("withdrawal_requests")
         .select("created_at, amount, status")
         .gte("created_at", fromDate)
-        .lte("created_at", toDate + "T23:59:59Z"),
-
-      // 7. All withdrawals — for avg withdrawal amount + total paid out
-      serviceSupabase.from("withdrawal_requests").select("amount, status"),
-
-      // 8. Total earned — all approved enrollments (all time)
-      serviceSupabase
-        .from("enrollment_requests")
-        .select("courses(price)")
-        .eq("status", "approved"),
+        .lte("created_at", toEnd),
     ]);
 
-    const approvedEnrollments = approvedEnrollmentsResult.data;
-    const approvedBundles = approvedBundlesResult.data;
+    const approvedEnrollments = approvedEnrollmentsResult.data || [];
+    const approvedBundles = approvedBundlesResult.data || [];
 
-    // --- 1. Revenue over time ---
+    // --- 1. Revenue over time (daily aggregation) ---
     const revenueMap = new Map<string, number>();
-    for (const e of approvedEnrollments || []) {
+    for (const e of approvedEnrollments) {
       const date = e.created_at.split("T")[0];
       const price = Number((e.courses as any)?.price || 0);
       revenueMap.set(date, (revenueMap.get(date) || 0) + price);
     }
-    for (const b of approvedBundles || []) {
+    for (const b of approvedBundles) {
       const date = b.created_at.split("T")[0];
       const price = Number((b.course_bundles as any)?.price || 0);
       revenueMap.set(date, (revenueMap.get(date) || 0) + price);
@@ -105,9 +88,9 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    // --- 2. Revenue by lecturer ---
+    // --- 2. Revenue by lecturer (same date-filtered enrollments) ---
     const lecturerMap = new Map<string, number>();
-    for (const e of allApprovedResult.data || []) {
+    for (const e of approvedEnrollments) {
       const lecturerId = (e.courses as any)?.lecturer_id;
       const price = Number((e.courses as any)?.price || 0);
       if (lecturerId) {
@@ -115,7 +98,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get lecturer names from profiles
+    // Get lecturer names
     const lecturerIds = Array.from(lecturerMap.keys());
     const { data: lecturerProfiles } = await serviceSupabase
       .from("profiles")
@@ -136,16 +119,15 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.revenue - a.revenue);
 
-    // --- 3. Average order value ---
+    // --- 3. Average order value (from date-filtered enrollments + bundles) ---
     const totalRevenue = revenueOverTime.reduce((sum, d) => sum + d.amount, 0);
-    const totalOrders =
-      (approvedEnrollments?.length || 0) + (approvedBundles?.length || 0);
+    const totalOrders = approvedEnrollments.length + approvedBundles.length;
     const averageOrderValue =
       totalOrders > 0
         ? Math.round((totalRevenue / totalOrders) * 100) / 100
         : 0;
 
-    // --- 4. Balance flow by source ---
+    // --- 4. Balance flow by source (keep real sign — no Math.abs) ---
     const flowMap = new Map<string, BalanceFlowDay>();
     for (const t of transactionsResult.data || []) {
       const date = t.created_at.split("T")[0];
@@ -159,7 +141,7 @@ export async function GET(request: NextRequest) {
         });
       }
       const day = flowMap.get(date)!;
-      const amount = Math.abs(Number(t.amount));
+      const amount = Number(t.amount);
       const source = t.source as keyof Omit<BalanceFlowDay, "date">;
       if (source in day && source !== ("date" as string)) {
         (day as any)[source] += amount;
@@ -175,15 +157,16 @@ export async function GET(request: NextRequest) {
         admin_adjustment: Math.round(d.admin_adjustment * 100) / 100,
       }));
 
-    // --- 5. Outstanding balances ---
+    // --- 5. Outstanding balances (intentionally all-time: shows current liability) ---
     const outstandingBalances = (balancesResult.data || []).reduce(
       (sum, p) => sum + Number(p.balance || 0),
       0,
     );
 
-    // --- 6. Withdrawal trend ---
+    // --- 6. Withdrawal trend (date-filtered) ---
+    const withdrawals = withdrawalsResult.data || [];
     const wMap = new Map<string, { amount: number; count: number }>();
-    for (const w of withdrawalsResult.data || []) {
+    for (const w of withdrawals) {
       const date = w.created_at.split("T")[0];
       const entry = wMap.get(date) || { amount: 0, count: 0 };
       entry.amount += Number(w.amount);
@@ -198,8 +181,9 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    // --- 7. Avg withdrawal amount + total paid out ---
-    const completedWithdrawals = (allWithdrawalsResult.data || []).filter(
+    // --- 7. Avg withdrawal amount + total paid out (from date-filtered withdrawals) ---
+    // Status 'approved' or 'completed' = money was paid out
+    const completedWithdrawals = withdrawals.filter(
       (w) => w.status === "approved" || w.status === "completed",
     );
     const totalPaidOut = completedWithdrawals.reduce(
@@ -211,11 +195,8 @@ export async function GET(request: NextRequest) {
         ? Math.round((totalPaidOut / completedWithdrawals.length) * 100) / 100
         : 0;
 
-    // --- 8. Total earned (all time) ---
-    const totalEarned = (allTimeApprovedResult.data || []).reduce(
-      (sum, e) => sum + Number((e.courses as any)?.price || 0),
-      0,
-    );
+    // --- 8. Total earned in period (from same date-filtered enrollments + bundles) ---
+    const totalEarned = totalRevenue;
 
     const result: FinancialAnalytics = {
       revenueOverTime,

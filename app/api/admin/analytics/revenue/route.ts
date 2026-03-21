@@ -43,12 +43,17 @@ export async function GET(request: NextRequest) {
       bundleQuery = bundleQuery.lte("created_at", toEnd);
     }
 
-    const [enrollmentsResult, bundleEnrollmentsResult, coursesResult] =
-      await Promise.all([
-        enrollmentQuery,
-        bundleQuery,
-        serviceSupabase.from("courses").select("id, title, course_type, price"),
-      ]);
+    const [
+      enrollmentsResult,
+      bundleEnrollmentsResult,
+      coursesResult,
+      bundlesResult,
+    ] = await Promise.all([
+      enrollmentQuery,
+      bundleQuery,
+      serviceSupabase.from("courses").select("id, title, course_type, price"),
+      serviceSupabase.from("course_bundles").select("id, title, price"),
+    ]);
 
     const enrollments = enrollmentsResult.data || [];
     const bundleEnrollments = bundleEnrollmentsResult.data || [];
@@ -78,24 +83,29 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Aggregate bundle revenue
+    // Initialize all bundles with 0 revenue (consistent with courses)
+    const allBundles = bundlesResult.data || [];
     const bundleRevenueMap = new Map<string, BundleRevenue>();
+    for (const bundle of allBundles) {
+      bundleRevenueMap.set(bundle.id, {
+        bundleId: bundle.id,
+        bundleTitle: bundle.title,
+        price: Number(bundle.price),
+        enrollmentCount: 0,
+        totalRevenue: 0,
+      });
+    }
+
+    // Aggregate bundle enrollments
     for (const ber of bundleEnrollments) {
       const bundleId = ber.bundle_id;
-      const bundle = (ber as Record<string, any>).course_bundles;
-      const price = Number(bundle?.price || 0);
+      const price = Number(
+        (ber as Record<string, any>).course_bundles?.price || 0,
+      );
       const existing = bundleRevenueMap.get(bundleId);
       if (existing) {
         existing.enrollmentCount += 1;
         existing.totalRevenue += price;
-      } else {
-        bundleRevenueMap.set(bundleId, {
-          bundleId,
-          bundleTitle: bundle?.title || "Unknown Bundle",
-          price,
-          enrollmentCount: 1,
-          totalRevenue: price,
-        });
       }
     }
 
