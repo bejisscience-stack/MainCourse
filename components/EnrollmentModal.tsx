@@ -586,13 +586,13 @@ export default function EnrollmentModal({
 
   const modalContent = (
     <div
-      className="fixed inset-0 bg-black/70 dark:bg-black/85 z-[9999] flex items-center justify-center p-3 md:p-6 animate-fade-in"
+      className="fixed inset-0 bg-black/70 dark:bg-black/85 z-[9999] flex items-center justify-center p-3 lg:p-6 animate-fade-in"
       onClick={() => {
         if (!isSubmitting && tokenPaymentStatus !== "processing") onClose();
       }}
     >
       <div
-        className="relative w-full max-w-md md:max-w-3xl bg-white dark:bg-navy-900 border border-gray-200/80 dark:border-navy-700/80 rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden"
+        className="relative w-full max-w-md md:max-w-lg lg:max-w-4xl bg-white dark:bg-navy-900 border border-gray-200/80 dark:border-navy-700/80 rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button — floats above everything */}
@@ -618,9 +618,9 @@ export default function EnrollmentModal({
         </button>
 
         {/* Two-panel grid: payment left, media right (stacked on mobile) */}
-        <div className="grid grid-cols-1 md:grid-cols-5 max-h-[90vh]">
+        <div className="grid grid-cols-1 lg:grid-cols-5 max-h-[90vh]">
           {/* ===== MEDIA PANEL (right on desktop, top on mobile) ===== */}
-          <div className="relative md:col-span-3 md:order-2 h-48 md:h-auto md:min-h-[420px] bg-charcoal-950 overflow-hidden">
+          <div className="relative lg:col-span-3 lg:order-2 h-48 lg:h-auto lg:min-h-[420px] bg-charcoal-950 overflow-hidden min-w-0">
             {course.intro_video_url ? (
               <video
                 src={course.intro_video_url}
@@ -694,13 +694,13 @@ export default function EnrollmentModal({
             <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
 
             {/* Course info overlay */}
-            <div className="absolute inset-x-0 bottom-0 p-5 md:p-6 z-10">
+            <div className="absolute inset-x-0 bottom-0 p-5 lg:p-6 z-10">
               <div
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold ${typeStyle.bg} ${typeStyle.text} border ${typeStyle.border} backdrop-blur-sm mb-2.5`}
               >
                 {course.course_type}
               </div>
-              <h2 className="text-lg md:text-xl font-bold text-white leading-tight line-clamp-2 drop-shadow-md">
+              <h2 className="text-lg lg:text-xl font-bold text-white leading-tight line-clamp-2 drop-shadow-md">
                 {course.title}
               </h2>
               <p className="text-sm text-white/70 mt-1">{course.creator}</p>
@@ -708,7 +708,7 @@ export default function EnrollmentModal({
           </div>
 
           {/* ===== PAYMENT PANEL (left on desktop, bottom on mobile) ===== */}
-          <div className="relative md:col-span-2 md:order-1 flex flex-col overflow-y-auto md:max-h-[90vh]">
+          <div className="relative lg:col-span-2 lg:order-1 flex flex-col overflow-y-auto lg:max-h-[90vh] min-w-0">
             {/* Processing overlay — scoped to payment panel */}
             {tokenPaymentStatus === "processing" && (
               <div className="absolute inset-0 z-20 bg-white/90 dark:bg-navy-900/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3 animate-fade-in">
