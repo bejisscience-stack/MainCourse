@@ -43,6 +43,11 @@ export interface ActiveProject {
 
 async function fetchActiveProjects(): Promise<ActiveProject[]> {
   try {
+    // Check if user is authenticated (some RPCs require auth)
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     // Get current date in Georgia timezone (UTC+4) as YYYY-MM-DD
     const today = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Asia/Tbilisi",
@@ -81,26 +86,27 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
       return [];
     }
 
-    // Get unique lecturer IDs
-    const lecturerIds = [
-      ...new Set(projects.map((p: any) => p.courses.lecturer_id)),
-    ];
+    // Only fetch lecturer profiles if authenticated (get_safe_profiles requires auth)
+    let profileMap = new Map();
+    if (session) {
+      const lecturerIds = [
+        ...new Set(projects.map((p: any) => p.courses.lecturer_id)),
+      ];
 
-    // Fetch lecturer profiles
-    const { data: profiles, error: profilesError } = await supabase.rpc(
-      "get_safe_profiles",
-      { user_ids: lecturerIds },
-    );
-
-    if (profilesError) {
-      console.error(
-        "[useActiveProjects] Error fetching profiles:",
-        profilesError,
+      const { data: profiles, error: profilesError } = await supabase.rpc(
+        "get_safe_profiles",
+        { user_ids: lecturerIds },
       );
-      // Continue without profiles - not critical
-    }
 
-    const profileMap = new Map(profiles?.map((p: any) => [p.id, p]) || []);
+      if (profilesError) {
+        console.error(
+          "[useActiveProjects] Error fetching profiles:",
+          profilesError,
+        );
+      }
+
+      profileMap = new Map(profiles?.map((p: any) => [p.id, p]) || []);
+    }
 
     // Get all project IDs to fetch criteria
     const projectIds = projects.map((p: any) => p.id);
