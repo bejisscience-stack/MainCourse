@@ -15,7 +15,7 @@ import type { User } from "@supabase/supabase-js";
 
 export default function LecturerChatPage() {
   const router = useRouter();
-  const { user, role: userRole, isLoading: userLoading } = useUser();
+  const { user, profile, role: userRole, isLoading: userLoading } = useUser();
   const {
     courses,
     isLoading: coursesLoading,
@@ -380,6 +380,7 @@ export default function LecturerChatPage() {
         onClose={() => setShowCourseModal(false)}
         onSuccess={handleCourseCreated}
         user={user}
+        profile={profile}
       />
       <div className="flex-1 overflow-hidden">
         {servers.length === 0 ? (

@@ -9,7 +9,6 @@ import ChatErrorBoundary from "./ChatErrorBoundary";
 import { useActiveServer } from "@/hooks/useActiveServer";
 import { useActiveChannel } from "@/hooks/useActiveChannel";
 import { useUser } from "@/hooks/useUser";
-import { supabase } from "@/lib/supabase";
 import type { Server, Channel } from "@/types/server";
 import type { EnrollmentInfo } from "@/hooks/useEnrollments";
 
@@ -52,11 +51,17 @@ export default function LayoutContainer({
   const [activeServerId, setActiveServerId] = useActiveServer();
   const [activeChannelId, setActiveChannelId] = useActiveChannel();
   const [channelsCollapsed, setChannelsCollapsed] = useState(false);
-  const [userName, setUserName] = useState<string>("");
-  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Mobile menu state
-  const { user } = useUser();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, profile } = useUser();
   const { t } = useI18n();
+
+  // Derive username and avatar from useUser() profile
+  const userName =
+    profile?.username?.trim() ||
+    user?.user_metadata?.username?.trim() ||
+    user?.email?.split("@")[0] ||
+    "User";
+  const userAvatarUrl = profile?.avatar_url || null;
 
   const activeServer =
     activeServerId && activeServerId !== "home"
@@ -69,48 +74,6 @@ export default function LayoutContainer({
 
   // Check if we're in DM mode (home)
   const isDMMode = activeServerId === "home";
-
-  // Load current user's username
-  useEffect(() => {
-    const loadUserName = async () => {
-      if (!user) return;
-
-      try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("username, avatar_url")
-          .eq("id", user.id)
-          .single();
-
-        // Always use profiles.username (required field in database)
-        // Fallback to metadata/email only if profile doesn't exist (shouldn't happen)
-        const profileUsername = profile?.username?.trim();
-
-        setUserAvatarUrl(profile?.avatar_url || null);
-
-        if (profileUsername && profileUsername.length > 0) {
-          setUserName(profileUsername);
-        } else {
-          // Fallback only if profile doesn't exist (shouldn't happen in normal flow)
-          const metadataUsername = user.user_metadata?.username?.trim();
-          const emailUsername = user.email?.split("@")[0];
-
-          if (metadataUsername && metadataUsername.length > 0) {
-            setUserName(metadataUsername);
-          } else if (emailUsername && emailUsername.length > 0) {
-            setUserName(emailUsername);
-          } else {
-            setUserName("User");
-          }
-        }
-      } catch (error) {
-        console.error("Error loading username:", error);
-        setUserName("User");
-      }
-    };
-
-    loadUserName();
-  }, [user]);
 
   // Auto-select first server and channel if none selected (but not if DM is selected)
   useEffect(() => {

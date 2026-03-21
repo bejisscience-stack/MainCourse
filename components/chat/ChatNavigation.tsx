@@ -3,12 +3,10 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getCurrentUser, signOut } from "@/lib/auth";
+import { signOut } from "@/lib/auth";
 import { useUser } from "@/hooks/useUser";
-import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/contexts/I18nContext";
 import { languages } from "@/lib/i18n";
-import type { User } from "@supabase/supabase-js";
 
 // Language selector component for dark chat interface
 function ChatLanguageSelector() {
@@ -113,55 +111,16 @@ function ChatLanguageSelector() {
 export default function ChatNavigation() {
   const router = useRouter();
   const { t } = useI18n();
-  const { role } = useUser();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, profile, role } = useUser();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [userName, setUserName] = useState<string>("");
-  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadUser();
-  }, []);
-
-  const loadUser = async () => {
-    try {
-      const currentUser = await getCurrentUser();
-      setUser(currentUser);
-
-      if (currentUser) {
-        // Get user name from profile
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("username, avatar_url")
-          .eq("id", currentUser.id)
-          .single();
-
-        // Always use profiles.username (required field in database)
-        // Fallback to metadata/email only if profile doesn't exist (shouldn't happen)
-        const profileUsername = profile?.username?.trim();
-
-        setUserAvatarUrl(profile?.avatar_url || null);
-
-        if (profileUsername && profileUsername.length > 0) {
-          setUserName(profileUsername);
-        } else {
-          // Fallback only if profile doesn't exist (shouldn't happen in normal flow)
-          const metadataUsername = currentUser.user_metadata?.username?.trim();
-          const emailUsername = currentUser.email?.split("@")[0];
-
-          if (metadataUsername && metadataUsername.length > 0) {
-            setUserName(metadataUsername);
-          } else if (emailUsername && emailUsername.length > 0) {
-            setUserName(emailUsername);
-          } else {
-            setUserName("User");
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error loading user:", error);
-    }
-  };
+  // Derive username and avatar from useUser() profile
+  const userName =
+    profile?.username?.trim() ||
+    user?.user_metadata?.username?.trim() ||
+    user?.email?.split("@")[0] ||
+    "User";
+  const userAvatarUrl = profile?.avatar_url || null;
 
   const handleSignOut = async () => {
     try {

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 
@@ -102,6 +102,39 @@ async function fetchUserData(): Promise<UserData> {
   }
 }
 
+// Module-level singleton auth listener — one listener for the entire app
+let authListenerSetup = false;
+
+function setupAuthListener() {
+  if (authListenerSetup || typeof window === "undefined") return;
+  authListenerSetup = true;
+
+  let debounceTimer: NodeJS.Timeout | null = null;
+
+  supabase.auth.onAuthStateChange((_event, session) => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(async () => {
+      if (session?.user) {
+        const profile = await fetchProfile(session.user.id);
+        const role = profile?.role || session.user.user_metadata?.role || null;
+        globalMutate(
+          "user-data",
+          { user: session.user, profile, role },
+          { revalidate: false },
+        );
+      } else {
+        globalMutate(
+          "user-data",
+          { user: null, profile: null, role: null },
+          { revalidate: false },
+        );
+      }
+    }, 100);
+  });
+}
+
 export function useUser() {
   const { data, error, isLoading, mutate } = useSWR<UserData>(
     "user-data",
@@ -129,50 +162,10 @@ export function useUser() {
     },
   );
 
-  // Listen for auth changes - properly set up in useEffect with cleanup
+  // Initialize the singleton auth listener (no-op after first call)
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    let debounceTimer: NodeJS.Timeout | null = null;
-    let isMounted = true;
-
-    // Set up auth state change listener with debouncing to prevent rapid re-renders
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Debounce mutations to prevent flickering
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-      debounceTimer = setTimeout(async () => {
-        if (!isMounted) return;
-
-        if (session?.user) {
-          // Fetch profile directly with the valid session to avoid race conditions
-          // where the initial SWR fetch runs before auth token is fully initialized
-          const profile = await fetchProfile(session.user.id);
-          if (!isMounted) return;
-          const role =
-            profile?.role || session.user.user_metadata?.role || null;
-          mutate({ user: session.user, profile, role }, { revalidate: false });
-        } else {
-          mutate(
-            { user: null, profile: null, role: null },
-            { revalidate: false },
-          );
-        }
-      }, 100); // Small delay to batch rapid changes
-    });
-
-    // Cleanup subscription on unmount
-    return () => {
-      isMounted = false;
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-      subscription.unsubscribe();
-    };
-  }, [mutate]);
+    setupAuthListener();
+  }, []);
 
   return {
     user: data?.user || null,

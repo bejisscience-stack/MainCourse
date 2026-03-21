@@ -9,10 +9,7 @@ interface CourseCreationModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   user: User | null;
-}
-
-interface Profile {
-  username: string | null;
+  profile?: { username?: string | null } | null;
 }
 
 export default function CourseCreationModal({
@@ -20,6 +17,7 @@ export default function CourseCreationModal({
   onClose,
   onSuccess,
   user,
+  profile: profileProp,
 }: CourseCreationModalProps) {
   const [formData, setFormData] = useState({
     title: "",
@@ -47,44 +45,19 @@ export default function CourseCreationModal({
   // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen && user) {
-      // Fetch profile to get username from profiles table
-      (async () => {
-        try {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("username")
-            .eq("id", user.id)
-            .single();
-
-          setFormData({
-            title: "",
-            description: "",
-            course_type: "Editing",
-            price: "",
-            original_price: "",
-            // Always use profiles.username (required field in database)
-            author: profile?.username || "",
-            creator: profile?.username || "",
-            intro_video_url: "",
-            thumbnail_url: "",
-            is_bestseller: false,
-          });
-        } catch {
-          // Fallback if profile fetch fails
-          setFormData({
-            title: "",
-            description: "",
-            course_type: "Editing",
-            price: "",
-            original_price: "",
-            author: "",
-            creator: "",
-            intro_video_url: "",
-            thumbnail_url: "",
-            is_bestseller: false,
-          });
-        }
-      })();
+      const username = profileProp?.username || "";
+      setFormData({
+        title: "",
+        description: "",
+        course_type: "Editing",
+        price: "",
+        original_price: "",
+        author: username,
+        creator: username,
+        intro_video_url: "",
+        thumbnail_url: "",
+        is_bestseller: false,
+      });
       setVideoFile(null);
       setThumbnailFile(null);
       setVideoUploadProgress(0);
@@ -92,7 +65,7 @@ export default function CourseCreationModal({
       setIsUploading(false);
       setError(null);
     }
-  }, [isOpen, user]);
+  }, [isOpen, user, profileProp]);
 
   // Handle ESC key to close modal
   useEffect(() => {
