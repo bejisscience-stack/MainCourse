@@ -100,9 +100,10 @@ export default function EnrollmentModal({
     return () => setMounted(false);
   }, []);
 
-  // Reset state and auto-fill referral when opened
+  // Reset state and auto-fill referral when modal opens (closed → open transition only)
+  const prevIsOpenRef = useRef(false);
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !prevIsOpenRef.current) {
       setError(null);
       setIsSubmitting(false);
       setReferralValidation("idle");
@@ -123,6 +124,7 @@ export default function EnrollmentModal({
       }
       setReferralCode(code);
     }
+    prevIsOpenRef.current = isOpen;
   }, [isOpen, course, profile, initialReferralCode]);
 
   // ESC key and body scroll lock
