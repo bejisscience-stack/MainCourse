@@ -19,6 +19,8 @@ interface EmailTemplateData {
   titleGe?: string;
   messageEn?: string;
   messageGe?: string;
+  messageHtmlEn?: string;
+  messageHtmlGe?: string;
 }
 
 interface EmailTemplate {
@@ -322,24 +324,50 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       ${
         data.titleEn
           ? `<h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">${escapeHtml(data.titleEn)}</h1>
-      <p style="color: #333; font-size: 16px; line-height: 1.6;">${data.messageEn ? escapeHtml(data.messageEn) : ""}</p>`
+      <div style="color: #333; font-size: 16px; line-height: 1.6;">${
+        data.messageHtmlEn
+          ? data.messageHtmlEn
+          : data.messageEn
+            ? escapeHtml(data.messageEn).replace(/\n/g, "<br>")
+            : ""
+      }</div>`
           : ""
       }
       ${data.titleEn && data.titleGe ? '<hr style="border: none; border-top: 1px solid #e0e0e0; margin: 24px 0;" />' : ""}
       ${
         data.titleGe
           ? `<h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">${escapeHtml(data.titleGe)}</h1>
-      <p style="color: #333; font-size: 16px; line-height: 1.6;">${data.messageGe ? escapeHtml(data.messageGe) : ""}</p>`
+      <div style="color: #333; font-size: 16px; line-height: 1.6;">${
+        data.messageHtmlGe
+          ? data.messageHtmlGe
+          : data.messageGe
+            ? escapeHtml(data.messageGe).replace(/\n/g, "<br>")
+            : ""
+      }</div>`
           : ""
       }
     `),
     text: (data) =>
       [
         data.titleEn
-          ? `${escapeHtml(data.titleEn)}\n${data.messageEn ? escapeHtml(data.messageEn) : ""}`
+          ? `${data.titleEn}\n${
+              data.messageHtmlEn
+                ? data.messageHtmlEn
+                    .replace(/<br\s*\/?>/gi, "\n")
+                    .replace(/<\/p>/gi, "\n")
+                    .replace(/<[^>]+>/g, "")
+                : data.messageEn || ""
+            }`
           : "",
         data.titleGe
-          ? `${escapeHtml(data.titleGe)}\n${data.messageGe ? escapeHtml(data.messageGe) : ""}`
+          ? `${data.titleGe}\n${
+              data.messageHtmlGe
+                ? data.messageHtmlGe
+                    .replace(/<br\s*\/?>/gi, "\n")
+                    .replace(/<\/p>/gi, "\n")
+                    .replace(/<[^>]+>/g, "")
+                : data.messageGe || ""
+            }`
           : "",
       ]
         .filter(Boolean)

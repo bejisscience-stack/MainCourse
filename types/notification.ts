@@ -1,14 +1,14 @@
-import type { Language } from '@/lib/i18n';
+import type { Language } from "@/lib/i18n";
 
 export type NotificationType =
-  | 'enrollment_approved'
-  | 'enrollment_rejected'
-  | 'bundle_enrollment_approved'
-  | 'bundle_enrollment_rejected'
-  | 'withdrawal_approved'
-  | 'withdrawal_rejected'
-  | 'admin_message'
-  | 'system';
+  | "enrollment_approved"
+  | "enrollment_rejected"
+  | "bundle_enrollment_approved"
+  | "bundle_enrollment_rejected"
+  | "withdrawal_approved"
+  | "withdrawal_rejected"
+  | "admin_message"
+  | "system";
 
 export interface MultilingualText {
   en: string;
@@ -57,16 +57,17 @@ export interface CreateNotificationPayload {
 }
 
 export interface AdminNotificationPayload {
-  target_type: 'all' | 'role' | 'course' | 'specific';
-  target_role?: 'student' | 'lecturer' | 'admin';
+  target_type: "all" | "role" | "course" | "specific";
+  target_role?: "student" | "lecturer" | "admin";
   target_course_id?: string;
   target_user_ids?: string[];
   title: MultilingualText;
   message: MultilingualText;
-  channel: 'in_app' | 'email' | 'both';
-  language: 'en' | 'ge' | 'both';
-  email_target?: 'profiles' | 'coming_soon' | 'both' | 'specific';
+  channel: "in_app" | "email" | "both";
+  language: "en" | "ge" | "both";
+  email_target?: "profiles" | "coming_soon" | "both" | "specific";
   target_emails?: string[];
+  message_html?: { en?: string; ge?: string };
 }
 
 export interface NotificationsResponse {
@@ -84,65 +85,68 @@ export interface UnreadCountResponse {
 // Helper to get localized text from multilingual object
 export function getLocalizedText(
   text: MultilingualText | string | null | undefined,
-  language: Language
+  language: Language,
 ): string {
-  if (!text) return '';
-  if (typeof text === 'string') return text;
-  return text[language] || text.en || '';
+  if (!text) return "";
+  if (typeof text === "string") return text;
+  return text[language] || text.en || "";
 }
 
 // Notification icon types for UI
 export const notificationIcons: Record<NotificationType, string> = {
-  enrollment_approved: 'check-circle',
-  enrollment_rejected: 'x-circle',
-  bundle_enrollment_approved: 'check-circle',
-  bundle_enrollment_rejected: 'x-circle',
-  withdrawal_approved: 'currency-dollar',
-  withdrawal_rejected: 'x-circle',
-  admin_message: 'megaphone',
-  system: 'information-circle',
+  enrollment_approved: "check-circle",
+  enrollment_rejected: "x-circle",
+  bundle_enrollment_approved: "check-circle",
+  bundle_enrollment_rejected: "x-circle",
+  withdrawal_approved: "currency-dollar",
+  withdrawal_rejected: "x-circle",
+  admin_message: "megaphone",
+  system: "information-circle",
 };
 
 // Notification colors for UI
-export const notificationColors: Record<NotificationType, { bg: string; text: string; icon: string }> = {
+export const notificationColors: Record<
+  NotificationType,
+  { bg: string; text: string; icon: string }
+> = {
   enrollment_approved: {
-    bg: 'bg-emerald-50 dark:bg-emerald-500/10',
-    text: 'text-emerald-700 dark:text-emerald-400',
-    icon: 'text-emerald-500',
+    bg: "bg-emerald-50 dark:bg-emerald-500/10",
+    text: "text-emerald-700 dark:text-emerald-400",
+    icon: "text-emerald-500",
   },
   enrollment_rejected: {
-    bg: 'bg-red-50 dark:bg-red-500/10',
-    text: 'text-red-700 dark:text-red-400',
-    icon: 'text-red-500',
+    bg: "bg-red-50 dark:bg-red-500/10",
+    text: "text-red-700 dark:text-red-400",
+    icon: "text-red-500",
   },
   bundle_enrollment_approved: {
-    bg: 'bg-emerald-50 dark:bg-emerald-500/10',
-    text: 'text-emerald-700 dark:text-emerald-400',
-    icon: 'text-emerald-500',
+    bg: "bg-emerald-50 dark:bg-emerald-500/10",
+    text: "text-emerald-700 dark:text-emerald-400",
+    icon: "text-emerald-500",
   },
   bundle_enrollment_rejected: {
-    bg: 'bg-red-50 dark:bg-red-500/10',
-    text: 'text-red-700 dark:text-red-400',
-    icon: 'text-red-500',
+    bg: "bg-red-50 dark:bg-red-500/10",
+    text: "text-red-700 dark:text-red-400",
+    icon: "text-red-500",
   },
   withdrawal_approved: {
-    bg: 'bg-emerald-50 dark:bg-emerald-500/10',
-    text: 'text-emerald-700 dark:text-emerald-400',
-    icon: 'text-emerald-500',
+    bg: "bg-emerald-50 dark:bg-emerald-500/10",
+    text: "text-emerald-700 dark:text-emerald-400",
+    icon: "text-emerald-500",
   },
   withdrawal_rejected: {
-    bg: 'bg-red-50 dark:bg-red-500/10',
-    text: 'text-red-700 dark:text-red-400',
-    icon: 'text-red-500',
+    bg: "bg-red-50 dark:bg-red-500/10",
+    text: "text-red-700 dark:text-red-400",
+    icon: "text-red-500",
   },
   admin_message: {
-    bg: 'bg-emerald-50 dark:bg-emerald-500/10',
-    text: 'text-emerald-700 dark:text-emerald-400',
-    icon: 'text-emerald-500',
+    bg: "bg-emerald-50 dark:bg-emerald-500/10",
+    text: "text-emerald-700 dark:text-emerald-400",
+    icon: "text-emerald-500",
   },
   system: {
-    bg: 'bg-charcoal-50 dark:bg-charcoal-500/10',
-    text: 'text-charcoal-700 dark:text-charcoal-400',
-    icon: 'text-charcoal-500',
+    bg: "bg-charcoal-50 dark:bg-charcoal-500/10",
+    text: "text-charcoal-700 dark:text-charcoal-400",
+    icon: "text-charcoal-500",
   },
 };

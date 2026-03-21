@@ -203,12 +203,14 @@ export async function sendLecturerRejectedEmail(
 
 /**
  * Send admin notification email (supports EN only, GE only, or both)
+ * Optionally accepts pre-sanitized HTML for rich formatting
  */
 export async function sendAdminNotificationEmail(
   to: string | string[],
   title: MultilingualText,
   message: MultilingualText,
   language: "en" | "ge" | "both" = "both",
+  messageHtml?: { en?: string; ge?: string },
 ): Promise<string> {
   const template = emailTemplates.adminNotification;
   const subject =
@@ -225,12 +227,16 @@ export async function sendAdminNotificationEmail(
       titleGe: language === "en" ? "" : title.ge,
       messageEn: language === "ge" ? "" : message.en,
       messageGe: language === "en" ? "" : message.ge,
+      messageHtmlEn: language === "ge" ? undefined : messageHtml?.en,
+      messageHtmlGe: language === "en" ? undefined : messageHtml?.ge,
     }),
     text: template.text({
       titleEn: language === "ge" ? "" : title.en,
       titleGe: language === "en" ? "" : title.ge,
       messageEn: language === "ge" ? "" : message.en,
       messageGe: language === "en" ? "" : message.ge,
+      messageHtmlEn: language === "ge" ? undefined : messageHtml?.en,
+      messageHtmlGe: language === "en" ? undefined : messageHtml?.ge,
     }),
   });
 }
