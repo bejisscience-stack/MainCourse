@@ -6,6 +6,12 @@ import type {
   AdminNotificationPayload,
   MultilingualText,
 } from "@/types/notification";
+import dynamic from "next/dynamic";
+
+const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), {
+  ssr: false,
+  loading: () => <div className="h-32 bg-gray-100 rounded-lg animate-pulse" />,
+});
 
 interface Course {
   id: string;
@@ -64,6 +70,8 @@ function AdminNotificationSender() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isPartialSuccess, setIsPartialSuccess] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [messageHtmlEn, setMessageHtmlEn] = useState("");
+  const [messageHtmlGe, setMessageHtmlGe] = useState("");
 
   // Fetch courses for course-specific targeting
   useEffect(() => {
@@ -316,6 +324,15 @@ function AdminNotificationSender() {
           en: notifLanguage === "ge" ? "" : messageEn.trim(),
           ge: notifLanguage === "en" ? "" : messageGe.trim(),
         },
+        ...(channel !== "in_app" &&
+          (messageHtmlEn || messageHtmlGe) && {
+            message_html: {
+              en:
+                notifLanguage === "ge" ? undefined : messageHtmlEn || undefined,
+              ge:
+                notifLanguage === "en" ? undefined : messageHtmlGe || undefined,
+            },
+          }),
         language: notifLanguage,
         channel,
         ...(showEmailTargeting && { email_target: emailTarget }),
@@ -379,6 +396,8 @@ function AdminNotificationSender() {
       setSelectedEmails([]);
       setManualEmails("");
       setShowPreview(false);
+      setMessageHtmlEn("");
+      setMessageHtmlGe("");
 
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err: any) {
@@ -1089,13 +1108,29 @@ function AdminNotificationSender() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Message (English) *
                 </label>
-                <textarea
-                  value={messageEn}
-                  onChange={(e) => setMessageEn(e.target.value)}
-                  placeholder="Enter notification message in English"
-                  rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900 resize-none"
-                />
+                {channel === "in_app" ? (
+                  <textarea
+                    value={messageEn}
+                    onChange={(e) => setMessageEn(e.target.value)}
+                    placeholder="Enter notification message in English"
+                    rows={4}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900 resize-none"
+                  />
+                ) : (
+                  <RichTextEditor
+                    content={messageHtmlEn}
+                    onChange={(html) => {
+                      setMessageHtmlEn(html);
+                      setMessageEn(
+                        html
+                          .replace(/<br\s*\/?>/gi, "\n")
+                          .replace(/<\/p>/gi, "\n")
+                          .replace(/<[^>]+>/g, ""),
+                      );
+                    }}
+                    placeholder="Enter notification message in English"
+                  />
+                )}
               </div>
             )}
             {(notifLanguage === "ge" || notifLanguage === "both") && (
@@ -1103,13 +1138,29 @@ function AdminNotificationSender() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Message (Georgian) *
                 </label>
-                <textarea
-                  value={messageGe}
-                  onChange={(e) => setMessageGe(e.target.value)}
-                  placeholder="შეიყვანეთ შეტყობინების ტექსტი ქართულად"
-                  rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900 resize-none"
-                />
+                {channel === "in_app" ? (
+                  <textarea
+                    value={messageGe}
+                    onChange={(e) => setMessageGe(e.target.value)}
+                    placeholder="შეიყვანეთ შეტყობინების ტექსტი ქართულად"
+                    rows={4}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900 resize-none"
+                  />
+                ) : (
+                  <RichTextEditor
+                    content={messageHtmlGe}
+                    onChange={(html) => {
+                      setMessageHtmlGe(html);
+                      setMessageGe(
+                        html
+                          .replace(/<br\s*\/?>/gi, "\n")
+                          .replace(/<\/p>/gi, "\n")
+                          .replace(/<[^>]+>/g, ""),
+                      );
+                    }}
+                    placeholder="შეიყვანეთ შეტყობინების ტექსტი ქართულად"
+                  />
+                )}
               </div>
             )}
           </div>

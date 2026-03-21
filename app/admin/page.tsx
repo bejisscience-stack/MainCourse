@@ -36,6 +36,10 @@ const AdminLecturerApprovals = dynamic(
 const AdminSettings = dynamic(() => import("@/components/AdminSettings"), {
   ssr: false,
 });
+const AdminEmailManager = dynamic(
+  () => import("@/components/AdminEmailManager"),
+  { ssr: false },
+);
 import { useUser } from "@/hooks/useUser";
 import { useCourses } from "@/hooks/useCourses";
 import { supabase } from "@/lib/supabase";
@@ -48,6 +52,7 @@ type TabType =
   | "lecturers"
   | "courses"
   | "notifications"
+  | "email-manager"
   | "analytics"
   | "settings";
 
@@ -64,14 +69,18 @@ async function retryWithBackoff<T>(
       return await fn();
     } catch (error: any) {
       lastError = error;
-      console.error(
-        `[Admin Page] Attempt ${attempt + 1}/${maxRetries} failed:`,
-        error.message,
-      );
+      if (process.env.NODE_ENV === "development") {
+        console.error(
+          `[Admin Page] Attempt ${attempt + 1}/${maxRetries} failed:`,
+          error.message,
+        );
+      }
 
       if (attempt < maxRetries - 1) {
         const delay = baseDelay * Math.pow(2, attempt);
-        console.log(`[Admin Page] Retrying in ${delay}ms...`);
+        if (process.env.NODE_ENV === "development") {
+          console.log(`[Admin Page] Retrying in ${delay}ms...`);
+        }
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
@@ -103,7 +112,9 @@ export default function AdminDashboard() {
 
     const verifyAdminDirectly = async () => {
       setIsCheckingAdmin(true);
-      console.log("[Admin Page] === DIRECT ADMIN VERIFICATION ===");
+      if (process.env.NODE_ENV === "development") {
+        console.log("[Admin Page] === DIRECT ADMIN VERIFICATION ===");
+      }
 
       try {
         // Get current session with retry
@@ -124,13 +135,17 @@ export default function AdminDashboard() {
 
         if (!isMounted) return;
 
-        console.log("[Admin Page] Session check:", {
-          hasSession: !!session,
-          userId: session?.user?.id,
-        });
+        if (process.env.NODE_ENV === "development") {
+          console.log("[Admin Page] Session check:", {
+            hasSession: !!session,
+            userId: session?.user?.id,
+          });
+        }
 
         if (!session?.user) {
-          console.log("[Admin Page] No session, redirecting to login");
+          if (process.env.NODE_ENV === "development") {
+            console.log("[Admin Page] No session, redirecting to login");
+          }
           if (isMounted) {
             setIsAdminVerified(false);
             setIsCheckingAdmin(false);
@@ -140,7 +155,6 @@ export default function AdminDashboard() {
         }
 
         const userId = session.user.id;
-        console.log("[Admin Page] Checking admin status for user:", userId);
 
         // Use RPC function to check admin status (bypasses RLS) with retry
         const isAdmin = await retryWithBackoff(
@@ -162,24 +176,21 @@ export default function AdminDashboard() {
 
         if (!isMounted) return;
 
-        console.log("[Admin Page] RPC check_is_admin result:", { isAdmin });
-
         if (isAdmin === true) {
-          console.log("[Admin Page] DIRECT VERIFICATION: User IS admin!");
           setIsAdminVerified(true);
         } else {
-          console.log("[Admin Page] DIRECT VERIFICATION: User is NOT admin");
           setIsAdminVerified(false);
         }
       } catch (err: any) {
-        console.error(
-          "[Admin Page] Error in direct admin verification after retries:",
-          err,
-        );
+        if (process.env.NODE_ENV === "development") {
+          console.error(
+            "[Admin Page] Error in direct admin verification after retries:",
+            err,
+          );
+        }
         if (isMounted) {
           // On persistent failure, check if hook has admin status as fallback
           if (userRole === "admin") {
-            console.log("[Admin Page] Using hook fallback - user is admin");
             setIsAdminVerified(true);
           } else {
             setIsAdminVerified(false);
@@ -362,6 +373,16 @@ export default function AdminDashboard() {
               }`}
             >
               Send Notifications
+            </button>
+            <button
+              onClick={() => setActiveTab("email-manager")}
+              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
+                activeTab === "email-manager"
+                  ? "text-navy-900 border-navy-900"
+                  : "text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300"
+              }`}
+            >
+              Email Manager
             </button>
             <button
               onClick={() => setActiveTab("analytics")}
@@ -554,6 +575,19 @@ export default function AdminDashboard() {
               }
             >
               <AdminNotificationSender />
+            </ErrorBoundary>
+          )}
+
+          {activeTab === "email-manager" && (
+            <ErrorBoundary
+              onError={(error) =>
+                console.error(
+                  "[Admin Dashboard] Email Manager section error:",
+                  error,
+                )
+              }
+            >
+              <AdminEmailManager />
             </ErrorBoundary>
           )}
 
