@@ -10,6 +10,53 @@ import { logAdminAction } from "@/lib/audit-log";
 import { isValidUUID } from "@/lib/validation";
 import { adminLimiter, rateLimitResponse } from "@/lib/rate-limit";
 import type { AdminNotificationPayload } from "@/types/notification";
+import sanitizeHtml from "sanitize-html";
+
+const sanitizeOptions: sanitizeHtml.IOptions = {
+  allowedTags: [
+    "b",
+    "i",
+    "em",
+    "strong",
+    "a",
+    "ul",
+    "ol",
+    "li",
+    "p",
+    "br",
+    "h1",
+    "h2",
+    "h3",
+    "hr",
+    "u",
+  ],
+  allowedAttributes: {
+    a: ["href", "target", "rel"],
+  },
+  transformTags: {
+    a: sanitizeHtml.simpleTransform("a", {
+      target: "_blank",
+      rel: "noopener noreferrer",
+    }),
+  },
+  allowedSchemes: ["http", "https", "mailto"],
+};
+
+function sanitizeMessageHtml(
+  html: { en?: string; ge?: string } | undefined,
+): { en?: string; ge?: string } | undefined {
+  if (!html) return undefined;
+  const result: { en?: string; ge?: string } = {};
+  if (html.en) {
+    if (Buffer.byteLength(html.en, "utf8") > 50000) return undefined;
+    result.en = sanitizeHtml(html.en, sanitizeOptions);
+  }
+  if (html.ge) {
+    if (Buffer.byteLength(html.ge, "utf8") > 50000) return undefined;
+    result.ge = sanitizeHtml(html.ge, sanitizeOptions);
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -251,6 +298,8 @@ export async function POST(request: NextRequest) {
       target_emails,
     } = body;
 
+    const message_html = sanitizeMessageHtml(body.message_html);
+
     // Validate payload based on language selection
     if ((language === "en" || language === "both") && !title?.en) {
       return NextResponse.json(
@@ -462,8 +511,35 @@ export async function POST(request: NextRequest) {
         // Send individual emails per recipient for reliable delivery
         for (const email of emails) {
           try {
-            await sendAdminNotificationEmail(email, title, message, language);
+            await sendAdminNotificationEmail(
+              email,
+              title,
+              message,
+              language,
+              message_html,
+            );
             emailSent++;
+            // Log to email_send_history (best-effort, don't block on failure)
+            try {
+              await serviceSupabase.from("email_send_history").insert({
+                recipient_email: email.toLowerCase(),
+                recipient_user_id: null,
+                subject:
+                  language === "en"
+                    ? title.en
+                    : language === "ge"
+                      ? title.ge
+                      : `${title.en} | ${title.ge}`,
+                sent_by: user.id,
+                source: "admin_notification",
+                metadata: { channel, language, target_type, email_target },
+              });
+            } catch (historyErr) {
+              console.error(
+                "[Admin Notifications API] Failed to log email history:",
+                historyErr,
+              );
+            }
           } catch (err: any) {
             emailFailed++;
             lastEmailError = err.message || String(err);
