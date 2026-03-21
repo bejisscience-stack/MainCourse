@@ -27,6 +27,16 @@ interface EmailTemplate {
   text: (data: EmailTemplateData) => string;
 }
 
+/** Escape user-supplied strings before interpolating into HTML */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 // Brand colors
 const BRAND_COLOR = "#1e3a5f";
 const SITE_URL = "https://wavleba.ge";
@@ -64,7 +74,7 @@ export const emailTemplates: Record<string, EmailTemplate> = {
     html: (data) =>
       emailWrapper(`
       <h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">
-        ${data.username ? `Welcome, ${data.username}!` : "Welcome!"}
+        ${data.username ? `Welcome, ${escapeHtml(data.username)}!` : "Welcome!"}
       </h1>
       <p style="color: #333; font-size: 16px; line-height: 1.6;">
         Your email has been verified and your account is now active. You can start exploring our courses and begin your learning journey.
@@ -77,7 +87,7 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       </p>
     `),
     text: (data) =>
-      `Welcome${data.username ? `, ${data.username}` : ""}! Your email has been verified. Visit ${SITE_URL}/courses to browse our courses.`,
+      `Welcome${data.username ? `, ${escapeHtml(data.username)}` : ""}! Your email has been verified. Visit ${SITE_URL}/courses to browse our courses.`,
   },
 
   enrollmentApproved: {
@@ -89,7 +99,7 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       emailWrapper(`
       <h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">Enrollment Approved!</h1>
       <p style="color: #333; font-size: 16px; line-height: 1.6;">
-        Great news! Your enrollment in <strong>${data.courseName || "the course"}</strong> has been approved.
+        Great news! Your enrollment in <strong>${data.courseName ? escapeHtml(data.courseName) : "the course"}</strong> has been approved.
       </p>
       <p style="color: #333; font-size: 16px; line-height: 1.6;">
         You now have full access to the course materials. Start learning today!
@@ -99,7 +109,7 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       </p>
     `),
     text: (data) =>
-      `Your enrollment in ${data.courseName || "the course"} has been approved! Visit ${SITE_URL}/my-courses to start learning.`,
+      `Your enrollment in ${data.courseName ? escapeHtml(data.courseName) : "the course"} has been approved! Visit ${SITE_URL}/my-courses to start learning.`,
   },
 
   enrollmentRejected: {
@@ -111,13 +121,13 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       emailWrapper(`
       <h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">Enrollment Update</h1>
       <p style="color: #333; font-size: 16px; line-height: 1.6;">
-        We regret to inform you that your enrollment request for <strong>${data.courseName || "the course"}</strong> could not be approved at this time.
+        We regret to inform you that your enrollment request for <strong>${data.courseName ? escapeHtml(data.courseName) : "the course"}</strong> could not be approved at this time.
       </p>
       ${
         data.reason
           ? `
         <div style="background-color: #f8f9fa; padding: 16px; border-radius: 6px; margin: 20px 0;">
-          <p style="color: #666; font-size: 14px; margin: 0;"><strong>Reason:</strong> ${data.reason}</p>
+          <p style="color: #666; font-size: 14px; margin: 0;"><strong>Reason:</strong> ${escapeHtml(data.reason)}</p>
         </div>
       `
           : ""
@@ -130,7 +140,7 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       </p>
     `),
     text: (data) =>
-      `Your enrollment request for ${data.courseName || "the course"} was not approved.${data.reason ? ` Reason: ${data.reason}` : ""} Contact support if you have questions.`,
+      `Your enrollment request for ${data.courseName ? escapeHtml(data.courseName) : "the course"} was not approved.${data.reason ? ` Reason: ${escapeHtml(data.reason)}` : ""} Contact support if you have questions.`,
   },
 
   withdrawalApproved: {
@@ -180,7 +190,7 @@ export const emailTemplates: Record<string, EmailTemplate> = {
         data.reason
           ? `
         <div style="background-color: #fff3e0; padding: 16px; border-radius: 6px; margin: 20px 0;">
-          <p style="color: #e65100; font-size: 14px; margin: 0;"><strong>Reason:</strong> ${data.reason}</p>
+          <p style="color: #e65100; font-size: 14px; margin: 0;"><strong>Reason:</strong> ${escapeHtml(data.reason)}</p>
         </div>
       `
           : ""
@@ -193,7 +203,7 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       </p>
     `),
     text: (data) =>
-      `Your withdrawal request${data.amount ? ` for ${data.amount.toFixed(2)} GEL` : ""} was not approved.${data.reason ? ` Reason: ${data.reason}` : ""} The amount has been returned to your balance.`,
+      `Your withdrawal request${data.amount ? ` for ${data.amount.toFixed(2)} GEL` : ""} was not approved.${data.reason ? ` Reason: ${escapeHtml(data.reason)}` : ""} The amount has been returned to your balance.`,
   },
 
   bundleEnrollmentApproved: {
@@ -205,7 +215,7 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       emailWrapper(`
       <h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">Bundle Enrollment Approved!</h1>
       <p style="color: #333; font-size: 16px; line-height: 1.6;">
-        Great news! Your enrollment in the <strong>${data.courseName || "course bundle"}</strong> has been approved.
+        Great news! Your enrollment in the <strong>${data.courseName ? escapeHtml(data.courseName) : "course bundle"}</strong> has been approved.
       </p>
       <p style="color: #333; font-size: 16px; line-height: 1.6;">
         You now have access to all courses included in this bundle. Start learning today!
@@ -215,7 +225,7 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       </p>
     `),
     text: (data) =>
-      `Your bundle enrollment for ${data.courseName || "the course bundle"} has been approved! Visit ${SITE_URL}/my-courses to start learning.`,
+      `Your bundle enrollment for ${data.courseName ? escapeHtml(data.courseName) : "the course bundle"} has been approved! Visit ${SITE_URL}/my-courses to start learning.`,
   },
 
   bundleEnrollmentRejected: {
@@ -227,13 +237,13 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       emailWrapper(`
       <h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">Bundle Enrollment Update</h1>
       <p style="color: #333; font-size: 16px; line-height: 1.6;">
-        We regret to inform you that your enrollment request for the <strong>${data.courseName || "course bundle"}</strong> could not be approved at this time.
+        We regret to inform you that your enrollment request for the <strong>${data.courseName ? escapeHtml(data.courseName) : "course bundle"}</strong> could not be approved at this time.
       </p>
       ${
         data.reason
           ? `
         <div style="background-color: #f8f9fa; padding: 16px; border-radius: 6px; margin: 20px 0;">
-          <p style="color: #666; font-size: 14px; margin: 0;"><strong>Reason:</strong> ${data.reason}</p>
+          <p style="color: #666; font-size: 14px; margin: 0;"><strong>Reason:</strong> ${escapeHtml(data.reason)}</p>
         </div>
       `
           : ""
@@ -246,7 +256,7 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       </p>
     `),
     text: (data) =>
-      `Your bundle enrollment request for ${data.courseName || "the course bundle"} was not approved.${data.reason ? ` Reason: ${data.reason}` : ""} Contact support if you have questions.`,
+      `Your bundle enrollment request for ${data.courseName ? escapeHtml(data.courseName) : "the course bundle"} was not approved.${data.reason ? ` Reason: ${escapeHtml(data.reason)}` : ""} Contact support if you have questions.`,
   },
 
   lecturerApproved: {
@@ -258,7 +268,7 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       emailWrapper(`
       <h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">Account Approved!</h1>
       <p style="color: #333; font-size: 16px; line-height: 1.6;">
-        Great news${data.username ? `, ${data.username}` : ""}! Your lecturer account has been approved by our admin team.
+        Great news${data.username ? `, ${escapeHtml(data.username)}` : ""}! Your lecturer account has been approved by our admin team.
       </p>
       <p style="color: #333; font-size: 16px; line-height: 1.6;">
         You now have full access to the lecturer dashboard where you can create and manage your courses.
@@ -268,7 +278,7 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       </p>
     `),
     text: (data) =>
-      `Great news${data.username ? `, ${data.username}` : ""}! Your lecturer account has been approved. Visit ${SITE_URL}/lecturer/dashboard to get started.`,
+      `Great news${data.username ? `, ${escapeHtml(data.username)}` : ""}! Your lecturer account has been approved. Visit ${SITE_URL}/lecturer/dashboard to get started.`,
   },
 
   lecturerRejected: {
@@ -280,13 +290,13 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       emailWrapper(`
       <h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">Account Update</h1>
       <p style="color: #333; font-size: 16px; line-height: 1.6;">
-        We regret to inform you${data.username ? `, ${data.username},` : ""} that your lecturer account request could not be approved at this time.
+        We regret to inform you${data.username ? `, ${escapeHtml(data.username)},` : ""} that your lecturer account request could not be approved at this time.
       </p>
       ${
         data.reason
           ? `
         <div style="background-color: #f8f9fa; padding: 16px; border-radius: 6px; margin: 20px 0;">
-          <p style="color: #666; font-size: 14px; margin: 0;"><strong>Reason:</strong> ${data.reason}</p>
+          <p style="color: #666; font-size: 14px; margin: 0;"><strong>Reason:</strong> ${escapeHtml(data.reason)}</p>
         </div>
       `
           : ""
@@ -299,7 +309,7 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       </p>
     `),
     text: (data) =>
-      `Your lecturer account request was not approved.${data.reason ? ` Reason: ${data.reason}` : ""} Contact support if you have questions.`,
+      `Your lecturer account request was not approved.${data.reason ? ` Reason: ${escapeHtml(data.reason)}` : ""} Contact support if you have questions.`,
   },
 
   adminNotification: {
@@ -311,22 +321,26 @@ export const emailTemplates: Record<string, EmailTemplate> = {
       emailWrapper(`
       ${
         data.titleEn
-          ? `<h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">${data.titleEn}</h1>
-      <p style="color: #333; font-size: 16px; line-height: 1.6;">${data.messageEn || ""}</p>`
+          ? `<h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">${escapeHtml(data.titleEn)}</h1>
+      <p style="color: #333; font-size: 16px; line-height: 1.6;">${data.messageEn ? escapeHtml(data.messageEn) : ""}</p>`
           : ""
       }
       ${data.titleEn && data.titleGe ? '<hr style="border: none; border-top: 1px solid #e0e0e0; margin: 24px 0;" />' : ""}
       ${
         data.titleGe
-          ? `<h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">${data.titleGe}</h1>
-      <p style="color: #333; font-size: 16px; line-height: 1.6;">${data.messageGe || ""}</p>`
+          ? `<h1 style="color: ${BRAND_COLOR}; margin-bottom: 24px;">${escapeHtml(data.titleGe)}</h1>
+      <p style="color: #333; font-size: 16px; line-height: 1.6;">${data.messageGe ? escapeHtml(data.messageGe) : ""}</p>`
           : ""
       }
     `),
     text: (data) =>
       [
-        data.titleEn ? `${data.titleEn}\n${data.messageEn || ""}` : "",
-        data.titleGe ? `${data.titleGe}\n${data.messageGe || ""}` : "",
+        data.titleEn
+          ? `${escapeHtml(data.titleEn)}\n${data.messageEn ? escapeHtml(data.messageEn) : ""}`
+          : "",
+        data.titleGe
+          ? `${escapeHtml(data.titleGe)}\n${data.messageGe ? escapeHtml(data.messageGe) : ""}`
+          : "",
       ]
         .filter(Boolean)
         .join("\n\n---\n\n"),
