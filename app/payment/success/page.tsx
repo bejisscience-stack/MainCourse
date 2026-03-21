@@ -144,7 +144,9 @@ function PaymentSuccessContent() {
   const getRedirectPath = () => {
     switch (paymentType) {
       case "course_enrollment":
-        return courseId ? `/courses/${courseId}/chat` : "/my-courses";
+        return courseId
+          ? `/courses/${courseId}/chat?channel=lectures`
+          : "/my-courses";
       case "bundle_enrollment":
         return "/my-courses";
       case "project_subscription":

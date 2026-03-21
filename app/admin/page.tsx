@@ -528,7 +528,7 @@ export default function AdminDashboard() {
                               ${course.price}
                             </span>
                             <Link
-                              href={`/courses/${course.id}/chat`}
+                              href={`/courses/${course.id}/chat?channel=lectures`}
                               className="px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm font-semibold"
                             >
                               Open Chat

@@ -413,7 +413,7 @@ function CourseCard({
                 customAction
               ) : isEnrolled ? (
                 <a
-                  href={`/courses/${course.id}/chat`}
+                  href={`/courses/${course.id}/chat?channel=lectures`}
                   className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-emerald-500 rounded-full hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5 will-change-transform"
                   style={{
                     transformOrigin: "center",
