@@ -102,6 +102,17 @@ const nextConfig = {
         ],
       },
       {
+        // CVE mitigation: Aggressive caching for optimized images reduces
+        // repeated optimizer invocations (GHSA-9g9p Image Optimizer DoS)
+        source: "/_next/image",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
         source: "/api/:path*",
         headers: [
           {
