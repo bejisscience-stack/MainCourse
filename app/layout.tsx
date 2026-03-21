@@ -114,6 +114,10 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <meta
+          name="facebook-domain-verification"
+          content="q23z4y9bvjtat94qbfj9zc9e631r97"
+        />
         {/* SECURITY: This script is hardcoded. NEVER insert user input here. */}
         <script
           nonce={nonce}
