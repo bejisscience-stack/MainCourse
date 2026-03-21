@@ -84,6 +84,11 @@ export default function EnrollmentModal({
     null,
   );
   const [saveCardChecked, setSaveCardChecked] = useState(false);
+  const saveCardRef = useRef(false);
+  // Keep ref in sync so handlePay always reads the latest value
+  useEffect(() => {
+    saveCardRef.current = saveCardChecked;
+  }, [saveCardChecked]);
 
   // Inline payment processing state (for saved card payments)
   const [tokenPaymentStatus, setTokenPaymentStatus] = useState<
@@ -484,7 +489,7 @@ export default function EnrollmentModal({
             paymentType,
             referenceId: enrollmentRequestId,
             keepzMethod: method,
-            saveCard: saveCardChecked || undefined,
+            saveCard: saveCardRef.current || undefined,
           }),
         });
         if (!orderResponse.ok) {
@@ -521,7 +526,7 @@ export default function EnrollmentModal({
         setSelectedMethod(null);
       }
     },
-    [course.id, enrollmentMode, referralCode, isReEnrollment, saveCardChecked],
+    [course.id, enrollmentMode, referralCode, isReEnrollment],
   );
 
   const handleDeleteCard = useCallback(
