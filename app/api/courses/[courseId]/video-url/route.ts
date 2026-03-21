@@ -75,7 +75,7 @@ export async function GET(
   const serviceSupabase = createServiceRoleClient(token);
   const { data, error } = await serviceSupabase.storage
     .from("course-videos")
-    .createSignedUrl(normalizedPath, 3600); // 1 hour expiry for paid content protection
+    .createSignedUrl(normalizedPath, 900); // 15 min expiry — client auto-refreshes before expiry
 
   if (error || !data?.signedUrl) {
     console.error("[video-url] Signed URL error:", error);

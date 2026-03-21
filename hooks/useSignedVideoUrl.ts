@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { extractStoragePath } from "@/lib/video-url-parser";
 
+const REFRESH_BUFFER_MS = 12 * 60 * 1000; // Refresh 12 min into a 15 min TTL
+
 interface UseSignedVideoUrlResult {
   signedUrl: string | null;
   isLoading: boolean;
@@ -17,7 +19,7 @@ export function useSignedVideoUrl(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const fetchIdRef = useRef(0);
-  const blobUrlRef = useRef<string | null>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchSignedUrl = useCallback(async () => {
     if (!videoUrl || !courseId) return;
@@ -32,10 +34,10 @@ export function useSignedVideoUrl(
     setError(null);
     const currentFetchId = ++fetchIdRef.current;
 
-    // Revoke previous blob URL to free memory
-    if (blobUrlRef.current) {
-      URL.revokeObjectURL(blobUrlRef.current);
-      blobUrlRef.current = null;
+    // Clear any pending refresh timer
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
     }
 
     try {
@@ -62,21 +64,12 @@ export function useSignedVideoUrl(
 
       if (currentFetchId !== fetchIdRef.current) return;
 
-      // Fetch the video as a blob and create a blob URL to prevent URL copying
-      const videoRes = await fetch(url);
-      if (!videoRes.ok) {
-        throw new Error(`Video fetch failed: HTTP ${videoRes.status}`);
-      }
+      setSignedUrl(url);
 
-      if (currentFetchId !== fetchIdRef.current) return;
-
-      const blob = await videoRes.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      blobUrlRef.current = blobUrl;
-
-      if (currentFetchId === fetchIdRef.current) {
-        setSignedUrl(blobUrl);
-      }
+      // Schedule auto-refresh before the signed URL expires
+      refreshTimerRef.current = setTimeout(() => {
+        fetchSignedUrl();
+      }, REFRESH_BUFFER_MS);
     } catch (err) {
       if (currentFetchId === fetchIdRef.current) {
         setError(err instanceof Error ? err : new Error(String(err)));
@@ -93,12 +86,12 @@ export function useSignedVideoUrl(
     fetchSignedUrl();
   }, [fetchSignedUrl]);
 
-  // Cleanup blob URL on unmount
+  // Cleanup refresh timer on unmount
   useEffect(() => {
     return () => {
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current);
-        blobUrlRef.current = null;
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
       }
     };
   }, []);
