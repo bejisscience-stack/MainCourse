@@ -62,7 +62,10 @@ export async function PUT(request: NextRequest) {
     const authResult = await verifyAdminRequest(request);
     if (isAuthError(authResult)) return authResult;
 
-    const { userId, serviceSupabase } = authResult;
+    const { userId, token } = authResult;
+
+    // Use user-scoped client — RLS policy allows admin updates
+    const supabase = createServerSupabaseClient(token);
 
     const body = await request.json();
     const { min_withdrawal_gel, subscription_price_gel } = body;
@@ -111,7 +114,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update the singleton row (filter required by PostgREST)
-    const { data, error } = await serviceSupabase
+    const { data, error } = await supabase
       .from("platform_settings")
       .update(updateData)
       .not("id", "is", null)
@@ -121,7 +124,12 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error("[Admin Settings PUT] Update error:", error);
+      console.error(
+        "[Admin Settings PUT] Update error:",
+        error.message,
+        error.code,
+        error.details,
+      );
       return NextResponse.json(
         { error: "Failed to update settings" },
         { status: 500 },
