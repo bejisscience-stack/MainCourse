@@ -372,8 +372,32 @@ function CountTooltip({ active, payload, label }: ChartTooltipProps) {
   );
 }
 
-// ─── Date Range Picker ──────────────────────────────────────────────
-const DATE_RANGES: { key: DateRangeKey; label: string }[] = [
+// ─── Chart Wrapper (fixes ResponsiveContainer 0-width bug in grid) ──
+function ChartBox({
+  title,
+  children,
+  empty,
+  emptyText = "No data available",
+}: {
+  title: string;
+  children: React.ReactNode;
+  empty: boolean;
+  emptyText?: string;
+}) {
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <h3 className="text-lg font-semibold text-navy-900 mb-4">{title}</h3>
+      {empty ? (
+        <p className="text-gray-500 text-center py-16">{emptyText}</p>
+      ) : (
+        <div style={{ width: "100%", height: 300 }}>{children}</div>
+      )}
+    </div>
+  );
+}
+
+// ─── Date Range Picker with Custom ──────────────────────────────────
+const PRESET_RANGES: { key: DateRangeKey; label: string }[] = [
   { key: "7d", label: "7D" },
   { key: "30d", label: "30D" },
   { key: "90d", label: "90D" },
@@ -384,25 +408,95 @@ const DATE_RANGES: { key: DateRangeKey; label: string }[] = [
 function DateRangePicker({
   value,
   onChange,
+  customFrom,
+  customTo,
+  onCustomChange,
 }: {
   value: DateRangeKey;
   onChange: (k: DateRangeKey) => void;
+  customFrom: string;
+  customTo: string;
+  onCustomChange: (from: string, to: string) => void;
 }) {
+  const [showCustom, setShowCustom] = useState(value === "custom");
+  const [fromInput, setFromInput] = useState(customFrom);
+  const [toInput, setToInput] = useState(customTo);
+
+  const handlePreset = (key: DateRangeKey) => {
+    setShowCustom(false);
+    onChange(key);
+  };
+
+  const handleCustomToggle = () => {
+    setShowCustom(true);
+    // Initialize inputs with reasonable defaults if empty
+    if (!fromInput) {
+      const d = new Date();
+      d.setDate(d.getDate() - 30);
+      setFromInput(d.toISOString().split("T")[0]);
+    }
+    if (!toInput) {
+      setToInput(new Date().toISOString().split("T")[0]);
+    }
+  };
+
+  const handleApplyCustom = () => {
+    if (fromInput && toInput && fromInput <= toInput) {
+      onCustomChange(fromInput, toInput);
+    }
+  };
+
   return (
-    <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-      {DATE_RANGES.map(({ key, label }) => (
+    <div className="flex flex-col gap-3">
+      <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+        {PRESET_RANGES.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => handlePreset(key)}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              value === key && !showCustom
+                ? "bg-white text-navy-900 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
         <button
-          key={key}
-          onClick={() => onChange(key)}
+          onClick={handleCustomToggle}
           className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-            value === key
+            showCustom
               ? "bg-white text-navy-900 shadow-sm"
               : "text-gray-600 hover:text-gray-900"
           }`}
         >
-          {label}
+          Custom
         </button>
-      ))}
+      </div>
+      {showCustom && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            type="date"
+            value={fromInput}
+            onChange={(e) => setFromInput(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <span className="text-gray-500 text-sm">to</span>
+          <input
+            type="date"
+            value={toInput}
+            onChange={(e) => setToInput(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={handleApplyCustom}
+            disabled={!fromInput || !toInput || fromInput > toInput}
+            className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Apply
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -422,6 +516,9 @@ function AdminAnalytics() {
     error,
     dateRangeKey,
     setDateRangeKey,
+    customFrom,
+    customTo,
+    setCustomDateRange,
   } = useAdminAnalytics();
 
   // ── Error State ──
@@ -473,7 +570,7 @@ function AdminAnalytics() {
     );
   }
 
-  // ── Derived data (existing) ──
+  // ── Derived data ──
   const totalRevenue =
     (overview?.totalRevenue ?? 0) + (overview?.totalBundleRevenue ?? 0);
   const totalEnrollments =
@@ -526,7 +623,6 @@ function AdminAnalytics() {
     (a, b) => b.projectCount - a.projectCount,
   );
 
-  // ── Derived data (new) ──
   const roleData = (users?.roleDistribution ?? []).map((r, i) => ({
     name: r.role.charAt(0).toUpperCase() + r.role.slice(1),
     value: r.count,
@@ -536,390 +632,73 @@ function AdminAnalytics() {
   return (
     <div className="space-y-8">
       {/* Header + Date Range Picker */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-navy-900">Analytics</h2>
           <p className="text-gray-600 mt-1">Platform analytics and insights</p>
         </div>
-        <DateRangePicker value={dateRangeKey} onChange={setDateRangeKey} />
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════════
-          EXISTING: Summary Cards
-          ══════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard
-          label="Waiting List"
-          value={overview?.waitingListCount ?? 0}
-          icon={Icons.users("text-blue-600")}
-          iconBg="bg-blue-100"
-          iconColor="text-blue-600"
-        />
-        <StatCard
-          label="Total Revenue"
-          value={formatCurrency(totalRevenue)}
-          icon={Icons.currency("text-green-600")}
-          iconBg="bg-green-100"
-          iconColor="text-green-600"
-        />
-        <StatCard
-          label="Total Enrollments"
-          value={totalEnrollments}
-          icon={Icons.enrollment("text-purple-600")}
-          iconBg="bg-purple-100"
-          iconColor="text-purple-600"
-        />
-        <StatCard
-          label="Active Referrals"
-          value={overview?.totalReferrals ?? 0}
-          icon={Icons.referral("text-orange-600")}
-          iconBg="bg-orange-100"
-          iconColor="text-orange-600"
-        />
-        <StatCard
-          label="Total Projects"
-          value={overview?.totalProjects ?? 0}
-          icon={Icons.project("text-indigo-600")}
-          iconBg="bg-indigo-100"
-          iconColor="text-indigo-600"
-        />
-        <StatCard
-          label="Total Project Budget"
-          value={formatCurrency(overview?.totalProjectBudget ?? 0)}
-          icon={Icons.budget("text-emerald-600")}
-          iconBg="bg-emerald-100"
-          iconColor="text-emerald-600"
+        <DateRangePicker
+          value={dateRangeKey}
+          onChange={setDateRangeKey}
+          customFrom={customFrom}
+          customTo={customTo}
+          onCustomChange={setCustomDateRange}
         />
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════
-          EXISTING: Charts
+          ALL CARDS — Overview + Users + Engagement + Financial + Operations
           ══════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-navy-900 mb-4">
-            Revenue by Course
-          </h3>
-          {revenueChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={revenueChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 12 }}
-                  stroke="#6b7280"
-                />
-                <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
-                <Tooltip content={<CurrencyTooltip />} />
-                <Bar dataKey="revenue" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-500 text-center py-16">
-              No revenue data available
-            </p>
-          )}
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-navy-900 mb-4">
-            Referral Activations by Course
-          </h3>
-          {referralChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={referralChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 12 }}
-                  stroke="#6b7280"
-                />
-                <YAxis
-                  tick={{ fontSize: 12 }}
-                  stroke="#6b7280"
-                  allowDecimals={false}
-                />
-                <Tooltip content={<CountTooltip />} />
-                <Bar dataKey="count" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-500 text-center py-16">
-              No referral data available
-            </p>
-          )}
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-navy-900 mb-4">
-            Projects by Course
-          </h3>
-          {projectChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={projectChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 12 }}
-                  stroke="#6b7280"
-                />
-                <YAxis
-                  tick={{ fontSize: 12 }}
-                  stroke="#6b7280"
-                  allowDecimals={false}
-                />
-                <Tooltip content={<CountTooltip />} />
-                <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-500 text-center py-16">
-              No project data available
-            </p>
-          )}
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-navy-900 mb-4">
-            Platform Distribution
-          </h3>
-          {platformData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={platformData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  dataKey="value"
-                  nameKey="name"
-                  paddingAngle={2}
-                >
-                  {platformData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value, name) => [`${value ?? 0}`, name ?? ""]}
-                  contentStyle={{
-                    borderRadius: "0.5rem",
-                    border: "1px solid #e5e7eb",
-                  }}
-                />
-                <Legend
-                  formatter={(value: string) => (
-                    <span className="text-sm text-gray-700">{value}</span>
-                  )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-500 text-center py-16">
-              No platform data available
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* ── Existing Detail Tables ── */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-navy-900">
-            Course Revenue
-          </h3>
-        </div>
-        {courseRevenueRows.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 text-left">
-                  <th className="px-6 py-3 font-semibold text-gray-700">
-                    Course
-                  </th>
-                  <th className="px-6 py-3 font-semibold text-gray-700">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                    Price
-                  </th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                    Enrollments
-                  </th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                    Revenue
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {courseRevenueRows.map((c) => (
-                  <tr
-                    key={c.courseId}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-6 py-3 font-medium text-gray-900">
-                      {c.courseTitle}
-                    </td>
-                    <td className="px-6 py-3 text-gray-600">{c.courseType}</td>
-                    <td className="px-6 py-3 text-right text-gray-600">
-                      {formatCurrency(c.price)}
-                    </td>
-                    <td className="px-6 py-3 text-right text-gray-600">
-                      {c.enrollmentCount}
-                    </td>
-                    <td className="px-6 py-3 text-right font-medium text-gray-900">
-                      {formatCurrency(c.totalRevenue)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-gray-50 font-semibold">
-                  <td className="px-6 py-3 text-gray-900">Total</td>
-                  <td className="px-6 py-3" />
-                  <td className="px-6 py-3" />
-                  <td className="px-6 py-3 text-right text-gray-900">
-                    {totalCourseEnrollments}
-                  </td>
-                  <td className="px-6 py-3 text-right text-gray-900">
-                    {formatCurrency(totalCourseRevenue)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        ) : (
-          <p className="text-gray-500 text-center py-8">
-            No revenue data available
-          </p>
-        )}
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-navy-900">Top Referrers</h3>
-        </div>
-        {topReferrers.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 text-left">
-                  <th className="px-6 py-3 font-semibold text-gray-700">
-                    User
-                  </th>
-                  <th className="px-6 py-3 font-semibold text-gray-700">
-                    Referral Code
-                  </th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                    Activations
-                  </th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                    Commission Earned
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {topReferrers.map((r: TopReferrer) => (
-                  <tr
-                    key={r.userId}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-6 py-3">
-                      <p className="font-medium text-gray-900">
-                        {r.username || r.email.split("@")[0]}
-                      </p>
-                      <p className="text-xs text-gray-500">{r.email}</p>
-                    </td>
-                    <td className="px-6 py-3">
-                      <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-700">
-                        {r.referralCode}
-                      </code>
-                    </td>
-                    <td className="px-6 py-3 text-right text-gray-600">
-                      {r.activationCount}
-                    </td>
-                    <td className="px-6 py-3 text-right font-medium text-gray-900">
-                      {formatCurrency(r.totalCommission)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-gray-500 text-center py-8">
-            No referral data available
-          </p>
-        )}
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-navy-900">
-            Projects by Course
-          </h3>
-        </div>
-        {projectRows.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 text-left">
-                  <th className="px-6 py-3 font-semibold text-gray-700">
-                    Course
-                  </th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                    Projects
-                  </th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                    Total Budget
-                  </th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                    Avg Budget
-                  </th>
-                  <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                    Submissions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {projectRows.map((p: ProjectByCourse) => (
-                  <tr
-                    key={p.courseId}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-6 py-3 font-medium text-gray-900">
-                      {p.courseTitle}
-                    </td>
-                    <td className="px-6 py-3 text-right text-gray-600">
-                      {p.projectCount}
-                    </td>
-                    <td className="px-6 py-3 text-right text-gray-600">
-                      {formatCurrency(p.totalBudget)}
-                    </td>
-                    <td className="px-6 py-3 text-right text-gray-600">
-                      {formatCurrency(p.averageBudget)}
-                    </td>
-                    <td className="px-6 py-3 text-right text-gray-600">
-                      {p.submissionCount}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-gray-500 text-center py-8">
-            No project data available
-          </p>
-        )}
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════════
-          NEW SECTION 1: Users
-          ══════════════════════════════════════════════════════════════════ */}
-      <Section title="Users">
+      <Section title="Key Metrics">
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <StatCard
+              label="Total Revenue"
+              value={formatCurrency(totalRevenue)}
+              icon={Icons.currency("text-green-600")}
+              iconBg="bg-green-100"
+              iconColor="text-green-600"
+            />
+            <StatCard
+              label="Total Enrollments"
+              value={totalEnrollments}
+              icon={Icons.enrollment("text-purple-600")}
+              iconBg="bg-purple-100"
+              iconColor="text-purple-600"
+            />
+            <StatCard
+              label="Active Referrals"
+              value={overview?.totalReferrals ?? 0}
+              icon={Icons.referral("text-orange-600")}
+              iconBg="bg-orange-100"
+              iconColor="text-orange-600"
+            />
+            <StatCard
+              label="Total Projects"
+              value={overview?.totalProjects ?? 0}
+              icon={Icons.project("text-indigo-600")}
+              iconBg="bg-indigo-100"
+              iconColor="text-indigo-600"
+            />
+            <StatCard
+              label="Project Budget"
+              value={formatCurrency(overview?.totalProjectBudget ?? 0)}
+              icon={Icons.budget("text-emerald-600")}
+              iconBg="bg-emerald-100"
+              iconColor="text-emerald-600"
+            />
+            <StatCard
+              label="Waiting List"
+              value={overview?.waitingListCount ?? 0}
+              icon={Icons.users("text-blue-600")}
+              iconBg="bg-blue-100"
+              iconColor="text-blue-600"
+            />
+          </div>
+
+          {/* User Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               label="Total Users"
               value={users?.totalUsers ?? "—"}
@@ -928,21 +707,21 @@ function AdminAnalytics() {
               iconColor="text-blue-600"
             />
             <StatCard
-              label="Daily Active Users"
+              label="Daily Active"
               value={users?.dau ?? "—"}
               icon={Icons.chart("text-cyan-600")}
               iconBg="bg-cyan-100"
               iconColor="text-cyan-600"
             />
             <StatCard
-              label="Weekly Active Users"
+              label="Weekly Active"
               value={users?.wau ?? "—"}
               icon={Icons.chart("text-teal-600")}
               iconBg="bg-teal-100"
               iconColor="text-teal-600"
             />
             <StatCard
-              label="Monthly Active Users"
+              label="Monthly Active"
               value={users?.mau ?? "—"}
               icon={Icons.chart("text-indigo-600")}
               iconBg="bg-indigo-100"
@@ -951,9 +730,10 @@ function AdminAnalytics() {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Growth + Engagement + Financial Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
-              label="Signup Growth Rate"
+              label="Signup Growth"
               value={
                 users
                   ? `${users.signupGrowthRate > 0 ? "+" : ""}${users.signupGrowthRate}%`
@@ -983,119 +763,6 @@ function AdminAnalytics() {
               iconBg="bg-purple-100"
               iconColor="text-purple-600"
             />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Signup Trend */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-navy-900 mb-4">
-                Signup Trend
-              </h3>
-              {(users?.newSignups?.length ?? 0) > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={users!.newSignups}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11 }}
-                      stroke="#6b7280"
-                    />
-                    <YAxis
-                      tick={{ fontSize: 12 }}
-                      stroke="#6b7280"
-                      allowDecimals={false}
-                    />
-                    <Tooltip content={<CountTooltip />} />
-                    <Line
-                      type="monotone"
-                      dataKey="count"
-                      stroke="#3b82f6"
-                      strokeWidth={2}
-                      dot={false}
-                      name="Signups"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-gray-500 text-center py-16">
-                  No signup data for this period
-                </p>
-              )}
-            </div>
-
-            {/* Role Distribution */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-navy-900 mb-4">
-                Role Distribution
-              </h3>
-              {roleData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={roleData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      dataKey="value"
-                      nameKey="name"
-                      paddingAngle={2}
-                    >
-                      {roleData.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value, name) => [`${value ?? 0}`, name ?? ""]}
-                      contentStyle={{
-                        borderRadius: "0.5rem",
-                        border: "1px solid #e5e7eb",
-                      }}
-                    />
-                    <Legend
-                      formatter={(value: string) => (
-                        <span className="text-sm text-gray-700">{value}</span>
-                      )}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-gray-500 text-center py-16">
-                  No user data available
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </Section>
-
-      {/* ══════════════════════════════════════════════════════════════════
-          NEW SECTION 2: Engagement
-          ══════════════════════════════════════════════════════════════════ */}
-      <Section title="Engagement">
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard
-              label="Pending Requests"
-              value={engagement?.enrollmentFunnel.pending ?? "—"}
-              icon={Icons.clock("text-yellow-600")}
-              iconBg="bg-yellow-100"
-              iconColor="text-yellow-600"
-            />
-            <StatCard
-              label="Approved"
-              value={engagement?.enrollmentFunnel.approved ?? "—"}
-              icon={Icons.enrollment("text-green-600")}
-              iconBg="bg-green-100"
-              iconColor="text-green-600"
-            />
-            <StatCard
-              label="Rejected"
-              value={engagement?.enrollmentFunnel.rejected ?? "—"}
-              icon={Icons.alert("text-red-600")}
-              iconBg="bg-red-100"
-              iconColor="text-red-600"
-            />
             <StatCard
               label="Conversion Rate"
               value={engagement ? `${engagement.conversionRate}%` : "—"}
@@ -1104,115 +771,6 @@ function AdminAnalytics() {
               iconColor="text-blue-600"
               subtitle={`Avg ${engagement?.avgEnrollmentsPerUser?.toFixed(1) ?? "—"} enrollments/user`}
             />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Messages Per Day */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-navy-900 mb-4">
-                Messages Per Day
-              </h3>
-              {(engagement?.messagesPerDay?.length ?? 0) > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={engagement!.messagesPerDay}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11 }}
-                      stroke="#6b7280"
-                    />
-                    <YAxis
-                      tick={{ fontSize: 12 }}
-                      stroke="#6b7280"
-                      allowDecimals={false}
-                    />
-                    <Tooltip content={<CountTooltip />} />
-                    <Line
-                      type="monotone"
-                      dataKey="count"
-                      stroke="#6366f1"
-                      strokeWidth={2}
-                      dot={false}
-                      name="Messages"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-gray-500 text-center py-16">
-                  No message data for this period
-                </p>
-              )}
-            </div>
-
-            {/* Most Active Courses */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-navy-900 mb-4">
-                Most Active Courses
-              </h3>
-              {(engagement?.mostActiveCourses?.length ?? 0) > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart
-                    data={engagement!.mostActiveCourses.map((c) => ({
-                      name: truncate(c.title, 15),
-                      messages: c.messageCount,
-                    }))}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fontSize: 11 }}
-                      stroke="#6b7280"
-                    />
-                    <YAxis
-                      tick={{ fontSize: 12 }}
-                      stroke="#6b7280"
-                      allowDecimals={false}
-                    />
-                    <Tooltip content={<CountTooltip />} />
-                    <Bar
-                      dataKey="messages"
-                      fill="#8b5cf6"
-                      radius={[4, 4, 0, 0]}
-                      name="Messages"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-gray-500 text-center py-16">
-                  No course activity data
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Courses with Zero Enrollments */}
-          {(engagement?.coursesWithZeroEnrollments?.length ?? 0) > 0 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h4 className="text-sm font-semibold text-yellow-800 mb-2">
-                Courses with Zero Enrollments (
-                {engagement!.coursesWithZeroEnrollments.length})
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {engagement!.coursesWithZeroEnrollments.map((c) => (
-                  <span
-                    key={c.courseId}
-                    className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded"
-                  >
-                    {c.title}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </Section>
-
-      {/* ══════════════════════════════════════════════════════════════════
-          NEW SECTION 3: Financials
-          ══════════════════════════════════════════════════════════════════ */}
-      <Section title="Financials">
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard
               label="Avg Order Value"
               value={
@@ -1222,6 +780,10 @@ function AdminAnalytics() {
               iconBg="bg-green-100"
               iconColor="text-green-600"
             />
+          </div>
+
+          {/* Financial + Enrollment Status Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               label="Outstanding Balances"
               value={
@@ -1239,7 +801,7 @@ function AdminAnalytics() {
               iconColor="text-red-600"
             />
             <StatCard
-              label="Total Earned (All Time)"
+              label="Total Earned"
               value={financial ? formatCurrency(financial.totalEarned) : "—"}
               icon={Icons.trending("text-emerald-600")}
               iconBg="bg-emerald-100"
@@ -1250,182 +812,18 @@ function AdminAnalytics() {
                   : undefined
               }
             />
+            <StatCard
+              label="Pending Requests"
+              value={engagement?.enrollmentFunnel.pending ?? "—"}
+              icon={Icons.clock("text-yellow-600")}
+              iconBg="bg-yellow-100"
+              iconColor="text-yellow-600"
+              subtitle={`${engagement?.enrollmentFunnel.approved ?? 0} approved, ${engagement?.enrollmentFunnel.rejected ?? 0} rejected`}
+            />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Revenue Over Time */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-navy-900 mb-4">
-                Revenue Over Time
-              </h3>
-              {(financial?.revenueOverTime?.length ?? 0) > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={financial!.revenueOverTime}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11 }}
-                      stroke="#6b7280"
-                    />
-                    <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
-                    <Tooltip content={<CurrencyTooltip />} />
-                    <Line
-                      type="monotone"
-                      dataKey="amount"
-                      stroke="#10b981"
-                      strokeWidth={2}
-                      dot={false}
-                      name="Revenue"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-gray-500 text-center py-16">
-                  No revenue data for this period
-                </p>
-              )}
-            </div>
-
-            {/* Revenue by Lecturer */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-navy-900 mb-4">
-                Revenue by Lecturer
-              </h3>
-              {(financial?.revenueByLecturer?.length ?? 0) > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart
-                    data={financial!.revenueByLecturer.map((l) => ({
-                      name: truncate(l.name, 15),
-                      revenue: l.revenue,
-                    }))}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fontSize: 11 }}
-                      stroke="#6b7280"
-                    />
-                    <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
-                    <Tooltip content={<CurrencyTooltip />} />
-                    <Bar
-                      dataKey="revenue"
-                      fill="#f59e0b"
-                      radius={[4, 4, 0, 0]}
-                      name="Revenue"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-gray-500 text-center py-16">
-                  No lecturer revenue data
-                </p>
-              )}
-            </div>
-
-            {/* Balance Flow */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-navy-900 mb-4">
-                Balance Flow by Source
-              </h3>
-              {(financial?.balanceFlow?.length ?? 0) > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={financial!.balanceFlow}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11 }}
-                      stroke="#6b7280"
-                    />
-                    <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
-                    <Tooltip content={<CurrencyTooltip />} />
-                    <Area
-                      type="monotone"
-                      dataKey="referral_commission"
-                      stackId="1"
-                      fill="#3b82f6"
-                      stroke="#3b82f6"
-                      fillOpacity={0.6}
-                      name="Referral"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="course_purchase"
-                      stackId="1"
-                      fill="#10b981"
-                      stroke="#10b981"
-                      fillOpacity={0.6}
-                      name="Course Purchase"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="withdrawal"
-                      stackId="1"
-                      fill="#ef4444"
-                      stroke="#ef4444"
-                      fillOpacity={0.6}
-                      name="Withdrawal"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="admin_adjustment"
-                      stackId="1"
-                      fill="#f59e0b"
-                      stroke="#f59e0b"
-                      fillOpacity={0.6}
-                      name="Admin Adjust"
-                    />
-                    <Legend />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-gray-500 text-center py-16">
-                  No balance flow data for this period
-                </p>
-              )}
-            </div>
-
-            {/* Withdrawal Trend */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-navy-900 mb-4">
-                Withdrawal Trend
-              </h3>
-              {(financial?.withdrawalTrend?.length ?? 0) > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={financial!.withdrawalTrend}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11 }}
-                      stroke="#6b7280"
-                    />
-                    <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
-                    <Tooltip content={<CurrencyTooltip />} />
-                    <Line
-                      type="monotone"
-                      dataKey="amount"
-                      stroke="#ef4444"
-                      strokeWidth={2}
-                      dot={false}
-                      name="Amount"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-gray-500 text-center py-16">
-                  No withdrawal data for this period
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </Section>
-
-      {/* ══════════════════════════════════════════════════════════════════
-          NEW SECTION 4: Operations
-          ══════════════════════════════════════════════════════════════════ */}
-      <Section title="Operations">
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Operations Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {/* Pending Enrollments */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-3">
@@ -1518,10 +916,8 @@ function AdminAnalytics() {
                 </p>
               )}
             </div>
-          </div>
 
-          {/* Processing Time Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Processing Times */}
             <StatCard
               label="Avg Enrollment Processing"
               value={
@@ -1553,6 +949,634 @@ function AdminAnalytics() {
               }
             />
           </div>
+        </div>
+      </Section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          ALL CHARTS
+          ══════════════════════════════════════════════════════════════════ */}
+      <Section title="Charts">
+        <div className="space-y-6">
+          {/* Row 1: Trends */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartBox
+              title="Signup Trend"
+              empty={(users?.newSignups?.length ?? 0) === 0}
+              emptyText="No signup data for this period"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={users?.newSignups}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11 }}
+                    stroke="#6b7280"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    stroke="#6b7280"
+                    allowDecimals={false}
+                  />
+                  <Tooltip content={<CountTooltip />} />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    dot={false}
+                    name="Signups"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartBox>
+
+            <ChartBox
+              title="Revenue Over Time"
+              empty={(financial?.revenueOverTime?.length ?? 0) === 0}
+              emptyText="No revenue data for this period"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={financial?.revenueOverTime}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11 }}
+                    stroke="#6b7280"
+                  />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
+                  <Tooltip content={<CurrencyTooltip />} />
+                  <Line
+                    type="monotone"
+                    dataKey="amount"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    dot={false}
+                    name="Revenue"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartBox>
+          </div>
+
+          {/* Row 2: Messages + Active Courses */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartBox
+              title="Messages Per Day"
+              empty={(engagement?.messagesPerDay?.length ?? 0) === 0}
+              emptyText="No message data for this period"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={engagement?.messagesPerDay}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11 }}
+                    stroke="#6b7280"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    stroke="#6b7280"
+                    allowDecimals={false}
+                  />
+                  <Tooltip content={<CountTooltip />} />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    stroke="#6366f1"
+                    strokeWidth={2}
+                    dot={false}
+                    name="Messages"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartBox>
+
+            <ChartBox
+              title="Most Active Courses"
+              empty={(engagement?.mostActiveCourses?.length ?? 0) === 0}
+              emptyText="No course activity data"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={(engagement?.mostActiveCourses ?? []).map((c) => ({
+                    name: truncate(c.title, 15),
+                    messages: c.messageCount,
+                  }))}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 11 }}
+                    stroke="#6b7280"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    stroke="#6b7280"
+                    allowDecimals={false}
+                  />
+                  <Tooltip content={<CountTooltip />} />
+                  <Bar
+                    dataKey="messages"
+                    fill="#8b5cf6"
+                    radius={[4, 4, 0, 0]}
+                    name="Messages"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartBox>
+          </div>
+
+          {/* Row 3: Revenue by Course + Revenue by Lecturer */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartBox
+              title="Revenue by Course"
+              empty={revenueChartData.length === 0}
+              emptyText="No revenue data available"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 12 }}
+                    stroke="#6b7280"
+                  />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
+                  <Tooltip content={<CurrencyTooltip />} />
+                  <Bar dataKey="revenue" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartBox>
+
+            <ChartBox
+              title="Revenue by Lecturer"
+              empty={(financial?.revenueByLecturer?.length ?? 0) === 0}
+              emptyText="No lecturer revenue data"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={(financial?.revenueByLecturer ?? []).map((l) => ({
+                    name: truncate(l.name, 15),
+                    revenue: l.revenue,
+                  }))}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 11 }}
+                    stroke="#6b7280"
+                  />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
+                  <Tooltip content={<CurrencyTooltip />} />
+                  <Bar
+                    dataKey="revenue"
+                    fill="#f59e0b"
+                    radius={[4, 4, 0, 0]}
+                    name="Revenue"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartBox>
+          </div>
+
+          {/* Row 4: Balance Flow + Withdrawal Trend */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartBox
+              title="Balance Flow by Source"
+              empty={(financial?.balanceFlow?.length ?? 0) === 0}
+              emptyText="No balance flow data for this period"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={financial?.balanceFlow}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11 }}
+                    stroke="#6b7280"
+                  />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
+                  <Tooltip content={<CurrencyTooltip />} />
+                  <Area
+                    type="monotone"
+                    dataKey="referral_commission"
+                    stackId="1"
+                    fill="#3b82f6"
+                    stroke="#3b82f6"
+                    fillOpacity={0.6}
+                    name="Referral"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="course_purchase"
+                    stackId="1"
+                    fill="#10b981"
+                    stroke="#10b981"
+                    fillOpacity={0.6}
+                    name="Course Purchase"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="withdrawal"
+                    stackId="1"
+                    fill="#ef4444"
+                    stroke="#ef4444"
+                    fillOpacity={0.6}
+                    name="Withdrawal"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="admin_adjustment"
+                    stackId="1"
+                    fill="#f59e0b"
+                    stroke="#f59e0b"
+                    fillOpacity={0.6}
+                    name="Admin Adjust"
+                  />
+                  <Legend />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartBox>
+
+            <ChartBox
+              title="Withdrawal Trend"
+              empty={(financial?.withdrawalTrend?.length ?? 0) === 0}
+              emptyText="No withdrawal data for this period"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={financial?.withdrawalTrend}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11 }}
+                    stroke="#6b7280"
+                  />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
+                  <Tooltip content={<CurrencyTooltip />} />
+                  <Line
+                    type="monotone"
+                    dataKey="amount"
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                    dot={false}
+                    name="Amount"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartBox>
+          </div>
+
+          {/* Row 5: Referrals + Projects + Distributions */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartBox
+              title="Referral Activations by Course"
+              empty={referralChartData.length === 0}
+              emptyText="No referral data available"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={referralChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 12 }}
+                    stroke="#6b7280"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    stroke="#6b7280"
+                    allowDecimals={false}
+                  />
+                  <Tooltip content={<CountTooltip />} />
+                  <Bar dataKey="count" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartBox>
+
+            <ChartBox
+              title="Projects by Course"
+              empty={projectChartData.length === 0}
+              emptyText="No project data available"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={projectChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 12 }}
+                    stroke="#6b7280"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    stroke="#6b7280"
+                    allowDecimals={false}
+                  />
+                  <Tooltip content={<CountTooltip />} />
+                  <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartBox>
+          </div>
+
+          {/* Row 6: Pie Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartBox
+              title="Role Distribution"
+              empty={roleData.length === 0}
+              emptyText="No user data available"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={roleData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    dataKey="value"
+                    nameKey="name"
+                    paddingAngle={2}
+                  >
+                    {roleData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value, name) => [`${value ?? 0}`, name ?? ""]}
+                    contentStyle={{
+                      borderRadius: "0.5rem",
+                      border: "1px solid #e5e7eb",
+                    }}
+                  />
+                  <Legend
+                    formatter={(value: string) => (
+                      <span className="text-sm text-gray-700">{value}</span>
+                    )}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartBox>
+
+            <ChartBox
+              title="Platform Distribution"
+              empty={platformData.length === 0}
+              emptyText="No platform data available"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={platformData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    dataKey="value"
+                    nameKey="name"
+                    paddingAngle={2}
+                  >
+                    {platformData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value, name) => [`${value ?? 0}`, name ?? ""]}
+                    contentStyle={{
+                      borderRadius: "0.5rem",
+                      border: "1px solid #e5e7eb",
+                    }}
+                  />
+                  <Legend
+                    formatter={(value: string) => (
+                      <span className="text-sm text-gray-700">{value}</span>
+                    )}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartBox>
+          </div>
+        </div>
+      </Section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          DETAIL TABLES
+          ══════════════════════════════════════════════════════════════════ */}
+      <Section title="Detail Tables">
+        <div className="space-y-6">
+          {/* Course Revenue Table */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-navy-900">
+                Course Revenue
+              </h3>
+            </div>
+            {courseRevenueRows.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 text-left">
+                      <th className="px-6 py-3 font-semibold text-gray-700">
+                        Course
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-gray-700">
+                        Type
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                        Price
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                        Enrollments
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                        Revenue
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {courseRevenueRows.map((c) => (
+                      <tr
+                        key={c.courseId}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-6 py-3 font-medium text-gray-900">
+                          {c.courseTitle}
+                        </td>
+                        <td className="px-6 py-3 text-gray-600">
+                          {c.courseType}
+                        </td>
+                        <td className="px-6 py-3 text-right text-gray-600">
+                          {formatCurrency(c.price)}
+                        </td>
+                        <td className="px-6 py-3 text-right text-gray-600">
+                          {c.enrollmentCount}
+                        </td>
+                        <td className="px-6 py-3 text-right font-medium text-gray-900">
+                          {formatCurrency(c.totalRevenue)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-gray-50 font-semibold">
+                      <td className="px-6 py-3 text-gray-900">Total</td>
+                      <td className="px-6 py-3" />
+                      <td className="px-6 py-3" />
+                      <td className="px-6 py-3 text-right text-gray-900">
+                        {totalCourseEnrollments}
+                      </td>
+                      <td className="px-6 py-3 text-right text-gray-900">
+                        {formatCurrency(totalCourseRevenue)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-8">
+                No revenue data available
+              </p>
+            )}
+          </div>
+
+          {/* Top Referrers Table */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-navy-900">
+                Top Referrers
+              </h3>
+            </div>
+            {topReferrers.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 text-left">
+                      <th className="px-6 py-3 font-semibold text-gray-700">
+                        User
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-gray-700">
+                        Referral Code
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                        Activations
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                        Commission Earned
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {topReferrers.map((r: TopReferrer) => (
+                      <tr
+                        key={r.userId}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-6 py-3">
+                          <p className="font-medium text-gray-900">
+                            {r.username || r.email.split("@")[0]}
+                          </p>
+                          <p className="text-xs text-gray-500">{r.email}</p>
+                        </td>
+                        <td className="px-6 py-3">
+                          <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-700">
+                            {r.referralCode}
+                          </code>
+                        </td>
+                        <td className="px-6 py-3 text-right text-gray-600">
+                          {r.activationCount}
+                        </td>
+                        <td className="px-6 py-3 text-right font-medium text-gray-900">
+                          {formatCurrency(r.totalCommission)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-8">
+                No referral data available
+              </p>
+            )}
+          </div>
+
+          {/* Projects by Course Table */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-navy-900">
+                Projects by Course
+              </h3>
+            </div>
+            {projectRows.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 text-left">
+                      <th className="px-6 py-3 font-semibold text-gray-700">
+                        Course
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                        Projects
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                        Total Budget
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                        Avg Budget
+                      </th>
+                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                        Submissions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {projectRows.map((p: ProjectByCourse) => (
+                      <tr
+                        key={p.courseId}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-6 py-3 font-medium text-gray-900">
+                          {p.courseTitle}
+                        </td>
+                        <td className="px-6 py-3 text-right text-gray-600">
+                          {p.projectCount}
+                        </td>
+                        <td className="px-6 py-3 text-right text-gray-600">
+                          {formatCurrency(p.totalBudget)}
+                        </td>
+                        <td className="px-6 py-3 text-right text-gray-600">
+                          {formatCurrency(p.averageBudget)}
+                        </td>
+                        <td className="px-6 py-3 text-right text-gray-600">
+                          {p.submissionCount}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-8">
+                No project data available
+              </p>
+            )}
+          </div>
+
+          {/* Courses with Zero Enrollments */}
+          {(engagement?.coursesWithZeroEnrollments?.length ?? 0) > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-yellow-800 mb-2">
+                Courses with Zero Enrollments (
+                {engagement!.coursesWithZeroEnrollments.length})
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {engagement!.coursesWithZeroEnrollments.map((c) => (
+                  <span
+                    key={c.courseId}
+                    className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded"
+                  >
+                    {c.title}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </Section>
     </div>

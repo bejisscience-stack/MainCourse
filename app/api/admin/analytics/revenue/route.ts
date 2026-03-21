@@ -1,8 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyAdminRequest, isAuthError, internalError } from '@/lib/admin-auth';
-import type { RevenueData, CourseRevenue, BundleRevenue } from '@/types/analytics';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  verifyAdminRequest,
+  isAuthError,
+  internalError,
+} from "@/lib/admin-auth";
+import type {
+  RevenueData,
+  CourseRevenue,
+  BundleRevenue,
+} from "@/types/analytics";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,21 +19,36 @@ export async function GET(request: NextRequest) {
 
     const { serviceSupabase } = auth;
 
-    const [enrollmentsResult, bundleEnrollmentsResult, coursesResult] = await Promise.all([
-      serviceSupabase
-        .from('enrollment_requests')
-        .select('id, course_id, courses(id, title, course_type, price)')
-        .eq('status', 'approved'),
+    const { searchParams } = new URL(request.url);
+    const fromDate = searchParams.get("from");
+    const toDate = searchParams.get("to");
 
-      serviceSupabase
-        .from('bundle_enrollment_requests')
-        .select('id, bundle_id, course_bundles(id, title, price)')
-        .eq('status', 'approved'),
+    let enrollmentQuery = serviceSupabase
+      .from("enrollment_requests")
+      .select("id, course_id, courses(id, title, course_type, price)")
+      .eq("status", "approved");
 
-      serviceSupabase
-        .from('courses')
-        .select('id, title, course_type, price'),
-    ]);
+    let bundleQuery = serviceSupabase
+      .from("bundle_enrollment_requests")
+      .select("id, bundle_id, course_bundles(id, title, price)")
+      .eq("status", "approved");
+
+    if (fromDate) {
+      enrollmentQuery = enrollmentQuery.gte("created_at", fromDate);
+      bundleQuery = bundleQuery.gte("created_at", fromDate);
+    }
+    if (toDate) {
+      const toEnd = toDate + "T23:59:59Z";
+      enrollmentQuery = enrollmentQuery.lte("created_at", toEnd);
+      bundleQuery = bundleQuery.lte("created_at", toEnd);
+    }
+
+    const [enrollmentsResult, bundleEnrollmentsResult, coursesResult] =
+      await Promise.all([
+        enrollmentQuery,
+        bundleQuery,
+        serviceSupabase.from("courses").select("id, title, course_type, price"),
+      ]);
 
     const enrollments = enrollmentsResult.data || [];
     const bundleEnrollments = bundleEnrollmentsResult.data || [];
@@ -68,7 +91,7 @@ export async function GET(request: NextRequest) {
       } else {
         bundleRevenueMap.set(bundleId, {
           bundleId,
-          bundleTitle: bundle?.title || 'Unknown Bundle',
+          bundleTitle: bundle?.title || "Unknown Bundle",
           price,
           enrollmentCount: 1,
           totalRevenue: price,
@@ -76,28 +99,32 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const courses = Array.from(courseRevenueMap.values())
-      .sort((a, b) => b.totalRevenue - a.totalRevenue);
+    const courses = Array.from(courseRevenueMap.values()).sort(
+      (a, b) => b.totalRevenue - a.totalRevenue,
+    );
 
     const totalRevenue = courses.reduce((sum, c) => sum + c.totalRevenue, 0);
-    const totalBundleRevenue = Array.from(bundleRevenueMap.values())
-      .reduce((sum, b) => sum + b.totalRevenue, 0);
+    const totalBundleRevenue = Array.from(bundleRevenueMap.values()).reduce(
+      (sum, b) => sum + b.totalRevenue,
+      0,
+    );
 
     const data: RevenueData = {
       courses,
       totalRevenue,
       totalBundleRevenue,
-      bundleRevenue: Array.from(bundleRevenueMap.values())
-        .sort((a, b) => b.totalRevenue - a.totalRevenue),
+      bundleRevenue: Array.from(bundleRevenueMap.values()).sort(
+        (a, b) => b.totalRevenue - a.totalRevenue,
+      ),
     };
 
     return NextResponse.json(data, {
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
-        'Pragma': 'no-cache',
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        Pragma: "no-cache",
       },
     });
   } catch (error) {
-    return internalError('Analytics Revenue API', error);
+    return internalError("Analytics Revenue API", error);
   }
 }

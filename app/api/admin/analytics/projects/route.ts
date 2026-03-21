@@ -1,8 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyAdminRequest, isAuthError, internalError } from '@/lib/admin-auth';
-import type { ProjectStats, ProjectByCourse, PlatformCount } from '@/types/analytics';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  verifyAdminRequest,
+  isAuthError,
+  internalError,
+} from "@/lib/admin-auth";
+import type {
+  ProjectStats,
+  ProjectByCourse,
+  PlatformCount,
+} from "@/types/analytics";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,19 +19,36 @@ export async function GET(request: NextRequest) {
 
     const { serviceSupabase } = auth;
 
-    const [projectsResult, submissionsResult, reviewsResult] = await Promise.all([
-      serviceSupabase
-        .from('projects')
-        .select('id, course_id, budget, platforms, courses(id, title)'),
+    const { searchParams } = new URL(request.url);
+    const fromDate = searchParams.get("from");
+    const toDate = searchParams.get("to");
 
-      serviceSupabase
-        .from('project_submissions')
-        .select('id, project_id'),
+    let projectQuery = serviceSupabase
+      .from("projects")
+      .select("id, course_id, budget, platforms, courses(id, title)");
 
-      serviceSupabase
-        .from('submission_reviews')
-        .select('id, submission_id'),
-    ]);
+    let submissionQuery = serviceSupabase
+      .from("project_submissions")
+      .select("id, project_id");
+
+    let reviewQuery = serviceSupabase
+      .from("submission_reviews")
+      .select("id, submission_id");
+
+    if (fromDate) {
+      projectQuery = projectQuery.gte("created_at", fromDate);
+      submissionQuery = submissionQuery.gte("created_at", fromDate);
+      reviewQuery = reviewQuery.gte("created_at", fromDate);
+    }
+    if (toDate) {
+      const toEnd = toDate + "T23:59:59Z";
+      projectQuery = projectQuery.lte("created_at", toEnd);
+      submissionQuery = submissionQuery.lte("created_at", toEnd);
+      reviewQuery = reviewQuery.lte("created_at", toEnd);
+    }
+
+    const [projectsResult, submissionsResult, reviewsResult] =
+      await Promise.all([projectQuery, submissionQuery, reviewQuery]);
 
     const projects = projectsResult.data || [];
     const submissions = submissionsResult.data || [];
@@ -51,7 +76,8 @@ export async function GET(request: NextRequest) {
       } else {
         byCourseMap.set(courseId, {
           courseId,
-          courseTitle: (project as Record<string, any>).courses?.title || 'Unknown Course',
+          courseTitle:
+            (project as Record<string, any>).courses?.title || "Unknown Course",
           projectCount: 1,
           totalBudget: budget,
           averageBudget: budget,
@@ -63,23 +89,28 @@ export async function GET(request: NextRequest) {
     // Aggregate platform distribution
     const platformMap = new Map<string, number>();
     for (const project of projects) {
-      const platforms: string[] = (project as Record<string, any>).platforms || [];
+      const platforms: string[] =
+        (project as Record<string, any>).platforms || [];
       for (const platform of platforms) {
         const current = platformMap.get(platform) || 0;
         platformMap.set(platform, current + 1);
       }
     }
 
-    const totalBudget = projects.reduce((sum: number, p: Record<string, any>) => {
-      return sum + Number(p.budget || 0);
-    }, 0);
+    const totalBudget = projects.reduce(
+      (sum: number, p: Record<string, any>) => {
+        return sum + Number(p.budget || 0);
+      },
+      0,
+    );
 
     const stats: ProjectStats = {
       totalProjects: projects.length,
       totalBudget,
       averageBudget: projects.length > 0 ? totalBudget / projects.length : 0,
-      projectsByCourse: Array.from(byCourseMap.values())
-        .sort((a, b) => b.projectCount - a.projectCount),
+      projectsByCourse: Array.from(byCourseMap.values()).sort(
+        (a, b) => b.projectCount - a.projectCount,
+      ),
       platformDistribution: Array.from(platformMap.entries())
         .map(([platform, count]): PlatformCount => ({ platform, count }))
         .sort((a, b) => b.count - a.count),
@@ -89,11 +120,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(stats, {
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
-        'Pragma': 'no-cache',
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        Pragma: "no-cache",
       },
     });
   } catch (error) {
-    return internalError('Analytics Projects API', error);
+    return internalError("Analytics Projects API", error);
   }
 }

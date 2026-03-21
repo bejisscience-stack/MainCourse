@@ -19,17 +19,34 @@ export async function GET(request: NextRequest) {
 
     const { serviceSupabase } = auth;
 
-    const [referralsResult, commissionsResult] = await Promise.all([
-      serviceSupabase
-        .from("referrals")
-        .select(
-          "id, referrer_id, referred_user_id, referral_code, course_id, created_at, courses(id, title)",
-        ),
+    const { searchParams } = new URL(request.url);
+    const fromDate = searchParams.get("from");
+    const toDate = searchParams.get("to");
 
-      serviceSupabase
-        .from("balance_transactions")
-        .select("user_id, amount")
-        .eq("source", "referral_commission"),
+    let referralQuery = serviceSupabase
+      .from("referrals")
+      .select(
+        "id, referrer_id, referred_user_id, referral_code, course_id, created_at, courses(id, title)",
+      );
+
+    let commissionQuery = serviceSupabase
+      .from("balance_transactions")
+      .select("user_id, amount")
+      .eq("source", "referral_commission");
+
+    if (fromDate) {
+      referralQuery = referralQuery.gte("created_at", fromDate);
+      commissionQuery = commissionQuery.gte("created_at", fromDate);
+    }
+    if (toDate) {
+      const toEnd = toDate + "T23:59:59Z";
+      referralQuery = referralQuery.lte("created_at", toEnd);
+      commissionQuery = commissionQuery.lte("created_at", toEnd);
+    }
+
+    const [referralsResult, commissionsResult] = await Promise.all([
+      referralQuery,
+      commissionQuery,
     ]);
 
     const referrals = referralsResult.data || [];

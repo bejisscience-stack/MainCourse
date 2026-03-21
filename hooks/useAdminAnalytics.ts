@@ -12,13 +12,25 @@ import type {
   OperationalAnalytics,
 } from "@/types/analytics";
 
-export type DateRangeKey = "7d" | "30d" | "90d" | "1y" | "all";
+export type DateRangeKey = "7d" | "30d" | "90d" | "1y" | "all" | "custom";
 
-function getDateRange(key: DateRangeKey): { from: string; to: string } {
+function getDateRange(
+  key: DateRangeKey,
+  customFrom?: string,
+  customTo?: string,
+): { from: string; to: string } {
   const now = new Date();
   const to = now.toISOString().split("T")[0];
+  if (key === "custom" && customFrom && customTo)
+    return { from: customFrom, to: customTo };
   if (key === "all") return { from: "2020-01-01", to };
-  const days = { "7d": 7, "30d": 30, "90d": 90, "1y": 365 }[key];
+  const daysMap: Record<string, number> = {
+    "7d": 7,
+    "30d": 30,
+    "90d": 90,
+    "1y": 365,
+  };
+  const days = daysMap[key] ?? 30;
   const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
@@ -55,36 +67,38 @@ async function fetchAnalytics<T>(endpoint: string): Promise<T> {
   return response.json();
 }
 
-interface OriginalAnalytics {
+interface AllAnalytics {
   overview: AnalyticsOverview;
   revenue: RevenueData;
   referrals: ReferralStats;
   projects: ProjectStats;
-}
-
-interface ExtendedAnalytics {
   users: UserAnalytics;
   engagement: EngagementAnalytics;
   financial: FinancialAnalytics;
   operational: OperationalAnalytics;
 }
 
-async function fetchOriginalAnalytics(): Promise<OriginalAnalytics> {
-  const [overview, revenue, referrals, projects] = await Promise.all([
-    fetchAnalytics<AnalyticsOverview>("/api/admin/analytics/overview"),
-    fetchAnalytics<RevenueData>("/api/admin/analytics/revenue"),
-    fetchAnalytics<ReferralStats>("/api/admin/analytics/referrals"),
-    fetchAnalytics<ProjectStats>("/api/admin/analytics/projects"),
-  ]);
-  return { overview, revenue, referrals, projects };
-}
-
-async function fetchExtendedAnalytics(dateRange: {
+async function fetchAllAnalytics(dateRange: {
   from: string;
   to: string;
-}): Promise<ExtendedAnalytics> {
+}): Promise<AllAnalytics> {
   const params = `from=${dateRange.from}&to=${dateRange.to}`;
-  const [users, engagement, financial, operational] = await Promise.all([
+  const [
+    overview,
+    revenue,
+    referrals,
+    projects,
+    users,
+    engagement,
+    financial,
+    operational,
+  ] = await Promise.all([
+    fetchAnalytics<AnalyticsOverview>(
+      `/api/admin/analytics/overview?${params}`,
+    ),
+    fetchAnalytics<RevenueData>(`/api/admin/analytics/revenue?${params}`),
+    fetchAnalytics<ReferralStats>(`/api/admin/analytics/referrals?${params}`),
+    fetchAnalytics<ProjectStats>(`/api/admin/analytics/projects?${params}`),
     fetchAnalytics<UserAnalytics>(`/api/admin/analytics/users?${params}`),
     fetchAnalytics<EngagementAnalytics>(
       `/api/admin/analytics/engagement?${params}`,
@@ -94,7 +108,16 @@ async function fetchExtendedAnalytics(dateRange: {
     ),
     fetchAnalytics<OperationalAnalytics>("/api/admin/analytics/operational"),
   ]);
-  return { users, engagement, financial, operational };
+  return {
+    overview,
+    revenue,
+    referrals,
+    projects,
+    users,
+    engagement,
+    financial,
+    operational,
+  };
 }
 
 export interface AdminAnalyticsResult {
@@ -110,30 +133,22 @@ export interface AdminAnalyticsResult {
   error: Error | undefined;
   dateRangeKey: DateRangeKey;
   setDateRangeKey: (key: DateRangeKey) => void;
+  customFrom: string;
+  customTo: string;
+  setCustomDateRange: (from: string, to: string) => void;
 }
 
 export function useAdminAnalytics(): AdminAnalyticsResult {
   const [dateRangeKey, setDateRangeKey] = useState<DateRangeKey>("30d");
-  const dateRange = getDateRange(dateRangeKey);
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
 
-  const {
-    data: originalData,
-    error: originalError,
-    isLoading: originalLoading,
-  } = useSWR("admin-analytics", fetchOriginalAnalytics, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 5000,
-    refreshInterval: 30000,
-  });
+  const dateRange = getDateRange(dateRangeKey, customFrom, customTo);
+  const swrKey = `admin-analytics-${dateRangeKey}-${dateRange.from}-${dateRange.to}`;
 
-  const {
-    data: extendedData,
-    error: extendedError,
-    isLoading: extendedLoading,
-  } = useSWR(
-    `admin-analytics-extended-${dateRangeKey}`,
-    () => fetchExtendedAnalytics(dateRange),
+  const { data, error, isLoading } = useSWR(
+    swrKey,
+    () => fetchAllAnalytics(dateRange),
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
@@ -146,18 +161,27 @@ export function useAdminAnalytics(): AdminAnalyticsResult {
     setDateRangeKey(key);
   }, []);
 
+  const handleSetCustomDateRange = useCallback((from: string, to: string) => {
+    setCustomFrom(from);
+    setCustomTo(to);
+    setDateRangeKey("custom");
+  }, []);
+
   return {
-    overview: originalData?.overview,
-    revenue: originalData?.revenue,
-    referrals: originalData?.referrals,
-    projects: originalData?.projects,
-    users: extendedData?.users,
-    engagement: extendedData?.engagement,
-    financial: extendedData?.financial,
-    operational: extendedData?.operational,
-    isLoading: originalLoading || extendedLoading,
-    error: originalError || extendedError,
+    overview: data?.overview,
+    revenue: data?.revenue,
+    referrals: data?.referrals,
+    projects: data?.projects,
+    users: data?.users,
+    engagement: data?.engagement,
+    financial: data?.financial,
+    operational: data?.operational,
+    isLoading,
+    error,
     dateRangeKey,
     setDateRangeKey: handleSetDateRange,
+    customFrom,
+    customTo,
+    setCustomDateRange: handleSetCustomDateRange,
   };
 }
