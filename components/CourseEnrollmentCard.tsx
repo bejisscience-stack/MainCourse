@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useMemo, useState, useCallback, memo, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import CourseCard, { type Course } from './CourseCard';
-import EnrollmentModal from './EnrollmentModal';
-import { useEnrollmentRequestStatus } from '@/hooks/useEnrollmentRequests';
-import { useRealtimeEnrollmentRequests } from '@/hooks/useRealtimeEnrollmentRequests';
-import { useI18n } from '@/contexts/I18nContext';
-import { useUser } from '@/hooks/useUser';
-import { toast } from 'sonner';
-import { clearReferral } from '@/lib/referral-storage';
+import { useMemo, useState, useCallback, memo, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import CourseCard, { type Course } from "./CourseCard";
+import EnrollmentModal from "./EnrollmentModal";
+import { useEnrollmentRequestStatus } from "@/hooks/useEnrollmentRequests";
+import { useRealtimeEnrollmentRequests } from "@/hooks/useRealtimeEnrollmentRequests";
+import { useI18n } from "@/contexts/I18nContext";
+import { useUser } from "@/hooks/useUser";
+import { toast } from "sonner";
+import { clearReferral } from "@/lib/referral-storage";
 
 interface CourseEnrollmentCardProps {
   course: Course;
@@ -50,46 +50,57 @@ function CourseEnrollmentCard({
   const { user } = useUser();
   const [showEnrollmentWizard, setShowEnrollmentWizard] = useState(false);
   const isOpeningRef = useRef(false);
-  const { request, hasPendingRequest, isLoading: isRequestLoading, mutate } = useEnrollmentRequestStatus(
-    userId,
-    course.id
-  );
+  const {
+    request,
+    hasPendingRequest,
+    isLoading: isRequestLoading,
+    mutate,
+  } = useEnrollmentRequestStatus(userId, course.id);
 
   // Handle button click to open enrollment wizard
-  const handleOpenEnrollmentWizard = useCallback((e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
-    // Prevent multiple rapid clicks
-    if (isOpeningRef.current || showEnrollmentWizard) {
-      return;
-    }
-    
-    // Check if user is authenticated before opening enrollment wizard
-    if (!user) {
-      const redirectUrl = `/courses?pendingEnroll=course:${course.id}`;
-      window.location.href = `/signup?redirect=${encodeURIComponent(redirectUrl)}`;
-      return;
-    }
-    
-    // Set flag to prevent multiple clicks
-    isOpeningRef.current = true;
-    
-    // Immediately open the enrollment wizard
-    setShowEnrollmentWizard(true);
-    
-    // Reset flag after a short delay
-    setTimeout(() => {
-      isOpeningRef.current = false;
-    }, 300);
-  }, [user, router, showEnrollmentWizard, course.id]);
+  const handleOpenEnrollmentWizard = useCallback(
+    (e?: React.MouseEvent) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      // Prevent multiple rapid clicks
+      if (isOpeningRef.current || showEnrollmentWizard) {
+        return;
+      }
+
+      // Check if user is authenticated before opening enrollment wizard
+      if (!user) {
+        const redirectUrl = `/courses?pendingEnroll=course:${course.id}`;
+        window.location.href = `/signup?redirect=${encodeURIComponent(redirectUrl)}`;
+        return;
+      }
+
+      // Set flag to prevent multiple clicks
+      isOpeningRef.current = true;
+
+      // Immediately open the enrollment wizard
+      setShowEnrollmentWizard(true);
+
+      // Reset flag after a short delay
+      setTimeout(() => {
+        isOpeningRef.current = false;
+      }, 300);
+    },
+    [user, router, showEnrollmentWizard, course.id],
+  );
 
   // Auto-open enrollment wizard if autoOpen is true and user is authenticated
   // This must be after hasPendingRequest is defined
   useEffect(() => {
-    if (autoOpen && user && !isEnrolled && !hasPendingRequest && !showEnrollmentWizard) {
+    if (
+      autoOpen &&
+      user &&
+      !isEnrolled &&
+      !hasPendingRequest &&
+      !showEnrollmentWizard
+    ) {
       // Use a small timeout to ensure state is ready
       const timer = setTimeout(() => {
         setShowEnrollmentWizard(true);
@@ -113,8 +124,9 @@ function CourseEnrollmentCard({
         mutate();
         // Show success toast
         toast.success(
-          t('enrollment.enrollmentApproved') || `Your enrollment for "${course.title}" has been approved!`,
-          { duration: 5000 }
+          t("enrollment.enrollmentApproved") ||
+            `Your enrollment for "${course.title}" has been approved!`,
+          { duration: 5000 },
         );
         // Call the callback to refresh enrollments list
         if (onEnrollmentApproved) {
@@ -127,8 +139,9 @@ function CourseEnrollmentCard({
       if (rejectedRequest.course_id === course.id) {
         mutate();
         toast.error(
-          t('enrollment.enrollmentRejected') || `Your enrollment request for "${course.title}" was rejected.`,
-          { duration: 5000 }
+          t("enrollment.enrollmentRejected") ||
+            `Your enrollment request for "${course.title}" was rejected.`,
+          { duration: 5000 },
         );
       }
     },
@@ -139,21 +152,49 @@ function CourseEnrollmentCard({
     if (isEnrolled && isExpired) {
       // Check if there's a pending re-enrollment request
       if (hasPendingRequest) {
-        return { type: 'pending' as const, disabled: true };
+        return { type: "pending" as const, disabled: true };
       }
-      return { type: 'expired' as const, disabled: false };
+      return { type: "expired" as const, disabled: false };
     }
     if (isEnrolled) {
-      return { type: 'enrolled' as const, disabled: false };
+      return { type: "enrolled" as const, disabled: false };
     }
     if (hasPendingRequest) {
-      return { type: 'pending' as const, disabled: true };
+      return { type: "pending" as const, disabled: true };
     }
     if (isEnrolling || isRequestLoading) {
-      return { type: 'loading' as const, disabled: true };
+      return { type: "loading" as const, disabled: true };
     }
-    return { type: 'request' as const, disabled: false };
+    return { type: "request" as const, disabled: false };
   }, [isEnrolled, isExpired, hasPendingRequest, isEnrolling, isRequestLoading]);
+
+  // Handle card-level click based on enrollment state
+  const handleCardClick = useCallback(() => {
+    switch (buttonState.type) {
+      case "enrolled":
+        router.push(`/courses/${course.id}/chat`);
+        break;
+      case "expired":
+      case "request":
+        handleOpenEnrollmentWizard();
+        break;
+      case "pending": {
+        // Allow Keepz payment retry
+        const isKeepzPayment = request?.payment_method === "keepz";
+        if (isKeepzPayment) {
+          handleOpenEnrollmentWizard();
+        }
+        break;
+      }
+      // 'loading' → no-op
+    }
+  }, [
+    buttonState.type,
+    router,
+    course.id,
+    handleOpenEnrollmentWizard,
+    request,
+  ]);
 
   // Custom action based on enrollment status
   const customAction = useMemo(() => {
@@ -191,13 +232,13 @@ function CourseEnrollmentCard({
       );
     }
 
-    if (buttonState.type === 'expired') {
+    if (buttonState.type === "expired") {
       return (
         <div className="space-y-2">
           <button
             onClick={handleOpenEnrollmentWizard}
             className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-amber-500 rounded-full hover:bg-amber-600 transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5 will-change-transform"
-            style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+            style={{ transformOrigin: "center", backfaceVisibility: "hidden" }}
           >
             <svg
               className="w-3.5 h-3.5 mr-1.5"
@@ -212,22 +253,22 @@ function CourseEnrollmentCard({
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            {t('enrollment.reEnroll')}
+            {t("enrollment.reEnroll")}
           </button>
           <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
-            {t('enrollment.expired')}
+            {t("enrollment.expired")}
           </p>
         </div>
       );
     }
 
-    if (buttonState.type === 'enrolled') {
+    if (buttonState.type === "enrolled") {
       return (
         <div className="space-y-2">
           <a
             href={`/courses/${course.id}/chat`}
             className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-emerald-500 rounded-full hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5 will-change-transform"
-            style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+            style={{ transformOrigin: "center", backfaceVisibility: "hidden" }}
           >
             <svg
               className="w-3.5 h-3.5 mr-1.5"
@@ -242,26 +283,28 @@ function CourseEnrollmentCard({
                 d="M5 13l4 4L19 7"
               />
             </svg>
-            {t('enrollment.goToCourse')}
+            {t("enrollment.goToCourse")}
           </a>
-          {daysRemaining !== null && daysRemaining <= 7 && daysRemaining > 0 && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
-              {t('enrollment.expiresIn', { days: daysRemaining })}
-            </p>
-          )}
+          {daysRemaining !== null &&
+            daysRemaining <= 7 &&
+            daysRemaining > 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                {t("enrollment.expiresIn", { days: daysRemaining })}
+              </p>
+            )}
         </div>
       );
     }
 
-    if (buttonState.type === 'pending') {
+    if (buttonState.type === "pending") {
       // For Keepz payments, allow retrying payment instead of showing disabled "Pending Approval"
-      const isKeepzPayment = request?.payment_method === 'keepz';
+      const isKeepzPayment = request?.payment_method === "keepz";
       if (isKeepzPayment) {
         return (
           <button
             onClick={handleOpenEnrollmentWizard}
             className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-emerald-500 rounded-full hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft hover:-translate-y-0.5 will-change-transform"
-            style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+            style={{ transformOrigin: "center", backfaceVisibility: "hidden" }}
           >
             <svg
               className="w-3.5 h-3.5 mr-1.5"
@@ -276,7 +319,7 @@ function CourseEnrollmentCard({
                 d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
               />
             </svg>
-            {t('enrollment.completePayment')}
+            {t("enrollment.completePayment")}
           </button>
         );
       }
@@ -304,12 +347,12 @@ function CourseEnrollmentCard({
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             ></path>
           </svg>
-          {t('enrollment.pendingApproval')}
+          {t("enrollment.pendingApproval")}
         </button>
       );
     }
 
-    if (buttonState.type === 'loading') {
+    if (buttonState.type === "loading") {
       return (
         <button
           disabled
@@ -335,7 +378,7 @@ function CourseEnrollmentCard({
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             ></path>
           </svg>
-          {t('enrollment.requesting')}
+          {t("enrollment.requesting")}
         </button>
       );
     }
@@ -346,7 +389,7 @@ function CourseEnrollmentCard({
         onClick={handleOpenEnrollmentWizard}
         disabled={buttonState.disabled}
         className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-charcoal-950 dark:bg-emerald-500 rounded-full hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 will-change-transform"
-        style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+        style={{ transformOrigin: "center", backfaceVisibility: "hidden" }}
         type="button"
       >
         <svg
@@ -362,20 +405,28 @@ function CourseEnrollmentCard({
             d="M12 4v16m8-8H4"
           />
         </svg>
-        {t('enrollment.requestEnrollment')}
+        {t("enrollment.requestEnrollment")}
       </button>
     );
-  }, [buttonState, showEnrollButton, translationsReady, t, course.id, handleOpenEnrollmentWizard, request]);
+  }, [
+    buttonState,
+    showEnrollButton,
+    translationsReady,
+    t,
+    course.id,
+    handleOpenEnrollmentWizard,
+    request,
+  ]);
 
   const handleEnrollmentWizardClose = useCallback(() => {
     setShowEnrollmentWizard(false);
     // Clear URL params when closing to prevent auto-reopening
-    if (typeof window !== 'undefined' && window.history) {
+    if (typeof window !== "undefined" && window.history) {
       const url = new URL(window.location.href);
-      url.searchParams.delete('course');
-      url.searchParams.delete('ref');
-      url.searchParams.delete('pendingEnroll');
-      window.history.replaceState({}, '', url.toString());
+      url.searchParams.delete("course");
+      url.searchParams.delete("ref");
+      url.searchParams.delete("pendingEnroll");
+      window.history.replaceState({}, "", url.toString());
     }
     // Notify parent component that wizard was closed
     if (onWizardClose) {
@@ -387,8 +438,9 @@ function CourseEnrollmentCard({
     mutate();
     setShowEnrollmentWizard(false);
     toast.success(
-      t('enrollment.enrollmentRequestSubmitted') || 'Enrollment request submitted! Waiting for approval.',
-      { duration: 5000 }
+      t("enrollment.enrollmentRequestSubmitted") ||
+        "Enrollment request submitted! Waiting for approval.",
+      { duration: 5000 },
     );
     clearReferral();
   }, [mutate, t]);
@@ -403,6 +455,7 @@ function CourseEnrollmentCard({
         customAction={customAction}
         daysRemaining={daysRemaining}
         isExpired={isExpired}
+        onCardClick={handleCardClick}
       />
       <EnrollmentModal
         course={course}
@@ -417,4 +470,3 @@ function CourseEnrollmentCard({
 }
 
 export default memo(CourseEnrollmentCard);
-

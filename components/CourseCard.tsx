@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import EnrollmentModal from "./EnrollmentModal";
 import { useI18n } from "@/contexts/I18nContext";
 import { useUser } from "@/hooks/useUser";
-import { formatPriceInGel, calculateStudentPrice } from "@/lib/currency";
+import { formatPriceInGel } from "@/lib/currency";
 
 export interface Course {
   id: string;
@@ -32,6 +32,7 @@ interface CourseCardProps {
   customAction?: React.ReactNode;
   daysRemaining?: number | null;
   isExpired?: boolean;
+  onCardClick?: () => void;
 }
 
 function CourseCard({
@@ -43,6 +44,7 @@ function CourseCard({
   customAction,
   daysRemaining = null,
   isExpired = false,
+  onCardClick,
 }: CourseCardProps) {
   const { t } = useI18n();
   const router = useRouter();
@@ -50,16 +52,13 @@ function CourseCard({
   const [isVideoExpanded, setIsVideoExpanded] = useState(false);
   const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
 
-  // Student-facing prices include platform commission (3% on top of base price)
+  // Ensure prices are never displayed as negative - fallback to 0 for any edge cases
   const safePrice = useMemo(
-    () => calculateStudentPrice(Math.max(0, course.price || 0)),
+    () => Math.max(0, course.price || 0),
     [course.price],
   );
   const safeOriginalPrice = useMemo(
-    () =>
-      course.original_price
-        ? calculateStudentPrice(Math.max(0, course.original_price))
-        : null,
+    () => (course.original_price ? Math.max(0, course.original_price) : null),
     [course.original_price],
   );
 
@@ -72,11 +71,15 @@ function CourseCard({
     [safeOriginalPrice],
   );
 
-  const handleThumbnailClick = useCallback(() => {
-    if (course.intro_video_url) {
-      setIsVideoExpanded(true);
-    }
-  }, [course.intro_video_url]);
+  const handleThumbnailClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (course.intro_video_url) {
+        setIsVideoExpanded(true);
+      }
+    },
+    [course.intro_video_url],
+  );
 
   const handleCloseVideo = useCallback(() => {
     setIsVideoExpanded(false);
@@ -102,17 +105,21 @@ function CourseCard({
     };
   }, [isVideoExpanded, handleCloseVideo]);
 
-  const handleEnrollClick = useCallback(() => {
-    // Check if user is authenticated before opening payment dialog
-    if (!user) {
-      const redirectUrl = `/courses?pendingEnroll=course:${course.id}`;
-      window.location.href = `/signup?redirect=${encodeURIComponent(redirectUrl)}`;
-      return;
-    }
-    if (onEnroll && !isEnrolled && !isEnrolling) {
-      setShowEnrollmentModal(true);
-    }
-  }, [user, onEnroll, isEnrolled, isEnrolling, router, course.id]);
+  const handleEnrollClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      // Check if user is authenticated before opening payment dialog
+      if (!user) {
+        const redirectUrl = `/courses?pendingEnroll=course:${course.id}`;
+        window.location.href = `/signup?redirect=${encodeURIComponent(redirectUrl)}`;
+        return;
+      }
+      if (onEnroll && !isEnrolled && !isEnrolling) {
+        setShowEnrollmentModal(true);
+      }
+    },
+    [user, onEnroll, isEnrolled, isEnrolling, router, course.id],
+  );
 
   const handleEnrollmentModalClose = useCallback(() => {
     setShowEnrollmentModal(false);
@@ -202,8 +209,21 @@ function CourseCard({
   return (
     <>
       <div
-        className="h-full flex flex-col bg-gradient-to-br from-white to-gray-50 dark:from-navy-800 dark:to-navy-900 rounded-3xl overflow-hidden shadow-soft hover:shadow-xl hover:shadow-emerald-500/10 dark:hover:shadow-emerald-500/20 transition-all duration-300 border border-charcoal-100/50 dark:border-navy-700/50 hover:scale-[1.02] hover:-translate-y-1 will-change-transform"
+        className={`h-full flex flex-col bg-gradient-to-br from-white to-gray-50 dark:from-navy-800 dark:to-navy-900 rounded-3xl overflow-hidden shadow-soft hover:shadow-xl hover:shadow-emerald-500/10 dark:hover:shadow-emerald-500/20 transition-all duration-300 border border-charcoal-100/50 dark:border-navy-700/50 hover:scale-[1.02] hover:-translate-y-1 will-change-transform${onCardClick ? " cursor-pointer" : ""}`}
         style={{ transformOrigin: "center", backfaceVisibility: "hidden" }}
+        onClick={onCardClick}
+        role={onCardClick ? "button" : undefined}
+        tabIndex={onCardClick ? 0 : undefined}
+        onKeyDown={
+          onCardClick
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onCardClick();
+                }
+              }
+            : undefined
+        }
       >
         {/* Thumbnail Section */}
         <div className="relative w-full h-32 bg-gradient-to-br from-emerald-50 via-white to-charcoal-50/30 dark:from-emerald-500/10 dark:via-navy-800 dark:to-navy-700/30 overflow-hidden cursor-pointer group">
@@ -385,7 +405,10 @@ function CourseCard({
 
           {/* Enroll Button or Custom Action - Always at bottom */}
           {(showEnrollButton || customAction) && (
-            <div className="mt-auto pt-3 border-t border-charcoal-100/50 dark:border-navy-700/50">
+            <div
+              className="mt-auto pt-3 border-t border-charcoal-100/50 dark:border-navy-700/50"
+              onClick={(e) => e.stopPropagation()}
+            >
               {customAction ? (
                 customAction
               ) : isEnrolled ? (
