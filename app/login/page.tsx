@@ -7,10 +7,13 @@ import { signIn, signInWithGoogle } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/contexts/I18nContext";
 import { validateRedirectUrl } from "@/lib/validate-redirect";
+import { useUser } from "@/hooks/useUser";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, role: userRole, isLoading: authLoading } = useUser();
+  const [authRedirecting, setAuthRedirecting] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +22,24 @@ function LoginForm() {
   const navigationStartedRef = useRef(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { t } = useI18n();
+
+  // Redirect authenticated users away from login
+  useEffect(() => {
+    if (authLoading || !user) return;
+
+    const redirectTo = validateRedirectUrl(searchParams.get("redirect"));
+    let destination = "/my-courses";
+    if (redirectTo) {
+      destination = redirectTo;
+    } else if (userRole === "admin") {
+      destination = "/admin";
+    } else if (userRole === "lecturer") {
+      destination = "/lecturer/dashboard";
+    }
+
+    setAuthRedirecting(true);
+    router.replace(destination);
+  }, [authLoading, user, userRole, router, searchParams]);
 
   useEffect(() => {
     // Reset refs on mount to handle remounting scenarios
@@ -187,6 +208,10 @@ function LoginForm() {
       isSubmittingRef.current = false;
     }
   };
+
+  if (authLoading || authRedirecting) {
+    return <LoadingFallback />;
+  }
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900 px-4 py-12 overflow-hidden">

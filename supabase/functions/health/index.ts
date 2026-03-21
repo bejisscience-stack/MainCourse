@@ -8,11 +8,9 @@ interface HealthStatus {
     database: {
       status: "ok" | "error";
       latency?: number;
-      error?: string;
     };
     supabase: {
       status: "ok" | "error";
-      error?: string;
     };
   };
 }
@@ -79,7 +77,6 @@ Deno.serve(async (req: Request) => {
 
     if (error) {
       healthStatus.checks.database.status = "error";
-      healthStatus.checks.database.error = error.message;
       healthStatus.status = "degraded";
       console.error("[Health Check] Database error:", error.message);
     } else {
@@ -90,10 +87,8 @@ Deno.serve(async (req: Request) => {
 
     if (errorMessage.includes("Supabase")) {
       healthStatus.checks.supabase.status = "error";
-      healthStatus.checks.supabase.error = errorMessage;
     } else {
       healthStatus.checks.database.status = "error";
-      healthStatus.checks.database.error = errorMessage;
     }
 
     healthStatus.status = "unhealthy";

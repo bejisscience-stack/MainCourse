@@ -3,6 +3,10 @@ import { getAuthenticatedUser, checkIsAdmin } from "../_shared/auth.ts";
 import { createServiceRoleClient } from "../_shared/supabase.ts";
 import { sendBundleEnrollmentRejectedEmail } from "../_shared/email.ts";
 
+function sanitizeText(text: string, maxLength: number = 500): string {
+  return text.replace(/<[^>]*>/g, "").slice(0, maxLength);
+}
+
 Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
@@ -46,13 +50,13 @@ Deno.serve(async (req: Request) => {
     );
 
     if (rejectError) {
-      console.error("[Reject API] Error:", rejectError);
+      console.error(
+        "[Reject API] Error:",
+        rejectError.message,
+        rejectError.code,
+      );
       return jsonResponse(
-        {
-          error: "Failed to reject bundle enrollment request",
-          details: rejectError.message,
-          code: rejectError.code,
-        },
+        { error: "Failed to reject bundle enrollment request" },
         500,
       );
     }
@@ -70,8 +74,8 @@ Deno.serve(async (req: Request) => {
           p_type: "bundle_enrollment_rejected",
           p_title_en: "Bundle Enrollment Request Update",
           p_title_ge: "პაკეტში რეგისტრაციის მოთხოვნის განახლება",
-          p_message_en: `Your enrollment request for bundle "${bundleTitle}" was not approved.${reason ? ` Reason: ${reason}` : ""}`,
-          p_message_ge: `თქვენი რეგისტრაციის მოთხოვნა პაკეტზე "${bundleTitle}" არ დამტკიცდა.${reason ? ` მიზეზი: ${reason}` : ""}`,
+          p_message_en: `Your enrollment request for bundle "${bundleTitle}" was not approved.${reason ? ` Reason: ${sanitizeText(reason)}` : ""}`,
+          p_message_ge: `თქვენი რეგისტრაციის მოთხოვნა პაკეტზე "${bundleTitle}" არ დამტკიცდა.${reason ? ` მიზეზი: ${sanitizeText(reason)}` : ""}`,
           p_metadata: {
             bundle_id: enrollmentRequest.bundle_id,
             bundle_title: bundleTitle,

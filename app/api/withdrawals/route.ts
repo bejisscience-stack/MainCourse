@@ -4,6 +4,12 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import {
+  generalLimiter,
+  paymentLimiter,
+  rateLimitResponse,
+  getClientIP,
+} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +26,9 @@ export async function GET(request: NextRequest) {
       console.error("Auth error in GET /api/withdrawals:", userError?.message);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rl = await generalLimiter.check(getClientIP(request));
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
     const supabase = createServerSupabaseClient(token);
 
@@ -62,6 +71,9 @@ export async function POST(request: NextRequest) {
       console.error("Auth error in POST /api/withdrawals:", userError?.message);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rl = await paymentLimiter.check(getClientIP(request));
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
     const supabase = createServerSupabaseClient(token);
 

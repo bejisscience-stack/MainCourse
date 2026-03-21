@@ -106,10 +106,7 @@ async function handlePost(
     if (requestCheckError && requestCheckError.code !== "PGRST116") {
       console.error("Error checking existing request:", requestCheckError);
       return jsonResponse(
-        {
-          error: "Failed to verify enrollment request status",
-          details: requestCheckError.message,
-        },
+        { error: "Failed to verify enrollment request status" },
         500,
       );
     }
@@ -135,13 +132,7 @@ async function handlePost(
         "Error checking existing enrollment:",
         enrollmentCheckError,
       );
-      return jsonResponse(
-        {
-          error: "Failed to verify enrollment status",
-          details: enrollmentCheckError.message,
-        },
-        500,
-      );
+      return jsonResponse({ error: "Failed to verify enrollment status" }, 500);
     }
 
     if (existingEnrollment) {
@@ -176,10 +167,7 @@ async function handlePost(
 
     if (courseError) {
       console.error("Error checking course:", courseError);
-      return jsonResponse(
-        { error: "Failed to verify course", details: courseError.message },
-        500,
-      );
+      return jsonResponse({ error: "Failed to verify course" }, 500);
     }
 
     if (!course) {
@@ -219,19 +207,13 @@ async function handlePost(
 
       if (insertError.code === "23505") {
         return jsonResponse(
-          {
-            error: "You already have an enrollment request for this course",
-            details: insertError.message,
-          },
+          { error: "You already have an enrollment request for this course" },
           400,
         );
       }
 
       if (insertError.code === "23503") {
-        return jsonResponse(
-          { error: "Invalid course or user", details: insertError.message },
-          400,
-        );
+        return jsonResponse({ error: "Invalid course or user" }, 400);
       }
 
       if (insertError.code === "42501") {
@@ -239,18 +221,13 @@ async function handlePost(
           {
             error:
               "Permission denied. Please ensure you are logged in correctly.",
-            details: insertError.message,
           },
           403,
         );
       }
 
       return jsonResponse(
-        {
-          error: "Failed to create enrollment request",
-          details: insertError.message || "Unknown database error",
-          code: insertError.code,
-        },
+        { error: "Failed to create enrollment request" },
         500,
       );
     }

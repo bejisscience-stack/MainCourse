@@ -4,6 +4,11 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import {
+  accountLimiter,
+  rateLimitResponse,
+  getClientIP,
+} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +86,9 @@ export async function PATCH(request: NextRequest) {
       console.error("Auth error in PATCH /api/balance:", userError?.message);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rl = await accountLimiter.check(getClientIP(request));
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
     const body = await request.json();
     const { bankAccountNumber } = body;

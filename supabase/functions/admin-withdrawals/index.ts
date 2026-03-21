@@ -18,7 +18,7 @@ Deno.serve(async (req: Request) => {
 
   const auth = await getAuthenticatedUser(req);
   if ("response" in auth) return auth.response;
-  const { user, supabase, token } = auth;
+  const { user, supabase } = auth;
 
   const isAdmin = await checkIsAdmin(supabase, user.id);
   if (!isAdmin) {
@@ -36,8 +36,7 @@ Deno.serve(async (req: Request) => {
       filterStatus || "all",
     );
 
-    // Pass user token as fallback in case service role key is not available
-    const serviceSupabase = createServiceRoleClient(token);
+    const serviceSupabase = createServiceRoleClient();
 
     // Use RPC function to bypass RLS and prevent caching (marked VOLATILE)
     let requests: any[] = [];

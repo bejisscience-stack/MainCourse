@@ -162,16 +162,6 @@ export default function SubmissionReviewDialog({
         // Ensure payment_amount is a proper decimal number (round to 2 decimal places)
         const finalPaymentAmount = Math.round(paymentAmount * 100) / 100;
 
-        console.log("Saving review for platform:", {
-          submissionId,
-          projectId,
-          platform,
-          lecturerId: session.user.id,
-          matchedCriteriaIds: criteriaToSave,
-          paymentAmount: finalPaymentAmount,
-          comment: (comments[platform] || "").trim() || null,
-        });
-
         // First, check if a review already exists for this submission and platform
         const { data: existingReview } = await supabase
           .from("submission_reviews")
@@ -238,8 +228,6 @@ export default function SubmissionReviewDialog({
           console.error("Error saving review:", reviewError);
           throw new Error(reviewError.message);
         }
-
-        console.log("Review saved successfully:", reviewData);
 
         setLastSavedRPM((prev) => ({
           ...prev,

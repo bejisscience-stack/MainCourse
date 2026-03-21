@@ -5,6 +5,11 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import {
+  accountLimiter,
+  rateLimitResponse,
+  getClientIP,
+} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +25,9 @@ export async function DELETE(request: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rl = await accountLimiter.check(getClientIP(request));
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
     // 2. Fetch profile to check role
     const supabase = createServerSupabaseClient(token);

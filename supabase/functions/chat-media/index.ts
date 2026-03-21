@@ -161,12 +161,10 @@ Deno.serve(async (req: Request) => {
         );
     }
 
-    if (uploadError)
-      return jsonResponse(
-        { error: "Failed to upload file", details: uploadError.message },
-        500,
-        cors,
-      );
+    if (uploadError) {
+      console.error("File upload error:", uploadError.message);
+      return jsonResponse({ error: "Failed to upload file" }, 500, cors);
+    }
 
     const { data: urlData } = supabase.storage
       .from("chat-media")

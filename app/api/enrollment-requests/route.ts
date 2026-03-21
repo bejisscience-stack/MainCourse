@@ -5,6 +5,12 @@ import {
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { enrollmentRequestSchema } from "@/lib/schemas";
+import {
+  generalLimiter,
+  writeLimiter,
+  rateLimitResponse,
+  getClientIP,
+} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +26,9 @@ export async function GET(request: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rl = await generalLimiter.check(getClientIP(request));
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
     const supabase = createServerSupabaseClient(token);
 
@@ -72,6 +81,9 @@ export async function POST(request: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rl = await writeLimiter.check(getClientIP(request));
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
     const rawBody = await request.json();
     const parsed = enrollmentRequestSchema.safeParse(rawBody);

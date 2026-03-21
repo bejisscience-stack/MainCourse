@@ -106,10 +106,7 @@ async function handlePost(
     if (requestCheckError && requestCheckError.code !== "PGRST116") {
       console.error("Error checking existing request:", requestCheckError);
       return jsonResponse(
-        {
-          error: "Failed to verify bundle enrollment request status",
-          details: requestCheckError.message,
-        },
+        { error: "Failed to verify bundle enrollment request status" },
         500,
       );
     }
@@ -136,10 +133,7 @@ async function handlePost(
         enrollmentCheckError,
       );
       return jsonResponse(
-        {
-          error: "Failed to verify bundle enrollment status",
-          details: enrollmentCheckError.message,
-        },
+        { error: "Failed to verify bundle enrollment status" },
         500,
       );
     }
@@ -158,10 +152,7 @@ async function handlePost(
 
     if (bundleError) {
       console.error("Error checking bundle:", bundleError);
-      return jsonResponse(
-        { error: "Failed to verify bundle", details: bundleError.message },
-        500,
-      );
+      return jsonResponse({ error: "Failed to verify bundle" }, 500);
     }
 
     if (!bundle) {
@@ -203,17 +194,13 @@ async function handlePost(
           {
             error:
               "You already have a bundle enrollment request for this bundle",
-            details: insertError.message,
           },
           400,
         );
       }
 
       if (insertError.code === "23503") {
-        return jsonResponse(
-          { error: "Invalid bundle or user", details: insertError.message },
-          400,
-        );
+        return jsonResponse({ error: "Invalid bundle or user" }, 400);
       }
 
       if (insertError.code === "42501") {
@@ -221,18 +208,13 @@ async function handlePost(
           {
             error:
               "Permission denied. Please ensure you are logged in correctly.",
-            details: insertError.message,
           },
           403,
         );
       }
 
       return jsonResponse(
-        {
-          error: "Failed to create bundle enrollment request",
-          details: insertError.message || "Unknown database error",
-          code: insertError.code,
-        },
+        { error: "Failed to create bundle enrollment request" },
         500,
       );
     }

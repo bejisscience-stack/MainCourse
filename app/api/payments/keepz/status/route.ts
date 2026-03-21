@@ -7,6 +7,11 @@ import {
 import { getOrderStatus } from "@/lib/keepz";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { isValidUUID } from "@/lib/validation";
+import {
+  generalLimiter,
+  rateLimitResponse,
+  getClientIP,
+} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +25,9 @@ export async function GET(request: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rl = await generalLimiter.check(getClientIP(request));
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
     const paymentId = request.nextUrl.searchParams.get("paymentId");
     if (!paymentId || !isValidUUID(paymentId)) {

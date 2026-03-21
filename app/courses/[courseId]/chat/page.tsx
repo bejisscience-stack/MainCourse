@@ -414,7 +414,6 @@ export default function CourseChatPage() {
     if (!user) return;
 
     // TODO: Save reaction to database
-    console.log("Adding reaction:", { messageId, emoji, userId: user.id });
   };
 
   const loading =

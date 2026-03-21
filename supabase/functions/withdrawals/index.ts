@@ -106,9 +106,13 @@ async function handlePost(
     );
 
     if (rpcError) {
-      console.error("Error creating withdrawal request:", rpcError);
+      console.error(
+        "Error creating withdrawal request:",
+        rpcError.message,
+        rpcError.code,
+      );
       return jsonResponse(
-        { error: rpcError.message || "Failed to create withdrawal request" },
+        { error: "Failed to create withdrawal request" },
         400,
         cors,
       );

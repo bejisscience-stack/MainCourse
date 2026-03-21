@@ -51,7 +51,7 @@ export async function GET(
   const [enrollmentResult, courseResult, adminResult] = await Promise.all([
     supabase
       .from("enrollments")
-      .select("id")
+      .select("id, expires_at")
       .eq("course_id", courseId)
       .eq("user_id", user.id)
       .maybeSingle(),
@@ -63,7 +63,10 @@ export async function GET(
     supabase.rpc("check_is_admin", { user_id: user.id }),
   ]);
 
-  const isEnrolled = !!enrollmentResult.data;
+  const enrollment = enrollmentResult.data;
+  const isEnrolled =
+    !!enrollment &&
+    (!enrollment.expires_at || new Date(enrollment.expires_at) > new Date());
   const isLecturer = courseResult.data?.lecturer_id === user.id;
   const isAdmin = adminResult.data === true;
 

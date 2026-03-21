@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // PAY-01 fix: use verifyAdminRequest (check_is_admin RPC)
@@ -24,7 +24,7 @@ export async function POST(
     if (isAuthError(auth)) return auth;
 
     const { userId, serviceSupabase } = auth;
-    const submissionId = params.id;
+    const { id: submissionId } = await params;
 
     if (!isValidUUID(submissionId)) {
       return NextResponse.json(

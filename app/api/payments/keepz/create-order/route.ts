@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
             verifyErr,
           );
           // Audit log so we know why self-healing failed
-          adminSupabase
+          const { error: auditError } = await adminSupabase
             .from("payment_audit_log")
             .insert({
               keepz_payment_id: existing.id,
@@ -228,11 +228,14 @@ export async function POST(request: NextRequest) {
               event_data: {
                 error: String(verifyErr),
               },
-            })
-            .then(
-              () => {},
-              () => {},
+            });
+
+          if (auditError) {
+            console.error(
+              "Failed to write payment audit log:",
+              auditError.message,
             );
+          }
         }
       }
 

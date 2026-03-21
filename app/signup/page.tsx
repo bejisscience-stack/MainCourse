@@ -7,10 +7,13 @@ import { signUp, signInWithGoogle } from "@/lib/auth";
 import { useI18n } from "@/contexts/I18nContext";
 import { saveReferral } from "@/lib/referral-storage";
 import { validateRedirectUrl } from "@/lib/validate-redirect";
+import { useUser } from "@/hooks/useUser";
 
 function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, role: userRole, isLoading: authLoading } = useUser();
+  const [authRedirecting, setAuthRedirecting] = useState(false);
   const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -75,6 +78,21 @@ function SignUpForm() {
     validateReferralCode();
   }, [searchParams]);
 
+  // Redirect authenticated users away from signup
+  useEffect(() => {
+    if (authLoading || !user) return;
+
+    let destination = "/my-courses";
+    if (userRole === "admin") {
+      destination = "/admin";
+    } else if (userRole === "lecturer") {
+      destination = "/lecturer/dashboard";
+    }
+
+    setAuthRedirecting(true);
+    router.replace(destination);
+  }, [authLoading, user, userRole, router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -121,6 +139,16 @@ function SignUpForm() {
       setLoading(false);
     }
   };
+
+  if (authLoading || authRedirecting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-charcoal-950 dark:border-emerald-500"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900 px-4 py-12 overflow-hidden">

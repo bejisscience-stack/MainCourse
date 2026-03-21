@@ -86,6 +86,15 @@ export const subscribeLimiter = wrapLimiter(_subscribeLimiter);
 export const callbackLimiter = wrapLimiter(_callbackLimiter);
 export const notificationLimiter = wrapLimiter(_notificationLimiter);
 
+// HIGH-05, HIGH-06, MED-03–07: limiters for previously-unprotected routes
+const _generalLimiter = createLimiter("general", 30, 60);
+const _writeLimiter = createLimiter("write", 10, 60);
+const _accountLimiter = createLimiter("account", 5, 60);
+
+export const generalLimiter = wrapLimiter(_generalLimiter);
+export const writeLimiter = wrapLimiter(_writeLimiter);
+export const accountLimiter = wrapLimiter(_accountLimiter);
+
 // INFRA-04: DigitalOcean App Platform appends the real client IP as the rightmost entry
 // in X-Forwarded-For. Clients can prepend fake entries but cannot control the last one.
 export function getClientIP(request: NextRequest): string {

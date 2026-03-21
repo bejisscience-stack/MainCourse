@@ -5,6 +5,11 @@ import {
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { completeProfileSchema } from "@/lib/schemas";
+import {
+  accountLimiter,
+  rateLimitResponse,
+  getClientIP,
+} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +25,9 @@ export async function POST(request: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rl = await accountLimiter.check(getClientIP(request));
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
     const rawBody = await request.json();
     const parsed = completeProfileSchema.safeParse(rawBody);
