@@ -48,6 +48,7 @@ Deno.serve(async (req: Request) => {
 
       const sanitizedContent = hasContent
         ? content
+            .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
