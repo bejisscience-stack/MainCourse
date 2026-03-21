@@ -12,6 +12,7 @@ import { useWithdrawalRequests } from "@/hooks/useWithdrawalRequests";
 import { useRealtimeWithdrawalRequests } from "@/hooks/useRealtimeWithdrawalRequests";
 import { useRealtimeUserProfile } from "@/hooks/useRealtimeUserProfile";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
+import { useSavedCards } from "@/hooks/useSavedCards";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
@@ -44,6 +45,15 @@ export default function SettingsPage() {
     useWithdrawalRequests(user?.id || null);
 
   const { minWithdrawal } = usePlatformSettings();
+
+  // Saved cards
+  const {
+    cards: savedCards,
+    isLoading: savedCardsLoading,
+    deleteCard,
+    mutate: mutateSavedCards,
+  } = useSavedCards();
+  const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
 
   // Real-time subscription for withdrawal request updates
   const { isConnected: withdrawalRtConnected } = useRealtimeWithdrawalRequests({
@@ -1206,6 +1216,116 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+
+            {/* Payment Methods Section */}
+            <div className="bg-white dark:bg-navy-800 border border-charcoal-100/50 dark:border-navy-700/50 rounded-3xl p-6 shadow-soft">
+              <h2 className="text-xl font-semibold text-charcoal-950 dark:text-white mb-4">
+                {t("settings.paymentMethods")}
+              </h2>
+              <p className="text-sm text-charcoal-600 dark:text-gray-400 mb-4">
+                {t("settings.paymentMethodsDescription")}
+              </p>
+
+              {savedCardsLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500" />
+                </div>
+              ) : savedCards.length === 0 ? (
+                <div className="bg-charcoal-50 dark:bg-navy-700/30 border border-charcoal-200/50 dark:border-navy-600/50 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <svg
+                      className="w-5 h-5 text-charcoal-400 dark:text-gray-500 mt-0.5 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                      />
+                    </svg>
+                    <p className="text-sm text-charcoal-500 dark:text-gray-400">
+                      {t("settings.noSavedCards")}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {savedCards.map((card) => (
+                    <div
+                      key={card.id}
+                      className="flex items-center gap-4 p-4 rounded-xl border border-charcoal-200/50 dark:border-navy-600/50 bg-charcoal-50/50 dark:bg-navy-700/30"
+                    >
+                      {/* Card icon */}
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-charcoal-700 to-charcoal-900 dark:from-navy-500 dark:to-navy-700 flex items-center justify-center flex-shrink-0">
+                        <svg
+                          className="w-5 h-5 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                          />
+                        </svg>
+                      </div>
+
+                      {/* Card details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-charcoal-950 dark:text-white">
+                            {card.cardBrand || "Card"}
+                          </span>
+                          <span className="text-sm text-charcoal-600 dark:text-gray-400 font-mono">
+                            {card.cardMask
+                              ? `•••• ${card.cardMask.slice(-4)}`
+                              : "••••"}
+                          </span>
+                        </div>
+                        {card.expirationDate && (
+                          <p className="text-xs text-charcoal-400 dark:text-gray-500 mt-0.5">
+                            {t("settings.expires")} {card.expirationDate}
+                          </p>
+                        )}
+                        {card.provider && (
+                          <p className="text-xs text-charcoal-400 dark:text-gray-500">
+                            {card.provider}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Delete button */}
+                      <button
+                        onClick={async () => {
+                          if (!confirm(t("settings.deleteCardConfirm"))) return;
+                          setDeletingCardId(card.id);
+                          const success = await deleteCard(card.id);
+                          setDeletingCardId(null);
+                          if (success) {
+                            toast.success(t("settings.cardDeleted"));
+                          } else {
+                            toast.error(t("settings.cardDeleteFailed"));
+                          }
+                        }}
+                        disabled={deletingCardId === card.id}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                      >
+                        {deletingCardId === card.id ? (
+                          <div className="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-red-500" />
+                        ) : (
+                          t("settings.deleteCard")
+                        )}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
