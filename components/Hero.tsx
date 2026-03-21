@@ -19,7 +19,7 @@ function Hero() {
         : { href: "/my-courses", labelKey: "home.myCourses" };
 
   return (
-    <section className="pt-24 md:pt-48 pb-12 md:pb-32 px-4 sm:px-6 lg:px-8 relative">
+    <section className="pt-24 md:pt-48 pb-12 md:pb-32 px-4 sm:px-6 lg:px-8 relative z-[2] overflow-hidden">
       {/* Subtle radial gradient halo behind content */}
       <div className="absolute inset-0 top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[600px] pointer-events-none blur-3xl">
         <div className="w-full h-full bg-gradient-radial from-emerald-500/5 via-emerald-500/2 to-transparent dark:from-emerald-400/8 dark:via-emerald-400/3 dark:to-transparent"></div>
