@@ -27,10 +27,13 @@ export default function MyCoursesPage() {
   // Recover stuck payments when user visits My Courses
   usePaymentRecovery(user?.id || null, () => mutateEnrollments());
 
-  // Redirect lecturers immediately
+  // Redirect lecturers and admins immediately
   useEffect(() => {
     if (!userLoading && userRole === "lecturer") {
       router.push("/lecturer/dashboard");
+    }
+    if (!userLoading && userRole === "admin") {
+      router.push("/admin");
     }
   }, [userRole, userLoading, router]);
 
