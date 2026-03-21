@@ -501,7 +501,7 @@ export default function ChatArea({
 
         const fileExt =
           data.videoFile.name.split(".").pop()?.toLowerCase() || "mp4";
-        const fileName = `project-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const fileName = `project-${Date.now()}-${crypto.randomUUID().replace(/-/g, "").substring(0, 16)}.${fileExt}`;
         // Storage path structure: {course_id}/{channel_id}/{user_id}/{filename}
         const filePath = `${channel.courseId}/${channel.id}/${session.user.id}/${fileName}`;
 

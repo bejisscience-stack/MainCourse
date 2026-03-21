@@ -167,7 +167,7 @@ export default function PaymentDialog({
 
         const fileExt =
           imageData.file.name.split(".").pop()?.toLowerCase() || "jpg";
-        const fileName = `payment-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const fileName = `payment-${Date.now()}-${crypto.randomUUID().replace(/-/g, "").substring(0, 16)}.${fileExt}`;
         const filePath = `${course.id}/${user.id}/${fileName}`;
 
         const { data, error: uploadError } = await supabase.storage

@@ -113,7 +113,7 @@ Deno.serve(async (req: Request) => {
     const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const fileExt = originalName.split(".").pop()?.toLowerCase() || "bin";
     const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(2, 10);
+    const randomId = crypto.randomUUID().replace(/-/g, "").substring(0, 16);
     const fileName = `${timestamp}-${randomId}.${fileExt}`;
     const filePath = `${channel.course_id}/${chatId}/${user.id}/${fileName}`;
 
