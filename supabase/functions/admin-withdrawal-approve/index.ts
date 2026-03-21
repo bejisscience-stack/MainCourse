@@ -1,9 +1,4 @@
-import {
-  handleCors,
-  getCorsHeaders,
-  jsonResponse,
-  errorResponse,
-} from "../_shared/cors.ts";
+import { handleCors, jsonResponse, errorResponse } from "../_shared/cors.ts";
 import { getAuthenticatedUser, checkIsAdmin } from "../_shared/auth.ts";
 import { createServiceRoleClient } from "../_shared/supabase.ts";
 import { sendWithdrawalApprovedEmail } from "../_shared/email.ts";
@@ -11,10 +6,9 @@ import { sendWithdrawalApprovedEmail } from "../_shared/email.ts";
 Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
-  const cors = getCorsHeaders(req);
 
   if (req.method !== "POST") {
-    return errorResponse("Method not allowed", 405, cors);
+    return errorResponse("Method not allowed", 405);
   }
 
   const auth = await getAuthenticatedUser(req);
@@ -23,7 +17,7 @@ Deno.serve(async (req: Request) => {
 
   const isAdmin = await checkIsAdmin(supabase, user.id);
   if (!isAdmin) {
-    return errorResponse("Forbidden: Admin access required", 403, cors);
+    return errorResponse("Forbidden: Admin access required", 403);
   }
 
   try {
@@ -31,7 +25,7 @@ Deno.serve(async (req: Request) => {
     const { requestId, adminNotes } = body;
 
     if (!requestId) {
-      return errorResponse("requestId is required", 400, cors);
+      return errorResponse("requestId is required", 400);
     }
 
     console.log(
@@ -49,14 +43,13 @@ Deno.serve(async (req: Request) => {
 
     if (fetchError || !withdrawalRequest) {
       console.error("[Approve Withdrawal API] Request not found:", fetchError);
-      return errorResponse("Withdrawal request not found", 404, cors);
+      return errorResponse("Withdrawal request not found", 404);
     }
 
     if (withdrawalRequest.status !== "pending") {
       return errorResponse(
         `Request is already ${withdrawalRequest.status}`,
         400,
-        cors,
       );
     }
 
@@ -77,7 +70,6 @@ Deno.serve(async (req: Request) => {
           code: approveError.code,
         },
         500,
-        cors,
       );
     }
 
@@ -143,16 +135,12 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    return jsonResponse(
-      {
-        message: "Withdrawal request approved successfully",
-        success: true,
-      },
-      200,
-      cors,
-    );
+    return jsonResponse({
+      message: "Withdrawal request approved successfully",
+      success: true,
+    });
   } catch (error) {
     console.error("[Approve Withdrawal API] Error:", error);
-    return errorResponse("Internal server error", 500, cors);
+    return errorResponse("Internal server error", 500);
   }
 });

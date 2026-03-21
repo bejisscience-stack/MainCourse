@@ -9,10 +9,6 @@ import { randomUUID } from "crypto";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { paymentLimiter, rateLimitResponse } from "@/lib/rate-limit";
 import { paymentOrderSchema } from "@/lib/schemas";
-import {
-  calculateStudentPrice,
-  PROJECT_COMMISSION_PERCENT,
-} from "@/lib/currency";
 
 export const dynamic = "force-dynamic";
 
@@ -62,16 +58,15 @@ export async function POST(request: NextRequest) {
           { status: 404 },
         );
       }
-      // courses is joined as object — apply platform commission on top of base price
+      // courses is joined as object
       const course = enrollment.courses as any;
-      const basePrice = course?.price || 0;
-      if (basePrice <= 0) {
+      amount = course?.price || 0;
+      if (amount <= 0) {
         return NextResponse.json(
           { error: "Invalid course price" },
           { status: 400 },
         );
       }
-      amount = calculateStudentPrice(basePrice);
     } else if (paymentType === "bundle_enrollment") {
       const { data: bundleReq, error } = await supabase
         .from("bundle_enrollment_requests")
@@ -86,16 +81,14 @@ export async function POST(request: NextRequest) {
           { status: 404 },
         );
       }
-      // Apply platform commission on top of base bundle price
       const bundle = bundleReq.course_bundles as any;
-      const bundleBasePrice = bundle?.price || 0;
-      if (bundleBasePrice <= 0) {
+      amount = bundle?.price || 0;
+      if (amount <= 0) {
         return NextResponse.json(
           { error: "Invalid bundle price" },
           { status: 400 },
         );
       }
-      amount = calculateStudentPrice(bundleBasePrice);
     } else if (paymentType === "project_subscription") {
       // project_subscription — price stored per subscription record
       const { data: sub, error } = await supabase
@@ -140,8 +133,7 @@ export async function POST(request: NextRequest) {
           { status: 404 },
         );
       }
-      const budgetBase = Number((project as any).budget) || 0;
-      amount = calculateStudentPrice(budgetBase, PROJECT_COMMISSION_PERCENT);
+      amount = Number((project as any).budget) || 0;
       if (amount <= 0) {
         return NextResponse.json(
           { error: "Invalid project budget" },

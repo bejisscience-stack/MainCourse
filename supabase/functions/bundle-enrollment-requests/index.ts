@@ -1,20 +1,14 @@
-import {
-  handleCors,
-  getCorsHeaders,
-  jsonResponse,
-  errorResponse,
-} from "../_shared/cors.ts";
+import { handleCors, jsonResponse, errorResponse } from "../_shared/cors.ts";
 import { getAuthenticatedUser } from "../_shared/auth.ts";
 
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
-  const cors = getCorsHeaders(req);
 
   // Only allow GET and POST
   if (req.method !== "GET" && req.method !== "POST") {
-    return errorResponse("Method not allowed", 405, cors);
+    return errorResponse("Method not allowed", 405);
   }
 
   // Authenticate user
@@ -25,9 +19,9 @@ Deno.serve(async (req: Request) => {
   const { user, supabase } = auth;
 
   if (req.method === "GET") {
-    return handleGet(supabase, user.id, cors);
+    return handleGet(supabase, user.id);
   } else {
-    return handlePost(req, supabase, user.id, cors);
+    return handlePost(req, supabase, user.id);
   }
 });
 
@@ -36,7 +30,6 @@ async function handleGet(
     typeof import("../_shared/supabase.ts").createServerSupabaseClient
   >,
   userId: string,
-  cors: Record<string, string>,
 ) {
   try {
     const { data: requests, error } = await supabase
@@ -60,17 +53,13 @@ async function handleGet(
 
     if (error) {
       console.error("Error fetching bundle enrollment requests:", error);
-      return errorResponse(
-        "Failed to fetch bundle enrollment requests",
-        500,
-        cors,
-      );
+      return errorResponse("Failed to fetch bundle enrollment requests", 500);
     }
 
-    return jsonResponse({ requests: requests || [] }, 200, cors);
+    return jsonResponse({ requests: requests || [] });
   } catch (error) {
     console.error("Error in GET /bundle-enrollment-requests:", error);
-    return errorResponse("Internal server error", 500, cors);
+    return errorResponse("Internal server error", 500);
   }
 }
 
@@ -80,19 +69,18 @@ async function handlePost(
     typeof import("../_shared/supabase.ts").createServerSupabaseClient
   >,
   userId: string,
-  cors: Record<string, string>,
 ) {
   try {
     const body = await req.json();
     const { bundleId, paymentScreenshots, referralCode } = body;
 
     if (!bundleId) {
-      return errorResponse("bundleId is required", 400, cors);
+      return errorResponse("bundleId is required", 400);
     }
 
     // Validate paymentScreenshots if provided
     if (paymentScreenshots && !Array.isArray(paymentScreenshots)) {
-      return errorResponse("paymentScreenshots must be an array", 400, cors);
+      return errorResponse("paymentScreenshots must be an array", 400);
     }
 
     // Validate referralCode if provided
@@ -103,7 +91,6 @@ async function handlePost(
       return errorResponse(
         "referralCode must be a string with max 20 characters",
         400,
-        cors,
       );
     }
 
@@ -124,7 +111,6 @@ async function handlePost(
           details: requestCheckError.message,
         },
         500,
-        cors,
       );
     }
 
@@ -132,7 +118,6 @@ async function handlePost(
       return errorResponse(
         "You already have a pending bundle enrollment request",
         400,
-        cors,
       );
     }
 
@@ -156,16 +141,11 @@ async function handlePost(
           details: enrollmentCheckError.message,
         },
         500,
-        cors,
       );
     }
 
     if (existingEnrollment) {
-      return errorResponse(
-        "You are already enrolled in this bundle",
-        400,
-        cors,
-      );
+      return errorResponse("You are already enrolled in this bundle", 400);
     }
 
     // Verify bundle exists and is active
@@ -181,12 +161,11 @@ async function handlePost(
       return jsonResponse(
         { error: "Failed to verify bundle", details: bundleError.message },
         500,
-        cors,
       );
     }
 
     if (!bundle) {
-      return errorResponse("Bundle not found or is not active", 404, cors);
+      return errorResponse("Bundle not found or is not active", 404);
     }
 
     // Format payment screenshots
@@ -227,7 +206,6 @@ async function handlePost(
             details: insertError.message,
           },
           400,
-          cors,
         );
       }
 
@@ -235,7 +213,6 @@ async function handlePost(
         return jsonResponse(
           { error: "Invalid bundle or user", details: insertError.message },
           400,
-          cors,
         );
       }
 
@@ -247,7 +224,6 @@ async function handlePost(
             details: insertError.message,
           },
           403,
-          cors,
         );
       }
 
@@ -258,7 +234,6 @@ async function handlePost(
           code: insertError.code,
         },
         500,
-        cors,
       );
     }
 
@@ -266,11 +241,10 @@ async function handlePost(
       return errorResponse(
         "Failed to create bundle enrollment request - no data returned",
         500,
-        cors,
       );
     }
 
-    return jsonResponse({ request: enrollmentRequest }, 201, cors);
+    return jsonResponse({ request: enrollmentRequest }, 201);
   } catch (error) {
     console.error("Error in POST /bundle-enrollment-requests:", error);
     return jsonResponse(
@@ -279,7 +253,6 @@ async function handlePost(
         details: "An unexpected error occurred",
       },
       500,
-      cors,
     );
   }
 }

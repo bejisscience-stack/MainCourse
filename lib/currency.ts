@@ -2,11 +2,8 @@
 // Prices are stored in GEL in the database (base price set by lecturer)
 // Students pay base price + platform commission
 
-/** Platform commission percentage added on top of lecturer's base price (courses/bundles) */
+/** Platform commission percentage added on top of lecturer's base price */
 export const PLATFORM_COMMISSION_PERCENT = 3;
-
-/** Platform commission percentage for project budgets */
-export const PROJECT_COMMISSION_PERCENT = 20;
 
 /**
  * Calculate the student-facing price (base price + platform commission)
@@ -16,16 +13,6 @@ export function calculateStudentPrice(
   commissionPercent: number = PLATFORM_COMMISSION_PERCENT,
 ): number {
   return Math.round(basePrice * (1 + commissionPercent / 100) * 100) / 100;
-}
-
-/**
- * Calculate the platform commission amount from a base price
- */
-export function calculatePlatformCommission(
-  basePrice: number,
-  commissionPercent: number = PLATFORM_COMMISSION_PERCENT,
-): number {
-  return Math.round(basePrice * (commissionPercent / 100) * 100) / 100;
 }
 
 /**

@@ -1,9 +1,4 @@
-import {
-  handleCors,
-  getCorsHeaders,
-  jsonResponse,
-  errorResponse,
-} from "../_shared/cors.ts";
+import { handleCors, jsonResponse, errorResponse } from "../_shared/cors.ts";
 import { getAuthenticatedUser, checkIsAdmin } from "../_shared/auth.ts";
 import { createServiceRoleClient } from "../_shared/supabase.ts";
 import { sendEnrollmentRejectedEmail } from "../_shared/email.ts";
@@ -11,10 +6,9 @@ import { sendEnrollmentRejectedEmail } from "../_shared/email.ts";
 Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
-  const cors = getCorsHeaders(req);
 
   if (req.method !== "POST") {
-    return errorResponse("Method not allowed", 405, cors);
+    return errorResponse("Method not allowed", 405);
   }
 
   const auth = await getAuthenticatedUser(req);
@@ -23,7 +17,7 @@ Deno.serve(async (req: Request) => {
 
   const isAdmin = await checkIsAdmin(supabase, user.id);
   if (!isAdmin) {
-    return errorResponse("Forbidden: Admin access required", 403, cors);
+    return errorResponse("Forbidden: Admin access required", 403);
   }
 
   try {
@@ -31,7 +25,7 @@ Deno.serve(async (req: Request) => {
     const { requestId, reason } = body;
 
     if (!requestId) {
-      return errorResponse("requestId is required", 400, cors);
+      return errorResponse("requestId is required", 400);
     }
 
     console.log("[Reject API] Attempting to reject request:", requestId);
@@ -59,7 +53,6 @@ Deno.serve(async (req: Request) => {
           code: rejectError.code,
         },
         500,
-        cors,
       );
     }
 
@@ -110,16 +103,12 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    return jsonResponse(
-      {
-        message: "Enrollment request rejected successfully",
-        success: true,
-      },
-      200,
-      cors,
-    );
+    return jsonResponse({
+      message: "Enrollment request rejected successfully",
+      success: true,
+    });
   } catch (error) {
     console.error("[Reject API] Error:", error);
-    return errorResponse("Internal server error", 500, cors);
+    return errorResponse("Internal server error", 500);
   }
 });

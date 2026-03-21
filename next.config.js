@@ -30,6 +30,17 @@ const nextConfig = {
   // Optimize production builds
   productionBrowserSourceMaps: false,
 
+  // Redirects for removed pages
+  async redirects() {
+    return [
+      {
+        source: "/coming-soon",
+        destination: "/courses",
+        permanent: true,
+      },
+    ];
+  },
+
   // Headers for performance and security
   async headers() {
     return [

@@ -20,17 +20,19 @@ export default function LecturerRootPage() {
         // Fetch profile to check role and approval status
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role, is_approved, lecturer_status")
+          .select("role, is_approved")
           .eq("id", currentUser.id)
           .single();
 
-        if (
-          profile?.lecturer_status === "approved" ||
-          (profile?.role === "lecturer" && profile?.is_approved === true)
-        ) {
-          router.push("/lecturer/dashboard");
-        } else if (profile?.lecturer_status === "pending") {
-          router.push("/lecturer/pending");
+        const resolvedRole = profile?.role || currentUser.user_metadata?.role;
+
+        if (resolvedRole === "lecturer") {
+          // Check if lecturer is approved
+          if (profile?.is_approved === true) {
+            router.push("/lecturer/dashboard");
+          } else {
+            router.push("/lecturer/pending");
+          }
         } else {
           router.push("/");
         }

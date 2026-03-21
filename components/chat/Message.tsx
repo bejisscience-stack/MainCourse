@@ -185,6 +185,7 @@ const MediaAttachment = memo(function MediaAttachment({
               src={attachment.fileUrl}
               alt={attachment.fileName}
               className={`max-h-96 object-contain cursor-pointer hover:opacity-90 transition-opacity ${isLoading ? "opacity-0" : "opacity-100"}`}
+              loading="lazy"
               onClick={() => setIsImageExpanded(true)}
               onLoad={() => setIsLoading(false)}
               onError={() => {

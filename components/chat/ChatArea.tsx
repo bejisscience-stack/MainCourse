@@ -3,10 +3,18 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Message from "./Message";
 import MessageInput from "./MessageInput";
-import LecturesChannel from "./LecturesChannel";
+import dynamic from "next/dynamic";
 import VideoUploadDialog, {
   type ProjectSubmissionData,
 } from "./VideoUploadDialog";
+
+const LecturesChannel = dynamic(() => import("./LecturesChannel"), {
+  loading: () => (
+    <div className="flex-1 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+    </div>
+  ),
+});
 import type { Channel } from "@/types/server";
 import type {
   Message as MessageType,

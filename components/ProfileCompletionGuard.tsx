@@ -9,7 +9,6 @@ const EXEMPT_PATHS = [
   "/login",
   "/signup",
   "/auth/",
-  "/coming-soon",
   "/reset-password",
   "/privacy-policy",
   "/terms-and-conditions",

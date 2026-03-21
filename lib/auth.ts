@@ -6,6 +6,7 @@ export interface SignUpData {
   username: string;
   role?: "student" | "lecturer";
   signupReferralCode?: string;
+  redirectAfterConfirm?: string;
 }
 
 export interface SignInData {
@@ -19,6 +20,7 @@ export async function signUp({
   username,
   role = "student",
   signupReferralCode,
+  redirectAfterConfirm,
 }: SignUpData) {
   // Validate username format
   if (!username || username.trim().length < 3 || username.trim().length > 30) {
@@ -46,13 +48,17 @@ export async function signUp({
     return `${PRODUCTION_URL}/auth/callback`;
   };
 
-  const redirectUrl = getRedirectUrl();
+  let emailRedirect = getRedirectUrl();
+  // Preserve post-signup redirect (e.g. pendingEnroll) through email confirmation flow
+  if (redirectAfterConfirm) {
+    emailRedirect += `?next=${encodeURIComponent(redirectAfterConfirm)}`;
+  }
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: redirectUrl,
+      emailRedirectTo: emailRedirect,
       data: {
         username: username.trim(),
         role: role,

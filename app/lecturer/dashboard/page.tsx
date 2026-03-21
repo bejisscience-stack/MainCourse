@@ -10,12 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import { useLecturerCourses } from "@/hooks/useLecturerCourses";
 import { useI18n } from "@/contexts/I18nContext";
-import {
-  formatPriceInGel,
-  calculateStudentPrice,
-  calculatePlatformCommission,
-  PLATFORM_COMMISSION_PERCENT,
-} from "@/lib/currency";
+import { formatPriceInGel } from "@/lib/currency";
 import type { Course } from "@/hooks/useCourses";
 
 export default function LecturerDashboard() {
@@ -1402,17 +1397,6 @@ export default function LecturerDashboard() {
                               }
                               className="w-full pl-8 pr-4 py-3 bg-white dark:bg-navy-700/50 border border-charcoal-200 dark:border-navy-600 text-charcoal-950 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                             />
-                            {formData.price &&
-                              parseFloat(formData.price) > 0 && (
-                                <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
-                                  პლატფორმის საკომისიო:{" "}
-                                  {PLATFORM_COMMISSION_PERCENT}% — სტუდენტი
-                                  გადაიხდის: ₾
-                                  {calculateStudentPrice(
-                                    parseFloat(formData.price),
-                                  ).toFixed(2)}
-                                </p>
-                              )}
                           </div>
                         </div>
                         <div>
@@ -1468,39 +1452,16 @@ export default function LecturerDashboard() {
                           {t("lecturerDashboard.referralCommissionHint") ||
                             "Percentage that goes to referring students"}
                         </p>
-                        {formData.price && parseFloat(formData.price) > 0 && (
-                          <div className="mt-3 p-3 bg-white dark:bg-navy-800/50 rounded-xl border border-purple-200 dark:border-purple-800/50">
-                            <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-2">
-                              საკომისიოს განაწილება:
-                            </p>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-charcoal-600 dark:text-gray-400">
-                                სტუდენტი გადაიხდის:
-                              </span>
-                              <span className="font-semibold text-charcoal-800 dark:text-white">
-                                ₾
-                                {calculateStudentPrice(
-                                  parseFloat(formData.price),
-                                ).toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between text-sm mt-1">
-                              <span className="text-charcoal-600 dark:text-gray-400">
-                                პლატფორმის საკომისიო (
-                                {PLATFORM_COMMISSION_PERCENT}%):
-                              </span>
-                              <span className="font-semibold text-amber-600 dark:text-amber-400">
-                                ₾
-                                {calculatePlatformCommission(
-                                  parseFloat(formData.price),
-                                ).toFixed(2)}
-                              </span>
-                            </div>
-                            {parseInt(formData.referral_commission_percentage) >
-                              0 && (
-                              <div className="flex justify-between text-sm mt-1">
+                        {parseInt(formData.referral_commission_percentage) >
+                          0 &&
+                          formData.price && (
+                            <div className="mt-3 p-3 bg-white dark:bg-navy-800/50 rounded-xl border border-purple-200 dark:border-purple-800/50">
+                              <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-2">
+                                Commission Breakdown:
+                              </p>
+                              <div className="flex justify-between text-sm">
                                 <span className="text-charcoal-600 dark:text-gray-400">
-                                  რეფერალი იღებს:
+                                  Referrer gets:
                                 </span>
                                 <span className="font-semibold text-purple-600 dark:text-purple-400">
                                   ₾
@@ -1513,32 +1474,24 @@ export default function LecturerDashboard() {
                                   ).toFixed(2)}
                                 </span>
                               </div>
-                            )}
-                            <div className="flex justify-between text-sm mt-1 pt-1 border-t border-charcoal-200 dark:border-navy-700">
-                              <span className="text-charcoal-600 dark:text-gray-400">
-                                თქვენ მიიღებთ:
-                              </span>
-                              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                ₾
-                                {(
-                                  parseFloat(formData.price) -
-                                  calculatePlatformCommission(
-                                    parseFloat(formData.price),
-                                  ) -
-                                  (parseInt(
-                                    formData.referral_commission_percentage,
-                                  ) > 0
-                                    ? (parseFloat(formData.price) *
+                              <div className="flex justify-between text-sm mt-1">
+                                <span className="text-charcoal-600 dark:text-gray-400">
+                                  You receive:
+                                </span>
+                                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                  ₾
+                                  {(
+                                    (parseFloat(formData.price) *
+                                      (100 -
                                         parseInt(
                                           formData.referral_commission_percentage,
-                                        )) /
-                                      100
-                                    : 0)
-                                ).toFixed(2)}
-                              </span>
+                                        ))) /
+                                    100
+                                  ).toFixed(2)}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
                       </div>
                     </div>
                   )}

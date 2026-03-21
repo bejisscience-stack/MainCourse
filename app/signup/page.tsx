@@ -81,35 +81,39 @@ function SignUpForm() {
     setLoading(true);
 
     try {
-      const { user } = await signUp({
+      const data = await signUp({
         email,
         password,
         username,
         role,
         signupReferralCode: referralCode || undefined,
+        redirectAfterConfirm: redirectUrl || undefined,
       });
 
-      if (user) {
+      if (data.user) {
         setSuccess(true);
-        // Redirect based on role and redirect URL
-        setTimeout(() => {
-          if (role === "lecturer") {
-            router.push("/lecturer/pending");
-          } else {
-            // Priority: redirect URL (from pending enrollment) > referral flow > default
-            if (redirectUrl) {
-              // Redirect URL already validated by validateRedirectUrl
+        // Email confirmation is required — user needs to check their inbox.
+        // The redirect URL is preserved in the email confirmation link via
+        // emailRedirectTo's ?next= param, so they'll land at the right place
+        // after confirming. Only redirect immediately if user has a session
+        // (auto-confirm enabled).
+        const hasSession = !!data.session;
+        if (hasSession) {
+          setTimeout(() => {
+            if (role === "lecturer") {
+              router.push("/lecturer/pending");
+            } else if (redirectUrl) {
               router.push(redirectUrl);
               return;
             } else if (referralCode) {
-              // If user registered with referral code, redirect to home page
               router.push("/");
             } else {
               router.push("/my-courses");
             }
-          }
-          router.refresh();
-        }, 2000);
+            router.refresh();
+          }, 2000);
+        }
+        // If no session (email confirmation required), just show success message
       }
     } catch (err: any) {
       setError(err.message || t("auth.failedToCreateAccount"));
@@ -130,6 +134,8 @@ function SignUpForm() {
               src="/wavleba-logo-new.png"
               alt="Wavleba"
               className="h-12 w-auto"
+              width={144}
+              height={48}
             />
           </Link>
           <h2 className="text-center text-3xl font-bold text-charcoal-950 dark:text-white">

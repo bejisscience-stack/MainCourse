@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useI18n } from '@/contexts/I18nContext';
+import Link from "next/link";
+import { useI18n } from "@/contexts/I18nContext";
 
 export default function Footer() {
   const { t } = useI18n();
@@ -18,23 +18,27 @@ export default function Footer() {
                 src="/wavleba-logo-new.png"
                 alt="Wavleba"
                 className="h-10 w-auto"
+                width={120}
+                height={40}
               />
             </Link>
             <p className="text-charcoal-400 dark:text-gray-400 text-sm max-w-xs">
-              {t('footer.description')}
+              {t("footer.description")}
             </p>
           </div>
 
           {/* Legal Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">{t('footer.legal')}</h3>
+            <h3 className="text-white font-semibold mb-4">
+              {t("footer.legal")}
+            </h3>
             <ul className="space-y-2">
               <li>
                 <Link
                   href="/terms-and-conditions"
                   className="text-charcoal-400 dark:text-gray-400 hover:text-emerald-400 transition-colors text-sm"
                 >
-                  {t('footer.termsAndConditions')}
+                  {t("footer.termsAndConditions")}
                 </Link>
               </li>
               <li>
@@ -42,7 +46,7 @@ export default function Footer() {
                   href="/privacy-policy"
                   className="text-charcoal-400 dark:text-gray-400 hover:text-emerald-400 transition-colors text-sm"
                 >
-                  {t('footer.privacyPolicy')}
+                  {t("footer.privacyPolicy")}
                 </Link>
               </li>
               <li>
@@ -50,7 +54,7 @@ export default function Footer() {
                   href="/personal-info-security"
                   className="text-charcoal-400 dark:text-gray-400 hover:text-emerald-400 transition-colors text-sm"
                 >
-                  {t('footer.personalInfoSecurity')}
+                  {t("footer.personalInfoSecurity")}
                 </Link>
               </li>
               <li>
@@ -58,7 +62,7 @@ export default function Footer() {
                   href="/refund-policy"
                   className="text-charcoal-400 dark:text-gray-400 hover:text-emerald-400 transition-colors text-sm"
                 >
-                  {t('footer.refundPolicy')}
+                  {t("footer.refundPolicy")}
                 </Link>
               </li>
             </ul>
@@ -66,14 +70,16 @@ export default function Footer() {
 
           {/* Company */}
           <div>
-            <h3 className="text-white font-semibold mb-4">{t('footer.company')}</h3>
+            <h3 className="text-white font-semibold mb-4">
+              {t("footer.company")}
+            </h3>
             <ul className="space-y-2">
               <li>
                 <Link
                   href="/about-us"
                   className="text-charcoal-400 dark:text-gray-400 hover:text-emerald-400 transition-colors text-sm"
                 >
-                  {t('footer.aboutUs')}
+                  {t("footer.aboutUs")}
                 </Link>
               </li>
               <li>
@@ -81,7 +87,7 @@ export default function Footer() {
                   href="/courses"
                   className="text-charcoal-400 dark:text-gray-400 hover:text-emerald-400 transition-colors text-sm"
                 >
-                  {t('nav.courses')}
+                  {t("nav.courses")}
                 </Link>
               </li>
             </ul>
@@ -91,7 +97,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="mt-8 pt-8 border-t border-charcoal-800 dark:border-navy-800">
           <p className="text-center text-charcoal-500 dark:text-gray-500 text-sm">
-            &copy; {currentYear} Wavleba. {t('footer.allRightsReserved')}
+            &copy; {currentYear} Wavleba. {t("footer.allRightsReserved")}
           </p>
         </div>
       </div>

@@ -347,9 +347,7 @@
     "payAndPublish": "Pay & Publish ₾{{amount}}",
     "pendingPayment": "Pending Payment",
     "retryPayment": "Retry Payment",
-    "processingPayment": "Processing Payment...",
-    "projectCommission": "Platform commission: {{percent}}%",
-    "projectCommissionHint": "You will pay: ₾{{amount}}"
+    "processingPayment": "Processing Payment..."
   },
   "videoSubmission": {
     "submitYourVideo": "Submit Your Video",
@@ -475,9 +473,6 @@
     "referralCommissionLabel": "Referral Commission Percentage (0-100%)",
     "referralCommissionHint": "Percentage of the course price that goes to the referring student. You receive the remaining amount.",
     "commissionBreakdown": "Commission Breakdown",
-    "platformCommission": "Platform Commission",
-    "platformCommissionHint": "A 3% platform commission is added on top of your price. Students will see the total price including this commission.",
-    "studentWillPay": "Student will pay",
     "referrerGets": "Referrer gets",
     "youGet": "You get",
     "currentVideo": "Current Video",

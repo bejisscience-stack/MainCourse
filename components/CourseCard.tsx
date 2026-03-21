@@ -234,6 +234,9 @@ function CourseCard({
                 src={course.thumbnail_url}
                 alt={course.title}
                 className="w-full h-full object-cover"
+                width={400}
+                height={128}
+                loading="lazy"
                 onClick={handleThumbnailClick}
               />
               {/* Overlay with play button */}

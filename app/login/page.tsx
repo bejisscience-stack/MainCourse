@@ -200,6 +200,8 @@ function LoginForm() {
               src="/wavleba-logo-new.png"
               alt="Wavleba"
               className="h-12 w-auto"
+              width={144}
+              height={48}
             />
           </Link>
           <h2 className="text-center text-3xl font-bold text-charcoal-950 dark:text-white">

@@ -71,13 +71,23 @@ export default function CourseChatPage() {
         return;
       }
 
-      // Fetch course details
-      const { data: courseData, error: courseError } = await supabase
-        .from("courses")
-        .select("id, title, lecturer_id")
-        .eq("id", courseId)
-        .single();
+      // Fetch course details and channels in parallel
+      const [courseResult, channelsResult] = await Promise.all([
+        supabase
+          .from("courses")
+          .select("id, title, lecturer_id")
+          .eq("id", courseId)
+          .single(),
+        supabase
+          .from("channels")
+          .select(
+            "id, course_id, name, type, description, category_name, display_order",
+          )
+          .eq("course_id", courseId)
+          .order("display_order", { ascending: true }),
+      ]);
 
+      const { data: courseData, error: courseError } = courseResult;
       if (courseError) throw courseError;
       if (!courseData) {
         setError("Course not found.");
@@ -87,42 +97,24 @@ export default function CourseChatPage() {
 
       setCourse(courseData);
 
-      // Fetch channels from database
+      // Process channels result
       let channelsData: any[] = [];
-      try {
-        const { data: channels, error: channelsError } = await supabase
-          .from("channels")
-          .select(
-            "id, course_id, name, type, description, category_name, display_order",
-          )
-          .eq("course_id", courseId)
-          .order("display_order", { ascending: true });
-
-        if (channelsError) {
-          // If channels table doesn't exist or query fails, continue with empty channels
-          if (
-            channelsError.code === "PGRST116" ||
-            channelsError.message?.includes("relation") ||
-            channelsError.message?.includes("does not exist")
-          ) {
-            console.warn(
-              "Channels table does not exist yet. Using default channels.",
-            );
-            channelsData = [];
-          } else {
-            console.warn("Error fetching channels:", channelsError);
-            channelsData = [];
-          }
+      const { data: channels, error: channelsError } = channelsResult;
+      if (channelsError) {
+        if (
+          channelsError.code === "PGRST116" ||
+          channelsError.message?.includes("relation") ||
+          channelsError.message?.includes("does not exist")
+        ) {
+          console.warn(
+            "Channels table does not exist yet. Using default channels.",
+          );
         } else {
-          channelsData = channels || [];
+          console.warn("Error fetching channels:", channelsError);
         }
-      } catch (channelsErr: any) {
-        // Channels table might not exist yet, continue with empty channels
-        console.warn(
-          "Channels query failed (table may not exist):",
-          channelsErr,
-        );
         channelsData = [];
+      } else {
+        channelsData = channels || [];
       }
 
       // Ensure required channels exist in database

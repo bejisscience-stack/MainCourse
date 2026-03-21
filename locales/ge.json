@@ -347,9 +347,7 @@
     "payAndPublish": "გადახდა და გამოქვეყნება ₾{{amount}}",
     "pendingPayment": "გადახდა მოლოდინშია",
     "retryPayment": "გადახდის გამეორება",
-    "processingPayment": "გადახდა მიმდინარეობს...",
-    "projectCommission": "პლატფორმის საკომისიო: {{percent}}%",
-    "projectCommissionHint": "გადაიხდით: ₾{{amount}}"
+    "processingPayment": "გადახდა მიმდინარეობს..."
   },
   "videoSubmission": {
     "submitYourVideo": "წარადგინეთ თქვენი ვიდეო",
@@ -475,9 +473,6 @@
     "referralCommissionLabel": "რეფერალური საკომისიოს პროცენტი (0-100%)",
     "referralCommissionHint": "კურსის ფასის პროცენტი, რომელიც მიიღებს მორიგებული სტუდენტი. თქვენ მიიღებთ დანარჩენ თანხას.",
     "commissionBreakdown": "საკომისიოს განაწილება",
-    "platformCommission": "პლატფორმის საკომისიო",
-    "platformCommissionHint": "თქვენს ფასზე ემატება 3% პლატფორმის საკომისიო. სტუდენტი დაინახავს ჯამურ ფასს საკომისიოს ჩათვლით.",
-    "studentWillPay": "სტუდენტი გადაიხდის",
     "referrerGets": "რეფერერი იღებს",
     "youGet": "თქვენ იღებთ",
     "currentVideo": "მიმდინარე ვიდეო",

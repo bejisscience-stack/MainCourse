@@ -47,15 +47,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update profile — always role='student', lecturer application via lecturer_status
+    // Update profile — set is_approved=false when becoming a lecturer
     const updatePayload: Record<string, unknown> = {
       username,
-      role: "student",
+      role,
       profile_completed: true,
     };
     if (role === "lecturer") {
       updatePayload.is_approved = false;
-      updatePayload.lecturer_status = "pending";
     }
 
     const { data: updated, error: updateError } = await supabase
