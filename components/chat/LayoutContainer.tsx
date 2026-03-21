@@ -30,6 +30,7 @@ interface LayoutContainerProps {
   isEnrolledInCourse?: boolean;
   enrollmentInfo?: EnrollmentInfo | null;
   onReEnrollRequest?: () => void;
+  initialChannelName?: string;
 }
 
 export default function LayoutContainer({
@@ -47,6 +48,7 @@ export default function LayoutContainer({
   isEnrolledInCourse = false,
   enrollmentInfo = null,
   onReEnrollRequest,
+  initialChannelName,
 }: LayoutContainerProps) {
   const [activeServerId, setActiveServerId] = useActiveServer();
   const [activeChannelId, setActiveChannelId] = useActiveChannel();
@@ -75,6 +77,32 @@ export default function LayoutContainer({
   // Check if we're in DM mode (home)
   const isDMMode = activeServerId === "home";
 
+  const [hasAppliedInitialChannel, setHasAppliedInitialChannel] =
+    useState(false);
+
+  // Auto-select channel from URL param (e.g., ?channel=projects)
+  useEffect(() => {
+    if (initialChannelName && activeServer && !hasAppliedInitialChannel) {
+      const allChannels = activeServer.channels.flatMap((cat) => cat.channels);
+      const targetChannel = allChannels.find(
+        (ch) => ch.name.toLowerCase() === initialChannelName.toLowerCase(),
+      );
+      if (targetChannel) {
+        setActiveChannelId(targetChannel.id);
+        if (typeof window !== "undefined") {
+          window.history.replaceState({}, "", window.location.pathname);
+        }
+      }
+      // Always mark applied (even if not found → fallback to default)
+      setHasAppliedInitialChannel(true);
+    }
+  }, [
+    initialChannelName,
+    activeServer,
+    hasAppliedInitialChannel,
+    setActiveChannelId,
+  ]);
+
   // Auto-select first server and channel if none selected (but not if DM is selected)
   useEffect(() => {
     if (!activeServerId && servers.length > 0) {
@@ -83,6 +111,7 @@ export default function LayoutContainer({
   }, [activeServerId, servers, setActiveServerId]);
 
   useEffect(() => {
+    if (initialChannelName && !hasAppliedInitialChannel) return;
     if (activeServer && !activeChannelId && activeServer.channels.length > 0) {
       // Prefer lectures channel first, then text channels
       const allChannels = activeServer.channels.flatMap((cat) => cat.channels);
@@ -97,7 +126,13 @@ export default function LayoutContainer({
         }
       }
     }
-  }, [activeServer, activeChannelId, setActiveChannelId]);
+  }, [
+    activeServer,
+    activeChannelId,
+    initialChannelName,
+    hasAppliedInitialChannel,
+    setActiveChannelId,
+  ]);
 
   const handleServerSelect = (serverId: string) => {
     const newServer = servers.find((s) => s.id === serverId);

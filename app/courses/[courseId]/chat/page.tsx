@@ -358,20 +358,6 @@ export default function CourseChatPage() {
       const server = servers[0];
       const allChannels = server.channels.flatMap((cat) => cat.channels);
 
-      // If a channel query param is present, use it (e.g. ?channel=projects)
-      if (channelParam) {
-        const paramChannel = allChannels.find(
-          (ch) => ch.name.toLowerCase() === channelParam.toLowerCase(),
-        );
-        if (paramChannel) {
-          setActiveChannelId(paramChannel.id);
-          setHasAutoSelectedChannel(true);
-          // Clean the URL to avoid re-triggering on refresh
-          window.history.replaceState({}, "", window.location.pathname);
-          return;
-        }
-      }
-
       // Pick the right default channel
       const targetChannel = isProjectAccessOnly
         ? allChannels.find((ch) => ch.name.toLowerCase() === "projects")
@@ -399,7 +385,6 @@ export default function CourseChatPage() {
     hasAutoSelectedChannel,
     setActiveChannelId,
     isProjectAccessOnly,
-    channelParam,
   ]);
 
   const handleSendMessage = async (
@@ -562,6 +547,7 @@ export default function CourseChatPage() {
                   isEnrolledInCourse={isEnrolled || userRole === "admin"}
                   enrollmentInfo={enrollmentInfo}
                   onReEnrollRequest={mutateEnrollments}
+                  initialChannelName={channelParam || undefined}
                 />
               </div>
             )}
