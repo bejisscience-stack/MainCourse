@@ -162,6 +162,18 @@ export default function CourseCreationModal({
       return;
     }
 
+    const allowedTypes = ["video/mp4", "video/webm", "video/ogg"];
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    if (
+      !allowedTypes.includes(file.type) &&
+      !["mp4", "webm", "ogg"].includes(ext)
+    ) {
+      setError(
+        `Unsupported format (.${ext}). Please upload MP4, WebM, or OGG video.`,
+      );
+      return;
+    }
+
     setVideoFile(file);
     setVideoUploadProgress(0);
     setIsUploading(true);
@@ -509,7 +521,7 @@ export default function CourseCreationModal({
                 <label className="flex-1 cursor-pointer">
                   <input
                     type="file"
-                    accept="video/*,.mov,video/quicktime"
+                    accept="video/mp4,video/webm,video/ogg,.mp4,.webm,.ogg"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) handleVideoUpload(file);

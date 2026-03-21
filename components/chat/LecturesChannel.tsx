@@ -1256,12 +1256,27 @@ function VideoUploadModal({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const validateVideoFormat = (file: File): boolean => {
+    const allowedTypes = ["video/mp4", "video/webm", "video/ogg"];
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    if (
+      !allowedTypes.includes(file.type) &&
+      !["mp4", "webm", "ogg"].includes(ext)
+    ) {
+      setError(t("lectures.unsupportedVideoFormat", { ext }));
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!videoFile) {
       setError("Please select a video file");
       return;
     }
+
+    if (!validateVideoFormat(videoFile)) return;
 
     setIsUploading(true);
     setError(null);
@@ -1520,7 +1535,7 @@ function VideoUploadModal({
             <div className="relative">
               <input
                 type="file"
-                accept="video/*"
+                accept="video/mp4,video/webm,video/ogg,.mp4,.webm,.ogg"
                 required
                 onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
                 className="w-full px-4 py-3 bg-navy-900/60 border border-navy-800/60 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/40 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-emerald-500 file:text-white file:font-medium file:cursor-pointer hover:file:bg-emerald-400"

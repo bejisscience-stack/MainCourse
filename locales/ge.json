@@ -477,6 +477,7 @@
     "uploadVideoFile": "ვიდეო ფაილის ატვირთვა",
     "clickToSelectVideo": "დააწკაპუნეთ ვიდეოს ასარჩევად",
     "videoUploadedSuccess": "ვიდეო წარმატებით აიტვირთა",
+    "unsupportedVideoFormat": "მხარდაუჭერელი ფორმატი (.{{ext}}). გთხოვთ ატვირთოთ MP4, WebM ან OGG ვიდეო.",
     "orEnterUrl": "ან შეიყვანეთ URL:",
     "clickToSelectImage": "დააწკაპუნეთ სურათის ასარჩევად (მაქს 5MB)",
     "thumbnailUploadedSuccess": "მინიატურა წარმატებით აიტვირთა",

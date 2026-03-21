@@ -477,6 +477,7 @@
     "uploadVideoFile": "Upload Video File",
     "clickToSelectVideo": "Click to select video",
     "videoUploadedSuccess": "Video uploaded successfully",
+    "unsupportedVideoFormat": "Unsupported format (.{{ext}}). Please upload MP4, WebM, or OGG video.",
     "orEnterUrl": "Or enter URL:",
     "clickToSelectImage": "Click to select image (max 5MB)",
     "thumbnailUploadedSuccess": "Thumbnail uploaded successfully",
