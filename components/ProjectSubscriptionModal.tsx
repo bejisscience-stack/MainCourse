@@ -37,6 +37,10 @@ export default function ProjectSubscriptionModal({
   const [error, setError] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [saveCardChecked, setSaveCardChecked] = useState(false);
+  const saveCardRef = useRef(false);
+  useEffect(() => {
+    saveCardRef.current = saveCardChecked;
+  }, [saveCardChecked]);
   const [tokenPaymentStatus, setTokenPaymentStatus] = useState<
     null | "processing" | "success" | "failed"
   >(null);
@@ -51,16 +55,19 @@ export default function ProjectSubscriptionModal({
     return () => setMounted(false);
   }, []);
 
-  // Reset state on open
+  // Reset state only on open transition (not on every rerender)
+  const prevIsOpenRef = useRef(false);
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !prevIsOpenRef.current) {
       setError(null);
       setIsRedirecting(false);
       setSaveCardChecked(false);
+      saveCardRef.current = false;
       setTokenPaymentStatus(null);
       setPayingWithCardId(null);
       setIsRetrying(false);
     }
+    prevIsOpenRef.current = isOpen;
   }, [isOpen]);
 
   // ESC key + body scroll lock
@@ -170,6 +177,10 @@ export default function ProjectSubscriptionModal({
 
   // Redirect flow (new card)
   const handleKeepzPayment = useCallback(async () => {
+    console.log(
+      "[SaveCard] handleKeepzPayment called, saveCardRef:",
+      saveCardRef.current,
+    );
     setIsRedirecting(true);
     setError(null);
     try {
@@ -185,7 +196,7 @@ export default function ProjectSubscriptionModal({
         body: JSON.stringify({
           paymentType: "project_subscription",
           referenceId: subscriptionId,
-          saveCard: saveCardChecked || undefined,
+          saveCard: saveCardRef.current || undefined,
         }),
       });
       if (!orderResponse.ok) {
@@ -206,7 +217,7 @@ export default function ProjectSubscriptionModal({
       setError(message);
       setIsRedirecting(false);
     }
-  }, [getAuthToken, createSubscriptionAndGetId, saveCardChecked]);
+  }, [getAuthToken, createSubscriptionAndGetId]);
 
   // Saved card flow (inline)
   const handlePayWithSavedCard = useCallback(
@@ -726,8 +737,20 @@ export default function ProjectSubscriptionModal({
                 role="checkbox"
                 aria-checked={saveCardChecked}
                 tabIndex={0}
-                onClick={() => {
-                  if (!isRedirecting) setSaveCardChecked((v) => !v);
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isRedirecting) {
+                    console.log(
+                      "[SaveCard] checkbox clicked, current:",
+                      saveCardChecked,
+                    );
+                    setSaveCardChecked((v) => {
+                      const next = !v;
+                      saveCardRef.current = next;
+                      console.log("[SaveCard] toggled to:", next);
+                      return next;
+                    });
+                  }
                 }}
                 onKeyDown={(e) => {
                   if (e.key === " " || e.key === "Enter") {
