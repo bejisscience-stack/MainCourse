@@ -492,6 +492,12 @@ export default function EnrollmentModal({
             saveCard: saveCardRef.current || undefined,
           }),
         });
+        console.log(
+          "[SaveCard] Payment request sent with saveCard:",
+          saveCardRef.current,
+          "state:",
+          saveCardChecked,
+        );
         if (!orderResponse.ok) {
           let errMsg = "Failed to create payment";
           try {
@@ -1058,8 +1064,21 @@ export default function EnrollmentModal({
                 role="checkbox"
                 aria-checked={saveCardChecked}
                 tabIndex={0}
-                onClick={() => {
-                  if (!isSubmitting) setSaveCardChecked((v) => !v);
+                onClick={(e) => {
+                  e.stopPropagation();
+                  console.log(
+                    "[SaveCard] clicked, isSubmitting:",
+                    isSubmitting,
+                    "current:",
+                    saveCardChecked,
+                  );
+                  if (!isSubmitting) {
+                    setSaveCardChecked((v) => {
+                      console.log("[SaveCard] toggling from", v, "to", !v);
+                      saveCardRef.current = !v;
+                      return !v;
+                    });
+                  }
                 }}
                 onKeyDown={(e) => {
                   if (e.key === " " || e.key === "Enter") {
