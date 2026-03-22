@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 interface PlatformSettings {
   min_withdrawal_gel: number;
   subscription_price_gel: number;
+  featured_course_id: string | null;
   updated_at?: string;
   updated_by?: string;
 }
@@ -11,6 +12,7 @@ interface PlatformSettings {
 const DEFAULTS: PlatformSettings = {
   min_withdrawal_gel: 50,
   subscription_price_gel: 10,
+  featured_course_id: null,
 };
 
 async function fetchPlatformSettings(): Promise<PlatformSettings> {
@@ -49,6 +51,7 @@ export function usePlatformSettings() {
     minWithdrawal: data?.min_withdrawal_gel ?? DEFAULTS.min_withdrawal_gel,
     subscriptionPrice:
       data?.subscription_price_gel ?? DEFAULTS.subscription_price_gel,
+    featuredCourseId: data?.featured_course_id ?? null,
     updatedAt: data?.updated_at,
     updatedBy: data?.updated_by,
     isLoading,

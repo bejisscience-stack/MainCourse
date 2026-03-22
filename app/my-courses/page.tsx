@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navigation from "@/components/Navigation";
 import BackgroundShapes from "@/components/BackgroundShapes";
 import CourseEnrollmentCard from "@/components/CourseEnrollmentCard";
+import EnrollmentModal from "@/components/EnrollmentModal";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import { useEnrollments } from "@/hooks/useEnrollments";
 import { usePaymentRecovery } from "@/hooks/usePaymentRecovery";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import useSWR from "swr";
 import type { Course } from "@/hooks/useCourses";
 import type { Course as CourseCardCourse } from "@/components/CourseCard";
@@ -27,6 +29,12 @@ export default function MyCoursesPage() {
   // Recover stuck payments when user visits My Courses
   usePaymentRecovery(user?.id || null, () => mutateEnrollments());
 
+  const { featuredCourseId } = usePlatformSettings();
+  const [showFeaturedModal, setShowFeaturedModal] = useState(false);
+  const [featuredCourse, setFeaturedCourse] = useState<CourseCardCourse | null>(
+    null,
+  );
+
   // Redirect lecturers and admins immediately
   useEffect(() => {
     if (!userLoading && userRole === "lecturer") {
@@ -43,6 +51,63 @@ export default function MyCoursesPage() {
       router.push("/login");
     }
   }, [user, userLoading, router]);
+
+  // Show featured course modal for first-time students
+  useEffect(() => {
+    if (userLoading || !user) return;
+    if (userRole !== "student") return;
+    if (enrolledCourseIds.size > 0) return;
+    if (!featuredCourseId) return;
+    if (
+      typeof window !== "undefined" &&
+      sessionStorage.getItem("featured_course_dismissed") === "true"
+    )
+      return;
+
+    const fetchFeatured = async () => {
+      const { data, error } = await supabase
+        .from("courses")
+        .select(
+          "id, title, description, course_type, price, original_price, author, creator, intro_video_url, thumbnail_url, rating, review_count, is_bestseller",
+        )
+        .eq("id", featuredCourseId)
+        .single();
+
+      if (!error && data) {
+        setFeaturedCourse({
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          course_type: data.course_type as
+            | "Editing"
+            | "Content Creation"
+            | "Website Creation",
+          price: data.price,
+          original_price: data.original_price,
+          author: data.author || "",
+          creator: data.creator || "",
+          intro_video_url: data.intro_video_url,
+          thumbnail_url: data.thumbnail_url,
+          rating: data.rating || 0,
+          review_count: data.review_count || 0,
+          is_bestseller: data.is_bestseller || false,
+        });
+        setShowFeaturedModal(true);
+      }
+    };
+
+    fetchFeatured();
+  }, [userLoading, user, userRole, enrolledCourseIds.size, featuredCourseId]);
+
+  const handleDismissFeatured = () => {
+    setShowFeaturedModal(false);
+    sessionStorage.setItem("featured_course_dismissed", "true");
+  };
+
+  const handleFeaturedEnrollSuccess = () => {
+    setShowFeaturedModal(false);
+    mutateEnrollments();
+  };
 
   // Fetch enrolled courses - use stable key with user ID and enrolled IDs
   const enrolledIdsArray = useMemo(
@@ -277,6 +342,15 @@ export default function MyCoursesPage() {
           </section>
         </div>
       </div>
+
+      {showFeaturedModal && featuredCourse && (
+        <EnrollmentModal
+          course={featuredCourse}
+          isOpen={showFeaturedModal}
+          onClose={handleDismissFeatured}
+          onSuccess={handleFeaturedEnrollSuccess}
+        />
+      )}
     </main>
   );
 }

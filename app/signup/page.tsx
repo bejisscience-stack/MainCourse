@@ -131,7 +131,10 @@ function SignUpForm() {
             router.refresh();
           }, 2000);
         }
-        // If no session (email confirmation required), just show success message
+        // If no session (email confirmation required), redirect to login with message
+        if (!hasSession) {
+          router.push("/login?message=signupSuccess");
+        }
       }
     } catch (err: any) {
       setError(err.message || t("auth.failedToCreateAccount"));

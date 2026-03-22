@@ -946,7 +946,8 @@
     "resetPasswordButton": "Reset password",
     "resettingPassword": "Resetting...",
     "passwordResetSuccess": "Your password has been reset successfully. Please sign in with your new password.",
-    "noResetSession": "This password reset link has expired or is invalid. Please request a new one."
+    "noResetSession": "This password reset link has expired or is invalid. Please request a new one.",
+    "signupSuccessMessage": "Account created successfully! Please check your email to confirm your account, then log in here."
   },
   "activeProjects": {
     "title": "Active Projects",
@@ -1218,7 +1219,10 @@
     "saved": "Settings saved successfully",
     "lastUpdated": "Last updated",
     "invalidMinWithdrawal": "Minimum withdrawal must be a positive number",
-    "invalidSubscriptionPrice": "Subscription price must be a positive number"
+    "invalidSubscriptionPrice": "Subscription price must be a positive number",
+    "featuredCourse": "Featured Course",
+    "featuredCourseHint": "Select a course to promote to new students on their first login",
+    "featuredCourseNone": "None (no promotion)"
   },
   "adminAnalytics": {
     "title": "Analytics",

@@ -3,15 +3,24 @@
 import { useState, useEffect } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
+import { useCourses } from "@/hooks/useCourses";
 import { supabase } from "@/lib/supabase";
 
 export default function AdminSettings() {
   const { t } = useI18n();
-  const { minWithdrawal, subscriptionPrice, updatedAt, isLoading, mutate } =
-    usePlatformSettings();
+  const {
+    minWithdrawal,
+    subscriptionPrice,
+    featuredCourseId,
+    updatedAt,
+    isLoading,
+    mutate,
+  } = usePlatformSettings();
+  const { courses } = useCourses("All");
 
   const [minWithdrawalInput, setMinWithdrawalInput] = useState("");
   const [subscriptionPriceInput, setSubscriptionPriceInput] = useState("");
+  const [featuredCourseInput, setFeaturedCourseInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -23,8 +32,9 @@ export default function AdminSettings() {
     if (!isLoading) {
       setMinWithdrawalInput(String(minWithdrawal));
       setSubscriptionPriceInput(String(subscriptionPrice));
+      setFeaturedCourseInput(featuredCourseId || "");
     }
-  }, [minWithdrawal, subscriptionPrice, isLoading]);
+  }, [minWithdrawal, subscriptionPrice, featuredCourseId, isLoading]);
 
   const handleSave = async () => {
     setMessage(null);
@@ -63,6 +73,7 @@ export default function AdminSettings() {
         body: JSON.stringify({
           min_withdrawal_gel: minVal,
           subscription_price_gel: subVal,
+          featured_course_id: featuredCourseInput || null,
         }),
       });
 
@@ -141,6 +152,28 @@ export default function AdminSettings() {
             </div>
             <p className="text-xs text-gray-500 mt-1">
               {t("adminSettings.subscriptionPriceHint")}
+            </p>
+          </div>
+
+          {/* Featured Course */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t("adminSettings.featuredCourse")}
+            </label>
+            <select
+              value={featuredCourseInput}
+              onChange={(e) => setFeaturedCourseInput(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-transparent text-navy-900 bg-white"
+            >
+              <option value="">{t("adminSettings.featuredCourseNone")}</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.title} ({course.course_type})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              {t("adminSettings.featuredCourseHint")}
             </p>
           </div>
         </div>

@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase
       .from("platform_settings")
       .select(
-        "min_withdrawal_gel, subscription_price_gel, updated_at, updated_by",
+        "min_withdrawal_gel, subscription_price_gel, featured_course_id, updated_at, updated_by",
       )
       .limit(1)
       .single();
@@ -65,12 +65,14 @@ export async function PUT(request: NextRequest) {
     const { userId, serviceSupabase } = authResult;
 
     const body = await request.json();
-    const { min_withdrawal_gel, subscription_price_gel } = body;
+    const { min_withdrawal_gel, subscription_price_gel, featured_course_id } =
+      body;
 
     // Validate: at least one field must be provided
     if (
       min_withdrawal_gel === undefined &&
-      subscription_price_gel === undefined
+      subscription_price_gel === undefined &&
+      featured_course_id === undefined
     ) {
       return NextResponse.json(
         { error: "No settings provided to update" },
@@ -109,6 +111,9 @@ export async function PUT(request: NextRequest) {
     if (subscription_price_gel !== undefined) {
       updateData.subscription_price_gel = Number(subscription_price_gel);
     }
+    if (featured_course_id !== undefined) {
+      updateData.featured_course_id = featured_course_id || null;
+    }
 
     // Update the singleton row (filter required by PostgREST)
     const { data, error } = await serviceSupabase
@@ -116,7 +121,7 @@ export async function PUT(request: NextRequest) {
       .update(updateData)
       .not("id", "is", null)
       .select(
-        "min_withdrawal_gel, subscription_price_gel, updated_at, updated_by",
+        "min_withdrawal_gel, subscription_price_gel, featured_course_id, updated_at, updated_by",
       )
       .single();
 
