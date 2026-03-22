@@ -6,7 +6,10 @@ import { useVideos } from "@/hooks/useVideos";
 import { useI18n } from "@/contexts/I18nContext";
 import type { Channel, Video, VideoProgress } from "@/types/server";
 import type { EnrollmentInfo } from "@/hooks/useEnrollments";
-import { useSignedVideoUrl } from "@/hooks/useSignedVideoUrl";
+import {
+  useSignedVideoUrl,
+  prefetchSignedUrl,
+} from "@/hooks/useSignedVideoUrl";
 
 interface LecturesChannelProps {
   channel: Channel;
@@ -57,6 +60,18 @@ export default function LecturesChannel({
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
+  // Prefetch signed URLs for unlocked videos when the list loads
+  useEffect(() => {
+    if (!videos.length) return;
+    const unlocked = videos.filter((_, i) => isVideoUnlocked(i));
+    // Prefetch first 5 unlocked videos, staggered to avoid API burst
+    unlocked.slice(0, 5).forEach((video, i) => {
+      setTimeout(() => {
+        prefetchSignedUrl(courseId, video.videoUrl);
+      }, i * 200);
+    });
+  }, [videos, courseId]);
 
   const getProgressPercentage = (video: Video) => {
     if (!video.progress || !video.duration) return 0;
@@ -232,6 +247,12 @@ export default function LecturesChannel({
           currentUserId={currentUserId}
           onClose={() => setSelectedVideo(null)}
           onProgressUpdate={mutateVideos}
+          nextVideoUrl={(() => {
+            const idx = videos.findIndex((v) => v.id === selectedVideo.id);
+            return idx >= 0 && idx < videos.length - 1
+              ? videos[idx + 1].videoUrl
+              : null;
+          })()}
         />
       )}
 
@@ -615,12 +636,14 @@ function VideoPlayerModal({
   currentUserId,
   onClose,
   onProgressUpdate,
+  nextVideoUrl,
 }: {
   video: Video;
   courseId: string;
   currentUserId: string;
   onClose: () => void;
   onProgressUpdate: () => void;
+  nextVideoUrl?: string | null;
 }) {
   const { t } = useI18n();
   const [currentTime, setCurrentTime] = useState(0);
@@ -633,6 +656,7 @@ function VideoPlayerModal({
   const progressUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
   const lastProgressPercentageRef = useRef<number>(0);
+  const nextPrefetchedRef = useRef(false);
 
   const {
     signedUrl,
@@ -700,6 +724,16 @@ function VideoPlayerModal({
     setDuration(total);
 
     const progressPercentage = (current / total) * 100;
+
+    // Prefetch next video's signed URL at 70% to eliminate wait on next play
+    if (
+      progressPercentage >= 70 &&
+      !nextPrefetchedRef.current &&
+      nextVideoUrl
+    ) {
+      nextPrefetchedRef.current = true;
+      prefetchSignedUrl(courseId, nextVideoUrl);
+    }
 
     // Check if we've reached 90% and haven't marked as completed yet
     if (
@@ -855,7 +889,7 @@ function VideoPlayerModal({
               src={signedUrl}
               controls
               autoPlay
-              preload="metadata"
+              preload="auto"
               playsInline
               className="w-full h-full"
               onTimeUpdate={handleTimeUpdate}

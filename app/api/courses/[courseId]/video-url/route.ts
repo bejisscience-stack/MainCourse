@@ -88,5 +88,12 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ signedUrl: data.signedUrl });
+  return NextResponse.json(
+    { signedUrl: data.signedUrl },
+    {
+      headers: {
+        "Cache-Control": "private, max-age=720", // 12 min — matches client refresh buffer
+      },
+    },
+  );
 }
