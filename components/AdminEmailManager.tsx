@@ -42,20 +42,18 @@ function AdminEmailManager() {
 
   // Compose modal
   const [showCompose, setShowCompose] = useState(false);
-  const [composeLanguage, setComposeLanguage] = useState<"en" | "ge" | "both">(
-    "both",
-  );
-  const [subjectEn, setSubjectEn] = useState("");
-  const [subjectGe, setSubjectGe] = useState("");
-  const [messageHtmlEn, setMessageHtmlEn] = useState("");
-  const [messageHtmlGe, setMessageHtmlGe] = useState("");
-  const [messagePlainEn, setMessagePlainEn] = useState("");
-  const [messagePlainGe, setMessagePlainGe] = useState("");
+  const [subject, setSubject] = useState("");
+  const [messageHtml, setMessageHtml] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sendResult, setSendResult] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
+
+  // Email history modal
+  const [historyEmail, setHistoryEmail] = useState<string | null>(null);
+  const [historyData, setHistoryData] = useState<any[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Filtered + sorted emails
   const filteredEmails = useMemo(() => {
@@ -177,31 +175,16 @@ function AdminEmailManager() {
 
   const closeCompose = () => {
     setShowCompose(false);
-    setSubjectEn("");
-    setSubjectGe("");
-    setMessageHtmlEn("");
-    setMessageHtmlGe("");
-    setMessagePlainEn("");
-    setMessagePlainGe("");
+    setSubject("");
+    setMessageHtml("");
     setSendResult(null);
   };
 
   const handleSend = useCallback(async () => {
     if (selectedEmails.size === 0) return;
 
-    // Validate
-    if (
-      (composeLanguage === "en" || composeLanguage === "both") &&
-      !subjectEn.trim()
-    ) {
-      setSendResult({ type: "error", message: "English subject is required" });
-      return;
-    }
-    if (
-      (composeLanguage === "ge" || composeLanguage === "both") &&
-      !subjectGe.trim()
-    ) {
-      setSendResult({ type: "error", message: "Georgian subject is required" });
+    if (!subject.trim()) {
+      setSendResult({ type: "error", message: "Subject is required" });
       return;
     }
 
@@ -217,22 +200,13 @@ function AdminEmailManager() {
 
       const payload = {
         target_type: "all" as const,
-        title: {
-          en: composeLanguage === "ge" ? "" : subjectEn.trim(),
-          ge: composeLanguage === "en" ? "" : subjectGe.trim(),
-        },
-        message: {
-          en: composeLanguage === "ge" ? "" : messagePlainEn,
-          ge: composeLanguage === "en" ? "" : messagePlainGe,
-        },
+        title: { en: subject.trim(), ge: "" },
+        message: { en: "", ge: "" },
         channel: "email" as const,
-        language: composeLanguage,
+        language: "en" as const,
         email_target: "specific" as const,
         target_emails: Array.from(selectedEmails),
-        message_html: {
-          en: composeLanguage === "ge" ? undefined : messageHtmlEn || undefined,
-          ge: composeLanguage === "en" ? undefined : messageHtmlGe || undefined,
-        },
+        message_html: { en: messageHtml || undefined },
       };
 
       const response = await fetch("/api/admin/notifications/send", {
@@ -252,7 +226,6 @@ function AdminEmailManager() {
         message: `Sent ${data.email_count || 0} email(s)${data.email_failed_count ? `, ${data.email_failed_count} failed` : ""}`,
       });
 
-      // Refresh email list to update send history
       mutate();
     } catch (err: any) {
       setSendResult({
@@ -262,17 +235,33 @@ function AdminEmailManager() {
     } finally {
       setIsSending(false);
     }
-  }, [
-    selectedEmails,
-    composeLanguage,
-    subjectEn,
-    subjectGe,
-    messageHtmlEn,
-    messageHtmlGe,
-    messagePlainEn,
-    messagePlainGe,
-    mutate,
-  ]);
+  }, [selectedEmails, subject, messageHtml, mutate]);
+
+  const fetchEmailHistory = useCallback(async (email: string) => {
+    setHistoryEmail(email);
+    setHistoryLoading(true);
+    setHistoryData(null);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      const response = await fetch(
+        `/api/admin/emails/status?email=${encodeURIComponent(email)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      const data = await response.json();
+      setHistoryData(data.history || []);
+    } catch {
+      setHistoryData([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
@@ -306,6 +295,48 @@ function AdminEmailManager() {
       default:
         return null;
     }
+  };
+
+  const statusBadge = (status: string | null) => {
+    if (!status) return <span className="text-xs text-gray-400">—</span>;
+    const map: Record<string, { bg: string; text: string; label: string }> = {
+      delivered: {
+        bg: "bg-green-100",
+        text: "text-green-700",
+        label: "Delivered",
+      },
+      opened: { bg: "bg-blue-100", text: "text-blue-700", label: "Opened" },
+      clicked: {
+        bg: "bg-indigo-100",
+        text: "text-indigo-700",
+        label: "Clicked",
+      },
+      bounced: { bg: "bg-red-100", text: "text-red-700", label: "Bounced" },
+      complained: {
+        bg: "bg-orange-100",
+        text: "text-orange-700",
+        label: "Complained",
+      },
+      sent: { bg: "bg-gray-100", text: "text-gray-600", label: "Sent" },
+      queued: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Queued" },
+      failed: { bg: "bg-red-100", text: "text-red-700", label: "Failed" },
+      delivery_delayed: {
+        bg: "bg-yellow-100",
+        text: "text-yellow-700",
+        label: "Delayed",
+      },
+      canceled: { bg: "bg-gray-100", text: "text-gray-600", label: "Canceled" },
+    };
+    const s = map[status] || {
+      bg: "bg-gray-100",
+      text: "text-gray-600",
+      label: status,
+    };
+    return (
+      <span className={`text-xs ${s.bg} ${s.text} px-1.5 py-0.5 rounded`}>
+        {s.label}
+      </span>
+    );
   };
 
   const filterSelectClass =
@@ -536,7 +567,17 @@ function AdminEmailManager() {
                       {entry.enrolled_courses_count}
                     </td>
                     <td className="px-4 py-3 text-gray-700">
-                      {formatDate(entry.last_email_sent_at)}
+                      {entry.total_emails_sent > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => fetchEmailHistory(entry.email)}
+                          className="text-navy-600 hover:text-navy-800 hover:underline"
+                        >
+                          {formatDate(entry.last_email_sent_at)}
+                        </button>
+                      ) : (
+                        formatDate(entry.last_email_sent_at)
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center text-gray-700">
                       {entry.total_emails_sent}
@@ -557,7 +598,7 @@ function AdminEmailManager() {
             if (e.target === e.currentTarget) closeCompose();
           }}
         >
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto mx-4 p-6 space-y-5">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4 p-6 space-y-5">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold text-navy-900">
                 Compose Email ({selectedEmails.size} recipient
@@ -580,93 +621,31 @@ function AdminEmailManager() {
               </div>
             )}
 
-            {/* Language selector */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Language
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {(["en", "ge", "both"] as const).map((lang) => (
-                  <button
-                    key={lang}
-                    type="button"
-                    onClick={() => setComposeLanguage(lang)}
-                    className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${composeLanguage === lang ? "border-navy-900 bg-navy-50 text-navy-900" : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"}`}
-                  >
-                    {lang === "en"
-                      ? "English"
-                      : lang === "ge"
-                        ? "Georgian"
-                        : "Both"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Subject */}
-            <div
-              className={`grid gap-4 ${composeLanguage === "both" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}
-            >
-              {(composeLanguage === "en" || composeLanguage === "both") && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Subject (English) *
-                  </label>
-                  <input
-                    type="text"
-                    value={subjectEn}
-                    onChange={(e) => setSubjectEn(e.target.value)}
-                    placeholder="Email subject in English"
-                    maxLength={200}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
-                  />
-                </div>
-              )}
-              {(composeLanguage === "ge" || composeLanguage === "both") && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Subject (Georgian) *
-                  </label>
-                  <input
-                    type="text"
-                    value={subjectGe}
-                    onChange={(e) => setSubjectGe(e.target.value)}
-                    placeholder="ელ-ფოსტის სათაური ქართულად"
-                    maxLength={200}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
-                  />
-                </div>
-              )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Subject *
+              </label>
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Email subject"
+                maxLength={200}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+              />
             </div>
 
             {/* Message body (Rich Text) */}
-            <div
-              className={`grid gap-4 ${composeLanguage === "both" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}
-            >
-              {(composeLanguage === "en" || composeLanguage === "both") && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Message (English)
-                  </label>
-                  <RichTextEditor
-                    content={messageHtmlEn}
-                    onChange={setMessageHtmlEn}
-                    placeholder="Compose your email message in English..."
-                  />
-                </div>
-              )}
-              {(composeLanguage === "ge" || composeLanguage === "both") && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Message (Georgian)
-                  </label>
-                  <RichTextEditor
-                    content={messageHtmlGe}
-                    onChange={setMessageHtmlGe}
-                    placeholder="შეიყვანეთ შეტყობინების ტექსტი ქართულად..."
-                  />
-                </div>
-              )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Message
+              </label>
+              <RichTextEditor
+                content={messageHtml}
+                onChange={setMessageHtml}
+                placeholder="Compose your email message..."
+              />
             </div>
 
             {/* Actions */}
@@ -689,6 +668,77 @@ function AdminEmailManager() {
                   : `Send to ${selectedEmails.size} recipient(s)`}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email History Modal */}
+      {historyEmail && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setHistoryEmail(null);
+              setHistoryData(null);
+            }
+          }}
+        >
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto mx-4 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-navy-900">
+                  Email History
+                </h3>
+                <p className="text-sm text-gray-500 mt-0.5">{historyEmail}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setHistoryEmail(null);
+                  setHistoryData(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
+
+            {historyLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="w-6 h-6 border-2 border-navy-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : historyData && historyData.length > 0 ? (
+              <div className="divide-y divide-gray-100">
+                {historyData.map((entry: any) => (
+                  <div
+                    key={entry.id}
+                    className="py-3 flex items-center justify-between gap-4"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {entry.subject}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {new Date(entry.sent_at).toLocaleString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0">
+                      {statusBadge(entry.resend_status)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-gray-500 py-8">
+                No email history found
+              </p>
+            )}
           </div>
         </div>
       )}

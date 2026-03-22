@@ -300,31 +300,17 @@ export async function POST(request: NextRequest) {
 
     const message_html = sanitizeMessageHtml(body.message_html);
 
-    // Validate payload based on language selection
-    if ((language === "en" || language === "both") && !title?.en) {
+    // Validate: at least one title and one message must be provided
+    if (!title?.en && !title?.ge) {
       return NextResponse.json(
-        { error: "English title is required" },
+        { error: "Subject is required" },
         { status: 400 },
       );
     }
 
-    if ((language === "ge" || language === "both") && !title?.ge) {
+    if (!message?.en && !message?.ge) {
       return NextResponse.json(
-        { error: "Georgian title is required" },
-        { status: 400 },
-      );
-    }
-
-    if ((language === "en" || language === "both") && !message?.en) {
-      return NextResponse.json(
-        { error: "English message is required" },
-        { status: 400 },
-      );
-    }
-
-    if ((language === "ge" || language === "both") && !message?.ge) {
-      return NextResponse.json(
-        { error: "Georgian message is required" },
+        { error: "Message is required" },
         { status: 400 },
       );
     }
@@ -332,25 +318,25 @@ export async function POST(request: NextRequest) {
     // Length bounds on text fields
     if (title?.en && title.en.length > 200) {
       return NextResponse.json(
-        { error: "English title must be 200 characters or fewer" },
+        { error: "Subject must be 200 characters or fewer" },
         { status: 400 },
       );
     }
     if (title?.ge && title.ge.length > 200) {
       return NextResponse.json(
-        { error: "Georgian title must be 200 characters or fewer" },
+        { error: "Subject must be 200 characters or fewer" },
         { status: 400 },
       );
     }
     if (message?.en && message.en.length > 5000) {
       return NextResponse.json(
-        { error: "English message must be 5000 characters or fewer" },
+        { error: "Message must be 5000 characters or fewer" },
         { status: 400 },
       );
     }
     if (message?.ge && message.ge.length > 5000) {
       return NextResponse.json(
-        { error: "Georgian message must be 5000 characters or fewer" },
+        { error: "Message must be 5000 characters or fewer" },
         { status: 400 },
       );
     }
@@ -511,7 +497,7 @@ export async function POST(request: NextRequest) {
         // Send individual emails per recipient for reliable delivery
         for (const email of emails) {
           try {
-            await sendAdminNotificationEmail(
+            const resendMessageId = await sendAdminNotificationEmail(
               email,
               title,
               message,
@@ -533,6 +519,7 @@ export async function POST(request: NextRequest) {
                 sent_by: user.id,
                 source: "admin_notification",
                 metadata: { channel, language, target_type, email_target },
+                resend_message_id: resendMessageId,
               });
             } catch (historyErr) {
               console.error(
