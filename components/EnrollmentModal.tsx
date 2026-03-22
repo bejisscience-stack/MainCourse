@@ -620,7 +620,7 @@ export default function EnrollmentModal({
         {/* Two-panel grid: payment left, media right (stacked on mobile) */}
         <div className="grid grid-cols-1 lg:grid-cols-5 max-h-[90vh]">
           {/* ===== MEDIA PANEL (right on desktop, top on mobile) ===== */}
-          <div className="relative lg:col-span-3 lg:order-2 h-48 lg:h-auto lg:min-h-[420px] bg-charcoal-950 overflow-hidden min-w-0">
+          <div className="relative lg:col-span-3 lg:order-2 h-56 lg:h-auto lg:min-h-[420px] bg-charcoal-950 overflow-hidden min-w-0">
             {course.intro_video_url ? (
               <video
                 src={course.intro_video_url}
@@ -694,7 +694,7 @@ export default function EnrollmentModal({
             <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
 
             {/* Course info overlay */}
-            <div className="absolute inset-x-0 bottom-0 p-5 lg:p-6 z-10">
+            <div className="absolute inset-x-0 bottom-0 p-5 lg:p-6 z-10 pointer-events-none">
               <div
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold ${typeStyle.bg} ${typeStyle.text} border ${typeStyle.border} backdrop-blur-sm mb-2.5`}
               >
