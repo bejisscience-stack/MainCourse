@@ -96,8 +96,10 @@ export async function GET(request: NextRequest) {
       );
       const serviceSupabase = createServiceRoleClient(token);
 
-      // Use RPC function which is marked VOLATILE to prevent caching
-      const { data: rpcData, error: rpcError } = await serviceSupabase.rpc(
+      // RPC needs user auth context (auth.uid()) for its admin check.
+      // It's SECURITY DEFINER so it bypasses RLS itself.
+      const authSupabase = createServerSupabaseClient(token);
+      const { data: rpcData, error: rpcError } = await authSupabase.rpc(
         "get_withdrawal_requests_admin",
         {
           filter_status: filterStatus || null,
