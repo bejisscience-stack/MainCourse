@@ -116,7 +116,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update the singleton row (filter required by PostgREST)
-    const { data, error } = await serviceSupabase
+    let { data, error } = await serviceSupabase
       .from("platform_settings")
       .update(updateData)
       .not("id", "is", null)
@@ -124,6 +124,26 @@ export async function PUT(request: NextRequest) {
         "min_withdrawal_gel, subscription_price_gel, featured_course_id, updated_at, updated_by",
       )
       .single();
+
+    // If no row exists yet, insert instead (self-healing)
+    if (error && error.code === "PGRST116") {
+      const insertData = {
+        min_withdrawal_gel: Number(min_withdrawal_gel ?? 50),
+        subscription_price_gel: Number(subscription_price_gel ?? 10),
+        featured_course_id: featured_course_id || null,
+        updated_at: new Date().toISOString(),
+        updated_by: userId,
+      };
+      const result = await serviceSupabase
+        .from("platform_settings")
+        .insert(insertData)
+        .select(
+          "min_withdrawal_gel, subscription_price_gel, featured_course_id, updated_at, updated_by",
+        )
+        .single();
+      data = result.data;
+      error = result.error;
+    }
 
     if (error) {
       console.error("[Admin Settings PUT] Update error:", error);
