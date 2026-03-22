@@ -6,6 +6,7 @@ import EnrollmentModal from "./EnrollmentModal";
 import { useI18n } from "@/contexts/I18nContext";
 import { useUser } from "@/hooks/useUser";
 import { formatPriceInGel } from "@/lib/currency";
+import { useIntroVideoUrl } from "@/hooks/useIntroVideoUrl";
 
 export interface Course {
   id: string;
@@ -51,6 +52,7 @@ function CourseCard({
   const { user } = useUser();
   const [isVideoExpanded, setIsVideoExpanded] = useState(false);
   const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
+  const introVideoSrc = useIntroVideoUrl(course.intro_video_url);
 
   // Ensure prices are never displayed as negative - fallback to 0 for any edge cases
   const safePrice = useMemo(
@@ -539,7 +541,7 @@ function CourseCard({
               style={{ paddingBottom: "56.25%" }}
             >
               <video
-                src={course.intro_video_url}
+                src={introVideoSrc || undefined}
                 controls
                 autoPlay
                 preload="metadata"

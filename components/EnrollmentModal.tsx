@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { getReferral } from "@/lib/referral-storage";
 import { useSavedCards, type SavedCard } from "@/hooks/useSavedCards";
 import { usePaymentRecovery } from "@/hooks/usePaymentRecovery";
+import { useIntroVideoUrl } from "@/hooks/useIntroVideoUrl";
 
 type KeepzMethod = "all";
 
@@ -48,6 +49,7 @@ export default function EnrollmentModal({
     mutate: mutateSavedCards,
   } = useSavedCards();
   const [mounted, setMounted] = useState(false);
+  const introVideoSrc = useIntroVideoUrl(course.intro_video_url);
 
   // Track enrollment modal open
   useEffect(() => {
@@ -621,9 +623,9 @@ export default function EnrollmentModal({
         <div className="grid grid-cols-1 lg:grid-cols-5 max-h-[90vh]">
           {/* ===== MEDIA PANEL (right on desktop, top on mobile) ===== */}
           <div className="relative lg:col-span-3 lg:order-2 h-56 lg:h-auto lg:min-h-[420px] bg-charcoal-950 overflow-hidden min-w-0">
-            {course.intro_video_url ? (
+            {course.intro_video_url && introVideoSrc ? (
               <video
-                src={course.intro_video_url}
+                src={introVideoSrc}
                 poster={course.thumbnail_url || undefined}
                 controls
                 playsInline
