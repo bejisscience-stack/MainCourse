@@ -308,9 +308,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!message?.en && !message?.ge) {
+    const hasMessageText = !!(message?.en || message?.ge);
+    const hasMessageHtml = !!(message_html?.en || message_html?.ge);
+    if (!hasMessageText && !hasMessageHtml) {
       return NextResponse.json(
         { error: "Message is required" },
+        { status: 400 },
+      );
+    }
+    // In-app notifications require plain text message (no HTML support)
+    const needsInApp = channel === "in_app" || channel === "both";
+    if (needsInApp && !hasMessageText) {
+      return NextResponse.json(
+        { error: "Plain text message is required for in-app notifications" },
         { status: 400 },
       );
     }
