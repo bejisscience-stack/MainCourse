@@ -1,11 +1,14 @@
-import { useEffect, useState, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { WithdrawalRequest } from '@/types/balance';
+import { useEffect, useState, useRef } from "react";
+import { supabase } from "@/lib/supabase";
+import type { WithdrawalRequest } from "@/types/balance";
 
 interface UseRealtimeAdminWithdrawalRequestsOptions {
   enabled?: boolean;
   onInsert?: (request: WithdrawalRequest) => void;
-  onUpdate?: (request: WithdrawalRequest, oldRequest: Partial<WithdrawalRequest>) => void;
+  onUpdate?: (
+    request: WithdrawalRequest,
+    oldRequest: Partial<WithdrawalRequest>,
+  ) => void;
   onConnectionChange?: (connected: boolean) => void;
 }
 
@@ -43,29 +46,36 @@ export function useRealtimeAdminWithdrawalRequests({
       return;
     }
 
-    console.log('[RT Admin Withdrawal] Setting up subscription');
+    console.log("[RT Admin Withdrawal] Setting up subscription");
 
     const channel = supabase
-      .channel('admin:withdrawal_requests')
+      .channel("admin:withdrawal_requests")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'withdrawal_requests',
+          event: "INSERT",
+          schema: "public",
+          table: "withdrawal_requests",
         },
         async (payload) => {
-          console.log('[RT Admin Withdrawal] INSERT received:', payload);
+          console.log("[RT Admin Withdrawal] INSERT received:", payload);
 
-          if (!payload.new || typeof payload.new !== 'object' || !('id' in payload.new)) {
-            console.error('[RT Admin Withdrawal] Invalid payload: missing new.id');
+          if (
+            !payload.new ||
+            typeof payload.new !== "object" ||
+            !("id" in payload.new)
+          ) {
+            console.error(
+              "[RT Admin Withdrawal] Invalid payload: missing new.id",
+            );
             return;
           }
 
           // Fetch the full request with related data
           const { data: request, error } = await supabase
-            .from('withdrawal_requests')
-            .select(`
+            .from("withdrawal_requests")
+            .select(
+              `
               id,
               user_id,
               user_type,
@@ -81,15 +91,20 @@ export function useRealtimeAdminWithdrawalRequests({
                 id,
                 email,
                 username,
+                bank_account_number,
                 role,
                 balance
               )
-            `)
-            .eq('id', (payload.new as { id: string }).id)
+            `,
+            )
+            .eq("id", (payload.new as { id: string }).id)
             .single();
 
           if (error || !request) {
-            console.error('[RT Admin Withdrawal] Error fetching request details:', error);
+            console.error(
+              "[RT Admin Withdrawal] Error fetching request details:",
+              error,
+            );
             onInsertRef.current?.(payload.new as WithdrawalRequest);
             return;
           }
@@ -98,32 +113,41 @@ export function useRealtimeAdminWithdrawalRequests({
           const transformedRequest: WithdrawalRequest = {
             ...request,
             profiles: Array.isArray(request.profiles)
-              ? (request.profiles.length > 0 ? request.profiles[0] : undefined)
-              : request.profiles ?? undefined,
+              ? request.profiles.length > 0
+                ? request.profiles[0]
+                : undefined
+              : (request.profiles ?? undefined),
           };
 
           onInsertRef.current?.(transformedRequest);
-        }
+        },
       )
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'withdrawal_requests',
+          event: "UPDATE",
+          schema: "public",
+          table: "withdrawal_requests",
         },
         async (payload) => {
-          console.log('[RT Admin Withdrawal] UPDATE received:', payload);
+          console.log("[RT Admin Withdrawal] UPDATE received:", payload);
 
-          if (!payload.new || typeof payload.new !== 'object' || !('id' in payload.new)) {
-            console.error('[RT Admin Withdrawal] Invalid payload: missing new.id');
+          if (
+            !payload.new ||
+            typeof payload.new !== "object" ||
+            !("id" in payload.new)
+          ) {
+            console.error(
+              "[RT Admin Withdrawal] Invalid payload: missing new.id",
+            );
             return;
           }
 
           // Fetch the full request with related data
           const { data: request, error } = await supabase
-            .from('withdrawal_requests')
-            .select(`
+            .from("withdrawal_requests")
+            .select(
+              `
               id,
               user_id,
               user_type,
@@ -139,16 +163,24 @@ export function useRealtimeAdminWithdrawalRequests({
                 id,
                 email,
                 username,
+                bank_account_number,
                 role,
                 balance
               )
-            `)
-            .eq('id', (payload.new as { id: string }).id)
+            `,
+            )
+            .eq("id", (payload.new as { id: string }).id)
             .single();
 
           if (error || !request) {
-            console.error('[RT Admin Withdrawal] Error fetching request details:', error);
-            onUpdateRef.current?.(payload.new as WithdrawalRequest, payload.old as Partial<WithdrawalRequest>);
+            console.error(
+              "[RT Admin Withdrawal] Error fetching request details:",
+              error,
+            );
+            onUpdateRef.current?.(
+              payload.new as WithdrawalRequest,
+              payload.old as Partial<WithdrawalRequest>,
+            );
             return;
           }
 
@@ -156,33 +188,40 @@ export function useRealtimeAdminWithdrawalRequests({
           const transformedRequest: WithdrawalRequest = {
             ...request,
             profiles: Array.isArray(request.profiles)
-              ? (request.profiles.length > 0 ? request.profiles[0] : undefined)
-              : request.profiles ?? undefined,
+              ? request.profiles.length > 0
+                ? request.profiles[0]
+                : undefined
+              : (request.profiles ?? undefined),
           };
 
-          onUpdateRef.current?.(transformedRequest, payload.old as Partial<WithdrawalRequest>);
-        }
+          onUpdateRef.current?.(
+            transformedRequest,
+            payload.old as Partial<WithdrawalRequest>,
+          );
+        },
       )
       .subscribe((status, err) => {
-        console.log('[RT Admin Withdrawal] Subscription status:', status, err);
+        console.log("[RT Admin Withdrawal] Subscription status:", status, err);
 
-        const connected = status === 'SUBSCRIBED';
+        const connected = status === "SUBSCRIBED";
         setIsConnected(connected);
         onConnectionChangeRef.current?.(connected);
 
-        if (status === 'CHANNEL_ERROR') {
-          console.error('[RT Admin Withdrawal] Channel error:', err);
-        } else if (status === 'TIMED_OUT') {
-          console.warn('[RT Admin Withdrawal] Connection timed out, will retry...');
-        } else if (status === 'CLOSED') {
-          console.log('[RT Admin Withdrawal] Channel closed');
+        if (status === "CHANNEL_ERROR") {
+          console.error("[RT Admin Withdrawal] Channel error:", err);
+        } else if (status === "TIMED_OUT") {
+          console.warn(
+            "[RT Admin Withdrawal] Connection timed out, will retry...",
+          );
+        } else if (status === "CLOSED") {
+          console.log("[RT Admin Withdrawal] Channel closed");
         }
       });
 
     channelRef.current = channel;
 
     return () => {
-      console.log('[RT Admin Withdrawal] Cleaning up subscription');
+      console.log("[RT Admin Withdrawal] Cleaning up subscription");
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
