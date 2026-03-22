@@ -86,7 +86,7 @@ function Navigation() {
           <Link href="/" className="flex items-center group">
             <Image
               src="/wavleba-logo-new.png"
-              alt="Wavleba"
+              alt="Swavleba"
               width={160}
               height={40}
               priority

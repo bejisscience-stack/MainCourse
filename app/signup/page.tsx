@@ -160,7 +160,7 @@ function SignUpForm() {
           <Link href="/" className="flex items-center justify-center mb-6">
             <img
               src="/wavleba-logo-new.png"
-              alt="Wavleba"
+              alt="Swavleba"
               className="h-12 w-auto"
               width={144}
               height={48}

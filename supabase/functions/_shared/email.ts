@@ -51,7 +51,7 @@ const emailWrapper = (content: string) => `
       ${content}
     </div>
     <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
-      <p>Wavleba - Online Learning Platform</p>
+      <p>Swavleba - Online Learning Platform</p>
       <p><a href="${SITE_URL}" style="color: ${BRAND_COLOR};">wavleba.ge</a></p>
     </div>
   </div>
@@ -247,7 +247,7 @@ export async function sendEmail(
     throw new Error("RESEND_API_KEY not configured");
   }
 
-  const from = Deno.env.get("EMAIL_FROM") || "Wavleba <no-reply@wavleba.ge>";
+  const from = Deno.env.get("EMAIL_FROM") || "Swavleba <no-reply@wavleba.ge>";
   const replyTo = Deno.env.get("EMAIL_REPLY_TO");
 
   const response = await fetch("https://api.resend.com/emails", {

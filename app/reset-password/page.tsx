@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
-import { useI18n } from '@/contexts/I18nContext';
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/contexts/I18nContext";
 
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
@@ -18,16 +18,16 @@ function ResetPasswordForm() {
   const { t } = useI18n();
 
   useEffect(() => {
-    const tokenHash = searchParams.get('token_hash');
-    const type = searchParams.get('type');
+    const tokenHash = searchParams.get("token_hash");
+    const type = searchParams.get("type");
 
     const verifyAndEstablishSession = async () => {
       // If token_hash is in the URL, verify it client-side.
       // This prevents email prefetchers from consuming the OTP token.
-      if (tokenHash && type === 'recovery') {
+      if (tokenHash && type === "recovery") {
         const { error: verifyError } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
-          type: 'recovery',
+          type: "recovery",
         });
 
         if (verifyError) {
@@ -42,7 +42,9 @@ function ResetPasswordForm() {
       }
 
       // Fallback: check for existing session (e.g. from old email links via /auth/callback)
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       setHasSession(!!session);
       setSessionChecked(true);
     };
@@ -55,12 +57,12 @@ function ResetPasswordForm() {
     setError(null);
 
     if (newPassword.length < 6) {
-      setError(t('settings.passwordTooShort'));
+      setError(t("settings.passwordTooShort"));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError(t('settings.passwordsDoNotMatch'));
+      setError(t("settings.passwordsDoNotMatch"));
       return;
     }
 
@@ -79,9 +81,9 @@ function ResetPasswordForm() {
       await supabase.auth.signOut();
 
       // Redirect to login with success message
-      window.location.href = '/login?message=passwordReset';
+      window.location.href = "/login?message=passwordReset";
     } catch (err: any) {
-      setError(err.message || t('auth.somethingWentWrong'));
+      setError(err.message || t("auth.somethingWentWrong"));
       setLoading(false);
     }
   };
@@ -101,14 +103,26 @@ function ResetPasswordForm() {
         <div className="relative z-10 max-w-md w-full space-y-8 bg-white dark:bg-navy-800 p-8 rounded-2xl shadow-xl border border-charcoal-100 dark:border-navy-700/50">
           <div>
             <Link href="/" className="flex items-center justify-center mb-6">
-              <img src="/wavleba-logo-new.png" alt="Wavleba" className="h-12 w-auto" />
+              <img
+                src="/wavleba-logo-new.png"
+                alt="Swavleba"
+                className="h-12 w-auto"
+              />
             </Link>
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
               <div className="flex items-start">
-                <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <svg
+                  className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
-                <p>{t('auth.noResetSession')}</p>
+                <p>{t("auth.noResetSession")}</p>
               </div>
             </div>
             <div className="mt-6 text-center">
@@ -116,7 +130,7 @@ function ResetPasswordForm() {
                 href="/forgot-password"
                 className="text-sm font-semibold text-charcoal-950 dark:text-emerald-400 hover:text-charcoal-700 dark:hover:text-emerald-300 transition-colors"
               >
-                {t('auth.forgotPasswordLink')}
+                {t("auth.forgotPasswordLink")}
               </Link>
             </div>
           </div>
@@ -132,13 +146,17 @@ function ResetPasswordForm() {
       <div className="relative z-10 max-w-md w-full space-y-8 bg-white dark:bg-navy-800 p-8 rounded-2xl shadow-xl border border-charcoal-100 dark:border-navy-700/50">
         <div>
           <Link href="/" className="flex items-center justify-center mb-6">
-            <img src="/wavleba-logo-new.png" alt="Wavleba" className="h-12 w-auto" />
+            <img
+              src="/wavleba-logo-new.png"
+              alt="Swavleba"
+              className="h-12 w-auto"
+            />
           </Link>
           <h2 className="text-center text-3xl font-bold text-charcoal-950 dark:text-white">
-            {t('auth.resetPassword')}
+            {t("auth.resetPassword")}
           </h2>
           <p className="mt-2 text-center text-sm text-charcoal-600 dark:text-gray-400">
-            {t('auth.resetPasswordDescription')}
+            {t("auth.resetPasswordDescription")}
           </p>
         </div>
 
@@ -146,8 +164,16 @@ function ResetPasswordForm() {
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm animate-in fade-in">
               <div className="flex items-start">
-                <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <svg
+                  className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 <p>{error}</p>
               </div>
@@ -156,8 +182,11 @@ function ResetPasswordForm() {
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
-                {t('settings.newPassword')}
+              <label
+                htmlFor="newPassword"
+                className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2"
+              >
+                {t("settings.newPassword")}
               </label>
               <input
                 id="newPassword"
@@ -168,13 +197,16 @@ function ResetPasswordForm() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="appearance-none relative block w-full px-4 py-3 bg-white dark:bg-navy-700 border border-charcoal-200 dark:border-navy-600 placeholder-gray-400 dark:placeholder-gray-500 text-charcoal-950 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent transition-colors"
-                placeholder={t('settings.newPassword')}
+                placeholder={t("settings.newPassword")}
               />
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
-                {t('settings.confirmPassword')}
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2"
+              >
+                {t("settings.confirmPassword")}
               </label>
               <input
                 id="confirmPassword"
@@ -185,7 +217,7 @@ function ResetPasswordForm() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="appearance-none relative block w-full px-4 py-3 bg-white dark:bg-navy-700 border border-charcoal-200 dark:border-navy-600 placeholder-gray-400 dark:placeholder-gray-500 text-charcoal-950 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent transition-colors"
-                placeholder={t('settings.confirmPassword')}
+                placeholder={t("settings.confirmPassword")}
               />
             </div>
           </div>
@@ -195,7 +227,9 @@ function ResetPasswordForm() {
             disabled={loading}
             className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-charcoal-950 dark:bg-emerald-500 hover:bg-charcoal-800 dark:hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? t('auth.resettingPassword') : t('auth.resetPasswordButton')}
+            {loading
+              ? t("auth.resettingPassword")
+              : t("auth.resetPasswordButton")}
           </button>
         </form>
       </div>

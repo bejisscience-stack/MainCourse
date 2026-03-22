@@ -100,7 +100,7 @@ export default function CompleteProfilePage() {
           <Link href="/" className="flex items-center justify-center mb-6">
             <img
               src="/wavleba-logo-new.png"
-              alt="Wavleba"
+              alt="Swavleba"
               className="h-12 w-auto"
             />
           </Link>

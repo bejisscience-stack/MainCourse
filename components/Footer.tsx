@@ -16,7 +16,7 @@ export default function Footer() {
             <Link href="/" className="flex items-center mb-4">
               <img
                 src="/wavleba-logo-new.png"
-                alt="Wavleba"
+                alt="Swavleba"
                 className="h-10 w-auto"
                 width={120}
                 height={40}
@@ -97,7 +97,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="mt-8 pt-8 border-t border-charcoal-800 dark:border-navy-800">
           <p className="text-center text-charcoal-500 dark:text-gray-500 text-sm">
-            &copy; {currentYear} Wavleba. {t("footer.allRightsReserved")}
+            &copy; {currentYear} Swavleba. {t("footer.allRightsReserved")}
           </p>
         </div>
       </div>
