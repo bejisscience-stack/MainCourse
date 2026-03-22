@@ -263,7 +263,7 @@ export default function StudentChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-navy-950/20 backdrop-blur-[0.5px]">
+    <div className="flex flex-col h-dvh bg-navy-950/20 backdrop-blur-[0.5px]">
       <ChatNavigation />
       <div className="flex-1 overflow-hidden">
         {servers.length === 0 ? (

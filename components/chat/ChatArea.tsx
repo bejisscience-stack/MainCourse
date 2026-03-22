@@ -696,7 +696,7 @@ export default function ChatArea({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-navy-950/30 backdrop-blur-sm relative">
+    <div className="flex-1 flex flex-col min-h-0 bg-navy-950/30 backdrop-blur-sm relative">
       {/* Channel header */}
       <div className="h-12 px-4 border-b border-navy-800/60 flex items-center shadow-soft flex-shrink-0 bg-navy-950/60 backdrop-blur-md z-10">
         <div className="flex items-center gap-2">
