@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, memo, useCallback } from "react";
+import { useState, useMemo, memo, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import { useAdminEmails, type AdminEmailEntry } from "@/hooks/useAdminEmails";
@@ -14,6 +14,15 @@ type SourceFilter = "all" | "profile" | "coming_soon";
 type RegistrationFilter = "all" | "registered" | "not_registered";
 type CourseFilter = "all" | "has_courses" | "no_courses";
 type EmailHistoryFilter = "all" | "never_emailed" | "emailed_before";
+type DeliveryStatusFilter =
+  | "all"
+  | "delivered"
+  | "opened"
+  | "clicked"
+  | "bounced"
+  | "failed"
+  | "complained"
+  | "not_sent";
 type RoleFilter = "all" | "student" | "lecturer" | "admin";
 type SortKey =
   | "email"
@@ -54,6 +63,43 @@ function AdminEmailManager() {
   const [historyEmail, setHistoryEmail] = useState<string | null>(null);
   const [historyData, setHistoryData] = useState<any[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Resend delivery statuses
+  const [resendStatuses, setResendStatuses] = useState<
+    Record<string, { status: string; subject: string; date: string }>
+  >({});
+  const [resendLoading, setResendLoading] = useState(false);
+  const [deliveryStatusFilter, setDeliveryStatusFilter] =
+    useState<DeliveryStatusFilter>("all");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchResendStatuses() {
+      setResendLoading(true);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+
+        const response = await fetch("/api/admin/emails/resend-status", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!cancelled) setResendStatuses(data.statuses || {});
+      } catch {
+        // Silently fail — statuses are non-critical
+      } finally {
+        if (!cancelled) setResendLoading(false);
+      }
+    }
+    fetchResendStatuses();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Filtered + sorted emails
   const filteredEmails = useMemo(() => {
@@ -103,6 +149,15 @@ function AdminEmailManager() {
       result = result.filter((e) => e.role === roleFilter);
     }
 
+    // Delivery status
+    if (deliveryStatusFilter !== "all") {
+      result = result.filter((e) => {
+        const rs = resendStatuses[e.email.toLowerCase()];
+        if (deliveryStatusFilter === "not_sent") return !rs;
+        return rs?.status === deliveryStatusFilter;
+      });
+    }
+
     // Sort
     result.sort((a, b) => {
       let cmp = 0;
@@ -137,6 +192,8 @@ function AdminEmailManager() {
     courseFilter,
     emailHistoryFilter,
     roleFilter,
+    deliveryStatusFilter,
+    resendStatuses,
     sortKey,
     sortAsc,
   ]);
@@ -474,6 +531,27 @@ function AdminEmailManager() {
               <option value="admin">Admin</option>
             </select>
           </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Delivery Status{resendLoading ? " ..." : ""}
+            </label>
+            <select
+              value={deliveryStatusFilter}
+              onChange={(e) =>
+                setDeliveryStatusFilter(e.target.value as DeliveryStatusFilter)
+              }
+              className={filterSelectClass}
+            >
+              <option value="all">All Statuses</option>
+              <option value="delivered">Delivered</option>
+              <option value="opened">Opened</option>
+              <option value="clicked">Clicked</option>
+              <option value="bounced">Bounced</option>
+              <option value="failed">Failed</option>
+              <option value="complained">Complained</option>
+              <option value="not_sent">Not Sent</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -527,13 +605,16 @@ function AdminEmailManager() {
                 >
                   Sent{sortIcon("total_emails_sent")}
                 </th>
+                <th className="px-4 py-3 text-center font-semibold text-gray-700">
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredEmails.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-4 py-12 text-center text-gray-500"
                   >
                     No emails match the current filters
@@ -581,6 +662,12 @@ function AdminEmailManager() {
                     </td>
                     <td className="px-4 py-3 text-center text-gray-700">
                       {entry.total_emails_sent}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {statusBadge(
+                        resendStatuses[entry.email.toLowerCase()]?.status ||
+                          null,
+                      )}
                     </td>
                   </tr>
                 ))
