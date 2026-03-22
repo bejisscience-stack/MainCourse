@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import type { Server, ChannelCategory, Channel } from "@/types/server";
 import ChannelManagement from "./ChannelManagement";
-import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 interface ChannelSidebarProps {
   server: Server | null;
@@ -17,6 +16,9 @@ interface ChannelSidebarProps {
   onChannelDelete?: (channelId: string) => Promise<void>;
   isLecturer?: boolean;
   onCollapse?: () => void;
+  getUnreadCount: (channelId: string) => number;
+  markAsRead: (channelId: string) => Promise<void>;
+  totalUnread: number;
 }
 
 // Channel icon component
@@ -42,6 +44,9 @@ export default function ChannelSidebar({
   onChannelDelete,
   isLecturer = false,
   onCollapse,
+  getUnreadCount,
+  markAsRead,
+  totalUnread,
 }: ChannelSidebarProps) {
   const [showChannelManagement, setShowChannelManagement] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(
@@ -75,18 +80,6 @@ export default function ChannelSidebar({
       return newSet;
     });
   }, []);
-
-  // Calculate channel IDs for unread tracking
-  const channelIds = useMemo(() => {
-    if (!server) return [];
-    return server.channels.flatMap((cat) => cat.channels).map((ch) => ch.id);
-  }, [server]);
-
-  // Get unread counts with real-time updates
-  const { getUnreadCount, markAsRead, totalUnread } = useUnreadMessages({
-    channelIds,
-    enabled: !!server,
-  });
 
   // All channels flat list
   const allChannels = useMemo(() => {

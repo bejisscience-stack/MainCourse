@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import ServerSidebar from "./ServerSidebar";
 import ChannelSidebar from "./ChannelSidebar";
@@ -9,6 +9,7 @@ import ChatErrorBoundary from "./ChatErrorBoundary";
 import { useActiveServer } from "@/hooks/useActiveServer";
 import { useActiveChannel } from "@/hooks/useActiveChannel";
 import { useUser } from "@/hooks/useUser";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import type { Server, Channel } from "@/types/server";
 import type { EnrollmentInfo } from "@/hooks/useEnrollments";
 
@@ -64,6 +65,39 @@ export default function LayoutContainer({
     user?.email?.split("@")[0] ||
     "User";
   const userAvatarUrl = profile?.avatar_url || null;
+
+  // Unread messages: single hook for all channels across all servers
+  const allChannelIds = useMemo(() => {
+    return servers.flatMap((s) =>
+      s.channels.flatMap((cat) => cat.channels.map((ch) => ch.id)),
+    );
+  }, [servers]);
+
+  const { getUnreadCount, markAsRead, totalUnread } = useUnreadMessages({
+    channelIds: allChannelIds,
+    enabled: servers.length > 0,
+  });
+
+  // Aggregate unread counts per server/course for ServerSidebar badges
+  const serverUnreadCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const server of servers) {
+      let total = 0;
+      for (const cat of server.channels) {
+        for (const ch of cat.channels) {
+          total += getUnreadCount(ch.id);
+        }
+      }
+      counts.set(server.id, total);
+    }
+    return counts;
+  }, [servers, getUnreadCount]);
+
+  // Per-active-server total for ChannelSidebar header badge
+  const activeServerTotalUnread = useMemo(() => {
+    if (!activeServerId || activeServerId === "home") return 0;
+    return serverUnreadCounts.get(activeServerId) || 0;
+  }, [activeServerId, serverUnreadCounts]);
 
   const activeServer =
     activeServerId && activeServerId !== "home"
@@ -190,6 +224,7 @@ export default function LayoutContainer({
           isLecturer={isLecturer}
           enrolledCourseIds={enrolledCourseIds}
           showDMButton={showDMButton}
+          serverUnreadCounts={serverUnreadCounts}
         />
 
         {/* Channels Sidebar Container */}
@@ -236,6 +271,9 @@ export default function LayoutContainer({
                     onChannelDelete={onChannelDelete}
                     isLecturer={isLecturer}
                     onCollapse={() => setChannelsCollapsed(true)}
+                    getUnreadCount={getUnreadCount}
+                    markAsRead={markAsRead}
+                    totalUnread={activeServerTotalUnread}
                   />
                 </div>
               )}

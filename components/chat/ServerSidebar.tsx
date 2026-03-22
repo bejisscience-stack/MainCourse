@@ -18,6 +18,7 @@ interface ServerSidebarProps {
   isLecturer?: boolean;
   enrolledCourseIds?: Set<string>;
   showDMButton?: boolean;
+  serverUnreadCounts?: Map<string, number>;
 }
 
 export default function ServerSidebar({
@@ -28,6 +29,7 @@ export default function ServerSidebar({
   isLecturer = false,
   enrolledCourseIds = new Set(),
   showDMButton = true,
+  serverUnreadCounts = new Map(),
 }: ServerSidebarProps) {
   const [hoveredServerId, setHoveredServerId] = useState<string | null>(null);
   const [enrollmentModal, setEnrollmentModal] = useState<{
@@ -144,6 +146,7 @@ export default function ServerSidebar({
           const isHovered = hoveredServerId === server.id;
           const isEnrolled = enrolledCourseIds.has(server.id) || isLecturer;
           const isLocked = !isEnrolled;
+          const unreadCount = serverUnreadCounts.get(server.id) || 0;
 
           return (
             <div key={server.id} className="relative group">
@@ -182,6 +185,13 @@ export default function ServerSidebar({
                   </svg>
                 ) : (
                   server.icon || server.name.charAt(0).toUpperCase()
+                )}
+
+                {/* Unread count badge */}
+                {!isLocked && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-semibold min-w-[18px] h-[18px] flex items-center justify-center rounded-full shadow-soft animate-in fade-in duration-200">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
                 )}
               </button>
 
