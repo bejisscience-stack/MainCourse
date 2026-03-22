@@ -250,7 +250,9 @@ export default function AdminWithdrawals() {
                       {req.user_type}
                     </td>
                     <td className="px-4 py-3 text-sm font-mono text-gray-700">
-                      {req.bank_account_number}
+                      {req.profiles?.bank_account_number ||
+                        req.bank_account_number ||
+                        "—"}
                     </td>
                     <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">
                       ₾{req.amount.toFixed(2)}
@@ -335,7 +337,9 @@ export default function AdminWithdrawals() {
               <p className="text-xs text-gray-500 font-medium">
                 IBAN:{" "}
                 <span className="font-mono">
-                  {showApproveModal.bank_account_number}
+                  {showApproveModal.profiles?.bank_account_number ||
+                    showApproveModal.bank_account_number ||
+                    "—"}
                 </span>
               </p>
             </div>

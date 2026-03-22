@@ -40,6 +40,7 @@ export interface WithdrawalRequest {
     id: string;
     email: string;
     username: string | null;
+    bank_account_number: string | null;
     role: string;
     balance: number;
   };
