@@ -112,14 +112,14 @@ export default function AdminWithdrawals() {
 
   const statusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      pending: "bg-yellow-100 text-yellow-800",
-      completed: "bg-green-100 text-green-800",
-      approved: "bg-green-100 text-green-800",
-      rejected: "bg-red-100 text-red-800",
+      pending: "bg-yellow-500/15 text-yellow-400",
+      completed: "bg-green-500/15 text-green-400",
+      approved: "bg-green-500/15 text-green-400",
+      rejected: "bg-red-500/15 text-red-400",
     };
     return (
       <span
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status] || "bg-gray-100 text-gray-800"}`}
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status] || "bg-navy-800/50 text-navy-300"}`}
       >
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
@@ -129,11 +129,14 @@ export default function AdminWithdrawals() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-10 bg-gray-200 rounded animate-pulse w-96" />
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+        <div className="h-10 bg-navy-800/50 rounded animate-pulse w-96" />
+        <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-8">
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />
+              <div
+                key={i}
+                className="h-12 bg-navy-800/50 rounded animate-pulse"
+              />
             ))}
           </div>
         </div>
@@ -143,7 +146,7 @@ export default function AdminWithdrawals() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg">
+      <div className="bg-red-500/15 border border-red-500/30 text-red-400 px-6 py-4 rounded-2xl">
         {error.message || t("common.error")}
       </div>
     );
@@ -153,11 +156,11 @@ export default function AdminWithdrawals() {
     <div className="space-y-6">
       {/* Action error banner */}
       {actionError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
+        <div className="bg-red-500/15 border border-red-500/30 text-red-400 px-4 py-3 rounded-2xl flex items-center justify-between">
           <span>{actionError}</span>
           <button
             onClick={() => setActionError(null)}
-            className="text-red-500 hover:text-red-700 font-bold"
+            className="text-red-400 hover:text-red-300 font-bold"
           >
             &times;
           </button>
@@ -179,8 +182,8 @@ export default function AdminWithdrawals() {
             onClick={() => setStatusFilter(key)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               statusFilter === key
-                ? "bg-navy-900 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-emerald-500/15 text-emerald-400"
+                : "bg-navy-800/50 text-navy-300 hover:bg-navy-800/70"
             }`}
           >
             {label} ({counts[key]})
@@ -190,8 +193,8 @@ export default function AdminWithdrawals() {
 
       {/* Table */}
       {filteredRequests.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-          <p className="text-gray-500 text-lg">
+        <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-12 text-center">
+          <p className="text-navy-400 text-lg">
             {statusFilter === "all"
               ? t("adminWithdrawals.noRequests")
               : t("adminWithdrawals.noRequestsForFilter", {
@@ -200,70 +203,70 @@ export default function AdminWithdrawals() {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-navy-800/60">
+              <thead className="bg-navy-800/50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminWithdrawals.username")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminWithdrawals.email")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminWithdrawals.role")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminWithdrawals.bankAccount")}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminWithdrawals.amount")}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminWithdrawals.currentBalance")}
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminWithdrawals.status")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminWithdrawals.requestDate")}
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminWithdrawals.actions")}
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-navy-800/60">
                 {filteredRequests.map((req) => (
                   <tr
                     key={req.id}
-                    className="hover:bg-gray-50 transition-colors"
+                    className="hover:bg-navy-800/30 transition-colors"
                   >
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-100">
                       {req.profiles?.username || t("adminWithdrawals.unknown")}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-navy-400">
                       {req.profiles?.email || "—"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 capitalize">
+                    <td className="px-4 py-3 text-sm text-navy-400 capitalize">
                       {req.user_type}
                     </td>
-                    <td className="px-4 py-3 text-sm font-mono text-gray-700">
+                    <td className="px-4 py-3 text-sm font-mono text-navy-300">
                       {req.profiles?.bank_account_number ||
                         req.bank_account_number ||
                         "—"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">
+                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-100">
                       ₾{req.amount.toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-600">
+                    <td className="px-4 py-3 text-sm text-right text-navy-400">
                       ₾{req.profiles?.balance?.toFixed(2) ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {statusBadge(req.status)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-4 py-3 text-sm text-navy-400">
                       {formatDate(req.created_at)}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -276,7 +279,7 @@ export default function AdminWithdrawals() {
                               setActionError(null);
                             }}
                             disabled={processingIds.has(req.id)}
-                            className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="px-3 py-1.5 bg-green-500/20 text-green-400 text-xs font-medium rounded-md hover:bg-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             {processingIds.has(req.id)
                               ? t("adminWithdrawals.processing")
@@ -289,16 +292,16 @@ export default function AdminWithdrawals() {
                               setActionError(null);
                             }}
                             disabled={processingIds.has(req.id)}
-                            className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="px-3 py-1.5 bg-red-500/20 text-red-400 text-xs font-medium rounded-md hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             {t("adminWithdrawals.reject")}
                           </button>
                         </div>
                       ) : (
-                        <div className="text-xs text-gray-400">
+                        <div className="text-xs text-navy-400">
                           {req.admin_notes && (
                             <p
-                              className="text-gray-500 italic max-w-[200px] truncate"
+                              className="text-navy-400 italic max-w-[200px] truncate"
                               title={req.admin_notes}
                             >
                               {req.admin_notes}
@@ -320,12 +323,12 @@ export default function AdminWithdrawals() {
 
       {/* Approve Modal */}
       {showApproveModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-bold text-gray-900">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-navy-900 border border-navy-800/60 rounded-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-bold text-gray-100">
               {t("adminWithdrawals.approveTitle")}
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-navy-400">
               {t("adminWithdrawals.approveMessage", {
                 amount: showApproveModal.amount.toFixed(2),
                 username:
@@ -334,7 +337,7 @@ export default function AdminWithdrawals() {
               })}
             </p>
             <div className="space-y-2">
-              <p className="text-xs text-gray-500 font-medium">
+              <p className="text-xs text-navy-400 font-medium">
                 IBAN:{" "}
                 <span className="font-mono">
                   {showApproveModal.profiles?.bank_account_number ||
@@ -347,7 +350,7 @@ export default function AdminWithdrawals() {
               value={approveNotes}
               onChange={(e) => setApproveNotes(e.target.value)}
               placeholder={t("adminWithdrawals.approveNotesPlaceholder")}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+              className="w-full border border-navy-700 bg-navy-800/50 text-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
               rows={3}
             />
             {actionError && (
@@ -359,14 +362,14 @@ export default function AdminWithdrawals() {
                   setShowApproveModal(null);
                   setActionError(null);
                 }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-navy-300 bg-navy-800 rounded-lg hover:bg-navy-700 transition-colors"
               >
                 {t("common.cancel")}
               </button>
               <button
                 onClick={handleApprove}
                 disabled={processingIds.has(showApproveModal.id)}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 text-sm font-medium text-green-400 bg-green-500/20 rounded-lg hover:bg-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {processingIds.has(showApproveModal.id)
                   ? t("adminWithdrawals.processing")
@@ -379,12 +382,12 @@ export default function AdminWithdrawals() {
 
       {/* Reject Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-bold text-gray-900">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-navy-900 border border-navy-800/60 rounded-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-bold text-gray-100">
               {t("adminWithdrawals.rejectTitle")}
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-navy-400">
               {t("adminWithdrawals.rejectMessage", {
                 amount: showRejectModal.amount.toFixed(2),
                 username:
@@ -393,14 +396,14 @@ export default function AdminWithdrawals() {
               })}
             </p>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-navy-300 mb-1">
                 {t("adminWithdrawals.rejectReason")} *
               </label>
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder={t("adminWithdrawals.rejectReasonPlaceholder")}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                className="w-full border border-navy-700 bg-navy-800/50 text-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
                 rows={3}
                 required
               />
@@ -419,7 +422,7 @@ export default function AdminWithdrawals() {
                   setShowRejectModal(null);
                   setActionError(null);
                 }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-navy-300 bg-navy-800 rounded-lg hover:bg-navy-700 transition-colors"
               >
                 {t("common.cancel")}
               </button>
@@ -428,7 +431,7 @@ export default function AdminWithdrawals() {
                 disabled={
                   !rejectReason.trim() || processingIds.has(showRejectModal.id)
                 }
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 text-sm font-medium text-red-400 bg-red-500/20 rounded-lg hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {processingIds.has(showRejectModal.id)
                   ? t("adminWithdrawals.processing")

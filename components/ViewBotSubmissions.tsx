@@ -53,9 +53,9 @@ function HistoryRow({ submissionId }: { submissionId: string }) {
   return (
     <>
       {history.map((h) => (
-        <tr key={h.id} className="bg-gray-50/50 text-xs">
+        <tr key={h.id} className="bg-navy-800/50/50 text-xs">
           <td className="px-4 py-2 pl-10" colSpan={3}>
-            <span className="text-gray-500">
+            <span className="text-navy-400">
               {new Date(h.scraped_at).toLocaleString()}
             </span>
           </td>
@@ -171,7 +171,7 @@ export default function ViewBotSubmissions({
           onChange={(e) =>
             onFilterChange({ ...filters, projectId: e.target.value || null })
           }
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-900"
+          className="px-3 py-2 border border-navy-700 rounded-lg text-sm bg-navy-900/50 text-gray-100"
         >
           <option value="">{t("viewBot.allProjects")}</option>
           {projects.map((p) => (
@@ -189,7 +189,7 @@ export default function ViewBotSubmissions({
               platform: (e.target.value as Platform) || null,
             })
           }
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-900"
+          className="px-3 py-2 border border-navy-700 rounded-lg text-sm bg-navy-900/50 text-gray-100"
         >
           <option value="">{t("viewBot.allPlatforms")}</option>
           <option value="tiktok">TikTok</option>
@@ -198,7 +198,7 @@ export default function ViewBotSubmissions({
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-navy-900/50 rounded-xl border border-navy-800/60 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-gray-400">
             {t("common.loading")}
@@ -209,8 +209,8 @@ export default function ViewBotSubmissions({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-gray-900">
-              <thead className="bg-gray-50 text-gray-600">
+            <table className="w-full text-sm text-gray-100">
+              <thead className="bg-navy-800/50 text-navy-400">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">
                     {t("viewBot.student")}
@@ -241,7 +241,7 @@ export default function ViewBotSubmissions({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-navy-800/40">
                 {submissions.map((sub) => {
                   const urls = getVideoUrls(sub);
                   const isExpanded = expandedId === sub.id;
@@ -264,7 +264,7 @@ export default function ViewBotSubmissions({
                         return (
                           <tr
                             key={`${sub.id}-${idx}`}
-                            className="hover:bg-gray-50 cursor-pointer"
+                            className="hover:bg-emerald-500/25/50 cursor-pointer"
                             onClick={() =>
                               setExpandedId(isExpanded ? null : sub.id)
                             }
@@ -272,7 +272,7 @@ export default function ViewBotSubmissions({
                             {idx === 0 && (
                               <>
                                 <td className="px-4 py-3" rowSpan={urls.length}>
-                                  <div className="font-medium text-navy-900">
+                                  <div className="font-medium text-gray-100">
                                     {sub.username}
                                   </div>
                                 </td>
@@ -291,14 +291,14 @@ export default function ViewBotSubmissions({
                                 <span
                                   className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium ${
                                     urlInfo.platform === "TikTok"
-                                      ? "bg-gray-900 text-white"
+                                      ? "bg-navy-700 text-gray-100"
                                       : urlInfo.platform === "Instagram"
                                         ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
                                         : urlInfo.platform === "YouTube"
                                           ? "bg-red-600 text-white"
                                           : urlInfo.platform === "Facebook"
                                             ? "bg-blue-600 text-white"
-                                            : "bg-gray-200 text-gray-700"
+                                            : "bg-navy-800/80 text-navy-300"
                                   }`}
                                 >
                                   {urlInfo.platform}
@@ -346,7 +346,7 @@ export default function ViewBotSubmissions({
                                   {t("viewBot.notScraped")}
                                 </span>
                               ) : payout > 0 ? (
-                                <span className="text-navy-900 font-semibold">
+                                <span className="text-gray-100 font-semibold">
                                   ₾{payout.toFixed(2)}
                                 </span>
                               ) : (
@@ -365,7 +365,7 @@ export default function ViewBotSubmissions({
                                     disabled={checkingId === sub.id}
                                     className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                                       checkingId === sub.id
-                                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                        ? "bg-navy-800/80 text-gray-400 cursor-not-allowed"
                                         : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                                     }`}
                                   >
@@ -388,7 +388,7 @@ export default function ViewBotSubmissions({
                                     disabled={isPaying}
                                     className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                                       isPaying
-                                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                        ? "bg-navy-800/80 text-gray-400 cursor-not-allowed"
                                         : "bg-blue-100 text-blue-700 hover:bg-blue-200"
                                     }`}
                                   >

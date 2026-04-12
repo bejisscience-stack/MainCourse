@@ -94,28 +94,28 @@ export default function AdminSettings() {
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+      <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-12 text-center">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-navy-900 mb-4"></div>
-        <p className="text-navy-700">{t("common.loading")}</p>
+        <p className="text-navy-300">{t("common.loading")}</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-bold text-navy-900 mb-6">
+      <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-6">
+        <h2 className="text-xl font-bold text-gray-100 mb-6">
           {t("adminSettings.title")}
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Min Withdrawal */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               {t("adminSettings.minWithdrawal")}
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-400 font-medium">
                 ₾
               </span>
               <input
@@ -124,21 +124,21 @@ export default function AdminSettings() {
                 step="0.01"
                 value={minWithdrawalInput}
                 onChange={(e) => setMinWithdrawalInput(e.target.value)}
-                className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-transparent text-navy-900"
+                className="w-full pl-8 pr-4 py-3 border border-navy-700 bg-navy-800/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-gray-200"
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-navy-500 mt-1">
               {t("adminSettings.minWithdrawalHint")}
             </p>
           </div>
 
           {/* Subscription Price */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               {t("adminSettings.subscriptionPrice")}
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-400 font-medium">
                 ₾
               </span>
               <input
@@ -147,23 +147,23 @@ export default function AdminSettings() {
                 step="0.01"
                 value={subscriptionPriceInput}
                 onChange={(e) => setSubscriptionPriceInput(e.target.value)}
-                className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-transparent text-navy-900"
+                className="w-full pl-8 pr-4 py-3 border border-navy-700 bg-navy-800/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-gray-200"
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-navy-500 mt-1">
               {t("adminSettings.subscriptionPriceHint")}
             </p>
           </div>
 
           {/* Featured Course */}
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-navy-300 mb-2">
               {t("adminSettings.featuredCourse")}
             </label>
             <select
               value={featuredCourseInput}
               onChange={(e) => setFeaturedCourseInput(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-transparent text-navy-900 bg-white"
+              className="w-full px-4 py-3 border border-navy-700 bg-navy-800/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-gray-200"
             >
               <option value="">{t("adminSettings.featuredCourseNone")}</option>
               {courses.map((course) => (
@@ -172,7 +172,7 @@ export default function AdminSettings() {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-navy-500 mt-1">
               {t("adminSettings.featuredCourseHint")}
             </p>
           </div>
@@ -183,8 +183,8 @@ export default function AdminSettings() {
           <div
             className={`mt-4 px-4 py-3 rounded-lg text-sm ${
               message.type === "success"
-                ? "bg-green-50 border border-green-200 text-green-700"
-                : "bg-red-50 border border-red-200 text-red-700"
+                ? "bg-green-500/10 border border-green-500/30 text-green-300"
+                : "bg-red-500/10 border border-red-500/30 text-red-300"
             }`}
           >
             {message.text}
@@ -195,7 +195,7 @@ export default function AdminSettings() {
         <div className="mt-6 flex items-center justify-between">
           <div>
             {updatedAt && (
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-navy-500">
                 {t("adminSettings.lastUpdated")}:{" "}
                 {new Date(updatedAt).toLocaleString()}
               </p>
@@ -204,7 +204,7 @@ export default function AdminSettings() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-6 py-3 bg-navy-900 text-white font-semibold rounded-lg hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-3 bg-emerald-500/20 text-emerald-400 font-semibold rounded-lg hover:bg-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {saving ? t("common.loading") : t("adminSettings.save")}
           </button>

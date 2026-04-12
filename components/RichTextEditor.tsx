@@ -29,7 +29,9 @@ function ToolbarButton({
       onClick={onClick}
       title={title}
       className={`px-2 py-1.5 rounded text-sm font-medium transition-colors ${
-        isActive ? "bg-navy-900 text-white" : "text-gray-700 hover:bg-gray-100"
+        isActive
+          ? "bg-emerald-500/20 text-emerald-400"
+          : "text-navy-300 hover:bg-navy-800/50"
       }`}
     >
       {children}
@@ -63,7 +65,7 @@ export default function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none min-h-[120px] px-4 py-3 focus:outline-none text-gray-900",
+          "prose prose-sm prose-invert max-w-none min-h-[120px] px-4 py-3 focus:outline-none text-gray-200",
       },
     },
   });
@@ -90,9 +92,9 @@ export default function RichTextEditor({
   if (!editor) return null;
 
   return (
-    <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-navy-500 focus-within:border-navy-500">
+    <div className="border border-navy-700 rounded-xl overflow-hidden bg-navy-800/50 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500">
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-1 px-2 py-1.5 border-b border-gray-200 bg-gray-50">
+      <div className="flex flex-wrap gap-1 px-2 py-1.5 border-b border-navy-700 bg-navy-800/30">
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           isActive={editor.isActive("bold")}
@@ -115,7 +117,7 @@ export default function RichTextEditor({
           <span className="underline">U</span>
         </ToolbarButton>
 
-        <div className="w-px h-6 bg-gray-300 mx-1 self-center" />
+        <div className="w-px h-6 bg-navy-700 mx-1 self-center" />
 
         <ToolbarButton
           onClick={() =>
@@ -136,7 +138,7 @@ export default function RichTextEditor({
           H3
         </ToolbarButton>
 
-        <div className="w-px h-6 bg-gray-300 mx-1 self-center" />
+        <div className="w-px h-6 bg-navy-700 mx-1 self-center" />
 
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -153,7 +155,7 @@ export default function RichTextEditor({
           1. List
         </ToolbarButton>
 
-        <div className="w-px h-6 bg-gray-300 mx-1 self-center" />
+        <div className="w-px h-6 bg-navy-700 mx-1 self-center" />
 
         <ToolbarButton
           onClick={setLink}

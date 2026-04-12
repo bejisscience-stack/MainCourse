@@ -91,20 +91,20 @@ export default function AdminLecturerApprovals() {
   const statusBadge = (lecturerStatus: string | null) => {
     if (lecturerStatus === "approved") {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/15 text-green-400">
           {t("adminLecturers.approved")}
         </span>
       );
     }
     if (lecturerStatus === "rejected") {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/15 text-red-400">
           {t("adminLecturers.rejected")}
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-500/15 text-yellow-400">
         {t("adminLecturers.pending")}
       </span>
     );
@@ -113,11 +113,14 @@ export default function AdminLecturerApprovals() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-10 bg-gray-200 rounded animate-pulse w-96" />
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+        <div className="h-10 bg-navy-800/50 rounded animate-pulse w-96" />
+        <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-8">
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />
+              <div
+                key={i}
+                className="h-12 bg-navy-800/50 rounded animate-pulse"
+              />
             ))}
           </div>
         </div>
@@ -127,7 +130,7 @@ export default function AdminLecturerApprovals() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg">
+      <div className="bg-red-500/15 border border-red-500/30 text-red-400 px-6 py-4 rounded-2xl">
         {error.message || t("common.error")}
       </div>
     );
@@ -137,11 +140,11 @@ export default function AdminLecturerApprovals() {
     <div className="space-y-6">
       {/* Action error banner */}
       {actionError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
+        <div className="bg-red-500/15 border border-red-500/30 text-red-400 px-4 py-3 rounded-2xl flex items-center justify-between">
           <span>{actionError}</span>
           <button
             onClick={() => setActionError(null)}
-            className="text-red-500 hover:text-red-700 font-bold"
+            className="text-red-400 hover:text-red-300 font-bold"
           >
             &times;
           </button>
@@ -163,8 +166,8 @@ export default function AdminLecturerApprovals() {
             onClick={() => setStatusFilter(key)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               statusFilter === key
-                ? "bg-navy-900 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-emerald-500/15 text-emerald-400"
+                : "bg-navy-800/50 text-navy-300 hover:bg-navy-800/70"
             }`}
           >
             {label} ({counts[key]})
@@ -174,56 +177,56 @@ export default function AdminLecturerApprovals() {
 
       {/* Table */}
       {filteredLecturers.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-          <p className="text-gray-500 text-lg">
+        <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-12 text-center">
+          <p className="text-navy-400 text-lg">
             {t("adminLecturers.noLecturers")}
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-navy-800/60">
+              <thead className="bg-navy-800/50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminLecturers.name")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminLecturers.email")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminLecturers.username")}
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminLecturers.status")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminLecturers.signupDate")}
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-navy-400 uppercase tracking-wider">
                     {t("adminLecturers.actions")}
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-navy-800/60">
                 {filteredLecturers.map((lecturer) => (
                   <tr
                     key={lecturer.id}
-                    className="hover:bg-gray-50 transition-colors"
+                    className="hover:bg-navy-800/30 transition-colors"
                   >
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-100">
                       {lecturer.full_name || "—"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-navy-400">
                       {lecturer.email || "—"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-navy-400">
                       {lecturer.username || "—"}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {statusBadge(lecturer.lecturer_status)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-4 py-3 text-sm text-navy-400">
                       {formatDate(lecturer.created_at)}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -232,7 +235,7 @@ export default function AdminLecturerApprovals() {
                           <button
                             onClick={() => handleApprove(lecturer.id)}
                             disabled={processingIds.has(lecturer.id)}
-                            className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="px-3 py-1.5 bg-green-500/20 text-green-400 text-xs font-medium rounded-md hover:bg-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             {processingIds.has(lecturer.id)
                               ? t("adminLecturers.processing")
@@ -245,13 +248,13 @@ export default function AdminLecturerApprovals() {
                               setActionError(null);
                             }}
                             disabled={processingIds.has(lecturer.id)}
-                            className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="px-3 py-1.5 bg-red-500/20 text-red-400 text-xs font-medium rounded-md hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             {t("adminLecturers.reject")}
                           </button>
                         </div>
                       ) : lecturer.lecturer_status === "approved" ? (
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-navy-400">
                           {t("adminLecturers.alreadyApproved")}
                         </span>
                       ) : (
@@ -270,28 +273,28 @@ export default function AdminLecturerApprovals() {
 
       {/* Reject Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-bold text-gray-900">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-navy-900 border border-navy-800/60 rounded-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-bold text-gray-100">
               {t("adminLecturers.rejectTitle")}
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-navy-300">
               {t("adminLecturers.rejectMessage")}
             </p>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-navy-300 mb-1">
                 {t("adminLecturers.rejectReasonLabel")} ({t("common.optional")})
               </label>
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder={t("adminLecturers.rejectReasonPlaceholder")}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                className="w-full border border-navy-700 bg-navy-800/50 text-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
                 rows={3}
               />
             </div>
             {actionError && (
-              <p className="text-sm text-red-600">{actionError}</p>
+              <p className="text-sm text-red-400">{actionError}</p>
             )}
             <div className="flex gap-3 justify-end">
               <button
@@ -299,14 +302,14 @@ export default function AdminLecturerApprovals() {
                   setShowRejectModal(null);
                   setActionError(null);
                 }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-navy-300 bg-navy-800 rounded-lg hover:bg-navy-700 transition-colors"
               >
                 {t("common.cancel")}
               </button>
               <button
                 onClick={handleReject}
                 disabled={processingIds.has(showRejectModal)}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 text-sm font-medium text-red-400 bg-red-500/20 rounded-lg hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {processingIds.has(showRejectModal)
                   ? t("adminLecturers.processing")

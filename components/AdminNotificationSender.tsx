@@ -10,7 +10,9 @@ import dynamic from "next/dynamic";
 
 const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), {
   ssr: false,
-  loading: () => <div className="h-32 bg-gray-100 rounded-lg animate-pulse" />,
+  loading: () => (
+    <div className="h-32 bg-navy-800/50 rounded-2xl animate-pulse" />
+  ),
 });
 
 interface Course {
@@ -448,59 +450,59 @@ function AdminNotificationSender() {
   const channelButtonClass = (value: string) =>
     `px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
       channel === value
-        ? "border-navy-900 bg-navy-50 text-navy-900"
-        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+        ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
+        : "border-navy-800/60 bg-navy-900/50 text-navy-300 hover:border-navy-700"
     }`;
 
   const targetButtonClass = (value: string) =>
     `px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
       targetType === value
-        ? "border-navy-900 bg-navy-50 text-navy-900"
-        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+        ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
+        : "border-navy-800/60 bg-navy-900/50 text-navy-300 hover:border-navy-700"
     }`;
 
   const emailTargetButtonClass = (value: string) =>
     `px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
       emailTarget === value
-        ? "border-navy-900 bg-navy-50 text-navy-900"
-        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+        ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
+        : "border-navy-800/60 bg-navy-900/50 text-navy-300 hover:border-navy-700"
     }`;
 
   const languageButtonClass = (value: string) =>
     `px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
       notifLanguage === value
-        ? "border-navy-900 bg-navy-50 text-navy-900"
-        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+        ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
+        : "border-navy-800/60 bg-navy-900/50 text-navy-300 hover:border-navy-700"
     }`;
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-navy-900">Send Notifications</h2>
-        <p className="text-gray-600 mt-1">
+        <h2 className="text-2xl font-bold text-gray-100">Send Notifications</h2>
+        <p className="text-navy-400 mt-1">
           Create and send targeted notifications to users
         </p>
       </div>
 
       {/* Messages */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-2xl">
           {error}
         </div>
       )}
       {successMessage && (
         <div
-          className={`px-4 py-3 rounded-lg ${isPartialSuccess ? "bg-amber-50 border border-amber-200 text-amber-700" : "bg-green-50 border border-green-200 text-green-700"}`}
+          className={`px-4 py-3 rounded-2xl ${isPartialSuccess ? "bg-amber-500/10 border border-amber-500/30 text-amber-300" : "bg-green-500/10 border border-green-500/30 text-green-300"}`}
         >
           {successMessage}
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
+      <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-6 space-y-6">
         {/* Channel Selector */}
         <div>
-          <label className="block text-sm font-semibold text-gray-900 mb-3">
+          <label className="block text-sm font-semibold text-gray-100 mb-3">
             Notification Channel
           </label>
           <div className="grid grid-cols-3 gap-3">
@@ -530,7 +532,7 @@ function AdminNotificationSender() {
 
         {/* Language Selector */}
         <div>
-          <label className="block text-sm font-semibold text-gray-900 mb-3">
+          <label className="block text-sm font-semibold text-gray-100 mb-3">
             Language
           </label>
           <div className="grid grid-cols-3 gap-3">
@@ -561,7 +563,7 @@ function AdminNotificationSender() {
         {/* In-App Target Selection */}
         {showInAppTargeting && (
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-3">
+            <label className="block text-sm font-semibold text-gray-100 mb-3">
               {channel === "both"
                 ? "In-App Target Audience"
                 : "Target Audience"}
@@ -602,7 +604,7 @@ function AdminNotificationSender() {
         {/* Role Selection */}
         {showInAppTargeting && targetType === "role" && (
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">
+            <label className="block text-sm font-semibold text-gray-100 mb-2">
               Select Role
             </label>
             <select
@@ -612,7 +614,7 @@ function AdminNotificationSender() {
                   e.target.value as "student" | "lecturer" | "admin",
                 )
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+              className="w-full px-4 py-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100"
             >
               <option value="student">Students</option>
               <option value="lecturer">Lecturers</option>
@@ -624,13 +626,13 @@ function AdminNotificationSender() {
         {/* Course Selection */}
         {showInAppTargeting && targetType === "course" && (
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">
+            <label className="block text-sm font-semibold text-gray-100 mb-2">
               Select Course
             </label>
             <select
               value={targetCourseId}
               onChange={(e) => setTargetCourseId(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+              className="w-full px-4 py-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100"
             >
               <option value="">-- Select a course --</option>
               {courses.map((course) => (
@@ -645,7 +647,7 @@ function AdminNotificationSender() {
         {/* User Selection (for in-app specific) */}
         {showInAppTargeting && targetType === "specific" && (
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">
+            <label className="block text-sm font-semibold text-gray-100 mb-2">
               Select Users ({selectedUserIds.length} selected)
             </label>
             <div className="space-y-3">
@@ -655,12 +657,12 @@ function AdminNotificationSender() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by email or username..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+                  className="flex-1 px-4 py-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100"
                 />
                 <button
                   type="button"
                   onClick={handleSelectAll}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                  className="px-4 py-2 bg-navy-800/50 text-navy-300 rounded-lg hover:bg-navy-800/80 transition-colors text-sm font-medium"
                 >
                   {selectedUserIds.length === filteredUsers.length
                     ? "Deselect All"
@@ -673,32 +675,32 @@ function AdminNotificationSender() {
                   <div className="w-6 h-6 border-2 border-navy-500 border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : (
-                <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                <div className="max-h-60 overflow-y-auto border border-navy-800/60 rounded-lg divide-y divide-navy-800/40">
                   {filteredUsers.map((user) => (
                     <label
                       key={user.id}
                       className={`flex items-center px-4 py-3 cursor-pointer transition-colors ${
                         selectedUserIds.includes(user.id)
-                          ? "bg-navy-50"
-                          : "hover:bg-gray-50"
+                          ? "bg-navy-800/30"
+                          : "hover:bg-navy-800/50"
                       }`}
                     >
                       <input
                         type="checkbox"
                         checked={selectedUserIds.includes(user.id)}
                         onChange={() => handleUserToggle(user.id)}
-                        className="w-4 h-4 text-navy-600 border-gray-300 rounded focus:ring-navy-500"
+                        className="w-4 h-4 text-emerald-500 border-navy-700 rounded bg-navy-800/50 focus:ring-emerald-500"
                       />
                       <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-100">
                           {user.username || user.email.split("@")[0]}
                         </p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
+                        <p className="text-xs text-navy-400">{user.email}</p>
                       </div>
                     </label>
                   ))}
                   {filteredUsers.length === 0 && (
-                    <p className="px-4 py-8 text-center text-gray-500">
+                    <p className="px-4 py-8 text-center text-navy-400">
                       No users found
                     </p>
                   )}
@@ -710,8 +712,8 @@ function AdminNotificationSender() {
 
         {/* Email Target Selection */}
         {showEmailTargeting && (
-          <div className="border-t border-gray-200 pt-6">
-            <label className="block text-sm font-semibold text-gray-900 mb-3">
+          <div className="border-t border-navy-800/60 pt-6">
+            <label className="block text-sm font-semibold text-gray-100 mb-3">
               Email Recipients
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -748,7 +750,7 @@ function AdminNotificationSender() {
             {/* Profiles sub-options: show the same target type selector */}
             {emailTarget === "profiles" && channel === "email" && (
               <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-navy-300 mb-2">
                   Which profile users?
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -792,7 +794,7 @@ function AdminNotificationSender() {
                           e.target.value as "student" | "lecturer" | "admin",
                         )
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+                      className="w-full px-4 py-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100"
                     >
                       <option value="student">Students</option>
                       <option value="lecturer">Lecturers</option>
@@ -807,7 +809,7 @@ function AdminNotificationSender() {
                     <select
                       value={targetCourseId}
                       onChange={(e) => setTargetCourseId(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+                      className="w-full px-4 py-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100"
                     >
                       <option value="">-- Select a course --</option>
                       {courses.map((course) => (
@@ -827,36 +829,36 @@ function AdminNotificationSender() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search by email or username..."
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+                      className="w-full px-4 py-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100"
                     />
-                    <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                    <div className="max-h-48 overflow-y-auto border border-navy-800/60 rounded-lg divide-y divide-navy-800/40">
                       {filteredUsers.map((user) => (
                         <label
                           key={user.id}
                           className={`flex items-center px-4 py-3 cursor-pointer transition-colors ${
                             selectedUserIds.includes(user.id)
-                              ? "bg-navy-50"
-                              : "hover:bg-gray-50"
+                              ? "bg-navy-800/30"
+                              : "hover:bg-navy-800/50"
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={selectedUserIds.includes(user.id)}
                             onChange={() => handleUserToggle(user.id)}
-                            className="w-4 h-4 text-navy-600 border-gray-300 rounded focus:ring-navy-500"
+                            className="w-4 h-4 text-emerald-500 border-navy-700 rounded bg-navy-800/50 focus:ring-emerald-500"
                           />
                           <div className="ml-3">
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-gray-100">
                               {user.username || user.email.split("@")[0]}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-navy-400">
                               {user.email}
                             </p>
                           </div>
                         </label>
                       ))}
                       {filteredUsers.length === 0 && (
-                        <p className="px-4 py-6 text-center text-gray-500">
+                        <p className="px-4 py-6 text-center text-navy-400">
                           No users found
                         </p>
                       )}
@@ -869,7 +871,7 @@ function AdminNotificationSender() {
             {/* Both info */}
             {emailTarget === "both" && channel === "email" && (
               <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-navy-300 mb-2">
                   Which profile users?
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -912,7 +914,7 @@ function AdminNotificationSender() {
                           e.target.value as "student" | "lecturer" | "admin",
                         )
                       }
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+                      className="w-full px-4 py-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100"
                     >
                       <option value="student">Students</option>
                       <option value="lecturer">Lecturers</option>
@@ -926,7 +928,7 @@ function AdminNotificationSender() {
                     <select
                       value={targetCourseId}
                       onChange={(e) => setTargetCourseId(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+                      className="w-full px-4 py-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100"
                     >
                       <option value="">-- Select a course --</option>
                       {courses.map((course) => (
@@ -938,7 +940,7 @@ function AdminNotificationSender() {
                   </div>
                 )}
 
-                <p className="mt-3 text-sm text-gray-500">
+                <p className="mt-3 text-sm text-navy-400">
                   Emails will be sent to both the selected profile users and all
                   pre-launch subscribers. Duplicates will be automatically
                   removed.
@@ -949,7 +951,7 @@ function AdminNotificationSender() {
             {/* Coming Soon email list */}
             {emailTarget === "coming_soon" && (
               <div className="mt-4">
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-navy-400">
                   Email will be sent to all {comingSoonEmails.length} pre-launch
                   subscriber(s).
                 </p>
@@ -960,7 +962,7 @@ function AdminNotificationSender() {
             {emailTarget === "specific" && (
               <div className="mt-4 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-navy-300 mb-1">
                     Manual Email Entry
                   </label>
                   <textarea
@@ -968,14 +970,14 @@ function AdminNotificationSender() {
                     onChange={(e) => setManualEmails(e.target.value)}
                     placeholder="Enter email addresses, separated by commas or new lines..."
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900 resize-none"
+                    className="w-full px-4 py-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100 resize-none"
                   />
                 </div>
 
                 {/* Selectable lists from profiles + coming_soon */}
                 {(users.length > 0 || comingSoonEmails.length > 0) && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-navy-300 mb-1">
                       Or select from existing emails ({selectedEmails.length}{" "}
                       selected)
                     </label>
@@ -984,9 +986,9 @@ function AdminNotificationSender() {
                       value={emailSearchQuery}
                       onChange={(e) => setEmailSearchQuery(e.target.value)}
                       placeholder="Search emails..."
-                      className="w-full px-4 py-2 mb-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+                      className="w-full px-4 py-2 mb-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100"
                     />
-                    <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                    <div className="max-h-48 overflow-y-auto border border-navy-800/60 rounded-lg divide-y divide-navy-800/40">
                       {/* Profile emails */}
                       {users
                         .filter(
@@ -1002,18 +1004,18 @@ function AdminNotificationSender() {
                             key={`profile-${user.id}`}
                             className={`flex items-center px-4 py-2 cursor-pointer transition-colors ${
                               selectedEmails.includes(user.email)
-                                ? "bg-navy-50"
-                                : "hover:bg-gray-50"
+                                ? "bg-navy-800/30"
+                                : "hover:bg-navy-800/50"
                             }`}
                           >
                             <input
                               type="checkbox"
                               checked={selectedEmails.includes(user.email)}
                               onChange={() => handleEmailToggle(user.email)}
-                              className="w-4 h-4 text-navy-600 border-gray-300 rounded focus:ring-navy-500"
+                              className="w-4 h-4 text-emerald-500 border-navy-700 rounded bg-navy-800/50 focus:ring-emerald-500"
                             />
                             <div className="ml-3 flex items-center gap-2">
-                              <p className="text-sm text-gray-900">
+                              <p className="text-sm text-gray-100">
                                 {user.email}
                               </p>
                               <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
@@ -1028,18 +1030,18 @@ function AdminNotificationSender() {
                           key={`cs-${cs.id}`}
                           className={`flex items-center px-4 py-2 cursor-pointer transition-colors ${
                             selectedEmails.includes(cs.email)
-                              ? "bg-navy-50"
-                              : "hover:bg-gray-50"
+                              ? "bg-navy-800/30"
+                              : "hover:bg-navy-800/50"
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={selectedEmails.includes(cs.email)}
                             onChange={() => handleEmailToggle(cs.email)}
-                            className="w-4 h-4 text-navy-600 border-gray-300 rounded focus:ring-navy-500"
+                            className="w-4 h-4 text-emerald-500 border-navy-700 rounded bg-navy-800/50 focus:ring-emerald-500"
                           />
                           <div className="ml-3 flex items-center gap-2">
-                            <p className="text-sm text-gray-900">{cs.email}</p>
+                            <p className="text-sm text-gray-100">{cs.email}</p>
                             <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
                               subscriber
                             </span>
@@ -1047,7 +1049,7 @@ function AdminNotificationSender() {
                         </label>
                       ))}
                       {users.length === 0 && comingSoonEmails.length === 0 && (
-                        <p className="px-4 py-6 text-center text-gray-500">
+                        <p className="px-4 py-6 text-center text-navy-400">
                           No emails found
                         </p>
                       )}
@@ -1060,8 +1062,8 @@ function AdminNotificationSender() {
         )}
 
         {/* Notification Content */}
-        <div className="border-t border-gray-200 pt-6 space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">
+        <div className="border-t border-navy-800/60 pt-6 space-y-4">
+          <h3 className="text-lg font-semibold text-gray-100">
             Notification Content
           </h3>
 
@@ -1071,7 +1073,7 @@ function AdminNotificationSender() {
           >
             {(notifLanguage === "en" || notifLanguage === "both") && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-navy-300 mb-1">
                   Title (English) *
                 </label>
                 <input
@@ -1079,13 +1081,13 @@ function AdminNotificationSender() {
                   value={titleEn}
                   onChange={(e) => setTitleEn(e.target.value)}
                   placeholder="Enter notification title in English"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+                  className="w-full px-4 py-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100"
                 />
               </div>
             )}
             {(notifLanguage === "ge" || notifLanguage === "both") && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-navy-300 mb-1">
                   Title (Georgian) *
                 </label>
                 <input
@@ -1093,7 +1095,7 @@ function AdminNotificationSender() {
                   value={titleGe}
                   onChange={(e) => setTitleGe(e.target.value)}
                   placeholder="შეიყვანეთ შეტყობინების სათაური ქართულად"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+                  className="w-full px-4 py-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100"
                 />
               </div>
             )}
@@ -1105,7 +1107,7 @@ function AdminNotificationSender() {
           >
             {(notifLanguage === "en" || notifLanguage === "both") && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-navy-300 mb-1">
                   Message (English) *
                 </label>
                 {channel === "in_app" ? (
@@ -1114,7 +1116,7 @@ function AdminNotificationSender() {
                     onChange={(e) => setMessageEn(e.target.value)}
                     placeholder="Enter notification message in English"
                     rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900 resize-none"
+                    className="w-full px-4 py-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100 resize-none"
                   />
                 ) : (
                   <RichTextEditor
@@ -1135,7 +1137,7 @@ function AdminNotificationSender() {
             )}
             {(notifLanguage === "ge" || notifLanguage === "both") && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-navy-300 mb-1">
                   Message (Georgian) *
                 </label>
                 {channel === "in_app" ? (
@@ -1144,7 +1146,7 @@ function AdminNotificationSender() {
                     onChange={(e) => setMessageGe(e.target.value)}
                     placeholder="შეიყვანეთ შეტყობინების ტექსტი ქართულად"
                     rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900 resize-none"
+                    className="w-full px-4 py-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100 resize-none"
                   />
                 ) : (
                   <RichTextEditor
@@ -1167,39 +1169,39 @@ function AdminNotificationSender() {
         </div>
 
         {/* Preview and Actions */}
-        <div className="border-t border-gray-200 pt-6 space-y-4">
+        <div className="border-t border-navy-800/60 pt-6 space-y-4">
           <button
             type="button"
             onClick={() => setShowPreview(!showPreview)}
-            className="text-sm text-navy-600 hover:text-navy-700 font-medium"
+            className="text-sm text-navy-400 hover:text-navy-300 font-medium"
           >
             {showPreview ? "Hide Preview" : "Show Preview"}
           </button>
 
           {showPreview && (
-            <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-              <h4 className="font-semibold text-gray-900">Preview</h4>
+            <div className="bg-navy-800/50 rounded-lg p-4 space-y-4">
+              <h4 className="font-semibold text-gray-100">Preview</h4>
               <div
                 className={`grid gap-4 ${notifLanguage === "both" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}
               >
                 {(notifLanguage === "en" || notifLanguage === "both") && (
-                  <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1">English</p>
-                    <p className="font-semibold text-gray-900">
+                  <div className="bg-navy-900/50 rounded-2xl p-4 border border-navy-800/60">
+                    <p className="text-xs text-navy-400 mb-1">English</p>
+                    <p className="font-semibold text-gray-100">
                       {titleEn || "(No title)"}
                     </p>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-navy-400 mt-1">
                       {messageEn || "(No message)"}
                     </p>
                   </div>
                 )}
                 {(notifLanguage === "ge" || notifLanguage === "both") && (
-                  <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1">Georgian</p>
-                    <p className="font-semibold text-gray-900">
+                  <div className="bg-navy-900/50 rounded-2xl p-4 border border-navy-800/60">
+                    <p className="text-xs text-navy-400 mb-1">Georgian</p>
+                    <p className="font-semibold text-gray-100">
                       {titleGe || "(სათაური არ არის)"}
                     </p>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-navy-400 mt-1">
                       {messageGe || "(ტექსტი არ არის)"}
                     </p>
                   </div>
@@ -1257,7 +1259,7 @@ function AdminNotificationSender() {
                 setManualEmails("");
                 setError(null);
               }}
-              className="px-6 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-6 py-2 text-sm font-semibold text-navy-300 bg-navy-800/50 rounded-lg hover:bg-navy-800/80 transition-colors"
             >
               Clear Form
             </button>

@@ -87,28 +87,28 @@ export default function ViewBotByProject({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {projects.map((project) => (
-        <div key={project.projectId} className="bg-white rounded-xl border border-gray-200 p-5">
+        <div key={project.projectId} className="bg-navy-900/50 rounded-xl border border-navy-800/60 p-5">
           <div className="mb-3">
-            <h4 className="font-semibold text-navy-900 text-base">{project.projectTitle}</h4>
-            <p className="text-sm text-gray-500">{project.courseTitle}</p>
+            <h4 className="font-semibold text-gray-100 text-base">{project.projectTitle}</h4>
+            <p className="text-sm text-navy-400">{project.courseTitle}</p>
           </div>
 
           <div className="space-y-2 mb-4">
             {project.minViews !== null && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{t('viewBot.minViews')}:</span>
-                <span className="font-medium text-gray-900">{project.minViews.toLocaleString()}</span>
+                <span className="text-navy-400">{t('viewBot.minViews')}:</span>
+                <span className="font-medium text-gray-100">{project.minViews.toLocaleString()}</span>
               </div>
             )}
             {project.platforms && project.platforms.length > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{t('viewBot.platformsLabel')}:</span>
+                <span className="text-navy-400">{t('viewBot.platformsLabel')}:</span>
                 <div className="flex gap-1">
                   {project.platforms.map((p) => (
                     <span key={p} className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium ${
-                      p.toLowerCase() === 'tiktok' ? 'bg-gray-900 text-white'
+                      p.toLowerCase() === 'tiktok' ? 'bg-navy-700 text-gray-100'
                         : p.toLowerCase() === 'instagram' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                        : 'bg-gray-200 text-gray-700'
+                        : 'bg-navy-800/80 text-navy-300'
                     }`}>
                       {p}
                     </span>
@@ -117,19 +117,19 @@ export default function ViewBotByProject({
               </div>
             )}
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">{t('viewBot.submissionsCount')}:</span>
-              <span className="font-medium text-gray-900">{project.submissionCount}</span>
+              <span className="text-navy-400">{t('viewBot.submissionsCount')}:</span>
+              <span className="font-medium text-gray-100">{project.submissionCount}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">{t('viewBot.avgViews')}:</span>
-              <span className="font-medium text-gray-900">{project.avgViews.toLocaleString()}</span>
+              <span className="text-navy-400">{t('viewBot.avgViews')}:</span>
+              <span className="font-medium text-gray-100">{project.avgViews.toLocaleString()}</span>
             </div>
           </div>
 
           <div className="flex gap-2">
             <button
               onClick={() => onViewSubmissions(project.projectId)}
-              className="flex-1 px-3 py-2 rounded-lg text-sm font-medium bg-navy-100 text-navy-700 hover:bg-navy-200 transition-colors"
+              className="flex-1 px-3 py-2 rounded-lg text-sm font-medium bg-navy-100 text-navy-300 hover:bg-navy-200 transition-colors"
             >
               {t('viewBot.viewSubmissions')}
             </button>
@@ -138,7 +138,7 @@ export default function ViewBotByProject({
               disabled={checkingProjectId === project.projectId}
               className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 checkingProjectId === project.projectId
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  ? 'bg-navy-800/80 text-gray-400 cursor-not-allowed'
                   : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
               }`}
             >

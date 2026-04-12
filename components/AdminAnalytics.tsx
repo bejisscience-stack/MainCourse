@@ -73,12 +73,14 @@ function ageBg(hours: number): string {
 
 // ─── Skeleton placeholder ────────────────────────────────────────────
 function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`bg-gray-200 rounded animate-pulse ${className}`} />;
+  return (
+    <div className={`bg-navy-800/80 rounded animate-pulse ${className}`} />
+  );
 }
 
 function CardSkeleton() {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-6">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           <Skeleton className="h-4 w-24" />
@@ -92,7 +94,7 @@ function CardSkeleton() {
 
 function ChartSkeleton() {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-6">
       <Skeleton className="h-5 w-40 mb-6" />
       <Skeleton className="h-64 w-full" />
     </div>
@@ -101,7 +103,7 @@ function ChartSkeleton() {
 
 function TableSkeleton() {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-6">
       <Skeleton className="h-5 w-48 mb-4" />
       {Array.from({ length: 5 }).map((_, i) => (
         <Skeleton key={i} className="h-10 w-full mb-2" />
@@ -129,12 +131,12 @@ function StatCard({
   subtitle,
 }: StatCardProps) {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600">{label}</p>
+          <p className="text-sm font-medium text-navy-400">{label}</p>
           <p className={`text-3xl font-bold mt-2 ${iconColor}`}>{value}</p>
-          {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+          {subtitle && <p className="text-xs text-navy-400 mt-1">{subtitle}</p>}
         </div>
         <div
           className={`w-12 h-12 ${iconBg} rounded-lg flex items-center justify-center`}
@@ -159,7 +161,7 @@ function Section({
     <div className="space-y-6">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 text-xl font-bold text-navy-900 hover:text-navy-700 transition-colors"
+        className="flex items-center gap-2 text-xl font-bold text-gray-100 hover:text-navy-300 transition-colors"
       >
         <svg
           className={`w-5 h-5 transform transition-transform ${open ? "rotate-90" : ""}`}
@@ -345,10 +347,10 @@ interface ChartTooltipProps {
 function CurrencyTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
-      <p className="font-medium text-gray-900 mb-1">{label}</p>
+    <div className="bg-navy-900/50 border border-navy-800/60 rounded-lg shadow-lg p-3 text-sm">
+      <p className="font-medium text-gray-100 mb-1">{label}</p>
       {payload.map((p, i) => (
-        <p key={i} className="text-gray-600">
+        <p key={i} className="text-navy-400">
           {p.name ? `${p.name}: ` : ""}
           {formatCurrency(p.value)}
         </p>
@@ -360,10 +362,10 @@ function CurrencyTooltip({ active, payload, label }: ChartTooltipProps) {
 function CountTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
-      <p className="font-medium text-gray-900 mb-1">{label}</p>
+    <div className="bg-navy-900/50 border border-navy-800/60 rounded-lg shadow-lg p-3 text-sm">
+      <p className="font-medium text-gray-100 mb-1">{label}</p>
       {payload.map((p, i) => (
-        <p key={i} className="text-gray-600">
+        <p key={i} className="text-navy-400">
           {p.name ? `${p.name}: ` : ""}
           {p.value}
         </p>
@@ -385,10 +387,10 @@ function ChartBox({
   emptyText?: string;
 }) {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-navy-900 mb-4">{title}</h3>
+    <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-6">
+      <h3 className="text-lg font-semibold text-gray-100 mb-4">{title}</h3>
       {empty ? (
-        <p className="text-gray-500 text-center py-16">{emptyText}</p>
+        <p className="text-navy-400 text-center py-16">{emptyText}</p>
       ) : (
         <div style={{ width: "100%", height: 300 }}>{children}</div>
       )}
@@ -448,15 +450,15 @@ function DateRangePicker({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+      <div className="flex gap-1 bg-navy-800/50 rounded-lg p-1">
         {PRESET_RANGES.map(({ key, label }) => (
           <button
             key={key}
             onClick={() => handlePreset(key)}
             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
               value === key && !showCustom
-                ? "bg-white text-navy-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-navy-700 text-gray-100"
+                : "text-navy-400 hover:text-gray-100"
             }`}
           >
             {label}
@@ -466,8 +468,8 @@ function DateRangePicker({
           onClick={handleCustomToggle}
           className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
             showCustom
-              ? "bg-white text-navy-900 shadow-sm"
-              : "text-gray-600 hover:text-gray-900"
+              ? "bg-navy-700 text-gray-100"
+              : "text-navy-400 hover:text-gray-100"
           }`}
         >
           Custom
@@ -479,14 +481,14 @@ function DateRangePicker({
             type="date"
             value={fromInput}
             onChange={(e) => setFromInput(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-1.5 text-sm border border-navy-700 bg-navy-800/50 text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
-          <span className="text-gray-500 text-sm">to</span>
+          <span className="text-navy-400 text-sm">to</span>
           <input
             type="date"
             value={toInput}
             onChange={(e) => setToInput(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-1.5 text-sm border border-navy-700 bg-navy-800/50 text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <button
             onClick={handleApplyCustom}
@@ -526,8 +528,8 @@ function AdminAnalytics() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold text-navy-900">Analytics</h2>
-          <p className="text-gray-600 mt-1">Platform analytics and insights</p>
+          <h2 className="text-2xl font-bold text-gray-100">Analytics</h2>
+          <p className="text-navy-400 mt-1">Platform analytics and insights</p>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
           <p className="text-red-700 font-medium mb-3">
@@ -550,8 +552,8 @@ function AdminAnalytics() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold text-navy-900">Analytics</h2>
-          <p className="text-gray-600 mt-1">Platform analytics and insights</p>
+          <h2 className="text-2xl font-bold text-gray-100">Analytics</h2>
+          <p className="text-navy-400 mt-1">Platform analytics and insights</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -634,8 +636,8 @@ function AdminAnalytics() {
       {/* Header + Date Range Picker */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-navy-900">Analytics</h2>
-          <p className="text-gray-600 mt-1">Platform analytics and insights</p>
+          <h2 className="text-2xl font-bold text-gray-100">Analytics</h2>
+          <p className="text-navy-400 mt-1">Platform analytics and insights</p>
         </div>
         <DateRangePicker
           value={dateRangeKey}
@@ -825,13 +827,13 @@ function AdminAnalytics() {
           {/* Operations Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {/* Pending Enrollments */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-6">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-gray-600">
+                <p className="text-sm font-medium text-navy-400">
                   Pending Enrollments
                 </p>
                 <div
-                  className={`w-10 h-10 ${operational ? ageBg(operational.pendingEnrollments.oldestAgeHours) : "bg-gray-100"} rounded-lg flex items-center justify-center`}
+                  className={`w-10 h-10 ${operational ? ageBg(operational.pendingEnrollments.oldestAgeHours) : "bg-navy-800/50"} rounded-lg flex items-center justify-center`}
                 >
                   {Icons.enrollment(
                     operational
@@ -840,7 +842,7 @@ function AdminAnalytics() {
                   )}
                 </div>
               </div>
-              <p className="text-3xl font-bold text-navy-900">
+              <p className="text-3xl font-bold text-gray-100">
                 {operational?.pendingEnrollments.count ?? "—"}
               </p>
               {operational && operational.pendingEnrollments.count > 0 && (
@@ -854,13 +856,13 @@ function AdminAnalytics() {
             </div>
 
             {/* Pending Withdrawals */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-6">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-gray-600">
+                <p className="text-sm font-medium text-navy-400">
                   Pending Withdrawals
                 </p>
                 <div
-                  className={`w-10 h-10 ${operational ? ageBg(operational.pendingWithdrawals.oldestAgeHours) : "bg-gray-100"} rounded-lg flex items-center justify-center`}
+                  className={`w-10 h-10 ${operational ? ageBg(operational.pendingWithdrawals.oldestAgeHours) : "bg-navy-800/50"} rounded-lg flex items-center justify-center`}
                 >
                   {Icons.currency(
                     operational
@@ -869,12 +871,12 @@ function AdminAnalytics() {
                   )}
                 </div>
               </div>
-              <p className="text-3xl font-bold text-navy-900">
+              <p className="text-3xl font-bold text-gray-100">
                 {operational?.pendingWithdrawals.count ?? "—"}
               </p>
               {operational && operational.pendingWithdrawals.count > 0 && (
                 <>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-navy-400 mt-1">
                     Total:{" "}
                     {formatCurrency(operational.pendingWithdrawals.totalAmount)}
                   </p>
@@ -889,13 +891,13 @@ function AdminAnalytics() {
             </div>
 
             {/* Pending Lecturers */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-6">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-gray-600">
+                <p className="text-sm font-medium text-navy-400">
                   Pending Lecturers
                 </p>
                 <div
-                  className={`w-10 h-10 ${operational ? ageBg(operational.pendingLecturers.oldestAgeHours) : "bg-gray-100"} rounded-lg flex items-center justify-center`}
+                  className={`w-10 h-10 ${operational ? ageBg(operational.pendingLecturers.oldestAgeHours) : "bg-navy-800/50"} rounded-lg flex items-center justify-center`}
                 >
                   {Icons.users(
                     operational
@@ -904,7 +906,7 @@ function AdminAnalytics() {
                   )}
                 </div>
               </div>
-              <p className="text-3xl font-bold text-navy-900">
+              <p className="text-3xl font-bold text-gray-100">
                 {operational?.pendingLecturers.count ?? "—"}
               </p>
               {operational && operational.pendingLecturers.count > 0 && (
@@ -930,7 +932,7 @@ function AdminAnalytics() {
               iconColor={
                 operational
                   ? ageColor(operational.avgEnrollmentProcessingHours)
-                  : "text-gray-600"
+                  : "text-navy-400"
               }
             />
             <StatCard
@@ -945,7 +947,7 @@ function AdminAnalytics() {
               iconColor={
                 operational
                   ? ageColor(operational.avgWithdrawalProcessingHours)
-                  : "text-gray-600"
+                  : "text-navy-400"
               }
             />
           </div>
@@ -1308,7 +1310,7 @@ function AdminAnalytics() {
                   />
                   <Legend
                     formatter={(value: string) => (
-                      <span className="text-sm text-gray-700">{value}</span>
+                      <span className="text-sm text-navy-300">{value}</span>
                     )}
                   />
                 </PieChart>
@@ -1345,7 +1347,7 @@ function AdminAnalytics() {
                   />
                   <Legend
                     formatter={(value: string) => (
-                      <span className="text-sm text-gray-700">{value}</span>
+                      <span className="text-sm text-navy-300">{value}</span>
                     )}
                   />
                 </PieChart>
@@ -1361,9 +1363,9 @@ function AdminAnalytics() {
       <Section title="Detail Tables">
         <div className="space-y-6">
           {/* Course Revenue Table */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-navy-900">
+          <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 overflow-hidden">
+            <div className="px-6 py-4 border-b border-navy-800/60">
+              <h3 className="text-lg font-semibold text-gray-100">
                 Course Revenue
               </h3>
             </div>
@@ -1371,57 +1373,57 @@ function AdminAnalytics() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 text-left">
-                      <th className="px-6 py-3 font-semibold text-gray-700">
+                    <tr className="bg-navy-800/50 text-left">
+                      <th className="px-6 py-3 font-semibold text-navy-300">
                         Course
                       </th>
-                      <th className="px-6 py-3 font-semibold text-gray-700">
+                      <th className="px-6 py-3 font-semibold text-navy-300">
                         Type
                       </th>
-                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                      <th className="px-6 py-3 font-semibold text-navy-300 text-right">
                         Price
                       </th>
-                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                      <th className="px-6 py-3 font-semibold text-navy-300 text-right">
                         Enrollments
                       </th>
-                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                      <th className="px-6 py-3 font-semibold text-navy-300 text-right">
                         Revenue
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-navy-800/40">
                     {courseRevenueRows.map((c) => (
                       <tr
                         key={c.courseId}
-                        className="hover:bg-gray-50 transition-colors"
+                        className="hover:bg-navy-800/50 transition-colors"
                       >
-                        <td className="px-6 py-3 font-medium text-gray-900">
+                        <td className="px-6 py-3 font-medium text-gray-100">
                           {c.courseTitle}
                         </td>
-                        <td className="px-6 py-3 text-gray-600">
+                        <td className="px-6 py-3 text-navy-400">
                           {c.courseType}
                         </td>
-                        <td className="px-6 py-3 text-right text-gray-600">
+                        <td className="px-6 py-3 text-right text-navy-400">
                           {formatCurrency(c.price)}
                         </td>
-                        <td className="px-6 py-3 text-right text-gray-600">
+                        <td className="px-6 py-3 text-right text-navy-400">
                           {c.enrollmentCount}
                         </td>
-                        <td className="px-6 py-3 text-right font-medium text-gray-900">
+                        <td className="px-6 py-3 text-right font-medium text-gray-100">
                           {formatCurrency(c.totalRevenue)}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="bg-gray-50 font-semibold">
-                      <td className="px-6 py-3 text-gray-900">Total</td>
+                    <tr className="bg-navy-800/50 font-semibold">
+                      <td className="px-6 py-3 text-gray-100">Total</td>
                       <td className="px-6 py-3" />
                       <td className="px-6 py-3" />
-                      <td className="px-6 py-3 text-right text-gray-900">
+                      <td className="px-6 py-3 text-right text-gray-100">
                         {totalCourseEnrollments}
                       </td>
-                      <td className="px-6 py-3 text-right text-gray-900">
+                      <td className="px-6 py-3 text-right text-gray-100">
                         {formatCurrency(totalCourseRevenue)}
                       </td>
                     </tr>
@@ -1429,16 +1431,16 @@ function AdminAnalytics() {
                 </table>
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-8">
+              <p className="text-navy-400 text-center py-8">
                 No revenue data available
               </p>
             )}
           </div>
 
           {/* Top Referrers Table */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-navy-900">
+          <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 overflow-hidden">
+            <div className="px-6 py-4 border-b border-navy-800/60">
+              <h3 className="text-lg font-semibold text-gray-100">
                 Top Referrers
               </h3>
             </div>
@@ -1446,42 +1448,42 @@ function AdminAnalytics() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 text-left">
-                      <th className="px-6 py-3 font-semibold text-gray-700">
+                    <tr className="bg-navy-800/50 text-left">
+                      <th className="px-6 py-3 font-semibold text-navy-300">
                         User
                       </th>
-                      <th className="px-6 py-3 font-semibold text-gray-700">
+                      <th className="px-6 py-3 font-semibold text-navy-300">
                         Referral Code
                       </th>
-                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                      <th className="px-6 py-3 font-semibold text-navy-300 text-right">
                         Activations
                       </th>
-                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                      <th className="px-6 py-3 font-semibold text-navy-300 text-right">
                         Commission Earned
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-navy-800/40">
                     {topReferrers.map((r: TopReferrer) => (
                       <tr
                         key={r.userId}
-                        className="hover:bg-gray-50 transition-colors"
+                        className="hover:bg-navy-800/50 transition-colors"
                       >
                         <td className="px-6 py-3">
-                          <p className="font-medium text-gray-900">
+                          <p className="font-medium text-gray-100">
                             {r.username || r.email.split("@")[0]}
                           </p>
-                          <p className="text-xs text-gray-500">{r.email}</p>
+                          <p className="text-xs text-navy-400">{r.email}</p>
                         </td>
                         <td className="px-6 py-3">
-                          <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-700">
+                          <code className="text-xs bg-navy-800/50 px-2 py-1 rounded text-navy-300">
                             {r.referralCode}
                           </code>
                         </td>
-                        <td className="px-6 py-3 text-right text-gray-600">
+                        <td className="px-6 py-3 text-right text-navy-400">
                           {r.activationCount}
                         </td>
-                        <td className="px-6 py-3 text-right font-medium text-gray-900">
+                        <td className="px-6 py-3 text-right font-medium text-gray-100">
                           {formatCurrency(r.totalCommission)}
                         </td>
                       </tr>
@@ -1490,16 +1492,16 @@ function AdminAnalytics() {
                 </table>
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-8">
+              <p className="text-navy-400 text-center py-8">
                 No referral data available
               </p>
             )}
           </div>
 
           {/* Projects by Course Table */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-navy-900">
+          <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 overflow-hidden">
+            <div className="px-6 py-4 border-b border-navy-800/60">
+              <h3 className="text-lg font-semibold text-gray-100">
                 Projects by Course
               </h3>
             </div>
@@ -1507,43 +1509,43 @@ function AdminAnalytics() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 text-left">
-                      <th className="px-6 py-3 font-semibold text-gray-700">
+                    <tr className="bg-navy-800/50 text-left">
+                      <th className="px-6 py-3 font-semibold text-navy-300">
                         Course
                       </th>
-                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                      <th className="px-6 py-3 font-semibold text-navy-300 text-right">
                         Projects
                       </th>
-                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                      <th className="px-6 py-3 font-semibold text-navy-300 text-right">
                         Total Budget
                       </th>
-                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                      <th className="px-6 py-3 font-semibold text-navy-300 text-right">
                         Avg Budget
                       </th>
-                      <th className="px-6 py-3 font-semibold text-gray-700 text-right">
+                      <th className="px-6 py-3 font-semibold text-navy-300 text-right">
                         Submissions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-navy-800/40">
                     {projectRows.map((p: ProjectByCourse) => (
                       <tr
                         key={p.courseId}
-                        className="hover:bg-gray-50 transition-colors"
+                        className="hover:bg-navy-800/50 transition-colors"
                       >
-                        <td className="px-6 py-3 font-medium text-gray-900">
+                        <td className="px-6 py-3 font-medium text-gray-100">
                           {p.courseTitle}
                         </td>
-                        <td className="px-6 py-3 text-right text-gray-600">
+                        <td className="px-6 py-3 text-right text-navy-400">
                           {p.projectCount}
                         </td>
-                        <td className="px-6 py-3 text-right text-gray-600">
+                        <td className="px-6 py-3 text-right text-navy-400">
                           {formatCurrency(p.totalBudget)}
                         </td>
-                        <td className="px-6 py-3 text-right text-gray-600">
+                        <td className="px-6 py-3 text-right text-navy-400">
                           {formatCurrency(p.averageBudget)}
                         </td>
-                        <td className="px-6 py-3 text-right text-gray-600">
+                        <td className="px-6 py-3 text-right text-navy-400">
                           {p.submissionCount}
                         </td>
                       </tr>
@@ -1552,7 +1554,7 @@ function AdminAnalytics() {
                 </table>
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-8">
+              <p className="text-navy-400 text-center py-8">
                 No project data available
               </p>
             )}
@@ -1569,7 +1571,7 @@ function AdminAnalytics() {
                 {engagement!.coursesWithZeroEnrollments.map((c) => (
                   <span
                     key={c.courseId}
-                    className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded"
+                    className="text-xs bg-yellow-500/15 text-yellow-400 px-2 py-1 rounded"
                   >
                     {c.title}
                   </span>

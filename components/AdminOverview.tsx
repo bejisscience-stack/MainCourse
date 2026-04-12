@@ -40,14 +40,14 @@ interface StatCardProps {
 
 function StatCard({ label, value, icon, iconBg, iconColor }: StatCardProps) {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-navy-900/50 border border-navy-800/60 rounded-2xl p-6 hover:bg-navy-800/50 transition-all duration-200">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600">{label}</p>
+          <p className="text-sm font-medium text-navy-400">{label}</p>
           <p className={`text-3xl font-bold mt-2 ${iconColor}`}>{value}</p>
         </div>
         <div
-          className={`w-12 h-12 ${iconBg} rounded-lg flex items-center justify-center`}
+          className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center`}
         >
           {icon}
         </div>
@@ -59,13 +59,13 @@ function StatCard({ label, value, icon, iconBg, iconColor }: StatCardProps) {
 // ─── Skeleton ───────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-navy-900/50 border border-navy-800/60 rounded-2xl p-6">
       <div className="flex items-center justify-between">
         <div className="space-y-3">
-          <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-          <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
+          <div className="h-4 w-24 bg-navy-800/80 rounded animate-pulse" />
+          <div className="h-8 w-16 bg-navy-800/80 rounded animate-pulse" />
         </div>
-        <div className="w-12 h-12 bg-gray-200 rounded-lg animate-pulse" />
+        <div className="w-12 h-12 bg-navy-800/80 rounded-xl animate-pulse" />
       </div>
     </div>
   );
@@ -73,12 +73,12 @@ function SkeletonCard() {
 
 function SkeletonQuickActions() {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="h-6 w-32 bg-gray-200 rounded animate-pulse mb-4" />
+    <div className="bg-navy-900/50 border border-navy-800/60 rounded-2xl p-6">
+      <div className="h-6 w-32 bg-navy-800/80 rounded animate-pulse mb-4" />
       <div className="flex flex-wrap gap-3">
-        <div className="h-10 w-36 bg-gray-200 rounded-lg animate-pulse" />
-        <div className="h-10 w-40 bg-gray-200 rounded-lg animate-pulse" />
-        <div className="h-10 w-36 bg-gray-200 rounded-lg animate-pulse" />
+        <div className="h-10 w-36 bg-navy-800/80 rounded-xl animate-pulse" />
+        <div className="h-10 w-40 bg-navy-800/80 rounded-xl animate-pulse" />
+        <div className="h-10 w-36 bg-navy-800/80 rounded-xl animate-pulse" />
       </div>
     </div>
   );
@@ -88,7 +88,7 @@ function SkeletonQuickActions() {
 function BookIcon() {
   return (
     <svg
-      className="w-6 h-6 text-navy-900"
+      className="w-6 h-6 text-sky-300"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -106,7 +106,7 @@ function BookIcon() {
 function AcademicCapIcon() {
   return (
     <svg
-      className="w-6 h-6 text-blue-900"
+      className="w-6 h-6 text-indigo-300"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -126,7 +126,7 @@ function AcademicCapIcon() {
 function BriefcaseIcon() {
   return (
     <svg
-      className="w-6 h-6 text-amber-900"
+      className="w-6 h-6 text-amber-300"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -144,7 +144,7 @@ function BriefcaseIcon() {
 function ClipboardCheckIcon() {
   return (
     <svg
-      className="w-6 h-6 text-green-900"
+      className="w-6 h-6 text-green-300"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -162,7 +162,7 @@ function ClipboardCheckIcon() {
 function CurrencyIcon() {
   return (
     <svg
-      className="w-6 h-6 text-emerald-900"
+      className="w-6 h-6 text-emerald-300"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -245,60 +245,60 @@ export default function AdminOverview({
           label="Total Courses"
           value={totalCourses}
           icon={<BookIcon />}
-          iconBg="bg-navy-100"
-          iconColor="text-navy-900"
+          iconBg="bg-sky-500/15"
+          iconColor="text-sky-300"
         />
         <StatCard
           label="Total Students"
           value={studentCount}
           icon={<AcademicCapIcon />}
-          iconBg="bg-blue-100"
-          iconColor="text-blue-900"
+          iconBg="bg-indigo-500/15"
+          iconColor="text-indigo-300"
         />
         <StatCard
           label="Total Lecturers"
           value={lecturerCount}
           icon={<BriefcaseIcon />}
-          iconBg="bg-amber-100"
-          iconColor="text-amber-900"
+          iconBg="bg-amber-500/15"
+          iconColor="text-amber-300"
         />
         <StatCard
           label="Total Enrollments"
           value={overview?.totalEnrollments ?? 0}
           icon={<ClipboardCheckIcon />}
-          iconBg="bg-green-100"
-          iconColor="text-green-900"
+          iconBg="bg-green-500/15"
+          iconColor="text-green-300"
         />
         <StatCard
           label="Total Revenue"
           value={`₾${(overview?.totalRevenue ?? 0).toLocaleString()}`}
           icon={<CurrencyIcon />}
-          iconBg="bg-emerald-100"
-          iconColor="text-emerald-900"
+          iconBg="bg-emerald-500/15"
+          iconColor="text-emerald-300"
         />
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="bg-navy-900/50 border border-navy-800/60 rounded-2xl p-6">
+        <h3 className="text-lg font-semibold text-gray-100 mb-4">
           Quick Actions
         </h3>
         <div className="flex flex-wrap gap-3">
           <button
             onClick={() => setActiveTab("courses")}
-            className="px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm font-medium"
+            className="px-4 py-2 bg-emerald-500/15 text-emerald-400 rounded-xl hover:bg-emerald-500/25 transition-colors text-sm font-medium"
           >
             View All Courses
           </button>
           <button
             onClick={() => setActiveTab("withdrawals")}
-            className="px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm font-medium"
+            className="px-4 py-2 bg-emerald-500/15 text-emerald-400 rounded-xl hover:bg-emerald-500/25 transition-colors text-sm font-medium"
           >
             View Withdrawals
           </button>
           <button
             onClick={() => setActiveTab("lecturers")}
-            className="px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm font-medium"
+            className="px-4 py-2 bg-emerald-500/15 text-emerald-400 rounded-xl hover:bg-emerald-500/25 transition-colors text-sm font-medium"
           >
             View Lecturers
           </button>

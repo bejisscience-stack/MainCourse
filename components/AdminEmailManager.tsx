@@ -7,7 +7,9 @@ import { useAdminEmails, type AdminEmailEntry } from "@/hooks/useAdminEmails";
 
 const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), {
   ssr: false,
-  loading: () => <div className="h-32 bg-gray-100 rounded-lg animate-pulse" />,
+  loading: () => (
+    <div className="h-32 bg-navy-800/50 rounded-2xl animate-pulse" />
+  ),
 });
 
 type SourceFilter = "all" | "profile" | "coming_soon";
@@ -333,19 +335,19 @@ function AdminEmailManager() {
     switch (source) {
       case "profile":
         return (
-          <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+          <span className="text-xs bg-blue-500/15 text-blue-400 px-1.5 py-0.5 rounded">
             Registered
           </span>
         );
       case "coming_soon":
         return (
-          <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
+          <span className="text-xs bg-purple-500/15 text-purple-400 px-1.5 py-0.5 rounded">
             Subscriber
           </span>
         );
       case "both":
         return (
-          <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">
+          <span className="text-xs bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded">
             Both
           </span>
         );
@@ -355,38 +357,46 @@ function AdminEmailManager() {
   };
 
   const statusBadge = (status: string | null) => {
-    if (!status) return <span className="text-xs text-gray-400">—</span>;
+    if (!status) return <span className="text-xs text-navy-500">—</span>;
     const map: Record<string, { bg: string; text: string; label: string }> = {
       delivered: {
-        bg: "bg-green-100",
-        text: "text-green-700",
+        bg: "bg-green-500/15",
+        text: "text-green-400",
         label: "Delivered",
       },
-      opened: { bg: "bg-blue-100", text: "text-blue-700", label: "Opened" },
+      opened: { bg: "bg-blue-500/15", text: "text-blue-400", label: "Opened" },
       clicked: {
-        bg: "bg-indigo-100",
-        text: "text-indigo-700",
+        bg: "bg-indigo-500/15",
+        text: "text-indigo-400",
         label: "Clicked",
       },
-      bounced: { bg: "bg-red-100", text: "text-red-700", label: "Bounced" },
+      bounced: { bg: "bg-red-500/15", text: "text-red-400", label: "Bounced" },
       complained: {
-        bg: "bg-orange-100",
-        text: "text-orange-700",
+        bg: "bg-orange-500/15",
+        text: "text-orange-400",
         label: "Complained",
       },
-      sent: { bg: "bg-gray-100", text: "text-gray-600", label: "Sent" },
-      queued: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Queued" },
-      failed: { bg: "bg-red-100", text: "text-red-700", label: "Failed" },
+      sent: { bg: "bg-navy-800/50", text: "text-navy-400", label: "Sent" },
+      queued: {
+        bg: "bg-yellow-500/15",
+        text: "text-yellow-400",
+        label: "Queued",
+      },
+      failed: { bg: "bg-red-500/15", text: "text-red-400", label: "Failed" },
       delivery_delayed: {
-        bg: "bg-yellow-100",
-        text: "text-yellow-700",
+        bg: "bg-yellow-500/15",
+        text: "text-yellow-400",
         label: "Delayed",
       },
-      canceled: { bg: "bg-gray-100", text: "text-gray-600", label: "Canceled" },
+      canceled: {
+        bg: "bg-navy-800/50",
+        text: "text-navy-400",
+        label: "Canceled",
+      },
     };
     const s = map[status] || {
-      bg: "bg-gray-100",
-      text: "text-gray-600",
+      bg: "bg-navy-800/50",
+      text: "text-navy-400",
       label: status,
     };
     return (
@@ -397,7 +407,7 @@ function AdminEmailManager() {
   };
 
   const filterSelectClass =
-    "px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-navy-500 focus:border-navy-500";
+    "px-3 py-1.5 border border-navy-700 rounded-lg text-sm text-navy-300 bg-navy-800/50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500";
 
   const sortIcon = (key: SortKey) => {
     if (sortKey !== key) return "";
@@ -414,7 +424,7 @@ function AdminEmailManager() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+      <div className="bg-red-500/15 border border-red-500/30 text-red-400 px-4 py-3 rounded-2xl">
         Failed to load email list: {error.message || "Unknown error"}
       </div>
     );
@@ -425,8 +435,8 @@ function AdminEmailManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-navy-900">Email Manager</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-2xl font-bold text-gray-100">Email Manager</h2>
+          <p className="text-navy-400 mt-1">
             {emails.length} total emails &middot; {filteredEmails.length} shown
             &middot; {selectedEmails.size} selected
           </p>
@@ -435,17 +445,17 @@ function AdminEmailManager() {
           type="button"
           onClick={openCompose}
           disabled={selectedEmails.size === 0}
-          className="px-6 py-2.5 text-sm font-semibold text-white bg-navy-900 rounded-lg hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-6 py-2.5 text-sm font-semibold bg-emerald-500/15 text-emerald-400 rounded-lg hover:bg-emerald-500/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Send Email to Selected ({selectedEmails.size})
         </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div className="bg-navy-900/50 rounded-2xl border border-navy-800/60 p-4">
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className="block text-xs font-medium text-navy-400 mb-1">
               Search
             </label>
             <input
@@ -453,11 +463,11 @@ function AdminEmailManager() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search email, name..."
-              className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+              className="w-full px-3 py-1.5 border border-navy-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className="block text-xs font-medium text-navy-400 mb-1">
               Source
             </label>
             <select
@@ -471,7 +481,7 @@ function AdminEmailManager() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className="block text-xs font-medium text-navy-400 mb-1">
               Registration
             </label>
             <select
@@ -487,7 +497,7 @@ function AdminEmailManager() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className="block text-xs font-medium text-navy-400 mb-1">
               Courses
             </label>
             <select
@@ -501,7 +511,7 @@ function AdminEmailManager() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className="block text-xs font-medium text-navy-400 mb-1">
               Email History
             </label>
             <select
@@ -517,7 +527,7 @@ function AdminEmailManager() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className="block text-xs font-medium text-navy-400 mb-1">
               Role
             </label>
             <select
@@ -532,7 +542,7 @@ function AdminEmailManager() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className="block text-xs font-medium text-navy-400 mb-1">
               Delivery Status{resendLoading ? " ..." : ""}
             </label>
             <select
@@ -556,11 +566,11 @@ function AdminEmailManager() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-navy-900/50 border border-navy-800/60 rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
+              <tr className="bg-navy-800/50 border-b border-navy-800/60">
                 <th className="px-4 py-3 text-left">
                   <input
                     type="checkbox"
@@ -569,53 +579,53 @@ function AdminEmailManager() {
                       selectedEmails.size === filteredEmails.length
                     }
                     onChange={toggleAll}
-                    className="w-4 h-4 text-navy-600 border-gray-300 rounded focus:ring-navy-500"
+                    className="w-4 h-4 text-emerald-500 border-navy-700 rounded bg-navy-800/50 focus:ring-emerald-500"
                   />
                 </th>
                 <th
-                  className="px-4 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:text-navy-900"
+                  className="px-4 py-3 text-left font-semibold text-navy-300 cursor-pointer hover:text-gray-100"
                   onClick={() => handleSort("email")}
                 >
                   Email{sortIcon("email")}
                 </th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                <th className="px-4 py-3 text-left font-semibold text-navy-300">
                   Name
                 </th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                <th className="px-4 py-3 text-left font-semibold text-navy-300">
                   Source
                 </th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                <th className="px-4 py-3 text-left font-semibold text-navy-300">
                   Role
                 </th>
                 <th
-                  className="px-4 py-3 text-center font-semibold text-gray-700 cursor-pointer hover:text-navy-900"
+                  className="px-4 py-3 text-center font-semibold text-navy-300 cursor-pointer hover:text-gray-100"
                   onClick={() => handleSort("enrolled_courses_count")}
                 >
                   Courses{sortIcon("enrolled_courses_count")}
                 </th>
                 <th
-                  className="px-4 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:text-navy-900"
+                  className="px-4 py-3 text-left font-semibold text-navy-300 cursor-pointer hover:text-gray-100"
                   onClick={() => handleSort("last_email_sent_at")}
                 >
                   Last Emailed{sortIcon("last_email_sent_at")}
                 </th>
                 <th
-                  className="px-4 py-3 text-center font-semibold text-gray-700 cursor-pointer hover:text-navy-900"
+                  className="px-4 py-3 text-center font-semibold text-navy-300 cursor-pointer hover:text-gray-100"
                   onClick={() => handleSort("total_emails_sent")}
                 >
                   Sent{sortIcon("total_emails_sent")}
                 </th>
-                <th className="px-4 py-3 text-center font-semibold text-gray-700">
+                <th className="px-4 py-3 text-center font-semibold text-navy-300">
                   Status
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-navy-800/40">
               {filteredEmails.length === 0 ? (
                 <tr>
                   <td
                     colSpan={9}
-                    className="px-4 py-12 text-center text-gray-500"
+                    className="px-4 py-12 text-center text-navy-400"
                   >
                     No emails match the current filters
                   </td>
@@ -624,35 +634,35 @@ function AdminEmailManager() {
                 filteredEmails.map((entry) => (
                   <tr
                     key={entry.email}
-                    className={`transition-colors ${selectedEmails.has(entry.email) ? "bg-navy-50" : "hover:bg-gray-50"}`}
+                    className={`transition-colors ${selectedEmails.has(entry.email) ? "bg-navy-800/30" : "hover:bg-navy-800/50"}`}
                   >
                     <td className="px-4 py-3">
                       <input
                         type="checkbox"
                         checked={selectedEmails.has(entry.email)}
                         onChange={() => toggleEmail(entry.email)}
-                        className="w-4 h-4 text-navy-600 border-gray-300 rounded focus:ring-navy-500"
+                        className="w-4 h-4 text-emerald-500 border-navy-700 rounded bg-navy-800/50 focus:ring-emerald-500"
                       />
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-900">
+                    <td className="px-4 py-3 font-medium text-gray-100">
                       {entry.email}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-navy-300">
                       {entry.full_name || entry.username || "-"}
                     </td>
                     <td className="px-4 py-3">{sourceBadge(entry.source)}</td>
-                    <td className="px-4 py-3 text-gray-700 capitalize">
+                    <td className="px-4 py-3 text-navy-300 capitalize">
                       {entry.role || "-"}
                     </td>
-                    <td className="px-4 py-3 text-center text-gray-700">
+                    <td className="px-4 py-3 text-center text-navy-300">
                       {entry.enrolled_courses_count}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-navy-300">
                       {entry.total_emails_sent > 0 ? (
                         <button
                           type="button"
                           onClick={() => fetchEmailHistory(entry.email)}
-                          className="text-navy-600 hover:text-navy-800 hover:underline"
+                          className="text-navy-400 hover:text-navy-800 hover:underline"
                         >
                           {formatDate(entry.last_email_sent_at)}
                         </button>
@@ -660,7 +670,7 @@ function AdminEmailManager() {
                         formatDate(entry.last_email_sent_at)
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center text-gray-700">
+                    <td className="px-4 py-3 text-center text-navy-300">
                       {entry.total_emails_sent}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -680,21 +690,21 @@ function AdminEmailManager() {
       {/* Compose Modal */}
       {showCompose && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
           onClick={(e) => {
             if (e.target === e.currentTarget) closeCompose();
           }}
         >
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4 p-6 space-y-5">
+          <div className="bg-navy-900 border border-navy-800/60 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4 p-6 space-y-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-navy-900">
+              <h3 className="text-xl font-bold text-gray-100">
                 Compose Email ({selectedEmails.size} recipient
                 {selectedEmails.size !== 1 ? "s" : ""})
               </h3>
               <button
                 type="button"
                 onClick={closeCompose}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                className="text-gray-400 hover:text-navy-400 text-2xl leading-none"
               >
                 &times;
               </button>
@@ -702,7 +712,7 @@ function AdminEmailManager() {
 
             {sendResult && (
               <div
-                className={`px-4 py-3 rounded-lg text-sm ${sendResult.type === "success" ? "bg-green-50 border border-green-200 text-green-700" : "bg-red-50 border border-red-200 text-red-700"}`}
+                className={`px-4 py-3 rounded-lg text-sm ${sendResult.type === "success" ? "bg-green-500/10 border border-green-500/30 text-green-300" : "bg-red-500/10 border border-red-500/30 text-red-300"}`}
               >
                 {sendResult.message}
               </div>
@@ -710,7 +720,7 @@ function AdminEmailManager() {
 
             {/* Subject */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-navy-300 mb-1">
                 Subject *
               </label>
               <input
@@ -719,13 +729,13 @@ function AdminEmailManager() {
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Email subject"
                 maxLength={200}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+                className="w-full px-4 py-2 border border-navy-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-100"
               />
             </div>
 
             {/* Message body (Rich Text) */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-navy-300 mb-1">
                 Message
               </label>
               <RichTextEditor
@@ -736,11 +746,11 @@ function AdminEmailManager() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-200">
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-navy-800/60">
               <button
                 type="button"
                 onClick={closeCompose}
-                className="px-6 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-6 py-2 text-sm font-semibold text-navy-300 bg-navy-800/50 rounded-lg hover:bg-navy-800/80 transition-colors"
               >
                 Cancel
               </button>
@@ -762,7 +772,7 @@ function AdminEmailManager() {
       {/* Email History Modal */}
       {historyEmail && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setHistoryEmail(null);
@@ -770,13 +780,13 @@ function AdminEmailManager() {
             }
           }}
         >
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto mx-4 p-6 space-y-4">
+          <div className="bg-navy-900 border border-navy-800/60 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto mx-4 p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-navy-900">
+                <h3 className="text-lg font-bold text-gray-100">
                   Email History
                 </h3>
-                <p className="text-sm text-gray-500 mt-0.5">{historyEmail}</p>
+                <p className="text-sm text-navy-400 mt-0.5">{historyEmail}</p>
               </div>
               <button
                 type="button"
@@ -784,7 +794,7 @@ function AdminEmailManager() {
                   setHistoryEmail(null);
                   setHistoryData(null);
                 }}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                className="text-gray-400 hover:text-navy-400 text-2xl leading-none"
               >
                 &times;
               </button>
@@ -795,17 +805,17 @@ function AdminEmailManager() {
                 <div className="w-6 h-6 border-2 border-navy-500 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : historyData && historyData.length > 0 ? (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-navy-800/40">
                 {historyData.map((entry: any) => (
                   <div
                     key={entry.id}
                     className="py-3 flex items-center justify-between gap-4"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-sm font-medium text-gray-100 truncate">
                         {entry.subject}
                       </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-xs text-navy-400 mt-0.5">
                         {new Date(entry.sent_at).toLocaleString("en-US", {
                           month: "short",
                           day: "numeric",
@@ -822,7 +832,7 @@ function AdminEmailManager() {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-gray-500 py-8">
+              <p className="text-center text-navy-400 py-8">
                 No email history found
               </p>
             )}

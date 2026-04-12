@@ -222,26 +222,26 @@ export default function AdminViewBot() {
       {/* Error alert */}
       {scraperError && (
         <div
-          className="flex items-center justify-between bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm cursor-pointer"
+          className="flex items-center justify-between bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm cursor-pointer"
           onClick={clearError}
         >
           <span>{scraperError}</span>
-          <span className="text-red-400 hover:text-red-600 ml-4 font-medium">
+          <span className="text-red-400 hover:text-red-300 ml-4 font-medium">
             &times;
           </span>
         </div>
       )}
 
       {/* Sub-tab navigation */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+      <div className="flex gap-1 bg-navy-800/50 p-1 rounded-xl w-fit">
         {(["dashboard", "submissions", "by-project"] as SubTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setSubTab(tab)}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               subTab === tab
-                ? "bg-white text-navy-900 shadow-sm"
-                : "text-gray-600 hover:text-navy-900"
+                ? "bg-navy-700 text-gray-100"
+                : "text-navy-400 hover:text-gray-200"
             }`}
           >
             {tab === "dashboard" && t("viewBot.tabDashboard")}

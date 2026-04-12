@@ -99,30 +99,30 @@ export default function ViewBotDashboard({
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm text-gray-500">{t('viewBot.totalLinks')}</p>
-          <p className="text-2xl font-bold text-navy-900 mt-1">{totalLinks.toLocaleString()}</p>
+        <div className="bg-navy-900/50 rounded-xl border border-navy-800/60 p-5">
+          <p className="text-sm text-navy-400">{t('viewBot.totalLinks')}</p>
+          <p className="text-2xl font-bold text-gray-100 mt-1">{totalLinks.toLocaleString()}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm text-gray-500">{t('viewBot.tiktokLinks')}</p>
-          <p className="text-2xl font-bold text-navy-900 mt-1">{tiktokLinks.toLocaleString()}</p>
+        <div className="bg-navy-900/50 rounded-xl border border-navy-800/60 p-5">
+          <p className="text-sm text-navy-400">{t('viewBot.tiktokLinks')}</p>
+          <p className="text-2xl font-bold text-gray-100 mt-1">{tiktokLinks.toLocaleString()}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm text-gray-500">{t('viewBot.instagramLinks')}</p>
-          <p className="text-2xl font-bold text-navy-900 mt-1">{instagramLinks.toLocaleString()}</p>
+        <div className="bg-navy-900/50 rounded-xl border border-navy-800/60 p-5">
+          <p className="text-sm text-navy-400">{t('viewBot.instagramLinks')}</p>
+          <p className="text-2xl font-bold text-gray-100 mt-1">{instagramLinks.toLocaleString()}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm text-gray-500">{t('viewBot.lastRun')}</p>
-          <p className="text-sm font-semibold text-navy-900 mt-1">
+        <div className="bg-navy-900/50 rounded-xl border border-navy-800/60 p-5">
+          <p className="text-sm text-navy-400">{t('viewBot.lastRun')}</p>
+          <p className="text-sm font-semibold text-gray-100 mt-1">
             {lastRun ? formatDate(lastRun.started_at) : t('viewBot.never')}
           </p>
         </div>
       </div>
 
       {/* Schedule Settings */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="bg-navy-900/50 rounded-xl border border-navy-800/60 p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-navy-900">{t('viewBot.scheduleSettings')}</h3>
+          <h3 className="text-lg font-semibold text-gray-100">{t('viewBot.scheduleSettings')}</h3>
           {scheduleLoading ? (
             <span className="text-sm text-gray-400">{t('common.loading')}</span>
           ) : schedule ? (
@@ -134,11 +134,11 @@ export default function ViewBotDashboard({
               }}
               disabled={scheduleUpdating}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                schedule.active ? 'bg-emerald-500' : 'bg-gray-300'
+                schedule.active ? 'bg-emerald-500' : 'bg-navy-700'
               } ${scheduleUpdating ? 'opacity-50' : ''}`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-navy-900/50 transition-transform ${
                   schedule.active ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
@@ -152,12 +152,12 @@ export default function ViewBotDashboard({
               <span className={`inline-block px-2.5 py-0.5 rounded text-xs font-medium ${
                 schedule.active
                   ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-gray-100 text-gray-500'
+                  : 'bg-navy-800/50 text-navy-400'
               }`}>
                 {schedule.active ? t('viewBot.active') : t('viewBot.paused')}
               </span>
               {schedule.schedule && (
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-navy-400">
                   {cronToHuman(schedule.schedule, t)}
                 </span>
               )}
@@ -177,7 +177,7 @@ export default function ViewBotDashboard({
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     schedule.schedule === preset.cron
                       ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-transparent'
+                      : 'bg-navy-800/50 text-navy-400 hover:bg-emerald-500/25/80 border border-transparent'
                   } ${scheduleUpdating ? 'opacity-50' : ''}`}
                 >
                   {t(`viewBot.preset_${preset.label}`)}
@@ -192,7 +192,7 @@ export default function ViewBotDashboard({
                 value={customCron}
                 onChange={(e) => setCustomCron(e.target.value)}
                 placeholder={t('viewBot.customCronPlaceholder')}
-                className="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300"
+                className="flex-1 px-3 py-1.5 text-sm border border-navy-800/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300"
               />
               <button
                 onClick={async () => {
@@ -206,7 +206,7 @@ export default function ViewBotDashboard({
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   customCron.trim() && !scheduleUpdating
                     ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-navy-800/80 text-gray-400 cursor-not-allowed'
                 }`}
               >
                 {t('viewBot.apply')}
@@ -221,15 +221,15 @@ export default function ViewBotDashboard({
       </div>
 
       {/* Run Button + Progress */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="bg-navy-900/50 rounded-xl border border-navy-800/60 p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-navy-900">{t('viewBot.scrapeControl')}</h3>
+          <h3 className="text-lg font-semibold text-gray-100">{t('viewBot.scrapeControl')}</h3>
           <button
             onClick={onRunBot}
             disabled={isRunning}
             className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors ${
               isRunning
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                ? 'bg-navy-800/50 text-navy-500 cursor-not-allowed'
                 : 'bg-emerald-600 text-white hover:bg-emerald-700'
             }`}
           >
@@ -239,13 +239,13 @@ export default function ViewBotDashboard({
 
         {isLiveActive && progress.total > 0 && (
           <div className="space-y-2">
-            <div className="w-full bg-gray-200 rounded-full h-3">
+            <div className="w-full bg-navy-800/80 rounded-full h-3">
               <div
                 className="bg-emerald-500 h-3 rounded-full transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <div className="flex justify-between text-sm text-gray-600">
+            <div className="flex justify-between text-sm text-navy-400">
               <span>{progress.completed} / {progress.total} {t('viewBot.urlsChecked')}</span>
               <span>{progressPercent}%</span>
             </div>
@@ -259,9 +259,9 @@ export default function ViewBotDashboard({
       </div>
 
       {/* Recent Runs Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="p-5 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-navy-900">{t('viewBot.recentRuns')}</h3>
+      <div className="bg-navy-900/50 rounded-xl border border-navy-800/60 overflow-hidden">
+        <div className="p-5 border-b border-navy-800/40">
+          <h3 className="text-lg font-semibold text-gray-100">{t('viewBot.recentRuns')}</h3>
         </div>
 
         {isLoading ? (
@@ -271,8 +271,8 @@ export default function ViewBotDashboard({
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-gray-900">
-                <thead className="bg-gray-50 text-gray-600">
+              <table className="w-full text-sm text-gray-100">
+                <thead className="bg-navy-800/50 text-navy-400">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">{t('viewBot.triggeredBy')}</th>
                     <th className="px-4 py-3 text-left font-medium">{t('viewBot.type')}</th>
@@ -283,9 +283,9 @@ export default function ViewBotDashboard({
                     <th className="px-4 py-3 text-left font-medium">{t('viewBot.statusCol')}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-navy-800/40">
                   {displayedRuns.map((run) => (
-                    <tr key={run.id} className="hover:bg-gray-50">
+                    <tr key={run.id} className="hover:bg-emerald-500/25/50">
                       <td className="px-4 py-3">
                         {run.triggered_by_username || (run.trigger_type === 'scheduled' ? 'System' : 'Unknown')}
                       </td>
@@ -319,7 +319,7 @@ export default function ViewBotDashboard({
               </table>
             </div>
             {runs.length > COLLAPSED_LIMIT && (
-              <div className="p-3 border-t border-gray-100 text-center">
+              <div className="p-3 border-t border-navy-800/40 text-center">
                 <button
                   onClick={() => setShowAllRuns(!showAllRuns)}
                   className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
@@ -335,9 +335,9 @@ export default function ViewBotDashboard({
       </div>
 
       {/* Last Run Results */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="p-5 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-navy-900">{t('viewBot.lastRunResults')}</h3>
+      <div className="bg-navy-900/50 rounded-xl border border-navy-800/60 overflow-hidden">
+        <div className="p-5 border-b border-navy-800/40">
+          <h3 className="text-lg font-semibold text-gray-100">{t('viewBot.lastRunResults')}</h3>
         </div>
 
         {lastRunResultsLoading ? (
@@ -347,8 +347,8 @@ export default function ViewBotDashboard({
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-gray-900">
-                <thead className="bg-gray-50 text-gray-600">
+              <table className="w-full text-sm text-gray-100">
+                <thead className="bg-navy-800/50 text-navy-400">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">{t('viewBot.platform')}</th>
                     <th className="px-4 py-3 text-left font-medium">{t('viewBot.user')}</th>
@@ -360,14 +360,14 @@ export default function ViewBotDashboard({
                     <th className="px-4 py-3 text-right font-medium">{t('viewBot.views')}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-navy-800/40">
                   {displayedResults.map((result) => (
-                    <tr key={result.id} className="hover:bg-gray-50">
+                    <tr key={result.id} className="hover:bg-emerald-500/25/50">
                       <td className="px-4 py-3">
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                           result.platform === 'tiktok' ? 'bg-pink-100 text-pink-700'
                             : result.platform === 'instagram' ? 'bg-purple-100 text-purple-700'
-                            : 'bg-gray-200 text-gray-700'
+                            : 'bg-navy-800/80 text-navy-300'
                         }`}>
                           {result.platform === 'tiktok' ? 'TikTok'
                             : result.platform === 'instagram' ? 'Instagram'
@@ -401,7 +401,7 @@ export default function ViewBotDashboard({
                             : t('viewBot.manual_label')}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-gray-500">
+                      <td className="px-4 py-3 text-navy-400">
                         {result.scraped_at ? new Date(result.scraped_at).toLocaleDateString() : '-'}
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
@@ -413,7 +413,7 @@ export default function ViewBotDashboard({
               </table>
             </div>
             {lastRunResults.length > COLLAPSED_LIMIT && (
-              <div className="p-3 border-t border-gray-100 text-center">
+              <div className="p-3 border-t border-navy-800/40 text-center">
                 <button
                   onClick={() => setShowAllResults(!showAllResults)}
                   className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
