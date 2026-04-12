@@ -24,6 +24,16 @@ export function useRealtimeDM({
 }: UseRealtimeDMOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const channelRef = useRef<any>(null);
+  const callbacksRef = useRef({
+    onNewMessage,
+    onMessageUpdate,
+    onMessageDelete,
+  });
+
+  // Keep callbacks fresh without recreating the subscription
+  useEffect(() => {
+    callbacksRef.current = { onNewMessage, onMessageUpdate, onMessageDelete };
+  }, [onNewMessage, onMessageUpdate, onMessageDelete]);
 
   useEffect(() => {
     if (!enabled || !dmChannelId) {
@@ -68,7 +78,7 @@ export function useRealtimeDM({
           reactions: msg.reactions || [],
         };
 
-        onNewMessage?.(message);
+        callbacksRef.current.onNewMessage?.(message);
       },
     );
 
@@ -101,7 +111,7 @@ export function useRealtimeDM({
           reactions: [],
         };
 
-        onNewMessage?.(message);
+        callbacksRef.current.onNewMessage?.(message);
       },
     );
 
@@ -131,7 +141,7 @@ export function useRealtimeDM({
           reactions: [],
         };
 
-        onMessageUpdate?.(message);
+        callbacksRef.current.onMessageUpdate?.(message);
       },
     );
 
@@ -146,7 +156,7 @@ export function useRealtimeDM({
       (payload: any) => {
         const record = payload.old;
         if (record?.id) {
-          onMessageDelete?.(record.id);
+          callbacksRef.current.onMessageDelete?.(record.id);
         }
       },
     );
@@ -162,7 +172,7 @@ export function useRealtimeDM({
       channelRef.current = null;
       setIsConnected(false);
     };
-  }, [dmChannelId, enabled, onNewMessage, onMessageUpdate, onMessageDelete]);
+  }, [dmChannelId, enabled]);
 
   return { isConnected, channelRef };
 }

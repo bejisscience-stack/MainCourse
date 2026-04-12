@@ -1,11 +1,14 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { EnrollmentRequest } from './useEnrollmentRequests';
+import { useEffect, useState, useRef, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import type { EnrollmentRequest } from "./useEnrollmentRequests";
 
 interface UseRealtimeAdminEnrollmentRequestsOptions {
   enabled?: boolean;
   onInsert?: (request: EnrollmentRequest) => void;
-  onUpdate?: (request: EnrollmentRequest, oldRequest: Partial<EnrollmentRequest>) => void;
+  onUpdate?: (
+    request: EnrollmentRequest,
+    oldRequest: Partial<EnrollmentRequest>,
+  ) => void;
   onConnectionChange?: (connected: boolean) => void;
 }
 
@@ -45,29 +48,29 @@ export function useRealtimeAdminEnrollmentRequests({
       return;
     }
 
-    console.log('[RT Admin Enrollment] Setting up subscription');
-
     const channel = supabase
-      .channel('admin:enrollment_requests')
+      .channel("admin:enrollment_requests")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'enrollment_requests',
+          event: "INSERT",
+          schema: "public",
+          table: "enrollment_requests",
         },
         async (payload) => {
-          console.log('[RT Admin Enrollment] INSERT received:', payload);
-
-          if (!payload.new || typeof payload.new !== 'object' || !('id' in payload.new)) {
-            console.error('[RT Admin Enrollment] Invalid payload: missing new.id');
+          if (
+            !payload.new ||
+            typeof payload.new !== "object" ||
+            !("id" in payload.new)
+          ) {
             return;
           }
 
           // Fetch the full request with related data for proper display
           const { data: request, error } = await supabase
-            .from('enrollment_requests')
-            .select(`
+            .from("enrollment_requests")
+            .select(
+              `
               id,
               user_id,
               course_id,
@@ -88,12 +91,16 @@ export function useRealtimeAdminEnrollmentRequests({
                 username,
                 email
               )
-            `)
-            .eq('id', (payload.new as { id: string }).id)
+            `,
+            )
+            .eq("id", (payload.new as { id: string }).id)
             .single();
 
           if (error || !request) {
-            console.error('[RT Admin Enrollment] Error fetching request details:', error);
+            console.error(
+              "[RT Admin Enrollment] Error fetching request details:",
+              error,
+            );
             // Still trigger callback to revalidate
             onInsertRef.current?.(payload.new as EnrollmentRequest);
             return;
@@ -103,35 +110,41 @@ export function useRealtimeAdminEnrollmentRequests({
           const transformedRequest: EnrollmentRequest = {
             ...request,
             courses: Array.isArray(request.courses)
-              ? (request.courses.length > 0 ? request.courses[0] : null)
-              : request.courses ?? null,
+              ? request.courses.length > 0
+                ? request.courses[0]
+                : null
+              : (request.courses ?? null),
             profiles: Array.isArray(request.profiles)
-              ? (request.profiles.length > 0 ? request.profiles[0] : undefined)
-              : request.profiles ?? undefined,
+              ? request.profiles.length > 0
+                ? request.profiles[0]
+                : undefined
+              : (request.profiles ?? undefined),
           };
 
           onInsertRef.current?.(transformedRequest);
-        }
+        },
       )
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'enrollment_requests',
+          event: "UPDATE",
+          schema: "public",
+          table: "enrollment_requests",
         },
         async (payload) => {
-          console.log('[RT Admin Enrollment] UPDATE received:', payload);
-
-          if (!payload.new || typeof payload.new !== 'object' || !('id' in payload.new)) {
-            console.error('[RT Admin Enrollment] Invalid payload: missing new.id');
+          if (
+            !payload.new ||
+            typeof payload.new !== "object" ||
+            !("id" in payload.new)
+          ) {
             return;
           }
 
           // Fetch the full request with related data
           const { data: request, error } = await supabase
-            .from('enrollment_requests')
-            .select(`
+            .from("enrollment_requests")
+            .select(
+              `
               id,
               user_id,
               course_id,
@@ -152,14 +165,21 @@ export function useRealtimeAdminEnrollmentRequests({
                 username,
                 email
               )
-            `)
-            .eq('id', (payload.new as { id: string }).id)
+            `,
+            )
+            .eq("id", (payload.new as { id: string }).id)
             .single();
 
           if (error || !request) {
-            console.error('[RT Admin Enrollment] Error fetching request details:', error);
+            console.error(
+              "[RT Admin Enrollment] Error fetching request details:",
+              error,
+            );
             // Still trigger callback to revalidate
-            onUpdateRef.current?.(payload.new as EnrollmentRequest, payload.old as Partial<EnrollmentRequest>);
+            onUpdateRef.current?.(
+              payload.new as EnrollmentRequest,
+              payload.old as Partial<EnrollmentRequest>,
+            );
             return;
           }
 
@@ -167,36 +187,36 @@ export function useRealtimeAdminEnrollmentRequests({
           const transformedRequest: EnrollmentRequest = {
             ...request,
             courses: Array.isArray(request.courses)
-              ? (request.courses.length > 0 ? request.courses[0] : null)
-              : request.courses ?? null,
+              ? request.courses.length > 0
+                ? request.courses[0]
+                : null
+              : (request.courses ?? null),
             profiles: Array.isArray(request.profiles)
-              ? (request.profiles.length > 0 ? request.profiles[0] : undefined)
-              : request.profiles ?? undefined,
+              ? request.profiles.length > 0
+                ? request.profiles[0]
+                : undefined
+              : (request.profiles ?? undefined),
           };
 
-          onUpdateRef.current?.(transformedRequest, payload.old as Partial<EnrollmentRequest>);
-        }
+          onUpdateRef.current?.(
+            transformedRequest,
+            payload.old as Partial<EnrollmentRequest>,
+          );
+        },
       )
       .subscribe((status, err) => {
-        console.log('[RT Admin Enrollment] Subscription status:', status, err);
-
-        const connected = status === 'SUBSCRIBED';
+        const connected = status === "SUBSCRIBED";
         setIsConnected(connected);
         onConnectionChangeRef.current?.(connected);
 
-        if (status === 'CHANNEL_ERROR') {
-          console.error('[RT Admin Enrollment] Channel error:', err);
-        } else if (status === 'TIMED_OUT') {
-          console.warn('[RT Admin Enrollment] Connection timed out, will retry...');
-        } else if (status === 'CLOSED') {
-          console.log('[RT Admin Enrollment] Channel closed');
+        if (status === "CHANNEL_ERROR") {
+          console.error("[RT Admin Enrollment] Channel error:", err);
         }
       });
 
     channelRef.current = channel;
 
     return () => {
-      console.log('[RT Admin Enrollment] Cleaning up subscription');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;

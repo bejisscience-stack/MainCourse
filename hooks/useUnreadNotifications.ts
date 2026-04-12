@@ -23,7 +23,6 @@ async function fetchUnreadCount(): Promise<UnreadCountResponse> {
 
   if (!response.ok) {
     // Return 0 on error instead of throwing to avoid breaking the UI
-    console.error("Failed to fetch unread count");
     return { count: 0 };
   }
 
@@ -36,13 +35,9 @@ export function useUnreadNotifications() {
     fetchUnreadCount,
     {
       revalidateOnFocus: false,
-      dedupingInterval: 1000,
+      dedupingInterval: 10000,
       refreshInterval: 30000,
       fallbackData: { count: 0 },
-      // Don't throw errors for this hook - UI should gracefully degrade
-      onError: (err) => {
-        console.error("Error fetching unread count:", err);
-      },
     },
   );
 

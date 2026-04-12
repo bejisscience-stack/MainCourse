@@ -1,8 +1,15 @@
 "use client";
 
 import { memo } from "react";
+import dynamic from "next/dynamic";
 import { ScrollReveal } from "./ScrollReveal";
-import VideoPlayer from "./VideoPlayer";
+
+const VideoPlayer = dynamic(() => import("./VideoPlayer"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full aspect-video bg-navy-900/50 rounded-xl animate-pulse" />
+  ),
+});
 
 const VIDEO_SRC =
   "https://nbecbsbuerdtakxkrduw.supabase.co/storage/v1/object/public/course-videos/intro-video.mp4";

@@ -28,11 +28,6 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = createServerSupabaseClient(token);
 
-    console.log(
-      "[Mark All Read API] Marking all notifications as read for user:",
-      user.id,
-    );
-
     // Direct UPDATE query instead of RPC for more reliable execution
     const {
       data,
@@ -57,11 +52,6 @@ export async function PATCH(request: NextRequest) {
     }
 
     const updatedCount = data?.length || 0;
-    console.log(
-      "[Mark All Read API] Successfully marked",
-      updatedCount,
-      "notifications as read",
-    );
 
     return NextResponse.json({
       success: true,

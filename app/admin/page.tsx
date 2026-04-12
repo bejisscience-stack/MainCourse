@@ -81,9 +81,6 @@ async function retryWithBackoff<T>(
 
       if (attempt < maxRetries - 1) {
         const delay = baseDelay * Math.pow(2, attempt);
-        if (process.env.NODE_ENV === "development") {
-          console.log(`[Admin Page] Retrying in ${delay}ms...`);
-        }
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
@@ -115,10 +112,6 @@ export default function AdminDashboard() {
 
     const verifyAdminDirectly = async () => {
       setIsCheckingAdmin(true);
-      if (process.env.NODE_ENV === "development") {
-        console.log("[Admin Page] === DIRECT ADMIN VERIFICATION ===");
-      }
-
       try {
         // Get current session with retry
         const session = await retryWithBackoff(
@@ -138,17 +131,7 @@ export default function AdminDashboard() {
 
         if (!isMounted) return;
 
-        if (process.env.NODE_ENV === "development") {
-          console.log("[Admin Page] Session check:", {
-            hasSession: !!session,
-            userId: session?.user?.id,
-          });
-        }
-
         if (!session?.user) {
-          if (process.env.NODE_ENV === "development") {
-            console.log("[Admin Page] No session, redirecting to login");
-          }
           if (isMounted) {
             setIsAdminVerified(false);
             setIsCheckingAdmin(false);

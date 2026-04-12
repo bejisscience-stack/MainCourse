@@ -59,12 +59,10 @@ export default function SettingsPage() {
   const { isConnected: withdrawalRtConnected } = useRealtimeWithdrawalRequests({
     userId: user?.id || null,
     onRequestUpdated: () => {
-      console.log("[Settings] Withdrawal request updated, refreshing data...");
       mutateWithdrawals();
       mutateBalance();
     },
     onRequestApproved: (request) => {
-      console.log("[Settings] Withdrawal approved:", request);
       toast.success(
         t("settings.withdrawalApproved") ||
           `Withdrawal of ₾${request.amount.toFixed(2)} approved!`,
@@ -74,7 +72,6 @@ export default function SettingsPage() {
       mutateBalance();
     },
     onRequestRejected: (request) => {
-      console.log("[Settings] Withdrawal rejected:", request);
       toast.error(
         t("settings.withdrawalRejected") ||
           `Withdrawal of ₾${request.amount.toFixed(2)} was rejected.`,
@@ -89,11 +86,9 @@ export default function SettingsPage() {
   useRealtimeUserProfile({
     userId: user?.id || null,
     onProfileUpdated: () => {
-      console.log("[Settings] Profile updated, refreshing balance...");
       mutateBalance();
     },
     onBalanceChanged: (newBalance, oldBalance) => {
-      console.log("[Settings] Balance changed:", oldBalance, "->", newBalance);
       mutateBalance();
       mutateWithdrawals();
     },

@@ -38,16 +38,11 @@ async function fetchCourses(filter?: string): Promise<Course[]> {
     const { data, error } = await query;
 
     if (error) {
-      console.error("[useCourses] Error fetching courses:", error);
-      console.error("[useCourses] Error code:", error.code);
-      console.error("[useCourses] Error message:", error.message);
       throw error;
     }
 
-    console.log("[useCourses] Fetched courses:", data?.length || 0);
     return data || [];
   } catch (err: any) {
-    console.error("[useCourses] Unexpected error:", err);
     throw err;
   }
 }
@@ -72,9 +67,6 @@ export function useCourses(filter: string = "All") {
           return false;
         }
         return true;
-      },
-      onError: (error) => {
-        console.error("[useCourses] SWR error:", error);
       },
     },
   );

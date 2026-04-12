@@ -177,10 +177,6 @@ export default function ProjectSubscriptionModal({
 
   // Redirect flow (new card)
   const handleKeepzPayment = useCallback(async () => {
-    console.log(
-      "[SaveCard] handleKeepzPayment called, saveCardRef:",
-      saveCardRef.current,
-    );
     setIsRedirecting(true);
     setError(null);
     try {
@@ -740,14 +736,9 @@ export default function ProjectSubscriptionModal({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (!isRedirecting) {
-                    console.log(
-                      "[SaveCard] checkbox clicked, current:",
-                      saveCardChecked,
-                    );
                     setSaveCardChecked((v) => {
                       const next = !v;
                       saveCardRef.current = next;
-                      console.log("[SaveCard] toggled to:", next);
                       return next;
                     });
                   }

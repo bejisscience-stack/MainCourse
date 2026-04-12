@@ -31,45 +31,20 @@ export async function prefetchProfiles(userIds: string[]) {
   });
 
   if (uncachedIds.length === 0) {
-    console.log("📦 All profiles already cached for:", userIds);
     return;
   }
-
-  console.log("📥 Prefetching profiles for user IDs:", uncachedIds);
 
   try {
     const { data: profiles, error } = await supabase.rpc("get_safe_profiles", {
       user_ids: uncachedIds,
     });
 
-    // Store profiles in a variable to avoid type narrowing issues
     const profilesArray = profiles || [];
-    // Store error properties to avoid type narrowing issues
-    const errorMessage = error?.message;
-    const errorCode = error?.code;
 
     if (profilesArray.length > 0 && !error) {
-      console.log(
-        `✅ Prefetched ${profilesArray.length} profiles out of ${uncachedIds.length} requested`,
-      );
-
       profilesArray.forEach((profile: any) => {
         // Always use profiles.username (required field in database)
         const username = normalizeProfileUsername(profile);
-
-        // Debug log for missing usernames
-        if (
-          !profile.username ||
-          profile.username.trim() === "" ||
-          username === "User"
-        ) {
-          console.warn(`⚠️ Prefetched profile with missing username:`, {
-            userId: profile.id,
-            profileUsername: profile.username,
-            normalizedUsername: username,
-            profileEmail: profile.email,
-          });
-        }
 
         profileCache.set(profile.id, {
           username,
@@ -78,26 +53,11 @@ export async function prefetchProfiles(userIds: string[]) {
           timestamp: now,
         });
       });
-
-      // Log missing profiles
-      const fetchedIds = new Set(profilesArray.map((p: any) => p.id));
-      const missingIds = uncachedIds.filter((id) => !fetchedIds.has(id));
-      if (missingIds.length > 0) {
-        console.warn(
-          `⚠️ Could not prefetch ${missingIds.length} profiles:`,
-          missingIds,
-        );
-      }
     } else {
-      console.error("❌ Failed to prefetch profiles:", {
-        error: errorMessage,
-        errorCode: errorCode,
-        requestedCount: uncachedIds.length,
-        fetchedCount: profilesArray.length,
-      });
+      console.error("Failed to prefetch profiles");
     }
   } catch (error) {
-    console.error("❌ Exception prefetching profiles:", error);
+    console.error("Failed to prefetch profiles", error);
   }
 }
 
@@ -131,35 +91,8 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
     });
     const profile = profiles?.[0] ?? null;
 
-    // Store error in a variable to avoid type narrowing issues
-    const fetchError = error;
-    const errorMessage = fetchError?.message;
-    const errorCode = fetchError?.code;
-
-    if (profile && !fetchError) {
+    if (profile && !error) {
       const username = normalizeProfileUsername(profile);
-
-      // Debug log
-      if (
-        !profile.username ||
-        profile.username.trim() === "" ||
-        username === "User"
-      ) {
-        console.warn(`⚠️ Profile fetch issue for user ${userId}:`, {
-          userId,
-          profileUsername: profile.username,
-          normalizedUsername: username,
-          profileEmail: profile.email,
-          hasError: !!fetchError,
-          error: errorMessage,
-        });
-      } else {
-        console.log(`✅ Fetched profile for user ${userId}:`, {
-          userId,
-          username,
-          profileEmail: profile.email,
-        });
-      }
 
       profileCache.set(userId, {
         username,
@@ -169,15 +102,10 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
       });
       return username;
     } else {
-      console.error(`❌ Failed to fetch profile for ${userId}:`, {
-        userId,
-        error: errorMessage,
-        errorCode: errorCode,
-        hasProfile: !!profile,
-      });
+      console.error("Failed to fetch profile");
     }
   } catch (err) {
-    console.error(`❌ Exception fetching profile for ${userId}:`, err);
+    console.error("Failed to fetch profile", err);
   }
 
   return "User";
@@ -418,12 +346,8 @@ export function useRealtimeMessages({
           setIsConnected(status === "SUBSCRIBED");
 
           if (status === "SUBSCRIBED") {
-            console.log(`[RT] Connected to channel ${channelId}`);
             reconnectAttemptsRef.current = 0;
           } else if (status === "CLOSED" || status === "CHANNEL_ERROR") {
-            console.warn(
-              `[RT] Disconnected from channel ${channelId}: ${status}`,
-            );
             scheduleReconnect();
           }
         });
@@ -434,9 +358,6 @@ export function useRealtimeMessages({
     function scheduleReconnect() {
       if (cancelled) return;
       if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
-        console.error(
-          `[RT] Max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached for channel ${channelId}`,
-        );
         return;
       }
 
@@ -445,9 +366,6 @@ export function useRealtimeMessages({
         MAX_BACKOFF_MS,
       );
       reconnectAttemptsRef.current += 1;
-      console.log(
-        `[RT] Reconnecting to channel ${channelId} in ${delay}ms (attempt ${reconnectAttemptsRef.current})`,
-      );
 
       reconnectTimerRef.current = setTimeout(() => {
         if (!cancelled) {

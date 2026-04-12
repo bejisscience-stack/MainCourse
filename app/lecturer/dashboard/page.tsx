@@ -446,14 +446,6 @@ export default function LecturerDashboard() {
     const fileName = `${path}-${Date.now()}.${fileExt}`;
     const filePath = `${user.id}/${fileName}`;
 
-    console.log("Starting upload:", {
-      bucket,
-      filePath,
-      fileName,
-      fileSize: file.size,
-      fileType: file.type,
-    });
-
     // Start progress simulation
     let progress = 0;
     let progressInterval: NodeJS.Timeout | null = null;
@@ -521,8 +513,6 @@ export default function LecturerDashboard() {
         throw new Error("Upload failed: No data returned");
       }
 
-      console.log("Upload successful, getting public URL...");
-
       // Get public URL
       const { data: urlData } = supabase.storage
         .from(bucket)
@@ -534,7 +524,6 @@ export default function LecturerDashboard() {
         throw new Error("Failed to get public URL");
       }
 
-      console.log("Upload complete:", urlData.publicUrl);
       return urlData.publicUrl;
     } catch (error: any) {
       stopProgress();
@@ -576,12 +565,6 @@ export default function LecturerDashboard() {
     setVideoUploadProgress(0);
     setIsUploading(true);
     setError(null);
-
-    console.log("Starting video upload:", {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    });
 
     try {
       const url = await uploadFile(

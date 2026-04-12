@@ -1,42 +1,55 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect, useCallback, memo } from 'react';
-import { useUser } from '@/hooks/useUser';
-import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
-import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
-import { useI18n } from '@/contexts/I18nContext';
-import NotificationDropdown from './NotificationDropdown';
-import type { Notification } from '@/types/notification';
+import { useState, useRef, useEffect, useCallback, memo } from "react";
+import { useUser } from "@/hooks/useUser";
+import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
+import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
+import { useI18n } from "@/contexts/I18nContext";
+import NotificationDropdown from "./NotificationDropdown";
+import type { Notification } from "@/types/notification";
 
 function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    right: 0,
+  });
   const bellButtonRef = useRef<HTMLButtonElement>(null);
   const { user } = useUser();
   const { unreadCount, refresh, mutate } = useUnreadNotifications();
   const { t, language } = useI18n();
 
   // Handle new notification received in real-time
-  const handleNewNotification = useCallback((notification: Notification) => {
-    console.log('[NotificationBell] New notification received:', notification);
-    // Increment unread count
-    mutate((current) => ({ count: (current?.count || 0) + 1 }), { revalidate: false });
-
-    // Show browser notification if supported and permitted
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-      const title = typeof notification.title === 'object'
-        ? notification.title[language] || notification.title.en
-        : notification.title;
-      const message = typeof notification.message === 'object'
-        ? notification.message[language] || notification.message.en
-        : notification.message;
-
-      new Notification(title, {
-        body: message,
-        icon: '/favicon.ico',
+  const handleNewNotification = useCallback(
+    (notification: Notification) => {
+      // Increment unread count
+      mutate((current) => ({ count: (current?.count || 0) + 1 }), {
+        revalidate: false,
       });
-    }
-  }, [language, mutate]);
+
+      // Show browser notification if supported and permitted
+      if (
+        typeof window !== "undefined" &&
+        "Notification" in window &&
+        Notification.permission === "granted"
+      ) {
+        const title =
+          typeof notification.title === "object"
+            ? notification.title[language] || notification.title.en
+            : notification.title;
+        const message =
+          typeof notification.message === "object"
+            ? notification.message[language] || notification.message.en
+            : notification.message;
+
+        new Notification(title, {
+          body: message,
+          icon: "/favicon.ico",
+        });
+      }
+    },
+    [language, mutate],
+  );
 
   // Set up real-time subscription
   useRealtimeNotifications({
@@ -66,7 +79,11 @@ function NotificationBell() {
 
   // Request notification permission on mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+    if (
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      Notification.permission === "default"
+    ) {
       // Don't auto-request, let user opt-in through settings or on first notification
     }
   }, []);
@@ -76,13 +93,13 @@ function NotificationBell() {
     if (!isOpen) return;
 
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         setIsOpen(false);
       }
     };
 
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen]);
 
   if (!user) {
@@ -95,7 +112,7 @@ function NotificationBell() {
         ref={bellButtonRef}
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 hover:bg-charcoal-100/50 dark:hover:bg-navy-800/50 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:ring-offset-2"
-        aria-label={t('notifications.title')}
+        aria-label={t("notifications.title")}
       >
         {/* Bell Icon */}
         <svg
@@ -115,7 +132,7 @@ function NotificationBell() {
         {/* Unread Badge */}
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full">
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>

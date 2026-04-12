@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import Message from "./Message";
 import MessageInput from "./MessageInput";
 import dynamic from "next/dynamic";
@@ -46,7 +46,7 @@ interface ChatAreaProps {
   dmOtherUser?: { id: string; username: string; avatarUrl: string } | null;
 }
 
-export default function ChatArea({
+function ChatArea({
   channel,
   currentUserId,
   isLecturer = false,
@@ -1177,3 +1177,5 @@ export default function ChatArea({
     </div>
   );
 }
+
+export default memo(ChatArea);

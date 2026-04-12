@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 interface UseRealtimeProjectsOptions {
   enabled?: boolean;
@@ -36,54 +36,46 @@ export function useRealtimeProjects({
 
     // Subscribe to projects table changes
     const channel = supabase
-      .channel('projects-realtime', {
+      .channel("projects-realtime", {
         config: {
           broadcast: { self: false },
-        }
+        },
       })
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'projects',
+          event: "INSERT",
+          schema: "public",
+          table: "projects",
         },
         (payload) => {
-          console.log('[RT Projects] New project inserted:', payload.new?.id);
           callbacksRef.current.onInsert?.(payload);
-        }
+        },
       )
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'projects',
+          event: "UPDATE",
+          schema: "public",
+          table: "projects",
         },
         (payload) => {
-          console.log('[RT Projects] Project updated:', payload.new?.id);
           callbacksRef.current.onUpdate?.(payload);
-        }
+        },
       )
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'projects',
+          event: "DELETE",
+          schema: "public",
+          table: "projects",
         },
         (payload) => {
-          console.log('[RT Projects] Project deleted:', payload.old?.id);
           callbacksRef.current.onDelete?.(payload);
-        }
+        },
       )
       .subscribe((status) => {
-        setIsConnected(status === 'SUBSCRIBED');
-        if (status === 'SUBSCRIBED') {
-          console.log('[RT Projects] Connected to projects realtime channel');
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          console.warn('[RT Projects] Disconnected from projects channel:', status);
-        }
+        setIsConnected(status === "SUBSCRIBED");
       });
 
     subscriptionRef.current = channel;
@@ -126,25 +118,24 @@ export function useRealtimeProjectCriteria({
     }
 
     const channel = supabase
-      .channel('project-criteria-realtime', {
+      .channel("project-criteria-realtime", {
         config: {
           broadcast: { self: false },
-        }
+        },
       })
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'project_criteria',
+          event: "*",
+          schema: "public",
+          table: "project_criteria",
         },
         () => {
-          console.log('[RT Project Criteria] Change detected');
           callbackRef.current?.();
-        }
+        },
       )
       .subscribe((status) => {
-        setIsConnected(status === 'SUBSCRIBED');
+        setIsConnected(status === "SUBSCRIBED");
       });
 
     subscriptionRef.current = channel;
@@ -192,23 +183,22 @@ export function useRealtimeSubmissionReviews({
       .channel(`submission-reviews:${projectId}`, {
         config: {
           broadcast: { self: false },
-        }
+        },
       })
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'submission_reviews',
+          event: "*",
+          schema: "public",
+          table: "submission_reviews",
           filter: `project_id=eq.${projectId}`,
         },
         () => {
-          console.log('[RT Submission Reviews] Change detected for project:', projectId);
           callbackRef.current?.();
-        }
+        },
       )
       .subscribe((status) => {
-        setIsConnected(status === 'SUBSCRIBED');
+        setIsConnected(status === "SUBSCRIBED");
       });
 
     subscriptionRef.current = channel;

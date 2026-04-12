@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
-import { edgeFunctionUrl } from '@/lib/api-client';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { supabase } from "@/lib/supabase";
+import { edgeFunctionUrl } from "@/lib/api-client";
 
 interface UseMuteStatusOptions {
   channelId: string | null;
@@ -8,7 +8,11 @@ interface UseMuteStatusOptions {
   enabled?: boolean;
 }
 
-export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStatusOptions) {
+export function useMuteStatus({
+  channelId,
+  userId,
+  enabled = true,
+}: UseMuteStatusOptions) {
   const [isMuted, setIsMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const subscriptionRef = useRef<any>(null);
@@ -22,21 +26,23 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
 
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         setIsMuted(false);
         return;
       }
 
       const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      const url = new URL(edgeFunctionUrl('chat-mute'));
-      url.searchParams.set('chatId', channelId);
-      url.searchParams.set('userId', userId);
+      const url = new URL(edgeFunctionUrl("chat-mute"));
+      url.searchParams.set("chatId", channelId);
+      url.searchParams.set("userId", userId);
 
       const response = await fetch(url.toString(), {
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          ...(anonKey && { 'apikey': anonKey }),
+          Authorization: `Bearer ${session.access_token}`,
+          ...(anonKey && { apikey: anonKey }),
         },
       });
 
@@ -47,7 +53,6 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
         setIsMuted(false);
       }
     } catch (error) {
-      console.warn('Failed to check mute status:', error);
       setIsMuted(false);
     } finally {
       setIsLoading(false);
@@ -70,11 +75,11 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
     const channel = supabase
       .channel(`mute_status:${userId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'muted_users',
+          event: "*",
+          schema: "public",
+          table: "muted_users",
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
@@ -82,7 +87,7 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
           // This handles the lecturer-wise muting since we need to check if the
           // mute affects the current channel's lecturer
           fetchMuteStatus();
-        }
+        },
       )
       .subscribe();
 
@@ -97,68 +102,72 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
   }, [channelId, userId, enabled, fetchMuteStatus]);
 
   // Mute a user (for lecturers) - mutes across ALL lecturer's channels
-  const muteUser = useCallback(async (targetUserId: string) => {
-    if (!channelId) return false;
+  const muteUser = useCallback(
+    async (targetUserId: string) => {
+      if (!channelId) return false;
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return false;
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) return false;
 
-      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      const response = await fetch(edgeFunctionUrl('chat-mute'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          ...(anonKey && { 'apikey': anonKey }),
-        },
-        body: JSON.stringify({ chatId: channelId, muted: true, userId: targetUserId }),
-      });
+        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        const response = await fetch(edgeFunctionUrl("chat-mute"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+            ...(anonKey && { apikey: anonKey }),
+          },
+          body: JSON.stringify({
+            chatId: channelId,
+            muted: true,
+            userId: targetUserId,
+          }),
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('User muted:', data.message);
+        return response.ok;
+      } catch (error) {
+        console.error("Failed to mute user:", error);
+        return false;
       }
-
-      return response.ok;
-    } catch (error) {
-      console.error('Failed to mute user:', error);
-      return false;
-    }
-  }, [channelId]);
+    },
+    [channelId],
+  );
 
   // Unmute a user (for lecturers) - unmutes across ALL lecturer's channels
-  const unmuteUser = useCallback(async (targetUserId: string) => {
-    if (!channelId) return false;
+  const unmuteUser = useCallback(
+    async (targetUserId: string) => {
+      if (!channelId) return false;
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return false;
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) return false;
 
-      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      const url = new URL(edgeFunctionUrl('chat-mute'));
-      url.searchParams.set('chatId', channelId);
-      url.searchParams.set('userId', targetUserId);
+        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        const url = new URL(edgeFunctionUrl("chat-mute"));
+        url.searchParams.set("chatId", channelId);
+        url.searchParams.set("userId", targetUserId);
 
-      const response = await fetch(url.toString(), {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          ...(anonKey && { 'apikey': anonKey }),
-        },
-      });
+        const response = await fetch(url.toString(), {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            ...(anonKey && { apikey: anonKey }),
+          },
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('User unmuted:', data.message);
+        return response.ok;
+      } catch (error) {
+        console.error("Failed to unmute user:", error);
+        return false;
       }
-
-      return response.ok;
-    } catch (error) {
-      console.error('Failed to unmute user:', error);
-      return false;
-    }
-  }, [channelId]);
+    },
+    [channelId],
+  );
 
   return {
     isMuted,
@@ -170,7 +179,10 @@ export function useMuteStatus({ channelId, userId, enabled = true }: UseMuteStat
 }
 
 // Hook for checking if a specific user is muted (for lecturers viewing other users)
-export function useUserMuteStatus(channelId: string | null, targetUserId: string | null) {
+export function useUserMuteStatus(
+  channelId: string | null,
+  targetUserId: string | null,
+) {
   const [isMuted, setIsMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const subscriptionRef = useRef<any>(null);
@@ -183,21 +195,23 @@ export function useUserMuteStatus(channelId: string | null, targetUserId: string
 
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         setIsMuted(false);
         return;
       }
 
       const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      const url = new URL(edgeFunctionUrl('chat-mute'));
-      url.searchParams.set('chatId', channelId);
-      url.searchParams.set('userId', targetUserId);
+      const url = new URL(edgeFunctionUrl("chat-mute"));
+      url.searchParams.set("chatId", channelId);
+      url.searchParams.set("userId", targetUserId);
 
       const response = await fetch(url.toString(), {
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          ...(anonKey && { 'apikey': anonKey }),
+          Authorization: `Bearer ${session.access_token}`,
+          ...(anonKey && { apikey: anonKey }),
         },
       });
 
@@ -205,8 +219,8 @@ export function useUserMuteStatus(channelId: string | null, targetUserId: string
         const data = await response.json();
         setIsMuted(data.muted || false);
       }
-    } catch (error) {
-      console.warn('Failed to check user mute status:', error);
+    } catch {
+      // Silent - non-critical status check
     } finally {
       setIsLoading(false);
     }
@@ -214,23 +228,23 @@ export function useUserMuteStatus(channelId: string | null, targetUserId: string
 
   useEffect(() => {
     if (!channelId || !targetUserId) return;
-    
+
     checkMuteStatus();
 
     // Subscribe to mute changes for this target user
     const channel = supabase
       .channel(`user_mute_status:${targetUserId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'muted_users',
+          event: "*",
+          schema: "public",
+          table: "muted_users",
           filter: `user_id=eq.${targetUserId}`,
         },
         () => {
           checkMuteStatus();
-        }
+        },
       )
       .subscribe();
 

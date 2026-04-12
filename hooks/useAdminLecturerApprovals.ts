@@ -63,12 +63,9 @@ export function useAdminLecturerApprovals(status?: string) {
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
-      dedupingInterval: 1000,
-      refreshInterval: 5000,
+      dedupingInterval: 5000,
+      refreshInterval: 15000,
       fallbackData: [],
-      onError: (error) => {
-        console.error("[Lecturer Approvals Hook] SWR error:", error);
-      },
     },
   );
 

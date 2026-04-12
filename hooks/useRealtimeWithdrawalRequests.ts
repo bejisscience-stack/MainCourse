@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { WithdrawalRequest } from '@/types/balance';
+import { useEffect, useState, useRef } from "react";
+import { supabase } from "@/lib/supabase";
+import type { WithdrawalRequest } from "@/types/balance";
 
 interface UseRealtimeWithdrawalRequestsOptions {
   userId: string | null;
@@ -35,7 +35,12 @@ export function useRealtimeWithdrawalRequests({
     onRequestApprovedRef.current = onRequestApproved;
     onRequestRejectedRef.current = onRequestRejected;
     onConnectionChangeRef.current = onConnectionChange;
-  }, [onRequestUpdated, onRequestApproved, onRequestRejected, onConnectionChange]);
+  }, [
+    onRequestUpdated,
+    onRequestApproved,
+    onRequestRejected,
+    onConnectionChange,
+  ]);
 
   useEffect(() => {
     if (!userId) {
@@ -47,24 +52,23 @@ export function useRealtimeWithdrawalRequests({
       return;
     }
 
-    console.log('[RT Withdrawal] Setting up subscription for user:', userId);
-
     // Subscribe to changes in withdrawal_requests table for this user
     const channel = supabase
       .channel(`withdrawal_requests:${userId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'withdrawal_requests',
+          event: "INSERT",
+          schema: "public",
+          table: "withdrawal_requests",
           filter: `user_id=eq.${userId}`,
         },
         async (payload) => {
-          console.log('[RT Withdrawal] INSERT received:', payload);
-
-          if (!payload.new || typeof payload.new !== 'object' || !('id' in payload.new)) {
-            console.error('[RT Withdrawal] Invalid INSERT payload');
+          if (
+            !payload.new ||
+            typeof payload.new !== "object" ||
+            !("id" in payload.new)
+          ) {
             return;
           }
 
@@ -72,21 +76,22 @@ export function useRealtimeWithdrawalRequests({
           if (onRequestUpdatedRef.current) {
             onRequestUpdatedRef.current(payload.new as WithdrawalRequest);
           }
-        }
+        },
       )
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'withdrawal_requests',
+          event: "UPDATE",
+          schema: "public",
+          table: "withdrawal_requests",
           filter: `user_id=eq.${userId}`,
         },
         async (payload) => {
-          console.log('[RT Withdrawal] UPDATE received:', payload);
-
-          if (!payload.new || typeof payload.new !== 'object' || !('id' in payload.new)) {
-            console.error('[RT Withdrawal] Invalid UPDATE payload');
+          if (
+            !payload.new ||
+            typeof payload.new !== "object" ||
+            !("id" in payload.new)
+          ) {
             return;
           }
 
@@ -94,46 +99,40 @@ export function useRealtimeWithdrawalRequests({
           const oldStatus = (payload.old as { status?: string } | null)?.status;
           const newStatus = newData.status;
 
-          console.log('[RT Withdrawal] Status change:', oldStatus, '->', newStatus);
-
           // Status changed - call specific callbacks
           if (oldStatus !== newStatus) {
-            if ((newStatus === 'approved' || newStatus === 'completed') && onRequestApprovedRef.current) {
-              console.log('[RT Withdrawal] Calling onRequestApproved');
+            if (
+              (newStatus === "approved" || newStatus === "completed") &&
+              onRequestApprovedRef.current
+            ) {
               onRequestApprovedRef.current(newData);
-            } else if (newStatus === 'rejected' && onRequestRejectedRef.current) {
-              console.log('[RT Withdrawal] Calling onRequestRejected');
+            } else if (
+              newStatus === "rejected" &&
+              onRequestRejectedRef.current
+            ) {
               onRequestRejectedRef.current(newData);
             }
           }
 
           // Always call onRequestUpdated for any update
           if (onRequestUpdatedRef.current) {
-            console.log('[RT Withdrawal] Calling onRequestUpdated');
             onRequestUpdatedRef.current(newData);
           }
-        }
+        },
       )
       .subscribe((status, err) => {
-        console.log('[RT Withdrawal] Subscription status:', status, err);
-
-        const connected = status === 'SUBSCRIBED';
+        const connected = status === "SUBSCRIBED";
         setIsConnected(connected);
         onConnectionChangeRef.current?.(connected);
 
-        if (status === 'CHANNEL_ERROR') {
-          console.error('[RT Withdrawal] Channel error:', err);
-        } else if (status === 'TIMED_OUT') {
-          console.warn('[RT Withdrawal] Connection timed out, will retry...');
-        } else if (status === 'CLOSED') {
-          console.log('[RT Withdrawal] Channel closed');
+        if (status === "CHANNEL_ERROR") {
+          console.error("[RT Withdrawal] Channel error:", err);
         }
       });
 
     channelRef.current = channel;
 
     return () => {
-      console.log('[RT Withdrawal] Cleaning up subscription');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;

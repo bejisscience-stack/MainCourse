@@ -75,10 +75,6 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
       .order("budget", { ascending: false });
 
     if (projectsError) {
-      console.error(
-        "[useActiveProjects] Error fetching projects:",
-        projectsError,
-      );
       throw projectsError;
     }
 
@@ -99,10 +95,7 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
       );
 
       if (profilesError) {
-        console.error(
-          "[useActiveProjects] Error fetching profiles:",
-          profilesError,
-        );
+        // Continue without profiles - not critical
       }
 
       profileMap = new Map(profiles?.map((p: any) => [p.id, p]) || []);
@@ -119,10 +112,6 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
       .order("display_order", { ascending: true });
 
     if (criteriaError) {
-      console.error(
-        "[useActiveProjects] Error fetching criteria:",
-        criteriaError,
-      );
       // Continue without criteria - not critical
     }
 
@@ -170,13 +159,8 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
       };
     });
 
-    console.log(
-      "[useActiveProjects] Fetched active projects:",
-      activeProjects.length,
-    );
     return activeProjects;
   } catch (err: any) {
-    console.error("[useActiveProjects] Unexpected error:", err);
     throw err;
   }
 }
@@ -202,17 +186,11 @@ export function useActiveProjects() {
         }
         return true;
       },
-      onError: (error) => {
-        console.error("[useActiveProjects] SWR error:", error);
-      },
     },
   );
 
   // Callback to refresh projects data
   const refreshProjects = useCallback(() => {
-    console.log(
-      "[useActiveProjects] Real-time update triggered, refreshing data",
-    );
     mutate();
   }, [mutate]);
 
