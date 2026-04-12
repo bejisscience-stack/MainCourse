@@ -6,10 +6,16 @@ import ServerSidebar from "./ServerSidebar";
 import ChannelSidebar from "./ChannelSidebar";
 import ChatArea from "./ChatArea";
 import ChatErrorBoundary from "./ChatErrorBoundary";
+import DMSection from "./DMSection";
+import AddFriendDialog from "./AddFriendDialog";
+import FriendRequestsDialog from "./FriendRequestsDialog";
 import { useActiveServer } from "@/hooks/useActiveServer";
 import { useActiveChannel } from "@/hooks/useActiveChannel";
 import { useUser } from "@/hooks/useUser";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useFriends } from "@/hooks/useFriends";
+import { useFriendRequests } from "@/hooks/useFriendRequests";
+import { useDMChannels } from "@/hooks/useDMChannels";
 import type { Server, Channel } from "@/types/server";
 import type { EnrollmentInfo } from "@/hooks/useEnrollments";
 
@@ -55,8 +61,32 @@ export default function LayoutContainer({
   const [activeChannelId, setActiveChannelId] = useActiveChannel();
   const [channelsCollapsed, setChannelsCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeDMChannelId, setActiveDMChannelId] = useState<string | null>(
+    null,
+  );
+  const [showAddFriend, setShowAddFriend] = useState(false);
+  const [showFriendRequests, setShowFriendRequests] = useState(false);
   const { user, profile } = useUser();
   const { t } = useI18n();
+
+  // DM & Friends hooks
+  const { friends, refetch: refetchFriends } = useFriends();
+  const {
+    incoming: incomingRequests,
+    outgoing: outgoingRequests,
+    pendingCount,
+    sendRequest,
+    acceptRequest,
+    rejectRequest,
+    isLoading: requestsLoading,
+    refetch: refetchRequests,
+  } = useFriendRequests();
+  const {
+    channels: dmChannels,
+    totalUnread: dmTotalUnread,
+    openOrCreateChannel,
+    refetch: refetchDMChannels,
+  } = useDMChannels();
 
   // Derive username and avatar from useUser() profile
   const userName =
@@ -172,6 +202,11 @@ export default function LayoutContainer({
     const newServer = servers.find((s) => s.id === serverId);
     setActiveServerId(serverId);
 
+    // Clear DM selection when switching to a course server
+    if (serverId !== "home") {
+      setActiveDMChannelId(null);
+    }
+
     // Try to find a matching channel in the new server before clearing
     if (newServer && activeChannelId) {
       const allChannels = newServer.channels.flatMap((cat) => cat.channels);
@@ -191,12 +226,31 @@ export default function LayoutContainer({
 
   const handleChannelSelect = (channelId: string) => {
     setActiveChannelId(channelId);
-    // Close mobile menu on component selection usually handled by parent or self
-    // We can close it here to be safe
+    setActiveDMChannelId(null); // Clear DM selection when selecting a course channel
     if (window.innerWidth < 768) {
       setMobileMenuOpen(false);
     }
   };
+
+  const handleDMSelect = (dmChannelId: string) => {
+    setActiveDMChannelId(dmChannelId);
+    setActiveChannelId(null); // Clear course channel when selecting DM
+    if (window.innerWidth < 768) {
+      setMobileMenuOpen(false);
+    }
+  };
+
+  const handleAcceptRequest = async (requestId: string) => {
+    await acceptRequest(requestId);
+    refetchFriends();
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    await rejectRequest(requestId);
+  };
+
+  // Find the active DM channel's other user info for ChatArea
+  const activeDMChannel = dmChannels.find((c) => c.id === activeDMChannelId);
 
   return (
     <div className="flex w-full h-full bg-navy-950/40 backdrop-blur-sm text-white overflow-hidden relative">
@@ -225,7 +279,62 @@ export default function LayoutContainer({
           enrolledCourseIds={enrolledCourseIds}
           showDMButton={showDMButton}
           serverUnreadCounts={serverUnreadCounts}
+          dmUnreadCount={dmTotalUnread}
         />
+
+        {/* DM Mode Sidebar */}
+        {isDMMode && (
+          <div className="w-60 bg-navy-950/95 md:bg-navy-950/70 border-r border-navy-800/60 flex flex-col h-full shadow-2xl md:shadow-none">
+            {/* DM Header */}
+            <div className="h-12 px-4 border-b border-navy-800/60 bg-navy-950/60 flex items-center justify-between shadow-soft flex-shrink-0">
+              <h2 className="text-gray-100 font-semibold text-sm">
+                Direct Messages
+              </h2>
+              {dmTotalUnread > 0 && (
+                <span className="bg-red-500 text-white text-[11px] font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-soft">
+                  {dmTotalUnread > 9 ? "9+" : dmTotalUnread}
+                </span>
+              )}
+            </div>
+
+            {/* Friends + DM content */}
+            <div className="flex-1 overflow-y-auto px-2.5 py-3 chat-scrollbar">
+              <DMSection
+                channels={dmChannels}
+                activeDMChannelId={activeDMChannelId}
+                onDMSelect={handleDMSelect}
+                onOpenAddFriend={() => setShowAddFriend(true)}
+                pendingRequestCount={pendingCount}
+                onOpenFriendRequests={() => setShowFriendRequests(true)}
+                totalUnread={dmTotalUnread}
+              />
+            </div>
+
+            {/* User profile footer */}
+            <div className="h-14 bg-navy-950/80 px-2 py-2 flex items-center gap-2 border-t border-navy-800/60 flex-shrink-0 mt-auto">
+              {userAvatarUrl ? (
+                <img
+                  src={userAvatarUrl}
+                  alt={userName}
+                  className="w-8 h-8 rounded-full object-cover shadow-soft"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold shadow-soft">
+                  {userName ? userName.charAt(0).toUpperCase() : "U"}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-gray-100 text-sm font-medium truncate">
+                  {userName || "User"}
+                </div>
+                <div className="text-emerald-300 text-xs flex items-center gap-1">
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                  {t("chat.online")}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Channels Sidebar Container */}
         {!isDMMode && activeServer && (
@@ -277,6 +386,19 @@ export default function LayoutContainer({
                   />
                 </div>
               )}
+            </div>
+
+            {/* DM Section - below channels */}
+            <div className="border-t border-navy-800/60 mt-2 pt-2 flex-shrink-0">
+              <DMSection
+                channels={dmChannels}
+                activeDMChannelId={activeDMChannelId}
+                onDMSelect={handleDMSelect}
+                onOpenAddFriend={() => setShowAddFriend(true)}
+                pendingRequestCount={pendingCount}
+                onOpenFriendRequests={() => setShowFriendRequests(true)}
+                totalUnread={dmTotalUnread}
+              />
             </div>
 
             {/* User profile footer - at the very bottom */}
@@ -347,7 +469,7 @@ export default function LayoutContainer({
       {/* Chat area */}
       <ChatErrorBoundary>
         <ChatArea
-          channel={activeChannel}
+          channel={activeDMChannelId ? null : activeChannel}
           currentUserId={currentUserId}
           isLecturer={isLecturer}
           onSendMessage={onSendMessage || (() => {})}
@@ -356,8 +478,30 @@ export default function LayoutContainer({
           enrollmentInfo={enrollmentInfo}
           onReEnrollRequest={onReEnrollRequest}
           onMobileMenuClick={() => setMobileMenuOpen(true)}
+          dmChannelId={activeDMChannelId}
+          dmOtherUser={activeDMChannel?.otherUser || null}
         />
       </ChatErrorBoundary>
+
+      {/* Friend Dialogs */}
+      <AddFriendDialog
+        isOpen={showAddFriend}
+        onClose={() => setShowAddFriend(false)}
+        onSendRequest={async (userId) => {
+          await sendRequest(userId);
+        }}
+        currentUserId={currentUserId}
+        existingFriendIds={friends.map((f) => f.id)}
+      />
+      <FriendRequestsDialog
+        isOpen={showFriendRequests}
+        onClose={() => setShowFriendRequests(false)}
+        incoming={incomingRequests}
+        outgoing={outgoingRequests}
+        onAccept={handleAcceptRequest}
+        onReject={handleRejectRequest}
+        isLoading={requestsLoading}
+      />
     </div>
   );
 }

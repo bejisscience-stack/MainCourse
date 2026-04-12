@@ -35,6 +35,7 @@ interface MessageInputProps {
   isSending?: boolean;
   channelId?: string;
   isMuted?: boolean;
+  isDMMode?: boolean;
 }
 
 const ALLOWED_IMAGE_TYPES = [
@@ -64,6 +65,7 @@ export default function MessageInput({
   isSending = false,
   channelId,
   isMuted = false,
+  isDMMode = false,
 }: MessageInputProps) {
   const [content, setContent] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -292,7 +294,10 @@ export default function MessageInput({
           xhr.ontimeout = () => reject(new Error("Upload timed out"));
           xhr.timeout = 30000; // 30 second timeout
 
-          xhr.open("POST", edgeFunctionUrl("chat-media"));
+          xhr.open(
+            "POST",
+            edgeFunctionUrl(isDMMode ? "dm-media" : "chat-media"),
+          );
           xhr.setRequestHeader(
             "Authorization",
             `Bearer ${session.access_token}`,

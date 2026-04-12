@@ -21,7 +21,9 @@ import type {
   MessageAttachment,
 } from "@/types/message";
 import { useChatMessages } from "@/hooks/useChatMessages";
+import { useDMMessages } from "@/hooks/useDMMessages";
 import { useRealtimeTyping } from "@/hooks/useRealtimeTyping";
+import { useDMTyping } from "@/hooks/useDMTyping";
 import { useMuteStatus } from "@/hooks/useMuteStatus";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { supabase } from "@/lib/supabase";
@@ -40,6 +42,8 @@ interface ChatAreaProps {
   enrollmentInfo?: EnrollmentInfo | null;
   onReEnrollRequest?: () => void;
   onMobileMenuClick?: () => void;
+  dmChannelId?: string | null;
+  dmOtherUser?: { id: string; username: string; avatarUrl: string } | null;
 }
 
 export default function ChatArea({
@@ -53,6 +57,8 @@ export default function ChatArea({
   enrollmentInfo = null,
   onReEnrollRequest,
   onMobileMenuClick,
+  dmChannelId = null,
+  dmOtherUser = null,
 }: ChatAreaProps) {
   const { t } = useI18n();
   const isEnrollmentExpired = !isEnrolledInCourse;
@@ -88,14 +94,28 @@ export default function ChatArea({
   const { markAsRead } = useUnreadMessages({ channelIds, enabled: !!channel });
 
   // Clear replyTo when channel changes
+  const currentChatId = dmChannelId || channel?.id || null;
   useEffect(() => {
-    if (prevChannelIdRef.current !== channel?.id) {
+    if (prevChannelIdRef.current !== currentChatId) {
       setReplyTo(undefined);
       userScrolledUpRef.current = false;
-      prevChannelIdRef.current = channel?.id || null;
+      prevChannelIdRef.current = currentChatId;
     }
-  }, [channel?.id]);
+  }, [currentChatId]);
 
+  const isDMMode = !!dmChannelId;
+
+  const courseChat = useChatMessages({
+    channelId: channel?.id || null,
+    enabled: !!channel && !isDMMode,
+  });
+
+  const dmChat = useDMMessages({
+    dmChannelId: dmChannelId || null,
+    enabled: isDMMode,
+  });
+
+  // Use DM or course chat based on mode
   const {
     messages,
     isLoading,
@@ -108,13 +128,11 @@ export default function ChatArea({
     removePendingMessage,
     replacePendingMessage,
     loadMore,
-    addReaction,
-    refetch,
     broadcastMessage,
-  } = useChatMessages({
-    channelId: channel?.id || null,
-    enabled: !!channel,
-  });
+  } = isDMMode ? dmChat : courseChat;
+
+  const addReaction = isDMMode ? undefined : courseChat.addReaction;
+  const refetch = isDMMode ? undefined : courseChat.refetch;
 
   // Store messages ref for timeout check
   const messagesRef = useRef(messages);
@@ -135,23 +153,45 @@ export default function ChatArea({
     };
   }, []);
 
-  const { typingUsers } = useRealtimeTyping({
+  const { typingUsers: courseTypingUsers } = useRealtimeTyping({
     channelId: channel?.id || null,
     currentUserId,
-    enabled: !!channel,
+    enabled: !!channel && !isDMMode,
   });
+
+  const { typingUsers: dmTypingUsers } = useDMTyping({
+    dmChannelId: dmChannelId || null,
+    currentUserId,
+    enabled: isDMMode,
+  });
+
+  const typingUsers = isDMMode ? dmTypingUsers : courseTypingUsers;
 
   // Mark channel as read when opened or when new messages arrive
   useEffect(() => {
-    if (!channel || !currentUserId) return;
+    if (!currentUserId) return;
 
-    // Mark as read after a short delay to ensure the channel is viewed
+    if (isDMMode && dmChannelId) {
+      // Reset DM unread count
+      const timeoutId = setTimeout(async () => {
+        try {
+          await supabase.rpc("reset_dm_unread", {
+            p_channel_id: dmChannelId,
+            p_user_id: currentUserId,
+          });
+        } catch {}
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+
+    if (!channel) return;
+
     const timeoutId = setTimeout(() => {
       markAsRead(channel.id);
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [channel?.id, currentUserId, markAsRead]);
+  }, [channel?.id, dmChannelId, isDMMode, currentUserId, markAsRead]);
 
   // Smart scroll management
   const handleScroll = useCallback(() => {
@@ -212,7 +252,7 @@ export default function ChatArea({
 
   // Scroll to bottom on initial load or channel change
   useEffect(() => {
-    if (channel?.id && messages.length > 0 && !isLoading) {
+    if ((channel?.id || dmChannelId) && messages.length > 0 && !isLoading) {
       // Use instant scroll for initial load, but wait a bit for DOM to update
       const timeoutId = setTimeout(() => {
         if (messagesContainerRef.current && messagesEndRef.current) {
@@ -222,7 +262,7 @@ export default function ChatArea({
       }, 150);
       return () => clearTimeout(timeoutId);
     }
-  }, [channel?.id, isLoading, messages.length]);
+  }, [channel?.id, dmChannelId, isLoading, messages.length]);
 
   // Add scroll listener
   useEffect(() => {
@@ -235,8 +275,8 @@ export default function ChatArea({
 
   const handleSend = useCallback(
     async (content: string | null, attachments?: MessageAttachment[]) => {
-      if (!channel) {
-        console.error("Cannot send message: channel is null");
+      if (!channel && !dmChannelId) {
+        console.error("Cannot send message: no channel");
         return;
       }
 
@@ -291,19 +331,29 @@ export default function ChatArea({
 
       try {
         const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        const response = await fetch(edgeFunctionUrl("chat-messages"), {
+        const edgeFn = isDMMode ? "dm-messages" : "chat-messages";
+        const bodyPayload = isDMMode
+          ? {
+              dmChannelId: dmChannelId,
+              content: content || "",
+              replyTo: currentReplyTo?.id || null,
+              attachments,
+            }
+          : {
+              chatId: channel!.id,
+              content: content || "",
+              replyTo: currentReplyTo?.id || null,
+              attachments,
+            };
+
+        const response = await fetch(edgeFunctionUrl(edgeFn), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
             ...(anonKey && { apikey: anonKey }),
           },
-          body: JSON.stringify({
-            chatId: channel.id,
-            content: content || "",
-            replyTo: currentReplyTo?.id || null,
-            attachments,
-          }),
+          body: JSON.stringify(bodyPayload),
         });
 
         if (!response.ok) {
@@ -356,7 +406,7 @@ export default function ChatArea({
 
         // Clear replyTo on success
         setReplyTo(undefined);
-        onSendMessage(channel.id, content);
+        if (channel) onSendMessage(channel.id, content);
       } catch (error: any) {
         console.error("Error sending message:", error);
 
@@ -382,6 +432,8 @@ export default function ChatArea({
     },
     [
       channel,
+      dmChannelId,
+      isDMMode,
       replyTo,
       addPendingMessage,
       markMessageFailed,
@@ -393,6 +445,21 @@ export default function ChatArea({
   );
 
   const handleTyping = useCallback(async () => {
+    // DM typing: upsert into dm_typing_indicators
+    if (isDMMode && dmChannelId) {
+      try {
+        await supabase.from("dm_typing_indicators").upsert(
+          {
+            dm_channel_id: dmChannelId,
+            user_id: currentUserId,
+            expires_at: new Date(Date.now() + 3000).toISOString(),
+          },
+          { onConflict: "dm_channel_id,user_id" },
+        );
+      } catch {}
+      return;
+    }
+
     if (!channel) return;
 
     try {
@@ -420,7 +487,7 @@ export default function ChatArea({
     } catch {
       // Silently fail - typing indicator is not critical
     }
-  }, [channel]);
+  }, [channel, isDMMode, dmChannelId, currentUserId]);
 
   const handleReply = useCallback(
     (messageId: string) => {
@@ -442,7 +509,7 @@ export default function ChatArea({
 
   const handleReaction = useCallback(
     (messageId: string, emoji: string) => {
-      addReaction(messageId, emoji, currentUserId);
+      addReaction?.(messageId, emoji, currentUserId);
       onReaction?.(messageId, emoji);
     },
     [addReaction, currentUserId, onReaction],
@@ -631,7 +698,7 @@ export default function ChatArea({
 
         if (orderData.recovered && orderData.status === "success") {
           // Payment was already completed (edge case recovery)
-          refetch();
+          refetch?.();
           return;
         }
 
@@ -643,18 +710,18 @@ export default function ChatArea({
 
         if (orderData.processing) {
           // Saved card flow — project will activate via callback
-          refetch();
+          refetch?.();
           return;
         }
       }
 
       // Refresh messages to show the new project
-      refetch();
+      refetch?.();
     },
     [channel, supabase, refetch],
   );
 
-  if (!channel) {
+  if (!channel && !isDMMode) {
     return (
       <div className="flex-1 bg-navy-950/30 backdrop-blur-sm flex items-center justify-center">
         <div className="text-center text-gray-500">
@@ -680,7 +747,7 @@ export default function ChatArea({
   }
 
   // Show Lectures channel for lectures type
-  if (channel.type === "lectures") {
+  if (channel?.type === "lectures") {
     return (
       <LecturesChannel
         channel={channel}
@@ -720,10 +787,31 @@ export default function ChatArea({
             </svg>
           </button>
 
-          <span className="text-emerald-300 text-lg">#</span>
-          <h2 className="text-gray-100 font-semibold text-sm">
-            {channel.name}
-          </h2>
+          {isDMMode && dmOtherUser ? (
+            <>
+              <div className="w-7 h-7 rounded-full bg-navy-900/70 border border-navy-800/60 flex items-center justify-center text-[10px] font-semibold text-emerald-200 overflow-hidden">
+                {dmOtherUser.avatarUrl ? (
+                  <img
+                    src={dmOtherUser.avatarUrl}
+                    alt={dmOtherUser.username}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  dmOtherUser.username.charAt(0).toUpperCase()
+                )}
+              </div>
+              <h2 className="text-gray-100 font-semibold text-sm">
+                {dmOtherUser.username}
+              </h2>
+            </>
+          ) : (
+            <>
+              <span className="text-emerald-300 text-lg">#</span>
+              <h2 className="text-gray-100 font-semibold text-sm">
+                {channel?.name}
+              </h2>
+            </>
+          )}
           {!isConnected && (
             <span className="flex items-center gap-1 text-amber-400 text-xs">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
@@ -731,7 +819,7 @@ export default function ChatArea({
             </span>
           )}
         </div>
-        {channel.description && (
+        {!isDMMode && channel?.description && (
           <span className="ml-4 text-gray-500 text-xs hidden md:block">
             {channel.description}
           </span>
@@ -748,7 +836,9 @@ export default function ChatArea({
         }}
       >
         <div className="min-h-full flex flex-col justify-end py-5">
-          {isLoading && messages.length === 0 && channel?.id ? (
+          {isLoading &&
+          messages.length === 0 &&
+          (channel?.id || dmChannelId) ? (
             // Fast loading skeleton - minimal DOM for speed
             <div className="space-y-4 px-4">
               {[1, 2, 3, 4, 5].map((i) => (
@@ -764,7 +854,7 @@ export default function ChatArea({
                 </div>
               ))}
             </div>
-          ) : error && messages.length === 0 && channel?.id ? (
+          ) : error && messages.length === 0 && (channel?.id || dmChannelId) ? (
             // Error state
             <div className="flex items-center justify-center flex-1 px-4">
               <div className="text-center text-gray-400 max-w-md">
@@ -775,14 +865,16 @@ export default function ChatArea({
                   <p className="text-sm">{error}</p>
                 </div>
                 <button
-                  onClick={() => refetch()}
+                  onClick={() => refetch?.()}
                   className="bg-emerald-500/90 text-white px-6 py-2 rounded-lg hover:bg-emerald-500 transition-colors shadow-soft"
                 >
                   Try Again
                 </button>
               </div>
             </div>
-          ) : messages.length === 0 && !isLoading && channel?.id ? (
+          ) : messages.length === 0 &&
+            !isLoading &&
+            (channel?.id || dmChannelId) ? (
             // Empty state
             <div className="flex items-center justify-center flex-1 px-4 text-gray-400">
               <div className="text-center">
@@ -907,8 +999,10 @@ export default function ChatArea({
                         onReply={handleReply}
                         onReaction={handleReaction}
                         isLecturer={isLecturer}
-                        channelId={channel.id}
-                        courseId={channel.courseId}
+                        channelId={
+                          isDMMode ? dmChannelId || "" : channel?.id || ""
+                        }
+                        courseId={isDMMode ? undefined : channel?.courseId}
                         showAvatar={showAvatar}
                         isEnrolledInCourse={isEnrolledInCourse}
                       />
@@ -983,6 +1077,26 @@ export default function ChatArea({
 
       {/* Message input or Project submission button */}
       {(() => {
+        // DM mode: always show message input
+        if (isDMMode) {
+          return (
+            <MessageInput
+              onSend={handleSend}
+              onTyping={handleTyping}
+              replyTo={replyTo}
+              onCancelReply={() => setReplyTo(undefined)}
+              placeholder={`Message ${dmOtherUser?.username || "..."}`}
+              disabled={false}
+              isSending={isSending}
+              channelId={dmChannelId || ""}
+              isMuted={false}
+              isDMMode={true}
+            />
+          );
+        }
+
+        if (!channel) return null;
+
         // Check if this is a restricted channel (Lectures or Projects)
         const channelName = channel.name?.toLowerCase() || "";
         const channelType = channel.type as string;
