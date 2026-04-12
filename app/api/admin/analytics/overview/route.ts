@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
       referralsResult,
       projectsResult,
       bundleEnrollmentsResult,
+      totalUsersResult,
     ] = await Promise.all([
       serviceSupabase
         .from("coming_soon_emails")
@@ -64,6 +65,9 @@ export async function GET(request: NextRequest) {
       referralQuery,
       projectQuery,
       bundleQuery,
+      serviceSupabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true }),
     ]);
 
     const enrollments = enrollmentsResult.data || [];
@@ -99,6 +103,7 @@ export async function GET(request: NextRequest) {
       totalProjectBudget,
       totalBundleRevenue,
       totalBundleEnrollments: bundleEnrollments.length,
+      totalUsers: totalUsersResult.count || 0,
     };
 
     return NextResponse.json(overview, {

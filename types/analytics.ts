@@ -9,6 +9,7 @@ export interface AnalyticsOverview {
   totalProjectBudget: number;
   totalBundleRevenue: number;
   totalBundleEnrollments: number;
+  totalUsers: number;
 }
 
 export interface CourseRevenue {

@@ -5,9 +5,6 @@ import type {
   AnalyticsOverview,
   RevenueData,
   ReferralStats,
-  ProjectStats,
-  UserAnalytics,
-  EngagementAnalytics,
   FinancialAnalytics,
   OperationalAnalytics,
 } from "@/types/analytics";
@@ -71,11 +68,9 @@ interface AllAnalytics {
   overview: AnalyticsOverview;
   revenue: RevenueData;
   referrals: ReferralStats;
-  projects: ProjectStats;
-  users: UserAnalytics;
-  engagement: EngagementAnalytics;
   financial: FinancialAnalytics;
   operational: OperationalAnalytics;
+  fetchedAt: number;
 }
 
 async function fetchAllAnalytics(dateRange: {
@@ -83,40 +78,25 @@ async function fetchAllAnalytics(dateRange: {
   to: string;
 }): Promise<AllAnalytics> {
   const params = `from=${dateRange.from}&to=${dateRange.to}`;
-  const [
-    overview,
-    revenue,
-    referrals,
-    projects,
-    users,
-    engagement,
-    financial,
-    operational,
-  ] = await Promise.all([
-    fetchAnalytics<AnalyticsOverview>(
-      `/api/admin/analytics/overview?${params}`,
-    ),
-    fetchAnalytics<RevenueData>(`/api/admin/analytics/revenue?${params}`),
-    fetchAnalytics<ReferralStats>(`/api/admin/analytics/referrals?${params}`),
-    fetchAnalytics<ProjectStats>(`/api/admin/analytics/projects?${params}`),
-    fetchAnalytics<UserAnalytics>(`/api/admin/analytics/users?${params}`),
-    fetchAnalytics<EngagementAnalytics>(
-      `/api/admin/analytics/engagement?${params}`,
-    ),
-    fetchAnalytics<FinancialAnalytics>(
-      `/api/admin/analytics/financial?${params}`,
-    ),
-    fetchAnalytics<OperationalAnalytics>("/api/admin/analytics/operational"),
-  ]);
+  const [overview, revenue, referrals, financial, operational] =
+    await Promise.all([
+      fetchAnalytics<AnalyticsOverview>(
+        `/api/admin/analytics/overview?${params}`,
+      ),
+      fetchAnalytics<RevenueData>(`/api/admin/analytics/revenue?${params}`),
+      fetchAnalytics<ReferralStats>(`/api/admin/analytics/referrals?${params}`),
+      fetchAnalytics<FinancialAnalytics>(
+        `/api/admin/analytics/financial?${params}`,
+      ),
+      fetchAnalytics<OperationalAnalytics>("/api/admin/analytics/operational"),
+    ]);
   return {
     overview,
     revenue,
     referrals,
-    projects,
-    users,
-    engagement,
     financial,
     operational,
+    fetchedAt: Date.now(),
   };
 }
 
@@ -124,9 +104,6 @@ export interface AdminAnalyticsResult {
   overview: AnalyticsOverview | undefined;
   revenue: RevenueData | undefined;
   referrals: ReferralStats | undefined;
-  projects: ProjectStats | undefined;
-  users: UserAnalytics | undefined;
-  engagement: EngagementAnalytics | undefined;
   financial: FinancialAnalytics | undefined;
   operational: OperationalAnalytics | undefined;
   isLoading: boolean;
@@ -136,6 +113,7 @@ export interface AdminAnalyticsResult {
   customFrom: string;
   customTo: string;
   setCustomDateRange: (from: string, to: string) => void;
+  lastUpdated: number | undefined;
 }
 
 export function useAdminAnalytics(): AdminAnalyticsResult {
@@ -171,9 +149,6 @@ export function useAdminAnalytics(): AdminAnalyticsResult {
     overview: data?.overview,
     revenue: data?.revenue,
     referrals: data?.referrals,
-    projects: data?.projects,
-    users: data?.users,
-    engagement: data?.engagement,
     financial: data?.financial,
     operational: data?.operational,
     isLoading,
@@ -183,5 +158,6 @@ export function useAdminAnalytics(): AdminAnalyticsResult {
     customFrom,
     customTo,
     setCustomDateRange: handleSetCustomDateRange,
+    lastUpdated: data?.fetchedAt,
   };
 }
