@@ -83,3 +83,4 @@ production-schema-export.json
 
 # Playwright MCP test artifacts
 .playwright-mcp/
+.worktrees/

@@ -159,9 +159,7 @@ const MediaAttachment = memo(function MediaAttachment({
       <>
         <div className="relative rounded-xl overflow-hidden border border-navy-800/60 bg-navy-900/60 max-w-3xl shadow-soft">
           {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-navy-900/70">
-              <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-            </div>
+            <div className="absolute inset-0 bg-navy-900/70 animate-pulse min-h-[120px]" />
           )}
           {hasError ? (
             <div className="p-4 text-gray-300 text-sm flex items-center gap-2">
@@ -184,7 +182,7 @@ const MediaAttachment = memo(function MediaAttachment({
             <img
               src={attachment.fileUrl}
               alt={attachment.fileName}
-              className={`max-h-96 object-contain cursor-pointer hover:opacity-90 transition-opacity ${isLoading ? "opacity-0" : "opacity-100"}`}
+              className={`max-h-96 object-contain cursor-pointer hover:opacity-90 transition-opacity duration-300 ${isLoading ? "opacity-0" : "opacity-100"}`}
               loading="lazy"
               onClick={() => setIsImageExpanded(true)}
               onLoad={() => setIsLoading(false)}
@@ -212,7 +210,8 @@ const MediaAttachment = memo(function MediaAttachment({
           src={attachment.fileUrl}
           controls
           className="max-h-96 w-full"
-          preload="metadata"
+          preload="none"
+          playsInline
         >
           Your browser does not support the video tag.
         </video>
@@ -782,10 +781,10 @@ const Message = memo(function Message({
             <div
               className={
                 isOwn
-                  ? `bg-emerald-600/80 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[75%] inline-block text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? "opacity-50" : isFailed ? "opacity-70" : ""}`
+                  ? `bg-emerald-600/80 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[75%] inline-block text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? "animate-message-pending" : isFailed ? "opacity-70" : ""}`
                   : isAuthorLecturer
-                    ? `bg-amber-500/10 border border-amber-500/20 text-gray-100 rounded-2xl rounded-tl-sm px-4 py-2 max-w-[75%] inline-block text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? "opacity-50" : isFailed ? "opacity-70" : ""}`
-                    : `text-gray-100 text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? "opacity-50" : isFailed ? "opacity-70" : ""}`
+                    ? `bg-amber-500/10 border border-amber-500/20 text-gray-100 rounded-2xl rounded-tl-sm px-4 py-2 max-w-[75%] inline-block text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? "animate-message-pending" : isFailed ? "opacity-70" : ""}`
+                    : `text-gray-100 text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? "animate-message-pending" : isFailed ? "opacity-70" : ""}`
               }
             >
               {message.content}
@@ -803,27 +802,22 @@ const Message = memo(function Message({
 
           {/* Pending indicator */}
           {isPending && (
-            <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-gray-500">
-              <svg
-                className="w-3 h-3 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
+            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-gray-500">
+              <div className="flex gap-0.5">
+                <span
+                  className="w-1 h-1 bg-gray-500 rounded-full animate-bounce"
+                  style={{ animationDelay: "0ms" }}
                 />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                <span
+                  className="w-1 h-1 bg-gray-500 rounded-full animate-bounce"
+                  style={{ animationDelay: "150ms" }}
                 />
-              </svg>
-              <span>Sending...</span>
+                <span
+                  className="w-1 h-1 bg-gray-500 rounded-full animate-bounce"
+                  style={{ animationDelay: "300ms" }}
+                />
+              </div>
+              <span>Sending</span>
             </div>
           )}
 

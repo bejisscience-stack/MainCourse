@@ -323,6 +323,24 @@ img {
   }
 }
 
+/* Chat message animation utilities */
+@media (prefers-reduced-motion: no-preference) {
+  .message-appear {
+    animation: messageSlideIn 0.2s ease-out both;
+  }
+}
+
+.message-pending {
+  animation: pulse-subtle 1.5s ease-in-out infinite;
+}
+
+/* Safe area padding for mobile input */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 @keyframes float {
   0%,
   100% {
