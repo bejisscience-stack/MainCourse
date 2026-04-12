@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, memo } from "react";
 import { supabase } from "@/lib/supabase";
 import { normalizeProfileUsername } from "@/lib/username";
 import { formatPriceInGel } from "@/lib/currency";
@@ -111,7 +111,7 @@ const PLATFORM_CONFIG: Record<
   },
 };
 
-export default function ProjectCard({
+function ProjectCard({
   project,
   currentUserId,
   isLecturer,
@@ -1521,3 +1521,5 @@ export default function ProjectCard({
     </>
   );
 }
+
+export default memo(ProjectCard);

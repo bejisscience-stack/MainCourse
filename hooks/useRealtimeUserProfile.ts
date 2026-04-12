@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useEffect, useState, useRef } from "react";
+import { supabase } from "@/lib/supabase";
 
 interface Profile {
   id: string;
@@ -44,23 +44,18 @@ export function useRealtimeUserProfile({
       return;
     }
 
-    console.log('[RT Profile] Setting up subscription for user:', userId);
-
     const channel = supabase
       .channel(`profile:${userId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
           filter: `id=eq.${userId}`,
         },
         (payload) => {
-          console.log('[RT Profile] UPDATE received:', payload);
-
-          if (!payload.new || typeof payload.new !== 'object') {
-            console.error('[RT Profile] Invalid UPDATE payload');
+          if (!payload.new || typeof payload.new !== "object") {
             return;
           }
 
@@ -73,7 +68,6 @@ export function useRealtimeUserProfile({
             oldProfile?.balance !== undefined &&
             newProfile.balance !== oldProfile.balance
           ) {
-            console.log('[RT Profile] Balance changed:', oldProfile.balance, '->', newProfile.balance);
             onBalanceChangedRef.current(newProfile.balance, oldProfile.balance);
           }
 
@@ -81,22 +75,20 @@ export function useRealtimeUserProfile({
           if (onProfileUpdatedRef.current) {
             onProfileUpdatedRef.current(newProfile);
           }
-        }
+        },
       )
       .subscribe((status, err) => {
-        console.log('[RT Profile] Subscription status:', status, err);
-        const connected = status === 'SUBSCRIBED';
+        const connected = status === "SUBSCRIBED";
         setIsConnected(connected);
 
-        if (status === 'CHANNEL_ERROR') {
-          console.error('[RT Profile] Channel error:', err);
+        if (status === "CHANNEL_ERROR") {
+          console.error("[RT Profile] Channel error:", err);
         }
       });
 
     channelRef.current = channel;
 
     return () => {
-      console.log('[RT Profile] Cleaning up subscription');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;

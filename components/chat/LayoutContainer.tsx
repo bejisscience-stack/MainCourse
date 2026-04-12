@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import ServerSidebar from "./ServerSidebar";
 import ChannelSidebar from "./ChannelSidebar";
@@ -66,6 +66,8 @@ export default function LayoutContainer({
   );
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showFriendRequests, setShowFriendRequests] = useState(false);
+  const handleMobileMenuOpen = useCallback(() => setMobileMenuOpen(true), []);
+  const noopSendMessage = useCallback(() => {}, []);
   const { user, profile } = useUser();
   const { t } = useI18n();
 
@@ -472,12 +474,12 @@ export default function LayoutContainer({
           channel={activeDMChannelId ? null : activeChannel}
           currentUserId={currentUserId}
           isLecturer={isLecturer}
-          onSendMessage={onSendMessage || (() => {})}
+          onSendMessage={onSendMessage || noopSendMessage}
           onReaction={onReaction}
           isEnrolledInCourse={isEnrolledInCourse}
           enrollmentInfo={enrollmentInfo}
           onReEnrollRequest={onReEnrollRequest}
-          onMobileMenuClick={() => setMobileMenuOpen(true)}
+          onMobileMenuClick={handleMobileMenuOpen}
           dmChannelId={activeDMChannelId}
           dmOtherUser={activeDMChannel?.otherUser || null}
         />

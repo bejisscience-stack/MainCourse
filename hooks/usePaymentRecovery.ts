@@ -37,9 +37,6 @@ export function usePaymentRecovery(
 
         const data = await res.json();
         if (data.recovered > 0) {
-          console.log(
-            `[PaymentRecovery] Recovered ${data.recovered} payment(s)`,
-          );
           onRecovered?.();
         }
       } catch {

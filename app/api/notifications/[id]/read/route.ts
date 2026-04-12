@@ -39,13 +39,6 @@ export async function PATCH(
 
     const supabase = createServerSupabaseClient(token);
 
-    console.log(
-      "[Mark Read API] Marking notification as read:",
-      id,
-      "for user:",
-      user.id,
-    );
-
     // Update the notification with explicit user_id check for security
     const { data: notification, error: updateError } = await supabase
       .from("notifications")
@@ -78,11 +71,6 @@ export async function PATCH(
 
       return NextResponse.json({ error: "An error occurred" }, { status: 500 });
     }
-
-    console.log(
-      "[Mark Read API] Successfully marked notification as read:",
-      id,
-    );
 
     return NextResponse.json({
       success: true,

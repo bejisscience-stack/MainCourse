@@ -35,26 +35,13 @@ async function fetchAdminBundleEnrollmentRequests(
     throw new Error("Not authenticated");
   }
 
-  // Always fetch all and filter client-side to avoid any server-side cache/filter drift
-  // Add timestamp to bust any caching
-  const timestamp = Date.now();
-  const url = `/api/admin/bundle-enrollment-requests?t=${timestamp}`;
+  const url = `/api/admin/bundle-enrollment-requests`;
 
   try {
-    console.log(
-      "[Admin Bundle Hook] Fetching bundle enrollment requests, status:",
-      status || "all",
-      "timestamp:",
-      timestamp,
-    );
-
     const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
-        "Cache-Control": "no-cache",
       },
-      cache: "no-store", // Ensure we always get fresh data
-      next: { revalidate: 0 }, // Disable Next.js caching
     });
 
     const responseClone = response.clone();
@@ -64,7 +51,6 @@ async function fetchAdminBundleEnrollmentRequests(
       try {
         const errorData = await response.json();
         errorMessage = errorData?.error || errorData?.details || errorMessage;
-        console.error("[Admin Bundle Hook] API error:", errorData);
       } catch (e) {
         try {
           const text = await responseClone.text();
@@ -86,23 +72,8 @@ async function fetchAdminBundleEnrollmentRequests(
       requests = requests.filter((r) => r.status === status);
     }
 
-    console.log(
-      "[Admin Bundle Hook] Successfully fetched",
-      requests.length,
-      "bundle enrollment requests (filtered from",
-      data.requests?.length || 0,
-      "total)",
-    );
-    console.log(
-      "[Admin Bundle Hook] Request statuses:",
-      requests.map((r) => r.status),
-    );
     return requests;
   } catch (error: any) {
-    console.error(
-      "[Admin Bundle Hook] Error fetching admin bundle enrollment requests:",
-      error,
-    );
     if (error instanceof Error) {
       throw error;
     }
@@ -121,19 +92,9 @@ export function useAdminBundleEnrollmentRequests(status?: string) {
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
-      dedupingInterval: 1000,
-      refreshInterval: 5000,
+      dedupingInterval: 5000,
+      refreshInterval: 15000,
       fallbackData: [],
-      onError: (error) => {
-        console.error("[Admin Bundle Hook] SWR error:", error);
-      },
-      onSuccess: (data) => {
-        console.log(
-          "[Admin Bundle Hook] SWR success, received",
-          data?.length || 0,
-          "requests",
-        );
-      },
     },
   );
 

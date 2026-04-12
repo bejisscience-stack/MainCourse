@@ -1,13 +1,14 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useRef, useMemo, memo } from 'react';
-import { useBackground } from '@/contexts/BackgroundContext';
+import { useEffect, useState, useRef, useMemo, memo } from "react";
+import { useBackground } from "@/contexts/BackgroundContext";
+import { usePageVisibility } from "@/hooks/usePageVisibility";
 
 interface ChartElement {
   id: number;
   x: number;
   y: number;
-  type: 'bar' | 'pie' | 'line' | 'area';
+  type: "bar" | "pie" | "line" | "area";
   size: number;
   data: number[];
   delay: number;
@@ -30,36 +31,44 @@ function AnalyticsBackgroundComponent() {
   const [charts, setCharts] = useState<ChartElement[]>([]);
   const [dataPoints, setDataPoints] = useState<DataPoint[]>([]);
   const { intensity, isReducedMotion } = useBackground();
+  const isPageVisible = usePageVisibility();
   const chartIdRef = useRef(0);
   const dataPointIdRef = useRef(0);
   const dimensionsRef = useRef({ width: 1920, height: 1080 });
 
   // Cache dimensions once
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      dimensionsRef.current = { width: window.innerWidth, height: window.innerHeight };
+    if (typeof window !== "undefined") {
+      dimensionsRef.current = {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      };
     }
   }, []);
 
   const intensityMultiplier = useMemo(() => {
     switch (intensity) {
-      case 'low': return 0.4;
-      case 'medium': return 0.7;
-      case 'high': return 1.0;
-      default: return 0.7;
+      case "low":
+        return 0.4;
+      case "medium":
+        return 0.7;
+      case "high":
+        return 1.0;
+      default:
+        return 0.7;
     }
   }, [intensity]);
 
   // Generate floating charts - slower interval
   useEffect(() => {
-    if (isReducedMotion) return;
+    if (isReducedMotion || !isPageVisible) return;
 
     const { width, height } = dimensionsRef.current;
     const intervalTime = Math.max(6000, 8000 / intensityMultiplier);
 
     const interval = setInterval(() => {
       const id = chartIdRef.current++;
-      const types: ChartElement['type'][] = ['bar', 'pie', 'line', 'area'];
+      const types: ChartElement["type"][] = ["bar", "pie", "line", "area"];
       const type = types[Math.floor(Math.random() * types.length)];
 
       const newChart: ChartElement = {
@@ -73,19 +82,19 @@ function AnalyticsBackgroundComponent() {
         duration: 6000 + Math.random() * 4000,
       };
 
-      setCharts(prev => [...prev.slice(-MAX_CHARTS + 1), newChart]);
+      setCharts((prev) => [...prev.slice(-MAX_CHARTS + 1), newChart]);
 
       setTimeout(() => {
-        setCharts(prev => prev.filter(c => c.id !== id));
+        setCharts((prev) => prev.filter((c) => c.id !== id));
       }, newChart.duration + newChart.delay);
     }, intervalTime);
 
     return () => clearInterval(interval);
-  }, [intensityMultiplier, isReducedMotion]);
+  }, [intensityMultiplier, isReducedMotion, isPageVisible]);
 
   // Generate data particles - slower interval
   useEffect(() => {
-    if (isReducedMotion) return;
+    if (isReducedMotion || !isPageVisible) return;
 
     const { width, height } = dimensionsRef.current;
     const intervalTime = Math.max(2000, 3000 / intensityMultiplier);
@@ -101,23 +110,31 @@ function AnalyticsBackgroundComponent() {
         duration: 3000 + Math.random() * 3000,
       };
 
-      setDataPoints(prev => [...prev.slice(-MAX_DATA_POINTS + 1), newDataPoint]);
+      setDataPoints((prev) => [
+        ...prev.slice(-MAX_DATA_POINTS + 1),
+        newDataPoint,
+      ]);
 
       setTimeout(() => {
-        setDataPoints(prev => prev.filter(d => d.id !== id));
+        setDataPoints((prev) => prev.filter((d) => d.id !== id));
       }, newDataPoint.duration + newDataPoint.delay);
     }, intervalTime);
 
     return () => clearInterval(interval);
-  }, [intensityMultiplier, isReducedMotion]);
+  }, [intensityMultiplier, isReducedMotion, isPageVisible]);
 
   const renderChart = (chart: ChartElement) => {
     const { size, data, type } = chart;
 
     switch (type) {
-      case 'bar':
+      case "bar":
         return (
-          <svg width={size} height={size} viewBox="0 0 100 100" className="text-emerald-500 dark:text-emerald-400">
+          <svg
+            width={size}
+            height={size}
+            viewBox="0 0 100 100"
+            className="text-emerald-500 dark:text-emerald-400"
+          >
             {data.slice(0, 4).map((value, i) => (
               <rect
                 key={i}
@@ -132,10 +149,23 @@ function AnalyticsBackgroundComponent() {
           </svg>
         );
 
-      case 'pie':
+      case "pie":
         return (
-          <svg width={size} height={size} viewBox="0 0 100 100" className="text-emerald-500 dark:text-emerald-400">
-            <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="8" opacity="0.2"/>
+          <svg
+            width={size}
+            height={size}
+            viewBox="0 0 100 100"
+            className="text-emerald-500 dark:text-emerald-400"
+          >
+            <circle
+              cx="50"
+              cy="50"
+              r="30"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="8"
+              opacity="0.2"
+            />
             <circle
               cx="50"
               cy="50"
@@ -150,10 +180,18 @@ function AnalyticsBackgroundComponent() {
           </svg>
         );
 
-      case 'line':
-        const points = data.slice(0, 5).map((value, i) => `${i * 20 + 10},${100 - value}`).join(' ');
+      case "line":
+        const points = data
+          .slice(0, 5)
+          .map((value, i) => `${i * 20 + 10},${100 - value}`)
+          .join(" ");
         return (
-          <svg width={size} height={size} viewBox="0 0 100 100" className="text-emerald-500 dark:text-emerald-400">
+          <svg
+            width={size}
+            height={size}
+            viewBox="0 0 100 100"
+            className="text-emerald-500 dark:text-emerald-400"
+          >
             <polyline
               points={points}
               fill="none"
@@ -174,14 +212,32 @@ function AnalyticsBackgroundComponent() {
           </svg>
         );
 
-      case 'area':
-        const areaPoints = data.slice(0, 5).map((value, i) => `${i * 20 + 10},${100 - value}`).join(' ');
+      case "area":
+        const areaPoints = data
+          .slice(0, 5)
+          .map((value, i) => `${i * 20 + 10},${100 - value}`)
+          .join(" ");
         return (
-          <svg width={size} height={size} viewBox="0 0 100 100" className="text-emerald-500 dark:text-emerald-400">
+          <svg
+            width={size}
+            height={size}
+            viewBox="0 0 100 100"
+            className="text-emerald-500 dark:text-emerald-400"
+          >
             <defs>
-              <linearGradient id={`areaGrad${chart.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="currentColor" stopOpacity="0.3"/>
-                <stop offset="100%" stopColor="currentColor" stopOpacity="0.1"/>
+              <linearGradient
+                id={`areaGrad${chart.id}`}
+                x1="0%"
+                y1="0%"
+                x2="0%"
+                y2="100%"
+              >
+                <stop offset="0%" stopColor="currentColor" stopOpacity="0.3" />
+                <stop
+                  offset="100%"
+                  stopColor="currentColor"
+                  stopOpacity="0.1"
+                />
               </linearGradient>
             </defs>
             <polygon
@@ -208,28 +264,32 @@ function AnalyticsBackgroundComponent() {
   const { width, height } = dimensionsRef.current;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true" style={{ contain: 'strict' }}>
+    <div
+      className="fixed inset-0 pointer-events-none z-0"
+      aria-hidden="true"
+      style={{ contain: "strict" }}
+    >
       {/* Dashboard grid background */}
       <div
         className="absolute inset-0 opacity-[0.002] dark:opacity-[0.004]"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cpath d='M0 0h80v80H0z' stroke='%2310b981' stroke-width='0.3' opacity='0.1'/%3E%3Cpath d='M20 20h40v40H20z' stroke='%2310b981' stroke-width='0.3' opacity='0.15'/%3E%3C/g%3E%3C/svg%3E")`,
-          animation: 'dashboardGrid 20s ease-in-out infinite',
+          animation: "dashboardGrid 20s ease-in-out infinite",
         }}
       />
 
       {/* Floating charts */}
-      {charts.map(chart => (
+      {charts.map((chart) => (
         <div
           key={chart.id}
           className="absolute"
           style={{
             left: `${chart.x}px`,
             top: `${chart.y}px`,
-            transform: 'translate(-50%, -50%)',
+            transform: "translate(-50%, -50%)",
             opacity: 0.04,
             animation: `chartFloat ${chart.duration}ms ease-in-out ${chart.delay}ms forwards`,
-            willChange: 'transform, opacity',
+            willChange: "transform, opacity",
           }}
         >
           {renderChart(chart)}
@@ -237,17 +297,17 @@ function AnalyticsBackgroundComponent() {
       ))}
 
       {/* Data points and particles */}
-      {dataPoints.map(point => (
+      {dataPoints.map((point) => (
         <div
           key={point.id}
           className="absolute flex items-center justify-center text-xs font-mono text-emerald-500 dark:text-emerald-400"
           style={{
             left: `${point.x}px`,
             top: `${point.y}px`,
-            transform: 'translate(-50%, -50%)',
+            transform: "translate(-50%, -50%)",
             opacity: 0.06,
             animation: `dataPointFade ${point.duration}ms ease-out ${point.delay}ms forwards`,
-            willChange: 'transform, opacity',
+            willChange: "transform, opacity",
           }}
         >
           {Math.round(point.value)}%
@@ -257,19 +317,93 @@ function AnalyticsBackgroundComponent() {
       {/* Analytics dashboard wireframe */}
       <svg className="absolute inset-0 w-full h-full opacity-[0.003] dark:opacity-[0.005]">
         <defs>
-          <pattern id="analyticsPattern" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse">
-            <rect x="10" y="10" width="40" height="25" stroke="#10b981" strokeWidth="0.5" fill="none" opacity="0.2"/>
-            <rect x="70" y="10" width="40" height="40" stroke="#10b981" strokeWidth="0.5" fill="none" opacity="0.2"/>
-            <rect x="10" y="70" width="100" height="20" stroke="#10b981" strokeWidth="0.5" fill="none" opacity="0.2"/>
-            <rect x="15" y="25" width="4" height="10" fill="#10b981" opacity="0.1"/>
-            <rect x="22" y="20" width="4" height="15" fill="#10b981" opacity="0.1"/>
-            <rect x="29" y="27" width="4" height="8" fill="#10b981" opacity="0.1"/>
-            <rect x="36" y="18" width="4" height="17" fill="#10b981" opacity="0.1"/>
-            <circle cx="90" cy="30" r="12" stroke="#10b981" strokeWidth="1" fill="none" opacity="0.1"/>
-            <path d="M 90 18 A 12 12 0 0 1 102 30 Z" fill="#10b981" opacity="0.08"/>
+          <pattern
+            id="analyticsPattern"
+            x="0"
+            y="0"
+            width="120"
+            height="120"
+            patternUnits="userSpaceOnUse"
+          >
+            <rect
+              x="10"
+              y="10"
+              width="40"
+              height="25"
+              stroke="#10b981"
+              strokeWidth="0.5"
+              fill="none"
+              opacity="0.2"
+            />
+            <rect
+              x="70"
+              y="10"
+              width="40"
+              height="40"
+              stroke="#10b981"
+              strokeWidth="0.5"
+              fill="none"
+              opacity="0.2"
+            />
+            <rect
+              x="10"
+              y="70"
+              width="100"
+              height="20"
+              stroke="#10b981"
+              strokeWidth="0.5"
+              fill="none"
+              opacity="0.2"
+            />
+            <rect
+              x="15"
+              y="25"
+              width="4"
+              height="10"
+              fill="#10b981"
+              opacity="0.1"
+            />
+            <rect
+              x="22"
+              y="20"
+              width="4"
+              height="15"
+              fill="#10b981"
+              opacity="0.1"
+            />
+            <rect
+              x="29"
+              y="27"
+              width="4"
+              height="8"
+              fill="#10b981"
+              opacity="0.1"
+            />
+            <rect
+              x="36"
+              y="18"
+              width="4"
+              height="17"
+              fill="#10b981"
+              opacity="0.1"
+            />
+            <circle
+              cx="90"
+              cy="30"
+              r="12"
+              stroke="#10b981"
+              strokeWidth="1"
+              fill="none"
+              opacity="0.1"
+            />
+            <path
+              d="M 90 18 A 12 12 0 0 1 102 30 Z"
+              fill="#10b981"
+              opacity="0.08"
+            />
           </pattern>
         </defs>
-        <rect width="100%" height="100%" fill="url(#analyticsPattern)"/>
+        <rect width="100%" height="100%" fill="url(#analyticsPattern)" />
       </svg>
 
       {/* Performance indicators - reduced count */}
@@ -305,13 +439,16 @@ function AnalyticsBackgroundComponent() {
       <div className="absolute inset-0">
         <div
           className="absolute top-1/4 right-1/4 text-xs font-mono text-emerald-500/[0.04] dark:text-emerald-400/[0.06]"
-          style={{ animation: 'kpiPulse 3s ease-in-out infinite' }}
+          style={{ animation: "kpiPulse 3s ease-in-out infinite" }}
         >
           ↗ 127%
         </div>
         <div
           className="absolute bottom-1/3 left-1/3 text-xs font-mono text-emerald-500/[0.04] dark:text-emerald-400/[0.06]"
-          style={{ animation: 'kpiPulse 4s ease-in-out infinite', animationDelay: '1s' }}
+          style={{
+            animation: "kpiPulse 4s ease-in-out infinite",
+            animationDelay: "1s",
+          }}
         >
           💹 +24.5K
         </div>
@@ -320,10 +457,16 @@ function AnalyticsBackgroundComponent() {
       {/* Data flow lines - static paths */}
       <svg className="absolute inset-0 w-full h-full">
         <defs>
-          <linearGradient id="dataFlowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0"/>
-            <stop offset="50%" stopColor="#10b981" stopOpacity="0.02"/>
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0"/>
+          <linearGradient
+            id="dataFlowGradient"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="100%"
+          >
+            <stop offset="0%" stopColor="#10b981" stopOpacity="0" />
+            <stop offset="50%" stopColor="#10b981" stopOpacity="0.02" />
+            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
           </linearGradient>
         </defs>
         {[0, 1].map((i) => (

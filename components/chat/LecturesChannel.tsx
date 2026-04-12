@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useVideos } from "@/hooks/useVideos";
 import { useI18n } from "@/contexts/I18nContext";
@@ -22,7 +22,7 @@ interface LecturesChannelProps {
   onMobileMenuClick?: () => void;
 }
 
-export default function LecturesChannel({
+function LecturesChannel({
   channel,
   courseId,
   currentUserId,
@@ -1684,3 +1684,5 @@ function VideoUploadModal({
     </div>
   );
 }
+
+export default memo(LecturesChannel);

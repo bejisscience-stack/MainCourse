@@ -51,9 +51,11 @@ export function useDMChannels({ enabled = true }: UseDMChannelsOptions = {}) {
     fetchChannels();
   }, [fetchChannels]);
 
-  // Realtime: refresh on new DM messages
+  // Realtime: refresh on DM channel changes
   useEffect(() => {
     if (!enabled) return;
+
+    let debounceTimer: NodeJS.Timeout | null = null;
 
     const channel = supabase
       .channel("dm-channels-realtime")
@@ -65,12 +67,17 @@ export function useDMChannels({ enabled = true }: UseDMChannelsOptions = {}) {
           table: "dm_messages",
         },
         () => {
-          fetchChannels();
+          // Debounce to avoid rapid refetches when multiple messages arrive
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            fetchChannels();
+          }, 2000);
         },
       )
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [enabled, fetchChannels]);

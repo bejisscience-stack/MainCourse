@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
-import { getCachedUsername, prefetchProfiles } from './useRealtimeMessages';
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { supabase } from "@/lib/supabase";
+import { getCachedUsername, prefetchProfiles } from "./useRealtimeMessages";
 
 interface TypingUser {
   userId: string;
@@ -68,35 +68,41 @@ export function useRealtimeTyping({
       .channel(`typing:${channelId}`, {
         config: {
           broadcast: { self: false },
-        }
+        },
       })
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'typing_indicators',
+          event: "*",
+          schema: "public",
+          table: "typing_indicators",
           filter: `channel_id=eq.${channelId}`,
         },
         async (payload) => {
-          const newRecord = payload.new as { user_id?: string; expires_at?: string } | null;
+          const newRecord = payload.new as {
+            user_id?: string;
+            expires_at?: string;
+          } | null;
           const oldRecord = payload.old as { user_id?: string } | null;
           const userId = newRecord?.user_id || oldRecord?.user_id;
 
           // Don't show current user's typing indicator
           if (!userId || userId === currentUserId) return;
 
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          if (
+            payload.eventType === "INSERT" ||
+            payload.eventType === "UPDATE"
+          ) {
             // Try to get username from cache first (instant)
             let username = getCachedUsername(userId);
-            
+
             // If not cached, fetch it
-            if (username === 'User') {
+            if (username === "User") {
               await prefetchProfiles([userId]);
               username = getCachedUsername(userId);
             }
 
-            const expiresAt = newRecord?.expires_at 
+            const expiresAt = newRecord?.expires_at
               ? new Date(newRecord.expires_at).getTime()
               : Date.now() + TYPING_TTL;
 
@@ -104,10 +110,10 @@ export function useRealtimeTyping({
               const filtered = prev.filter((u) => u.userId !== userId);
               return [...filtered, { userId, username, expiresAt }];
             });
-          } else if (payload.eventType === 'DELETE') {
+          } else if (payload.eventType === "DELETE") {
             setTypingUsers((prev) => prev.filter((u) => u.userId !== userId));
           }
-        }
+        },
       )
       .subscribe();
 
@@ -117,10 +123,10 @@ export function useRealtimeTyping({
     const fetchCurrentTyping = async () => {
       try {
         const { data, error } = await supabase
-          .from('typing_indicators')
-          .select('user_id, expires_at')
-          .eq('channel_id', channelId)
-          .gt('expires_at', new Date().toISOString());
+          .from("typing_indicators")
+          .select("user_id, expires_at")
+          .eq("channel_id", channelId)
+          .gt("expires_at", new Date().toISOString());
 
         if (error || !data || data.length === 0) {
           setTypingUsers([]);
@@ -148,8 +154,7 @@ export function useRealtimeTyping({
           }));
 
         setTypingUsers(users);
-      } catch (err) {
-        console.warn('Error fetching typing indicators:', err);
+      } catch {
         setTypingUsers([]);
       }
     };

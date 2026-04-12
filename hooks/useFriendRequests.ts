@@ -67,28 +67,50 @@ export function useFriendRequests({
     fetchRequests();
   }, [fetchRequests]);
 
-  // Listen for realtime friend request changes
+  // Listen for realtime friend request changes (filtered to current user)
   useEffect(() => {
     if (!enabled) return;
 
-    const channel = supabase
-      .channel("friend-requests-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "friend_requests",
-        },
-        () => {
-          // Refetch on any change
-          fetchRequests();
-        },
-      )
-      .subscribe();
+    let channel: any = null;
+
+    (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user?.id) return;
+      const userId = session.user.id;
+
+      channel = supabase
+        .channel("friend-requests-realtime")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "friend_requests",
+            filter: `sender_id=eq.${userId}`,
+          },
+          () => {
+            fetchRequests();
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "friend_requests",
+            filter: `receiver_id=eq.${userId}`,
+          },
+          () => {
+            fetchRequests();
+          },
+        )
+        .subscribe();
+    })();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [enabled, fetchRequests]);
 

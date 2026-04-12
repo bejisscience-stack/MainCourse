@@ -104,7 +104,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     () => fetchNotifications(options),
     {
       revalidateOnFocus: false,
-      dedupingInterval: 1000,
+      dedupingInterval: 10000,
       refreshInterval: 30000,
       fallbackData: {
         notifications: [],

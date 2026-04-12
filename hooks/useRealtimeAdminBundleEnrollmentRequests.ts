@@ -1,11 +1,14 @@
-import { useEffect, useState, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { BundleEnrollmentRequest } from './useAdminBundleEnrollmentRequests';
+import { useEffect, useState, useRef } from "react";
+import { supabase } from "@/lib/supabase";
+import type { BundleEnrollmentRequest } from "./useAdminBundleEnrollmentRequests";
 
 interface UseRealtimeAdminBundleEnrollmentRequestsOptions {
   enabled?: boolean;
   onInsert?: (request: BundleEnrollmentRequest) => void;
-  onUpdate?: (request: BundleEnrollmentRequest, oldRequest: Partial<BundleEnrollmentRequest>) => void;
+  onUpdate?: (
+    request: BundleEnrollmentRequest,
+    oldRequest: Partial<BundleEnrollmentRequest>,
+  ) => void;
   onConnectionChange?: (connected: boolean) => void;
 }
 
@@ -43,29 +46,29 @@ export function useRealtimeAdminBundleEnrollmentRequests({
       return;
     }
 
-    console.log('[RT Admin Bundle] Setting up subscription');
-
     const channel = supabase
-      .channel('admin:bundle_enrollment_requests')
+      .channel("admin:bundle_enrollment_requests")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'bundle_enrollment_requests',
+          event: "INSERT",
+          schema: "public",
+          table: "bundle_enrollment_requests",
         },
         async (payload) => {
-          console.log('[RT Admin Bundle] INSERT received:', payload);
-
-          if (!payload.new || typeof payload.new !== 'object' || !('id' in payload.new)) {
-            console.error('[RT Admin Bundle] Invalid payload: missing new.id');
+          if (
+            !payload.new ||
+            typeof payload.new !== "object" ||
+            !("id" in payload.new)
+          ) {
             return;
           }
 
           // Fetch the full request with related data
           const { data: request, error } = await supabase
-            .from('bundle_enrollment_requests')
-            .select(`
+            .from("bundle_enrollment_requests")
+            .select(
+              `
               id,
               user_id,
               bundle_id,
@@ -85,12 +88,16 @@ export function useRealtimeAdminBundleEnrollmentRequests({
                 title,
                 price
               )
-            `)
-            .eq('id', (payload.new as { id: string }).id)
+            `,
+            )
+            .eq("id", (payload.new as { id: string }).id)
             .single();
 
           if (error || !request) {
-            console.error('[RT Admin Bundle] Error fetching request details:', error);
+            console.error(
+              "[RT Admin Bundle] Error fetching request details:",
+              error,
+            );
             onInsertRef.current?.(payload.new as BundleEnrollmentRequest);
             return;
           }
@@ -99,35 +106,41 @@ export function useRealtimeAdminBundleEnrollmentRequests({
           const transformedRequest: BundleEnrollmentRequest = {
             ...request,
             profiles: Array.isArray(request.profiles)
-              ? (request.profiles.length > 0 ? request.profiles[0] : null)
-              : request.profiles ?? null,
+              ? request.profiles.length > 0
+                ? request.profiles[0]
+                : null
+              : (request.profiles ?? null),
             bundles: Array.isArray(request.course_bundles)
-              ? (request.course_bundles.length > 0 ? request.course_bundles[0] : null)
-              : request.course_bundles ?? null,
+              ? request.course_bundles.length > 0
+                ? request.course_bundles[0]
+                : null
+              : (request.course_bundles ?? null),
           };
 
           onInsertRef.current?.(transformedRequest);
-        }
+        },
       )
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'bundle_enrollment_requests',
+          event: "UPDATE",
+          schema: "public",
+          table: "bundle_enrollment_requests",
         },
         async (payload) => {
-          console.log('[RT Admin Bundle] UPDATE received:', payload);
-
-          if (!payload.new || typeof payload.new !== 'object' || !('id' in payload.new)) {
-            console.error('[RT Admin Bundle] Invalid payload: missing new.id');
+          if (
+            !payload.new ||
+            typeof payload.new !== "object" ||
+            !("id" in payload.new)
+          ) {
             return;
           }
 
           // Fetch the full request with related data
           const { data: request, error } = await supabase
-            .from('bundle_enrollment_requests')
-            .select(`
+            .from("bundle_enrollment_requests")
+            .select(
+              `
               id,
               user_id,
               bundle_id,
@@ -147,13 +160,20 @@ export function useRealtimeAdminBundleEnrollmentRequests({
                 title,
                 price
               )
-            `)
-            .eq('id', (payload.new as { id: string }).id)
+            `,
+            )
+            .eq("id", (payload.new as { id: string }).id)
             .single();
 
           if (error || !request) {
-            console.error('[RT Admin Bundle] Error fetching request details:', error);
-            onUpdateRef.current?.(payload.new as BundleEnrollmentRequest, payload.old as Partial<BundleEnrollmentRequest>);
+            console.error(
+              "[RT Admin Bundle] Error fetching request details:",
+              error,
+            );
+            onUpdateRef.current?.(
+              payload.new as BundleEnrollmentRequest,
+              payload.old as Partial<BundleEnrollmentRequest>,
+            );
             return;
           }
 
@@ -161,36 +181,36 @@ export function useRealtimeAdminBundleEnrollmentRequests({
           const transformedRequest: BundleEnrollmentRequest = {
             ...request,
             profiles: Array.isArray(request.profiles)
-              ? (request.profiles.length > 0 ? request.profiles[0] : null)
-              : request.profiles ?? null,
+              ? request.profiles.length > 0
+                ? request.profiles[0]
+                : null
+              : (request.profiles ?? null),
             bundles: Array.isArray(request.course_bundles)
-              ? (request.course_bundles.length > 0 ? request.course_bundles[0] : null)
-              : request.course_bundles ?? null,
+              ? request.course_bundles.length > 0
+                ? request.course_bundles[0]
+                : null
+              : (request.course_bundles ?? null),
           };
 
-          onUpdateRef.current?.(transformedRequest, payload.old as Partial<BundleEnrollmentRequest>);
-        }
+          onUpdateRef.current?.(
+            transformedRequest,
+            payload.old as Partial<BundleEnrollmentRequest>,
+          );
+        },
       )
       .subscribe((status, err) => {
-        console.log('[RT Admin Bundle] Subscription status:', status, err);
-
-        const connected = status === 'SUBSCRIBED';
+        const connected = status === "SUBSCRIBED";
         setIsConnected(connected);
         onConnectionChangeRef.current?.(connected);
 
-        if (status === 'CHANNEL_ERROR') {
-          console.error('[RT Admin Bundle] Channel error:', err);
-        } else if (status === 'TIMED_OUT') {
-          console.warn('[RT Admin Bundle] Connection timed out, will retry...');
-        } else if (status === 'CLOSED') {
-          console.log('[RT Admin Bundle] Channel closed');
+        if (status === "CHANNEL_ERROR") {
+          console.error("[RT Admin Bundle] Channel error:", err);
         }
       });
 
     channelRef.current = channel;
 
     return () => {
-      console.log('[RT Admin Bundle] Cleaning up subscription');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;

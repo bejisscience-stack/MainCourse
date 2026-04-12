@@ -56,13 +56,9 @@ export function useAdminWithdrawalRequests(status?: string) {
     () => fetchAdminWithdrawalRequests(undefined),
     {
       revalidateOnFocus: false,
-      dedupingInterval: 1000,
+      dedupingInterval: 5000,
       refreshInterval: 10000,
       fallbackData: [], // Default to empty array
-      onError: (err) => {
-        // Silently handle errors when withdrawal system isn't configured
-        console.warn("[Withdrawal Hook] Error:", err.message);
-      },
     },
   );
 

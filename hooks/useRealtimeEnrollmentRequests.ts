@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { EnrollmentRequest } from './useEnrollmentRequests';
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import type { EnrollmentRequest } from "./useEnrollmentRequests";
 
 interface UseRealtimeEnrollmentRequestsOptions {
   userId: string | null;
@@ -26,26 +26,28 @@ export function useRealtimeEnrollmentRequests({
     const channel = supabase
       .channel(`enrollment_requests:${userId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'enrollment_requests',
+          event: "*",
+          schema: "public",
+          table: "enrollment_requests",
           filter: `user_id=eq.${userId}`,
         },
         async (payload) => {
-          console.log('Enrollment request real-time update:', payload);
-
           // Check if payload.new exists and has an id
-          if (!payload.new || typeof payload.new !== 'object' || !('id' in payload.new)) {
-            console.error('Invalid payload: missing new.id');
+          if (
+            !payload.new ||
+            typeof payload.new !== "object" ||
+            !("id" in payload.new)
+          ) {
             return;
           }
 
           // Fetch the full request with related data
           const { data: request, error } = await supabase
-            .from('enrollment_requests')
-            .select(`
+            .from("enrollment_requests")
+            .select(
+              `
               id,
               user_id,
               course_id,
@@ -59,12 +61,13 @@ export function useRealtimeEnrollmentRequests({
                 title,
                 thumbnail_url
               )
-            `)
-            .eq('id', (payload.new as { id: string }).id)
+            `,
+            )
+            .eq("id", (payload.new as { id: string }).id)
             .single();
 
           if (error || !request) {
-            console.error('Error fetching updated enrollment request:', error);
+            console.error("Failed to fetch updated enrollment request", error);
             return;
           }
 
@@ -73,20 +76,23 @@ export function useRealtimeEnrollmentRequests({
           const transformedRequest: EnrollmentRequest = {
             ...request,
             courses: Array.isArray(request.courses)
-              ? (request.courses.length > 0 ? request.courses[0] : null)
-              : request.courses ?? null,
+              ? request.courses.length > 0
+                ? request.courses[0]
+                : null
+              : (request.courses ?? null),
           };
 
           // Call the appropriate callback based on status change
-          if (payload.eventType === 'UPDATE') {
-            const oldStatus = (payload.old as { status?: string } | null)?.status;
+          if (payload.eventType === "UPDATE") {
+            const oldStatus = (payload.old as { status?: string } | null)
+              ?.status;
             const newStatus = (payload.new as { status?: string })?.status;
 
             // Status changed
             if (oldStatus !== newStatus) {
-              if (newStatus === 'approved' && onRequestApproved) {
+              if (newStatus === "approved" && onRequestApproved) {
                 onRequestApproved(transformedRequest);
-              } else if (newStatus === 'rejected' && onRequestRejected) {
+              } else if (newStatus === "rejected" && onRequestRejected) {
                 onRequestRejected(transformedRequest);
               }
             }
@@ -95,11 +101,11 @@ export function useRealtimeEnrollmentRequests({
             if (onRequestUpdated) {
               onRequestUpdated(transformedRequest);
             }
-          } else if (payload.eventType === 'INSERT' && onRequestUpdated) {
+          } else if (payload.eventType === "INSERT" && onRequestUpdated) {
             // New request created
             onRequestUpdated(transformedRequest);
           }
-        }
+        },
       )
       .subscribe();
 
@@ -108,15 +114,3 @@ export function useRealtimeEnrollmentRequests({
     };
   }, [userId, onRequestUpdated, onRequestApproved, onRequestRejected]);
 }
-
-
-
-
-
-
-
-
-
-
-
-

@@ -42,12 +42,6 @@ export async function GET(request: NextRequest) {
     const limit = safeLimit;
     const offset = (page - 1) * limit;
 
-    console.log(
-      "[Notifications API] Fetching notifications for user:",
-      user.id,
-      { page, limit, unreadOnly },
-    );
-
     // Build query
     let query = supabase
       .from("notifications")
