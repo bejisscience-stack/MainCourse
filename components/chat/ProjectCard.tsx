@@ -143,7 +143,7 @@ export default function ProjectCard({
 
   const isPendingPayment = project.status === "pending_payment";
 
-  const { hasProjectAccess } = useProjectAccess(currentUserId);
+  const { canSubmitToProject } = useProjectAccess(currentUserId);
 
   const countdown = useProjectCountdown(project.startDate, project.endDate);
   const budget = useProjectBudget(projectDbId || "", project.budget);
@@ -475,15 +475,15 @@ export default function ProjectCard({
     !isProjectExpired &&
     hasProjectStarted &&
     hasBudgetAvailable &&
-    (isEnrolledInCourse || hasProjectAccess);
+    (isEnrolledInCourse || canSubmitToProject(courseId));
 
-  const showLockIcon = !isEnrolledInCourse && !hasProjectAccess;
+  const showLockIcon = !isEnrolledInCourse && !canSubmitToProject(courseId);
 
   // Determine why submission is disabled (for tooltip)
   const getSubmitDisabledReason = (): string | null => {
     if (isLecturer) return "Lecturers cannot submit videos";
     if (isProjectOwner) return "You cannot submit to your own project";
-    if (!hasProjectAccess && !isEnrolledInCourse)
+    if (!canSubmitToProject(courseId) && !isEnrolledInCourse)
       return "Subscribe to projects to submit";
     if (isProjectExpired) return "This project has expired";
     if (!hasProjectStarted)

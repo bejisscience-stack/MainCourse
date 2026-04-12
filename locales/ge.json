@@ -991,7 +991,9 @@
     "minuteLeft": "წუთი დარჩა",
     "minutesLeft": "წუთი დარჩა",
     "endingSoon": "მალე დასრულდება",
-    "startsTomorrow": "ხვალ იწყება"
+    "startsTomorrow": "ხვალ იწყება",
+    "orSeparator": "ან",
+    "noAccessMessage": "ჩაეწერეთ ამ კურსზე ან შეიძინეთ გამოწერა მონაწილეობისთვის"
   },
   "projectsPage": {
     "title": "აქტიური პროექტები",

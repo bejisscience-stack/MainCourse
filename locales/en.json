@@ -991,7 +991,9 @@
     "minuteLeft": "minute left",
     "minutesLeft": "minutes left",
     "endingSoon": "Ending soon",
-    "startsTomorrow": "Starts tomorrow"
+    "startsTomorrow": "Starts tomorrow",
+    "orSeparator": "or",
+    "noAccessMessage": "Enroll in this course or buy a subscription to participate"
   },
   "projectsPage": {
     "title": "Active Projects",

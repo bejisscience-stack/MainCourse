@@ -1,8 +1,9 @@
 "use client";
 
 import useSWR, { mutate } from "swr";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { useEnrollments } from "@/hooks/useEnrollments";
 
 export interface ProjectSubscription {
   id: string;
@@ -16,12 +17,13 @@ export interface ProjectSubscription {
 }
 
 export interface ProjectAccessData {
-  hasInitialAccess: boolean;
+  accessTier: "subscription" | "new_user" | "none";
   hasActiveSubscription: boolean;
-  hasProjectAccess: boolean;
+  isNewUser: boolean;
+  enrolledCourseIds: Set<string>;
+  canSubmitToProject: (courseId: string) => boolean;
   subscription: ProjectSubscription | null;
   isLoading: boolean;
-  projectAccessExpiresAt: string | null;
 }
 
 async function getAuthToken(): Promise<string | null> {
@@ -38,16 +40,13 @@ async function getAuthToken(): Promise<string | null> {
 }
 
 /**
- * Determine if user has active project access via:
- * 1. Initial 1-month grant from first course approval
- * 2. Active project subscription
+ * Three-tier project access model:
+ * 1. Active project subscription → all projects (1 month)
+ * 2. Course enrollment → only that course's projects (lifetime)
+ * 3. New user (< 30 days) → all projects
  */
 export function useProjectAccess(userId?: string): ProjectAccessData {
-  const [projectAccessExpiresAt, setProjectAccessExpiresAt] = useState<
-    string | null
-  >(null);
-
-  // Fetch profile project_access_expires_at
+  // Fetch profile (project_access_expires_at + created_at)
   const { data: profileData, isLoading: profileLoading } = useSWR(
     userId ? `/api/profile?userId=${userId}` : null,
     async (url) => {
@@ -81,6 +80,10 @@ export function useProjectAccess(userId?: string): ProjectAccessData {
     { revalidateOnFocus: true, dedupingInterval: 5000 },
   );
 
+  // Fetch enrollments
+  const { enrolledCourseIds, isLoading: enrollmentsLoading } =
+    useEnrollments(userId || null);
+
   // Subscribe to realtime updates on project_subscriptions
   useEffect(() => {
     if (!userId) return;
@@ -96,7 +99,6 @@ export function useProjectAccess(userId?: string): ProjectAccessData {
           filter: `user_id=eq.${userId}`,
         },
         () => {
-          // Revalidate SWR caches instead of full page reload
           mutate("/api/project-subscriptions");
           mutate(`/api/profile?userId=${userId}`);
         },
@@ -108,17 +110,7 @@ export function useProjectAccess(userId?: string): ProjectAccessData {
     };
   }, [userId]);
 
-  // Update local state from profile data
-  useEffect(() => {
-    if (profileData?.profile?.project_access_expires_at) {
-      setProjectAccessExpiresAt(profileData.profile.project_access_expires_at);
-    }
-  }, [profileData]);
-
   const now = new Date();
-
-  const hasInitialAccess =
-    projectAccessExpiresAt != null && new Date(projectAccessExpiresAt) > now;
 
   const hasActiveSubscription =
     subscriptionData != null &&
@@ -126,12 +118,36 @@ export function useProjectAccess(userId?: string): ProjectAccessData {
     subscriptionData.expires_at != null &&
     new Date(subscriptionData.expires_at) > now;
 
+  const isNewUser = useMemo(() => {
+    const createdAt = profileData?.profile?.created_at;
+    if (!createdAt) return false;
+    const registeredDate = new Date(createdAt);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    return registeredDate > thirtyDaysAgo;
+  }, [profileData?.profile?.created_at]);
+
+  const accessTier = useMemo(() => {
+    if (hasActiveSubscription) return "subscription" as const;
+    if (isNewUser) return "new_user" as const;
+    return "none" as const;
+  }, [hasActiveSubscription, isNewUser]);
+
+  const canSubmitToProject = useCallback(
+    (courseId: string): boolean => {
+      if (hasActiveSubscription) return true;
+      if (isNewUser) return true;
+      return enrolledCourseIds.has(courseId);
+    },
+    [hasActiveSubscription, isNewUser, enrolledCourseIds],
+  );
+
   return {
-    hasInitialAccess,
+    accessTier,
     hasActiveSubscription,
-    hasProjectAccess: hasInitialAccess || hasActiveSubscription,
+    isNewUser,
+    enrolledCourseIds,
+    canSubmitToProject,
     subscription: subscriptionData,
-    isLoading: profileLoading || subLoading,
-    projectAccessExpiresAt,
+    isLoading: profileLoading || subLoading || enrollmentsLoading,
   };
 }

@@ -29,7 +29,7 @@ export default function CourseChatPage() {
     isLoading: enrollmentsLoading,
     mutate: mutateEnrollments,
   } = useEnrollments(user?.id || null);
-  const { hasProjectAccess, isLoading: projectAccessLoading } =
+  const { canSubmitToProject, isLoading: projectAccessLoading } =
     useProjectAccess(user?.id);
   const [activeServerId, setActiveServerId] = useActiveServer();
   const [activeChannelId, setActiveChannelId] = useActiveChannel();
@@ -65,7 +65,11 @@ export default function CourseChatPage() {
 
       // Admins can access all courses without enrollment
       // Regular users must be enrolled OR have project access
-      if (userRole !== "admin" && !isEnrolledInCourse && !hasProjectAccess) {
+      if (
+        userRole !== "admin" &&
+        !isEnrolledInCourse &&
+        !canSubmitToProject(courseId)
+      ) {
         setError("You are not enrolled in this course.");
         setIsLoadingCourse(false);
         return;
@@ -291,7 +295,9 @@ export default function CourseChatPage() {
 
       // Filter channels for project-access-only users (not enrolled, not admin)
       const isProjectAccessOnly =
-        !isEnrolledInCourse && userRole !== "admin" && hasProjectAccess;
+        !isEnrolledInCourse &&
+        userRole !== "admin" &&
+        canSubmitToProject(courseId);
       const filteredServers = isProjectAccessOnly
         ? serversData.map((server) => ({
             ...server,
@@ -317,7 +323,7 @@ export default function CourseChatPage() {
       setError(err.message || "Failed to load course chat. Please try again.");
       setIsLoadingCourse(false);
     }
-  }, [courseId, user, isEnrolledInCourse, hasProjectAccess, userRole]);
+  }, [courseId, user, isEnrolledInCourse, canSubmitToProject, userRole]);
 
   // Check enrollment and fetch course (only once per courseId)
   useEffect(() => {
@@ -351,7 +357,7 @@ export default function CourseChatPage() {
   // Auto-select channel when servers are loaded
   // Project-access-only users get the "projects" channel; enrolled users get "lectures"
   const isProjectAccessOnly =
-    !isEnrolledInCourse && userRole !== "admin" && hasProjectAccess;
+    !isEnrolledInCourse && userRole !== "admin" && canSubmitToProject(courseId);
 
   useEffect(() => {
     if (servers.length > 0 && !hasAutoSelectedChannel && courseId) {
@@ -475,7 +481,9 @@ export default function CourseChatPage() {
 
   // Gate access: allow if admin, OR enrolled, OR (not enrolled but has project access)
   const hasAccess =
-    userRole === "admin" || isEnrolled || (!isEnrolled && hasProjectAccess);
+    userRole === "admin" ||
+    isEnrolled ||
+    (!isEnrolled && canSubmitToProject(courseId));
 
   if (!hasAccess && userRole !== "admin") {
     return (

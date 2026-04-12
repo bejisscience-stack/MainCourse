@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/contexts/I18nContext";
 import { useUser } from "@/hooks/useUser";
-import { useEnrollments } from "@/hooks/useEnrollments";
 import { useProjectAccess } from "@/hooks/useProjectAccess";
 import { formatPriceInGel } from "@/lib/currency";
 import ProjectSubscriptionModal from "./ProjectSubscriptionModal";
@@ -72,8 +71,7 @@ export default function ProjectDetailsModal({
   const { t } = useI18n();
   const router = useRouter();
   const { user } = useUser();
-  const { enrolledCourseIds } = useEnrollments(user?.id || null);
-  const { hasProjectAccess } = useProjectAccess(user?.id);
+  const { canSubmitToProject } = useProjectAccess(user?.id);
   const [mounted, setMounted] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
@@ -82,14 +80,10 @@ export default function ProjectDetailsModal({
     return () => setMounted(false);
   }, []);
 
-  // Check if user is enrolled in the course
-  const isEnrolled = useMemo(() => {
-    if (!project) return false;
-    return enrolledCourseIds.has(project.course_id);
-  }, [project, enrolledCourseIds]);
-
-  // User can access if enrolled OR has project access (free 1-month or subscription)
-  const canAccessProject = isEnrolled || hasProjectAccess;
+  // Check if user can submit to this project (subscription, enrollment, or new user)
+  const canAccessProject = project
+    ? canSubmitToProject(project.course_id)
+    : false;
 
   // Format budget as currency (GEL)
   const formattedBudget = useMemo(() => {
@@ -546,25 +540,61 @@ export default function ProjectDetailsModal({
               {t("activeProjects.goToProject")}
             </button>
           ) : (
-            <button
-              onClick={handleSubscribeClick}
-              className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 text-base font-semibold text-white bg-gradient-to-r from-charcoal-800 to-charcoal-900 dark:from-emerald-500 dark:to-teal-600 rounded-2xl hover:from-charcoal-700 hover:to-charcoal-800 dark:hover:from-emerald-600 dark:hover:to-teal-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <div className="space-y-3">
+              <p className="text-sm text-center text-charcoal-500 dark:text-gray-400">
+                {t("activeProjects.noAccessMessage")}
+              </p>
+              <button
+                onClick={() => {
+                  if (project) {
+                    onClose();
+                    router.push(`/courses/${project.course_id}`);
+                  }
+                }}
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl hover:from-emerald-600 hover:to-teal-700 transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
-              {t("activeProjects.subscribeToProjects")}
-            </button>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                  />
+                </svg>
+                {t("activeProjects.enrollInCourse")}
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-charcoal-200 dark:bg-navy-600" />
+                <span className="text-xs text-charcoal-400 dark:text-gray-500 uppercase">
+                  {t("activeProjects.orSeparator")}
+                </span>
+                <div className="flex-1 h-px bg-charcoal-200 dark:bg-navy-600" />
+              </div>
+              <button
+                onClick={handleSubscribeClick}
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-charcoal-700 dark:text-white border-2 border-charcoal-200 dark:border-navy-600 rounded-2xl hover:bg-charcoal-50 dark:hover:bg-navy-800 transition-all duration-200"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+                {t("activeProjects.subscribeToProjects")}
+              </button>
+            </div>
           )}
         </div>
       </div>
