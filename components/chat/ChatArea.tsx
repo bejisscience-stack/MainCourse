@@ -78,8 +78,6 @@ function ChatArea({
   const prevChannelIdRef = useRef<string | null>(null);
   const prevMessageCountRef = useRef(0);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const knownMessageIdsRef = useRef<Set<string>>(new Set());
-  const initialLoadDoneRef = useRef(false);
 
   // Get mute status with real-time updates
   const { isMuted } = useMuteStatus({
@@ -102,8 +100,6 @@ function ChatArea({
       setReplyTo(undefined);
       userScrolledUpRef.current = false;
       prevChannelIdRef.current = currentChatId;
-      knownMessageIdsRef.current.clear();
-      initialLoadDoneRef.current = false;
     }
   }, [currentChatId]);
 
@@ -329,9 +325,9 @@ function ChatArea({
       pendingSendsRef.current += 1;
       setIsSending(true);
 
-      // Scroll to bottom immediately — use instant for own sends to avoid lag
+      // Scroll to bottom immediately
       userScrolledUpRef.current = false;
-      scrollToBottom("instant");
+      scrollToBottom("smooth");
 
       try {
         const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -833,13 +829,13 @@ function ChatArea({
       {/* Messages container */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden chat-scrollbar will-change-transform"
+        className="flex-1 overflow-y-auto overflow-x-hidden chat-scrollbar"
         style={{
           scrollBehavior: "auto",
           overscrollBehavior: "contain",
         }}
       >
-        <div className="min-h-full flex flex-col justify-end py-5 pb-[76px] md:pb-5">
+        <div className="min-h-full flex flex-col justify-end py-5">
           {isLoading &&
           messages.length === 0 &&
           (channel?.id || dmChannelId) ? (
@@ -963,26 +959,6 @@ function ChatArea({
                     return true;
                   });
 
-                  // Track which messages are new (added after initial load)
-                  const newMessageIds = new Set<string>();
-                  if (
-                    !initialLoadDoneRef.current &&
-                    filteredMessages.length > 0
-                  ) {
-                    // First render — mark all as known
-                    filteredMessages.forEach((m) =>
-                      knownMessageIdsRef.current.add(m.id),
-                    );
-                    initialLoadDoneRef.current = true;
-                  } else {
-                    filteredMessages.forEach((m) => {
-                      if (!knownMessageIdsRef.current.has(m.id)) {
-                        newMessageIds.add(m.id);
-                        knownMessageIdsRef.current.add(m.id);
-                      }
-                    });
-                  }
-
                   return filteredMessages.map((message, index) => {
                     const prevMessage =
                       index > 0 ? filteredMessages[index - 1] : null;
@@ -1015,30 +991,21 @@ function ChatArea({
                       return null;
                     }
 
-                    const isNewMessage = newMessageIds.has(message.id);
                     return (
-                      <div
+                      <Message
                         key={message.id}
-                        className={
-                          isNewMessage
-                            ? "motion-safe:animate-message-slide-in"
-                            : undefined
+                        message={messageWithRetry}
+                        currentUserId={currentUserId}
+                        onReply={handleReply}
+                        onReaction={handleReaction}
+                        isLecturer={isLecturer}
+                        channelId={
+                          isDMMode ? dmChannelId || "" : channel?.id || ""
                         }
-                      >
-                        <Message
-                          message={messageWithRetry}
-                          currentUserId={currentUserId}
-                          onReply={handleReply}
-                          onReaction={handleReaction}
-                          isLecturer={isLecturer}
-                          channelId={
-                            isDMMode ? dmChannelId || "" : channel?.id || ""
-                          }
-                          courseId={isDMMode ? undefined : channel?.courseId}
-                          showAvatar={showAvatar}
-                          isEnrolledInCourse={isEnrolledInCourse}
-                        />
-                      </div>
+                        courseId={isDMMode ? undefined : channel?.courseId}
+                        showAvatar={showAvatar}
+                        isEnrolledInCourse={isEnrolledInCourse}
+                      />
                     );
                   });
                 })()}

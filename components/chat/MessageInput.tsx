@@ -500,7 +500,7 @@ export default function MessageInput({
 
   return (
     <div
-      className={`px-4 py-3 chat-surface border-t border-navy-800/60 transition-colors fixed bottom-0 left-0 right-0 z-30 md:relative md:bottom-auto md:left-auto md:right-auto md:z-auto pb-safe ${
+      className={`px-4 py-3 chat-surface border-t border-navy-800/60 transition-colors ${
         isDragging
           ? "bg-emerald-500/10 ring-2 ring-emerald-400/40 ring-inset"
           : ""
