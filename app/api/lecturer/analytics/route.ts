@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  createServerSupabaseClient,
+  createServiceRoleClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import type { LecturerAnalytics } from "@/types/analytics";
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabase = createServerSupabaseClient(token);
+    const supabase = createServiceRoleClient(token);
     const lecturerId = user.id;
 
     const { searchParams } = new URL(request.url);
@@ -50,29 +50,35 @@ export async function GET(request: NextRequest) {
     const activeCourses = courses?.length ?? 0;
 
     // 2. Get enrollment counts per course (approved only)
-    let enrollmentQuery = supabase
-      .from("enrollment_requests")
-      .select("id, course_id")
-      .eq("status", "approved")
-      .in("course_id", courseIds.length > 0 ? courseIds : ["__none__"]);
+    let enrollments: Array<{ id: string; course_id: string }> = [];
+    if (courseIds.length > 0) {
+      let enrollmentQuery = supabase
+        .from("enrollment_requests")
+        .select("id, course_id")
+        .eq("status", "approved")
+        .in("course_id", courseIds);
 
-    if (fromDate) enrollmentQuery = enrollmentQuery.gte("created_at", fromDate);
-    if (toEnd) enrollmentQuery = enrollmentQuery.lte("created_at", toEnd);
+      if (fromDate)
+        enrollmentQuery = enrollmentQuery.gte("created_at", fromDate);
+      if (toEnd) enrollmentQuery = enrollmentQuery.lte("created_at", toEnd);
 
-    const { data: enrollments, error: enrollError } = await enrollmentQuery;
-    if (enrollError) {
-      return NextResponse.json(
-        { error: "Failed to fetch enrollments" },
-        { status: 500 },
-      );
+      const { data, error: enrollError } = await enrollmentQuery;
+      if (enrollError) {
+        console.error("Enrollment query error:", enrollError);
+        return NextResponse.json(
+          { error: "Failed to fetch enrollments" },
+          { status: 500 },
+        );
+      }
+      enrollments = data || [];
     }
 
     const enrollmentsByCourse: Record<string, number> = {};
-    (enrollments || []).forEach((e) => {
+    enrollments.forEach((e) => {
       enrollmentsByCourse[e.course_id] =
         (enrollmentsByCourse[e.course_id] || 0) + 1;
     });
-    const totalEnrollments = enrollments?.length ?? 0;
+    const totalEnrollments = enrollments.length;
 
     // 3. Get balance transactions for revenue over time
     let balanceQuery = supabase
