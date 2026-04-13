@@ -446,6 +446,24 @@
     "expired": "Expired",
     "daysLeft": "{{days}} days left"
   },
+  "lecturerAnalytics": {
+    "title": "Analytics",
+    "subtitle": "Track your course performance and earnings",
+    "totalRevenue": "Total Revenue",
+    "totalEnrollments": "Total Enrollments",
+    "activeCourses": "Active Courses",
+    "currentBalance": "Current Balance",
+    "revenueOverTime": "Revenue Over Time",
+    "coursePerformance": "Course Performance",
+    "course": "Course",
+    "enrollments": "Enrollments",
+    "revenue": "Revenue",
+    "rating": "Rating",
+    "total": "Total",
+    "noRevenueData": "No revenue data for the selected period",
+    "noCourses": "No courses yet. Create your first course to see analytics.",
+    "errorLoading": "Failed to load analytics"
+  },
   "lecturerDashboard": {
     "title": "Lecturer Dashboard",
     "subtitle": "Manage your courses and content",

@@ -11,6 +11,7 @@ import { useUser } from "@/hooks/useUser";
 import { useLecturerCourses } from "@/hooks/useLecturerCourses";
 import { useI18n } from "@/contexts/I18nContext";
 import { formatPriceInGel } from "@/lib/currency";
+import LecturerAnalytics from "@/components/LecturerAnalytics";
 import type { Course } from "@/hooks/useCourses";
 
 export default function LecturerDashboard() {
@@ -879,6 +880,9 @@ export default function LecturerDashboard() {
               </div>
             </div>
           )}
+
+          {/* Analytics Section */}
+          <LecturerAnalytics />
 
           {/* Bundles Section */}
           {safeCourses.length >= 2 && (

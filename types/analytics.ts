@@ -184,3 +184,32 @@ export interface OperationalAnalytics {
   avgEnrollmentProcessingHours: number;
   avgWithdrawalProcessingHours: number;
 }
+
+// ─── Lecturer Dashboard Analytics Types ─────────────────────────────
+
+export interface LecturerAnalyticsOverview {
+  totalRevenue: number;
+  totalEnrollments: number;
+  activeCourses: number;
+  currentBalance: number;
+}
+
+export interface LecturerCoursePerformance {
+  courseId: string;
+  title: string;
+  enrollmentCount: number;
+  revenue: number;
+  rating: number;
+  reviewCount: number;
+}
+
+export interface LecturerRevenuePoint {
+  date: string;
+  amount: number;
+}
+
+export interface LecturerAnalytics {
+  overview: LecturerAnalyticsOverview;
+  coursePerformance: LecturerCoursePerformance[];
+  revenueOverTime: LecturerRevenuePoint[];
+}
