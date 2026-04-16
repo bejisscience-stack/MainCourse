@@ -49,11 +49,9 @@ const FeaturedCoursesHero = dynamic(
   () => import("@/components/landing/FeaturedCoursesHero"),
   {
     loading: () => (
-      <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
-          </div>
+      <section className="pt-24 md:pt-28 px-4 sm:px-6 lg:px-8 pb-10 md:pb-12">
+        <div className="max-w-7xl mx-auto rounded-3xl bg-charcoal-950/90 dark:bg-navy-900/90 h-[400px] md:h-[480px] lg:h-[540px] flex items-center justify-center">
+          <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500"></div>
         </div>
       </section>
     ),

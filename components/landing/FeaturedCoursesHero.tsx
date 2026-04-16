@@ -42,7 +42,7 @@ export default function FeaturedCoursesHero() {
   if (isLoading && courses.length === 0) {
     return (
       <section className="pt-24 md:pt-28 px-4 sm:px-6 lg:px-8 pb-10 md:pb-12">
-        <div className="max-w-7xl mx-auto rounded-3xl bg-charcoal-950/90 dark:bg-navy-900/90 h-[360px] flex items-center justify-center">
+        <div className="max-w-7xl mx-auto rounded-3xl bg-charcoal-950/90 dark:bg-navy-900/90 h-[400px] md:h-[480px] lg:h-[540px] flex items-center justify-center">
           <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500" />
         </div>
       </section>
@@ -71,26 +71,26 @@ export default function FeaturedCoursesHero() {
   return (
     <section className="pt-24 md:pt-28 px-4 sm:px-6 lg:px-8 pb-10 md:pb-12">
       <div className="max-w-7xl mx-auto relative">
-        <div className="rounded-3xl overflow-hidden bg-charcoal-950 dark:bg-navy-900 border border-charcoal-800 dark:border-navy-700 shadow-soft-2xl">
-          <div className="grid lg:grid-cols-2 min-h-[380px] md:min-h-[420px]">
-            <div className="p-7 md:p-10 lg:p-12 flex flex-col justify-center text-white">
-              <p className="text-xs uppercase tracking-[0.2em] text-emerald-300 mb-4">
+        <div className="rounded-3xl overflow-hidden bg-charcoal-950 dark:bg-navy-900 shadow-soft-2xl">
+          <div className="grid lg:grid-cols-2 h-[400px] md:h-[480px] lg:h-[540px]">
+            <div className="h-full p-8 md:p-12 lg:p-16 flex flex-col text-white bg-charcoal-950 dark:bg-navy-900">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-300 mb-5">
                 {isReady ? t("home.featuredCarousel.badge") : "Featured Course"}
               </p>
-              <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-4">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight line-clamp-2 min-h-[72px] md:min-h-[88px] lg:min-h-[116px]">
                 {course.title}
               </h1>
-              <p className="text-charcoal-300 dark:text-gray-300 text-sm md:text-base leading-relaxed mb-6 line-clamp-3">
+              <p className="mt-5 text-charcoal-300 dark:text-gray-300 text-sm md:text-base leading-relaxed line-clamp-3 min-h-[62px] md:min-h-[72px]">
                 {course.description ||
                   (isReady
                     ? t("home.featuredCarousel.defaultDescription")
                     : "Learn practical digital skills with expert guidance.")}
               </p>
 
-              <div className="flex items-center gap-4 text-sm text-charcoal-300 mb-6">
-                <span className="inline-flex items-center gap-1">
+              <div className="mt-5 h-7 flex items-center gap-2.5 text-xs md:text-sm text-charcoal-300 overflow-hidden">
+                <span className="inline-flex items-center gap-1 shrink-0">
                   <svg
-                    className="w-4 h-4 text-emerald-400"
+                    className="w-3.5 h-3.5 text-emerald-400"
                     viewBox="0 0 20 20"
                     fill="currentColor"
                   >
@@ -98,36 +98,36 @@ export default function FeaturedCoursesHero() {
                   </svg>
                   {course.rating > 0 ? course.rating.toFixed(1) : "4.8"}
                 </span>
-                <span>
+                <span className="shrink-0">
                   {course.review_count.toLocaleString()}{" "}
                   {isReady ? t("courseCard.ratings") : "ratings"}
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-white/10 text-xs">
+                <span className="px-2 py-0.5 rounded-full bg-white/10 text-[11px] whitespace-nowrap truncate max-w-[140px] md:max-w-none">
                   {course.course_type}
                 </span>
               </div>
 
-              <div className="flex items-center gap-3 mb-6">
-                <span className="text-3xl font-bold">
+              <div className="mt-5 h-10 flex items-center gap-3">
+                <span className="text-3xl font-bold leading-none shrink-0">
                   {formatPriceInGel(course.price)}
                 </span>
                 {hasDiscount && (
                   <>
-                    <span className="text-charcoal-400 line-through text-lg">
+                    <span className="text-charcoal-400 line-through text-base md:text-lg shrink-0">
                       {formatPriceInGel(course.original_price!)}
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-red-500/20 text-red-300 text-sm font-semibold">
+                    <span className="px-2 py-0.5 rounded-md bg-red-500/20 text-red-300 text-xs md:text-sm font-semibold shrink-0">
                       -{discountPercent}%
                     </span>
                   </>
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-3">
+              <div className="mt-auto pt-6 flex flex-wrap gap-3">
                 {role === "lecturer" ? (
                   <Link
                     href="/lecturer/dashboard"
-                    className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition-colors"
+                    className="inline-flex items-center justify-center h-11 px-6 rounded-xl bg-white text-charcoal-950 hover:bg-gray-200 font-semibold transition-colors"
                   >
                     {isReady
                       ? t("home.featuredCarousel.lecturerCta")
@@ -136,7 +136,7 @@ export default function FeaturedCoursesHero() {
                 ) : (
                   <Link
                     href={enrollmentHref}
-                    className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-white text-charcoal-950 hover:bg-gray-200 font-semibold transition-colors"
+                    className="inline-flex items-center justify-center h-11 px-6 rounded-xl bg-white text-charcoal-950 hover:bg-gray-200 font-semibold transition-colors"
                   >
                     {isReady
                       ? t("home.featuredCarousel.primaryCta")
@@ -145,7 +145,7 @@ export default function FeaturedCoursesHero() {
                 )}
                 <Link
                   href="/courses"
-                  className="inline-flex items-center justify-center px-6 py-3 rounded-lg border border-white/30 text-white hover:bg-white/10 font-medium transition-colors"
+                  className="inline-flex items-center justify-center h-11 px-6 rounded-xl border border-white/30 text-white hover:bg-white/10 font-medium transition-colors"
                 >
                   {isReady
                     ? t("home.featuredCarousel.secondaryCta")
@@ -154,20 +154,16 @@ export default function FeaturedCoursesHero() {
               </div>
             </div>
 
-            <div className="relative bg-charcoal-900 dark:bg-navy-950">
+            <div className="relative h-full bg-charcoal-950 dark:bg-navy-900 p-4 md:p-6">
               {course.thumbnail_url ? (
                 <img
                   src={course.thumbnail_url}
                   alt={course.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover rounded-2xl"
                   loading="eager"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-emerald-500/20 to-charcoal-900 flex items-center justify-center text-white/70">
-                  {isReady
-                    ? t("home.featuredCarousel.imageFallback")
-                    : "Course preview"}
-                </div>
+                <div className="w-full h-full bg-gradient-to-br from-emerald-500/10 via-charcoal-900 to-charcoal-950 dark:from-emerald-500/10 dark:via-navy-950 dark:to-navy-900 rounded-2xl" />
               )}
             </div>
           </div>
@@ -184,13 +180,13 @@ export default function FeaturedCoursesHero() {
                     featuredCourses.length,
                 )
               }
-              className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/90 text-charcoal-900 items-center justify-center shadow-soft hover:bg-white transition-colors"
+              className="hidden md:flex absolute left-0 lg:-left-6 xl:-left-8 top-1/2 -translate-y-1/2 z-20 w-10 h-10 lg:w-12 lg:h-12 rounded-full border-2 border-white/30 bg-transparent text-white items-center justify-center hover:border-white/60 hover:bg-white/10 transition-all duration-200"
               aria-label={
                 isReady ? t("home.featuredCarousel.previous") : "Previous"
               }
             >
               <svg
-                className="w-5 h-5"
+                className="w-4 h-4 lg:w-5 lg:h-5"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -208,11 +204,11 @@ export default function FeaturedCoursesHero() {
               onClick={() =>
                 setCurrentIndex((prev) => (prev + 1) % featuredCourses.length)
               }
-              className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/90 text-charcoal-900 items-center justify-center shadow-soft hover:bg-white transition-colors"
+              className="hidden md:flex absolute right-0 lg:-right-6 xl:-right-8 top-1/2 -translate-y-1/2 z-20 w-10 h-10 lg:w-12 lg:h-12 rounded-full border-2 border-white/30 bg-transparent text-white items-center justify-center hover:border-white/60 hover:bg-white/10 transition-all duration-200"
               aria-label={isReady ? t("home.featuredCarousel.next") : "Next"}
             >
               <svg
-                className="w-5 h-5"
+                className="w-4 h-4 lg:w-5 lg:h-5"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -235,10 +231,10 @@ export default function FeaturedCoursesHero() {
                 key={item.id}
                 type="button"
                 onClick={() => setCurrentIndex(index)}
-                className={`h-2 rounded-full transition-all ${
+                className={`rounded-full transition-all duration-200 ${
                   index === currentIndex
-                    ? "w-6 bg-charcoal-900 dark:bg-white"
-                    : "w-2 bg-charcoal-300 dark:bg-gray-600"
+                    ? "w-4 h-1.5 bg-white"
+                    : "w-1.5 h-1.5 bg-white/40 hover:bg-white/60"
                 }`}
                 aria-label={`${isReady ? t("home.featuredCarousel.goToSlide") : "Go to slide"} ${index + 1}`}
               />
