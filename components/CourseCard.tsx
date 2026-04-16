@@ -84,11 +84,6 @@ function CourseCard({
       ((safeOriginalPrice - safePrice) / safeOriginalPrice) * 100,
     );
   }, [safeOriginalPrice, safePrice]);
-  const ratingPercent = useMemo(() => {
-    if (!course.rating || course.rating <= 0) return null;
-    return Math.round((Math.min(5, course.rating) / 5) * 100);
-  }, [course.rating]);
-
   const handleThumbnailClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -373,7 +368,7 @@ function CourseCard({
               {course.author}
             </p>
 
-            {/* Badges: Course Type (prominent), Bestseller, Rating, Reviews */}
+            {/* Badges: Course Type and bestseller only */}
             <div className="flex flex-wrap items-center gap-2">
               {/* Course Type Badge - Prominent with color and icon */}
               <span
@@ -386,30 +381,6 @@ function CourseCard({
               {course.is_bestseller && (
                 <span className="bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-medium px-2 py-0.5 rounded-md">
                   {t("courseCard.bestseller")}
-                </span>
-              )}
-              {course.rating > 0 && (
-                <span className="bg-white dark:bg-navy-700 border border-charcoal-100 dark:border-navy-600 text-charcoal-600 dark:text-gray-300 text-[10px] font-medium px-2 py-0.5 rounded-md flex items-center space-x-1">
-                  <svg
-                    className="w-2.5 h-2.5 text-emerald-500 dark:text-emerald-400 fill-current"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                  </svg>
-                  <span>{course.rating.toFixed(1)}</span>
-                </span>
-              )}
-              {ratingPercent !== null && (
-                <span className="bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-semibold px-2 py-0.5 rounded-md">
-                  {ratingPercent}% {t("courseCard.positive")}
-                </span>
-              )}
-              {course.review_count > 0 && (
-                <span className="bg-white dark:bg-navy-700 border border-charcoal-100 dark:border-navy-600 text-charcoal-600 dark:text-gray-300 text-[10px] font-medium px-2 py-0.5 rounded-md">
-                  {course.review_count.toLocaleString()}{" "}
-                  {course.review_count === 1
-                    ? t("courseCard.rating")
-                    : t("courseCard.ratings")}
                 </span>
               )}
             </div>

@@ -88,20 +88,6 @@ export default function FeaturedCoursesHero() {
               </p>
 
               <div className="mt-5 h-7 flex items-center gap-2.5 text-xs md:text-sm text-charcoal-300 overflow-hidden">
-                <span className="inline-flex items-center gap-1 shrink-0">
-                  <svg
-                    className="w-3.5 h-3.5 text-emerald-400"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.08 3.324a1 1 0 00.95.69h3.494c.969 0 1.371 1.24.588 1.81l-2.827 2.055a1 1 0 00-.364 1.118l1.08 3.323c.3.922-.755 1.688-1.54 1.118l-2.827-2.055a1 1 0 00-1.176 0l-2.827 2.055c-.784.57-1.838-.196-1.539-1.118l1.08-3.323a1 1 0 00-.364-1.118L2.98 8.75c-.783-.57-.38-1.81.588-1.81h3.494a1 1 0 00.95-.69l1.08-3.324z" />
-                  </svg>
-                  {course.rating > 0 ? course.rating.toFixed(1) : "4.8"}
-                </span>
-                <span className="shrink-0">
-                  {course.review_count.toLocaleString()}{" "}
-                  {isReady ? t("courseCard.ratings") : "ratings"}
-                </span>
                 <span className="px-2 py-0.5 rounded-full bg-white/10 text-[11px] whitespace-nowrap truncate max-w-[140px] md:max-w-none">
                   {course.course_type}
                 </span>
