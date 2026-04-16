@@ -205,6 +205,17 @@
         }
       }
     },
+    "featuredCarousel": {
+      "badge": "Featured Course",
+      "defaultDescription": "Learn practical digital skills with expert guidance and real outcomes.",
+      "primaryCta": "Enroll now",
+      "secondaryCta": "Browse courses",
+      "lecturerCta": "Open Dashboard",
+      "imageFallback": "Course preview",
+      "previous": "Previous course",
+      "next": "Next course",
+      "goToSlide": "Go to slide"
+    },
     "finalCta": {
       "title": "Ready to start learning and earning?",
       "subtitle": "Join the students already building practical digital skills on Swavleba.",
