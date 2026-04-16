@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import Footer from "@/components/Footer";
 import PromoBanner from "@/components/landing/PromoBanner";
-import CompactHero from "@/components/landing/CompactHero";
 import TrustStrip from "@/components/landing/TrustStrip";
 import ValuePropsGrid from "@/components/landing/ValuePropsGrid";
 import SocialProofStats from "@/components/landing/SocialProofStats";
@@ -46,6 +45,21 @@ const ActiveProjectsCarousel = dynamic(
   },
 );
 
+const FeaturedCoursesHero = dynamic(
+  () => import("@/components/landing/FeaturedCoursesHero"),
+  {
+    loading: () => (
+      <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+          </div>
+        </div>
+      </section>
+    ),
+  },
+);
+
 export default function Home() {
   const router = useRouter();
   const { role: userRole, isLoading: userLoading } = useUser();
@@ -62,7 +76,7 @@ export default function Home() {
       <PromoBanner />
       <Navigation />
       <div className="relative z-10 flex-1">
-        <CompactHero />
+        <FeaturedCoursesHero />
         <TrustStrip />
         <LandingCourseShowcase />
         <ValuePropsGrid />
