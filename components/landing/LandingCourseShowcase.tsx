@@ -1,26 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useCourses } from "@/hooks/useCourses";
 import { useEnrollments } from "@/hooks/useEnrollments";
 import { useUser } from "@/hooks/useUser";
 import CourseEnrollmentCard from "@/components/CourseEnrollmentCard";
+import ProjectCard from "@/components/ProjectCard";
+import ProjectDetailsModal from "@/components/ProjectDetailsModal";
 import { useI18n } from "@/contexts/I18nContext";
 import { ScrollReveal } from "@/components/ScrollReveal";
-
-const categoryOrder = [
-  { key: "editing", type: "Editing" },
-  { key: "contentCreation", type: "Content Creation" },
-  { key: "websiteCreation", type: "Website Creation" },
-] as const;
+import {
+  useActiveProjects,
+  type ActiveProject,
+} from "@/hooks/useActiveProjects";
 
 export default function LandingCourseShowcase() {
   const { t } = useI18n();
   const { user } = useUser();
-  const { courses, isLoading, error } = useCourses("All");
+  const { courses, isLoading, error: courseError } = useCourses("All");
+  const {
+    projects,
+    isLoading: projectsLoading,
+    error: projectsError,
+  } = useActiveProjects();
   const { enrolledCourseIds, getEnrollmentInfo } = useEnrollments(
     user?.id || null,
+  );
+  const [selectedProject, setSelectedProject] = useState<ActiveProject | null>(
+    null,
   );
 
   const popularCourses = useMemo(() => {
@@ -45,17 +53,6 @@ export default function LandingCourseShowcase() {
       .map((item) => item.course);
   }, [courses]);
 
-  const groupedCourses = useMemo(
-    () =>
-      categoryOrder.map((entry) => ({
-        ...entry,
-        courses: courses
-          .filter((course) => course.course_type === entry.type)
-          .slice(0, 8),
-      })),
-    [courses],
-  );
-
   if (isLoading && courses.length === 0) {
     return (
       <section className="px-4 sm:px-6 lg:px-8 pb-20 md:pb-28">
@@ -68,7 +65,7 @@ export default function LandingCourseShowcase() {
     );
   }
 
-  if (error) {
+  if (courseError) {
     return (
       <section className="px-4 sm:px-6 lg:px-8 pb-20 md:pb-28">
         <div className="max-w-7xl mx-auto">
@@ -77,7 +74,7 @@ export default function LandingCourseShowcase() {
               {t("home.courseShowcase.errorTitle")}
             </p>
             <p className="text-sm">
-              {error.message || t("home.courseShowcase.errorBody")}
+              {courseError.message || t("home.courseShowcase.errorBody")}
             </p>
           </div>
         </div>
@@ -139,48 +136,66 @@ export default function LandingCourseShowcase() {
           </div>
         </div>
 
-        {groupedCourses.map((group) => (
-          <div key={group.type}>
-            <div className="flex items-end justify-between mb-5">
-              <div>
-                <h3 className="text-xl md:text-2xl font-bold text-charcoal-950 dark:text-white">
-                  {t(`home.courseShowcase.rows.${group.key}.title`)}
-                </h3>
-                <p className="text-sm text-charcoal-500 dark:text-gray-400 mt-1">
-                  {t(`home.courseShowcase.rows.${group.key}.subtitle`)}
-                </p>
-              </div>
-              <Link
-                href={`/courses?filter=${encodeURIComponent(group.type)}`}
-                className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500"
-              >
-                {t("home.courseShowcase.viewCategory")}
-              </Link>
+        <div>
+          <div className="flex items-end justify-between mb-5">
+            <div>
+              <h3 className="text-xl md:text-2xl font-bold text-charcoal-950 dark:text-white">
+                {t("activeProjects.title")}
+              </h3>
+              <p className="text-sm text-charcoal-500 dark:text-gray-400 mt-1">
+                {t("projectsPage.subtitle")}
+              </p>
             </div>
-            <div className="flex gap-5 overflow-x-auto pb-2 snap-x scrollbar-thin">
-              {group.courses.map((course) => {
-                const enrollmentInfo = getEnrollmentInfo(course.id);
-                return (
-                  <div
-                    key={course.id}
-                    className="min-w-[280px] max-w-[320px] snap-start flex-1"
-                  >
-                    <CourseEnrollmentCard
-                      course={course}
-                      isEnrolled={enrolledCourseIds.has(course.id)}
-                      showEnrollButton={true}
-                      userId={user?.id || null}
-                      isExpired={enrollmentInfo?.isExpired}
-                      expiresAt={enrollmentInfo?.expiresAt}
-                      daysRemaining={enrollmentInfo?.daysRemaining}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+            <Link
+              href="/projects"
+              className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500"
+            >
+              {t("nav.projects")}
+            </Link>
           </div>
-        ))}
+
+          {projectsLoading && projects.length === 0 ? (
+            <div className="flex items-center justify-center py-10">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+            </div>
+          ) : projectsError ? (
+            <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 text-red-700 dark:text-red-400 px-6 py-4 rounded-2xl text-center shadow-soft">
+              <p className="font-medium mb-1">
+                {t("activeProjects.errorLoading")}
+              </p>
+              <p className="text-sm">
+                {projectsError.message || t("activeProjects.errorMessage")}
+              </p>
+            </div>
+          ) : projects.length > 0 ? (
+            <div className="flex gap-5 overflow-x-auto pb-2 snap-x scrollbar-thin">
+              {projects.slice(0, 8).map((project) => (
+                <div
+                  key={project.id}
+                  className="min-w-[280px] max-w-[320px] snap-start flex-1"
+                >
+                  <ProjectCard
+                    project={project}
+                    onClick={() => setSelectedProject(project)}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10 bg-white/60 dark:bg-navy-800/60 border border-charcoal-100/50 dark:border-navy-700/50 rounded-2xl">
+              <p className="text-charcoal-600 dark:text-gray-300">
+                {t("projectsPage.noProjects")}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
+
+      <ProjectDetailsModal
+        project={selectedProject}
+        isOpen={!!selectedProject}
+        onClose={() => setSelectedProject(null)}
+      />
     </section>
   );
 }
