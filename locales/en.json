@@ -55,7 +55,161 @@
     "coursesAvailable": "courses available",
     "loadingCourses": "Loading courses...",
     "errorLoadingCourses": "Error loading courses",
-    "errorMessage": "Failed to load courses. Please check your connection and try again."
+    "errorMessage": "Failed to load courses. Please check your connection and try again.",
+    "promo": {
+      "message": "This offer will not last long - special enrollment pricing is live now",
+      "cta": "View Courses",
+      "dismiss": "Dismiss promotional banner",
+      "days": "days",
+      "hours": "hours",
+      "minutes": "mins",
+      "seconds": "secs"
+    },
+    "hero": {
+      "title": "Learn by doing. Start earning with practical skills.",
+      "subtitle": "Explore top courses in editing, content creation, and web development taught by experts.",
+      "searchPlaceholder": "Search courses, instructors, or skills",
+      "searchCta": "Search",
+      "secondaryCta": "Browse Courses",
+      "primaryGuest": "Join for Free",
+      "primaryAdmin": "Open Admin Panel",
+      "primaryLecturer": "Open Dashboard",
+      "primaryStudent": "Enroll in Courses",
+      "category": {
+        "editing": "Editing",
+        "contentCreation": "Content Creation",
+        "websiteCreation": "Website Creation"
+      }
+    },
+    "trustStrip": {
+      "secure": "Secure Payments",
+      "instructors": "Expert Instructors",
+      "pace": "Learn at Your Pace",
+      "community": "Active Community"
+    },
+    "courseShowcase": {
+      "title": "Popular Courses",
+      "subtitle": "Compare quickly, choose confidently, and enroll in minutes.",
+      "popularTitle": "Top picks this week",
+      "popularSubtitle": "High-rated and high-demand courses",
+      "viewAll": "View all courses",
+      "viewCategory": "View category",
+      "errorTitle": "Unable to load courses",
+      "errorBody": "Please refresh and try again.",
+      "rows": {
+        "editing": {
+          "title": "Editing Courses",
+          "subtitle": "Master storytelling, pacing, and polished visuals"
+        },
+        "contentCreation": {
+          "title": "Content Creation Courses",
+          "subtitle": "Build content systems that grow audience and income"
+        },
+        "websiteCreation": {
+          "title": "Website Creation Courses",
+          "subtitle": "Learn to launch modern websites from scratch"
+        }
+      }
+    },
+    "valueGrid": {
+      "title": "What you get with Swavleba",
+      "subtitle": "Everything you need to learn faster and convert skills into income",
+      "items": {
+        "selfPaced": {
+          "title": "Self-paced learning",
+          "description": "Study on your schedule and revisit lessons whenever needed."
+        },
+        "projects": {
+          "title": "Hands-on projects",
+          "description": "Practice with real tasks and build portfolio-ready work."
+        },
+        "experts": {
+          "title": "Expert instructors",
+          "description": "Learn from professionals with real market experience."
+        },
+        "community": {
+          "title": "Student community",
+          "description": "Get support, feedback, and motivation from peers."
+        },
+        "support": {
+          "title": "Live support channels",
+          "description": "Ask questions and get help while you learn."
+        },
+        "bilingual": {
+          "title": "Georgian and English",
+          "description": "Choose the language that helps you learn best."
+        },
+        "secure": {
+          "title": "Secure enrollments",
+          "description": "Trusted payment and transparent enrollment process."
+        },
+        "earn": {
+          "title": "Learn to earn",
+          "description": "Focus on practical skills designed for income outcomes."
+        }
+      }
+    },
+    "socialProof": {
+      "students": "Students Registered",
+      "courses": "Professional Courses",
+      "satisfaction": "Student Satisfaction"
+    },
+    "testimonials": {
+      "title": "What our students say",
+      "subtitle": "Real stories from learners already taking action",
+      "items": {
+        "one": {
+          "quote": "The course structure made everything clear. I stopped jumping between random tutorials and finally started finishing projects.",
+          "name": "Nino K.",
+          "meta": "Editing student"
+        },
+        "two": {
+          "quote": "I enrolled for content creation and got practical feedback fast. It gave me confidence to publish consistently.",
+          "name": "Giorgi M.",
+          "meta": "Content Creation student"
+        },
+        "three": {
+          "quote": "The web development path is very practical. I built and launched my first client website after completing the modules.",
+          "name": "Luka T.",
+          "meta": "Website Creation student"
+        }
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "subtitle": "Everything you need before enrollment",
+      "items": {
+        "coursesWork": {
+          "question": "How do courses work?",
+          "answer": "After enrollment, you get access to course content and can progress at your own pace."
+        },
+        "paymentMethods": {
+          "question": "What payment methods are supported?",
+          "answer": "You can pay using the available payment options shown during the enrollment process."
+        },
+        "refunds": {
+          "question": "Can I get a refund?",
+          "answer": "Please review our refund policy page for the latest terms and conditions."
+        },
+        "access": {
+          "question": "How long do I have access?",
+          "answer": "Access depends on your enrollment period. Active and expiry status are shown on your course cards."
+        },
+        "earnings": {
+          "question": "Can I earn money after learning?",
+          "answer": "Yes. The platform focuses on practical skills and projects to help you move toward paid outcomes."
+        },
+        "support": {
+          "question": "Is support available if I get stuck?",
+          "answer": "Yes. You can use chat and platform support resources whenever you need guidance."
+        }
+      }
+    },
+    "finalCta": {
+      "title": "Ready to start learning and earning?",
+      "subtitle": "Join the students already building practical digital skills on Swavleba.",
+      "button": "Start Enrollment"
+    }
   },
   "courses": {
     "ourCourses": "Our Courses",
@@ -239,7 +393,8 @@
   "courseCard": {
     "bestseller": "Bestseller",
     "rating": "rating",
-    "ratings": "ratings"
+    "ratings": "ratings",
+    "positive": "positive"
   },
   "videoSection": {
     "enrollNow": "Enroll Now",

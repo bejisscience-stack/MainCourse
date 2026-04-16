@@ -1,48 +1,88 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect } from 'react';
-import ProjectCard from '@/components/ProjectCard';
-import ProjectDetailsModal from '@/components/ProjectDetailsModal';
-import { useActiveProjects, type ActiveProject } from '@/hooks/useActiveProjects';
-import { useI18n } from '@/contexts/I18nContext';
-import { ScrollReveal } from './ScrollReveal';
+import { useState, useCallback, useEffect, useRef } from "react";
+import ProjectCard from "@/components/ProjectCard";
+import ProjectDetailsModal from "@/components/ProjectDetailsModal";
+import {
+  useActiveProjects,
+  type ActiveProject,
+} from "@/hooks/useActiveProjects";
+import { useI18n } from "@/contexts/I18nContext";
+import { ScrollReveal } from "./ScrollReveal";
 
 export default function ActiveProjectsCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAllMobile, setShowAllMobile] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<ActiveProject | null>(null);
+  const [slidesPerView, setSlidesPerView] = useState(3);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [selectedProject, setSelectedProject] = useState<ActiveProject | null>(
+    null,
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { projects, isLoading, error: projectsError } = useActiveProjects();
   const { t, isReady: translationsReady } = useI18n();
 
-  // Reset currentIndex when projects change
   useEffect(() => {
-    if (projects.length > 0 && currentIndex >= projects.length) {
-      setCurrentIndex(0);
-    }
-  }, [projects.length, currentIndex]);
+    const lgQuery = window.matchMedia("(min-width: 1280px)");
+    const mdQuery = window.matchMedia("(min-width: 1024px)");
+    const handleChange = () => {
+      if (lgQuery.matches) {
+        setSlidesPerView(3);
+      } else if (mdQuery.matches) {
+        setSlidesPerView(2);
+      } else {
+        setSlidesPerView(1);
+      }
+    };
+    handleChange();
+    lgQuery.addEventListener("change", handleChange);
+    mdQuery.addEventListener("change", handleChange);
+    return () => {
+      lgQuery.removeEventListener("change", handleChange);
+      mdQuery.removeEventListener("change", handleChange);
+    };
+  }, []);
 
-  // Auto-rotation every 4 seconds when not hovered
   useEffect(() => {
-    if (projects.length < 2) return;
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const max = Math.max(0, projects.length - slidesPerView);
+    if (currentIndex > max) {
+      setCurrentIndex(max);
+    }
+  }, [projects.length, slidesPerView, currentIndex]);
+
+  useEffect(() => {
+    if (projects.length <= slidesPerView) return;
+    const maxIdx = Math.max(0, projects.length - slidesPerView);
     const interval = setInterval(() => {
       if (!isHovered) {
-        setCurrentIndex(prev => (prev + 1) % projects.length);
+        setCurrentIndex((prev) => (prev < maxIdx ? prev + 1 : 0));
       }
-    }, 4000);
+    }, 5000);
     return () => clearInterval(interval);
-  }, [isHovered, projects.length]);
+  }, [isHovered, projects.length, slidesPerView]);
 
   const handlePrevious = useCallback(() => {
-    if (projects.length === 0) return;
-    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : projects.length - 1));
-  }, [projects.length]);
+    const maxIdx = Math.max(0, projects.length - slidesPerView);
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : maxIdx));
+  }, [projects.length, slidesPerView]);
 
   const handleNext = useCallback(() => {
-    if (projects.length === 0) return;
-    setCurrentIndex((prev) => (prev < projects.length - 1 ? prev + 1 : 0));
-  }, [projects.length]);
+    const maxIdx = Math.max(0, projects.length - slidesPerView);
+    setCurrentIndex((prev) => (prev < maxIdx ? prev + 1 : 0));
+  }, [projects.length, slidesPerView]);
 
   const handleProjectClick = useCallback((project: ActiveProject) => {
     setSelectedProject(project);
@@ -54,23 +94,18 @@ export default function ActiveProjectsCarousel() {
     setSelectedProject(null);
   }, []);
 
-  // Show loading only when we have no data yet - don't block content
   if (isLoading && projects.length === 0) {
     return (
       <section className="px-4 sm:px-6 lg:px-8 pb-24 md:pb-32">
         <div className="max-w-7xl mx-auto">
           <ScrollReveal delay={0} duration={600}>
             <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white text-center mb-12 tracking-tight">
-              {t('activeProjects.title')}
+              {t("activeProjects.title")}
             </h2>
           </ScrollReveal>
-          <ScrollReveal delay={100} duration={600}>
-            <div className="flex items-center justify-center">
-              <div className="text-charcoal-500 dark:text-gray-400">
-                {translationsReady ? t('activeProjects.loading') : 'Loading projects...'}
-              </div>
-            </div>
-          </ScrollReveal>
+          <div className="flex items-center justify-center py-6">
+            <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500" />
+          </div>
         </div>
       </section>
     );
@@ -82,44 +117,48 @@ export default function ActiveProjectsCarousel() {
         <div className="max-w-7xl mx-auto">
           <ScrollReveal delay={0} duration={600}>
             <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white text-center mb-12 tracking-tight">
-              {translationsReady ? t('activeProjects.title') : 'Active Projects'}
+              {translationsReady
+                ? t("activeProjects.title")
+                : "Active Projects"}
             </h2>
           </ScrollReveal>
-          <ScrollReveal delay={100} duration={600}>
-            <div className="flex flex-col items-center justify-center">
-              <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 text-red-700 dark:text-red-400 px-6 py-4 rounded-2xl max-w-md text-center shadow-soft">
-                <p className="font-medium mb-2">
-                  {translationsReady ? t('activeProjects.errorLoading') : 'Error Loading Projects'}
-                </p>
-                <p className="text-sm mb-4 text-red-600 dark:text-red-400">
-                  {projectsError.message || (translationsReady ? t('activeProjects.errorMessage') : 'An error occurred')}
-                </p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="bg-charcoal-950 dark:bg-emerald-500 text-white px-5 py-2 rounded-full font-medium hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft text-sm"
-                >
-                  {translationsReady ? t('common.retry') : 'Retry'}
-                </button>
-              </div>
-            </div>
-          </ScrollReveal>
+          <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 text-red-700 dark:text-red-400 px-6 py-4 rounded-2xl max-w-md text-center shadow-soft mx-auto">
+            <p className="font-medium mb-2">
+              {translationsReady
+                ? t("activeProjects.errorLoading")
+                : "Error Loading Projects"}
+            </p>
+            <p className="text-sm mb-4 text-red-600 dark:text-red-400">
+              {projectsError.message ||
+                (translationsReady
+                  ? t("activeProjects.errorMessage")
+                  : "An error occurred")}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-charcoal-950 dark:bg-emerald-500 text-white px-5 py-2 rounded-full font-medium hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft text-sm"
+            >
+              {translationsReady ? t("common.retry") : "Retry"}
+            </button>
+          </div>
         </div>
       </section>
     );
   }
 
-  // Don't show section if no active projects
   if (projects.length === 0) {
     return null;
   }
 
-  const safeCurrentIndex = Math.min(currentIndex, Math.max(0, projects.length - 1));
-  const showArrows = projects.length >= 2;
-
-  // 3D ring calculations
-  const anglePerItem = 360 / projects.length;
-  const ringRotation = -safeCurrentIndex * anglePerItem;
-  const radius = Math.max(420, Math.round((300 * projects.length) / (2 * Math.PI)) + 60);
+  const gap = 20;
+  const cardWidth =
+    containerWidth > 0
+      ? (containerWidth - (slidesPerView - 1) * gap) / slidesPerView
+      : 0;
+  const maxIndex = Math.max(0, projects.length - slidesPerView);
+  const safeCurrentIndex = Math.min(currentIndex, maxIndex);
+  const showArrows = projects.length > slidesPerView;
+  const translateX = -safeCurrentIndex * (cardWidth + gap);
 
   return (
     <>
@@ -128,149 +167,123 @@ export default function ActiveProjectsCarousel() {
           <ScrollReveal delay={0} duration={600}>
             <div className="text-center mb-12">
               <h2 className="inline-block text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white tracking-tight">
-                {translationsReady ? t('activeProjects.title') : 'Active Projects'}
+                {translationsReady
+                  ? t("activeProjects.title")
+                  : "Active Projects"}
               </h2>
               <p className="mt-3 text-lg text-charcoal-600 dark:text-gray-400">
-                {projects.length} {translationsReady ? t('activeProjects.projectsAvailable') : 'active projects available'}
+                {projects.length}{" "}
+                {translationsReady
+                  ? t("activeProjects.projectsAvailable")
+                  : "active projects available"}
               </p>
             </div>
           </ScrollReveal>
 
           <div className="relative">
-            {/* Mobile View: Vertical Stack — unchanged layout */}
-            <div className="md:hidden flex flex-col gap-6 px-4">
-              {projects.slice(0, showAllMobile ? undefined : 3).map((project) => (
-                <div key={project.id} className="w-full">
-                  <ProjectCard
-                    project={project}
-                    onClick={() => handleProjectClick(project)}
-                  />
-                </div>
-              ))}
-
+            <div className="md:hidden flex flex-col gap-6 px-1">
+              {projects
+                .slice(0, showAllMobile ? undefined : 3)
+                .map((project) => (
+                  <div key={project.id} className="w-full">
+                    <ProjectCard
+                      project={project}
+                      onClick={() => handleProjectClick(project)}
+                    />
+                  </div>
+                ))}
               {projects.length > 3 && (
-                <div className="flex justify-center mt-2">
+                <div className="flex justify-center mt-1">
                   <button
-                    onClick={() => setShowAllMobile(!showAllMobile)}
-                    className="px-6 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 bg-white dark:bg-navy-800 text-charcoal-600 dark:text-gray-300 border border-charcoal-200 dark:border-navy-700 hover:bg-gray-50 dark:hover:bg-navy-700 hover:text-charcoal-900 dark:hover:text-white shadow-sm flex items-center gap-2"
+                    onClick={() => setShowAllMobile((prev) => !prev)}
+                    className="px-6 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 bg-white dark:bg-navy-800 text-charcoal-600 dark:text-gray-300 border border-charcoal-200 dark:border-navy-700 hover:bg-gray-50 dark:hover:bg-navy-700 hover:text-charcoal-900 dark:hover:text-white shadow-sm"
                   >
-                    {showAllMobile ? (
-                      <>
-                        <span>{translationsReady ? t('common.showLess') : 'Show Less'}</span>
-                        <svg className="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </>
-                    ) : (
-                      <>
-                        <span>{translationsReady ? t('common.showMore') : 'Show More'}</span>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </>
-                    )}
+                    {showAllMobile
+                      ? translationsReady
+                        ? t("common.showLess")
+                        : "Show Less"
+                      : translationsReady
+                        ? t("common.showMore")
+                        : "Show More"}
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Desktop View: 3D Circular Gallery */}
             <div className="hidden md:block relative">
-              {/* Navigation Arrows */}
               {showArrows && (
                 <>
                   <button
                     onClick={handlePrevious}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 md:-translate-x-10 z-30 w-14 h-14 md:w-16 md:h-16 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl dark:shadow-glow-dark flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-charcoal-100/50 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 group will-change-transform"
-                    style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 z-20 w-12 h-12 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl border border-charcoal-200 dark:border-navy-700 flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/15 transition-colors"
                     aria-label="Previous project"
                   >
                     <svg
-                      className="w-6 h-6 md:w-7 md:h-7 text-charcoal-950 dark:text-white group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors duration-300"
+                      className="w-5 h-5 text-charcoal-800 dark:text-gray-100"
+                      viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
-                      viewBox="0 0 24 24"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M15 19l-7-7 7-7"
+                      />
                     </svg>
                   </button>
-
                   <button
                     onClick={handleNext}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 md:translate-x-10 z-30 w-14 h-14 md:w-16 md:h-16 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl dark:shadow-glow-dark flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-charcoal-100/50 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 group will-change-transform"
-                    style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 z-20 w-12 h-12 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl border border-charcoal-200 dark:border-navy-700 flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/15 transition-colors"
                     aria-label="Next project"
                   >
                     <svg
-                      className="w-6 h-6 md:w-7 md:h-7 text-charcoal-950 dark:text-white group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors duration-300"
+                      className="w-5 h-5 text-charcoal-800 dark:text-gray-100"
+                      viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
-                      viewBox="0 0 24 24"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M9 5l7 7-7 7"
+                      />
                     </svg>
                   </button>
                 </>
               )}
 
-              {/* 3D Ring — perspective container */}
               <div
-                style={{ perspective: '2000px', height: '520px', position: 'relative' }}
+                ref={containerRef}
+                className="overflow-hidden"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
               >
-                {/* Rotating ring */}
                 <div
+                  className="flex gap-5"
                   style={{
-                    position: 'absolute',
-                    width: '100%',
-                    height: '100%',
-                    transformStyle: 'preserve-3d',
-                    transform: `rotateY(${ringRotation}deg)`,
-                    transition: 'transform 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transform: `translateX(${translateX}px)`,
+                    transition: "transform 450ms ease-in-out",
                   }}
                 >
-                  {projects.map((project, i) => {
-                    // Angular distance from the front face (0° = front)
-                    const cardAngle = ((i * anglePerItem) + ringRotation + 360) % 360;
-                    const normalizedAngle = cardAngle > 180 ? 360 - cardAngle : cardAngle;
-                    // Front half (<90°) fully visible; 90–120° fade out; back half (>120°) hidden
-                    const opacity =
-                      normalizedAngle < 90 ? 1 :
-                      normalizedAngle > 120 ? 0 :
-                      (120 - normalizedAngle) / 30;
-
-                    const isFront = i === safeCurrentIndex;
-
-                    return (
-                      <div
-                        key={project.id}
-                        style={{
-                          position: 'absolute',
-                          width: '300px',
-                          left: '50%',
-                          top: '50%',
-                          marginLeft: '-150px',
-                          marginTop: '-210px',
-                          transform: `rotateY(${i * anglePerItem}deg) translateZ(${radius}px)`,
-                          opacity,
-                          pointerEvents: opacity > 0.1 ? 'auto' : 'none',
-                          transition: 'opacity 0.3s ease',
-                          cursor: isFront ? 'pointer' : opacity > 0.1 ? 'pointer' : 'default',
-                        }}
-                        onClick={() => {
-                          if (isFront) {
-                            handleProjectClick(project);
-                          } else if (opacity > 0.1) {
-                            setCurrentIndex(i);
-                          }
-                        }}
-                      >
-                        {/* Pass undefined onClick — click handled by wrapper div above */}
-                        <ProjectCard project={project} onClick={undefined} />
-                      </div>
-                    );
-                  })}
+                  {projects.map((project) => (
+                    <div
+                      key={project.id}
+                      className="flex-shrink-0"
+                      style={{
+                        width:
+                          cardWidth > 0
+                            ? `${cardWidth}px`
+                            : `calc((100% - ${(slidesPerView - 1) * gap}px) / ${slidesPerView})`,
+                      }}
+                    >
+                      <ProjectCard
+                        project={project}
+                        onClick={() => handleProjectClick(project)}
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -278,7 +291,6 @@ export default function ActiveProjectsCarousel() {
         </div>
       </section>
 
-      {/* Project Details Modal */}
       <ProjectDetailsModal
         project={selectedProject}
         isOpen={isModalOpen}
