@@ -61,16 +61,42 @@ function LecturesChannel({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Prefetch signed URLs for unlocked videos when the list loads
+  // Prefetch signed URLs for unlocked videos lazily via IntersectionObserver
+  const prefetchedRef = useRef<Set<string>>(new Set());
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
   useEffect(() => {
     if (!videos.length) return;
-    const unlocked = videos.filter((_, i) => isVideoUnlocked(i));
-    // Prefetch first 5 unlocked videos, staggered to avoid API burst
-    unlocked.slice(0, 5).forEach((video, i) => {
-      setTimeout(() => {
-        prefetchSignedUrl(courseId, video.videoUrl);
-      }, i * 200);
-    });
+
+    // Prefetch only the first unlocked video immediately for fast first paint
+    const firstUnlocked = videos.find((_, i) => isVideoUnlocked(i));
+    if (firstUnlocked && !prefetchedRef.current.has(firstUnlocked.videoUrl)) {
+      prefetchedRef.current.add(firstUnlocked.videoUrl);
+      prefetchSignedUrl(courseId, firstUnlocked.videoUrl);
+    }
+
+    // Lazy prefetch the rest as they scroll into view
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const videoUrl = (entry.target as HTMLElement).dataset.videoUrl;
+            if (videoUrl && !prefetchedRef.current.has(videoUrl)) {
+              prefetchedRef.current.add(videoUrl);
+              prefetchSignedUrl(courseId, videoUrl);
+            }
+            observerRef.current?.unobserve(entry.target);
+          }
+        });
+      },
+      { rootMargin: "200px" },
+    );
+
+    // Observe all unlocked video card elements
+    const cards = document.querySelectorAll("[data-video-url]");
+    cards.forEach((card) => observerRef.current?.observe(card));
+
+    return () => observerRef.current?.disconnect();
   }, [videos, courseId]);
 
   const getProgressPercentage = (video: Video) => {
@@ -352,6 +378,7 @@ function VideoCard({
           : "bg-navy-900/30 border border-navy-800/50 opacity-60"
       }`}
       onClick={() => !showMenu && onPlay()}
+      data-video-url={unlocked ? video.videoUrl : undefined}
     >
       {/* Thumbnail */}
       <div className="relative w-full sm:w-56 h-40 sm:h-32 flex-shrink-0 rounded-xl overflow-hidden bg-navy-950/70 border border-navy-800/60">

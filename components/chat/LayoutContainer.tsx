@@ -71,6 +71,17 @@ export default function LayoutContainer({
   const { user, profile } = useUser();
   const { t } = useI18n();
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [mobileMenuOpen]);
+
   // DM & Friends hooks
   const { friends, refetch: refetchFriends } = useFriends();
   const {
@@ -259,7 +270,7 @@ export default function LayoutContainer({
       {/* Mobile Menu Overlay / Backdrop */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm touch-none"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
