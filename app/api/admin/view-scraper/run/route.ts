@@ -4,7 +4,8 @@ import {
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { logAdminAction } from "@/lib/audit-log";
-import { isValidUUID } from "@/lib/validation";
+import { scraperRunSchema } from "@/lib/schemas";
+import { adminLimiter, rateLimitResponse, getClientIP } from "@/lib/rate-limit";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -34,14 +35,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const body = await request.json().catch(() => ({}));
+    const rl = await adminLimiter.check(getClientIP(request));
+    if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
-    if (body.project_id && !isValidUUID(body.project_id)) {
+    const rawBody = await request.json().catch(() => ({}));
+    const parsed = scraperRunSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid project_id" },
+        { error: "Invalid request body" },
         { status: 400 },
       );
     }
+    const body = parsed.data;
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 

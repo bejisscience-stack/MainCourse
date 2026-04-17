@@ -45,3 +45,27 @@ export const completeProfileSchema = z.object({
     .regex(/^[a-zA-Z0-9_]+$/),
   role: z.enum(["student", "lecturer"]),
 });
+
+export const scraperRunSchema = z.object({
+  project_id: z.string().uuid().optional().nullable(),
+});
+
+export const profileUpdateSchema = z
+  .object({
+    username: z
+      .string()
+      .trim()
+      .min(3)
+      .max(30)
+      .regex(/^[a-zA-Z0-9_]+$/)
+      .optional(),
+    avatar_url: z
+      .string()
+      .regex(/^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\//)
+      .nullable()
+      .optional(),
+  })
+  .refine(
+    (data) => data.username !== undefined || data.avatar_url !== undefined,
+    { message: "No fields to update" },
+  );

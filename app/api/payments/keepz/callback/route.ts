@@ -49,11 +49,28 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true }, { status: 200 });
       }
     } else {
-      // IP allowlist not configured — warn and continue.
-      // RSA-encrypted payload decryption is the primary authentication;
-      // IP allowlist is defense-in-depth only (Keepz uses Cloudflare, IPs vary).
+      // IP allowlist not configured. Behavior depends on environment:
+      // - Production: FAIL CLOSED. We still return 200 (Keepz retries on non-2xx),
+      //   but we audit the misconfiguration and stop processing the callback. This
+      //   enforces defense-in-depth: RSA decryption alone is not acceptable in prod.
+      // - Dev/staging: warn and continue. RSA decryption still authenticates the payload.
+      if (process.env.NODE_ENV === "production") {
+        console.error(
+          "[Keepz Callback] CRITICAL: KEEPZ_ALLOWED_IPS unset in production — callback rejected",
+          { ip: clientIP },
+        );
+        await auditLog(
+          supabase,
+          null,
+          null,
+          null,
+          "callback_misconfigured_no_ip_allowlist",
+          { ip: clientIP, env: "production" },
+        );
+        return NextResponse.json({ received: true }, { status: 200 });
+      }
       console.warn(
-        "[Keepz Callback] KEEPZ_ALLOWED_IPS not set — relying on encrypted payload auth",
+        "[Keepz Callback] KEEPZ_ALLOWED_IPS not set — relying on encrypted payload auth (non-production)",
         { ip: clientIP },
       );
       await auditLog(supabase, null, null, null, "callback_no_ip_allowlist", {

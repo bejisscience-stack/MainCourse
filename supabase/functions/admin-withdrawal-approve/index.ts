@@ -63,14 +63,7 @@ Deno.serve(async (req: Request) => {
 
     if (approveError) {
       console.error("[Approve Withdrawal API] RPC error:", approveError);
-      return jsonResponse(
-        {
-          error: "Failed to approve withdrawal request",
-          details: approveError.message,
-          code: approveError.code,
-        },
-        500,
-      );
+      return errorResponse("Failed to approve withdrawal request", 500);
     }
 
     console.log(

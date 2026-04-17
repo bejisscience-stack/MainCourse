@@ -4,11 +4,8 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
-import {
-  accountLimiter,
-  rateLimitResponse,
-  getClientIP,
-} from "@/lib/rate-limit";
+import { writeLimiter, rateLimitResponse, getClientIP } from "@/lib/rate-limit";
+import { profileUpdateSchema } from "@/lib/schemas";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +26,9 @@ export async function GET(request: NextRequest) {
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("id, username, avatar_url, project_access_expires_at, role, created_at")
+      .select(
+        "id, username, avatar_url, project_access_expires_at, role, created_at",
+      )
       .eq("id", user.id)
       .single();
 
@@ -64,52 +63,24 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const rl = await accountLimiter.check(getClientIP(request));
+    const rl = await writeLimiter.check(getClientIP(request));
     if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
-    const body = await request.json();
-    const { username, avatar_url } = body;
-
-    // Build update object - only include fields that were sent
-    const updateData: Record<string, any> = {};
-
-    if (username !== undefined) {
-      const trimmed = username.trim();
-      if (
-        !trimmed ||
-        trimmed.length < 3 ||
-        trimmed.length > 30 ||
-        !/^[a-zA-Z0-9_]+$/.test(trimmed)
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              "Username must be 3-30 characters, only letters, numbers, and underscores",
-          },
-          { status: 400 },
-        );
-      }
-      updateData.username = trimmed;
-    }
-
-    if (avatar_url !== undefined) {
-      if (
-        avatar_url !== null &&
-        !/^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\//.test(avatar_url)
-      ) {
-        return NextResponse.json(
-          { error: "Invalid avatar URL" },
-          { status: 400 },
-        );
-      }
-      updateData.avatar_url = avatar_url; // can be null to remove
-    }
-
-    if (Object.keys(updateData).length === 0) {
+    const rawBody = await request.json().catch(() => ({}));
+    const parsed = profileUpdateSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "No fields to update" },
+        { error: "Invalid request body" },
         { status: 400 },
       );
+    }
+
+    const updateData: Record<string, any> = {};
+    if (parsed.data.username !== undefined) {
+      updateData.username = parsed.data.username;
+    }
+    if (parsed.data.avatar_url !== undefined) {
+      updateData.avatar_url = parsed.data.avatar_url; // nullable
     }
 
     const supabase = createServerSupabaseClient(token);
