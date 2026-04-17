@@ -628,7 +628,11 @@
     "total": "Total",
     "noRevenueData": "No revenue data for the selected period",
     "noCourses": "No courses yet. Create your first course to see analytics.",
-    "errorLoading": "Failed to load analytics"
+    "errorLoading": "Failed to load analytics",
+    "preset7d": "7D",
+    "preset30d": "30D",
+    "preset90d": "90D",
+    "presetAll": "All"
   },
   "lecturerDashboard": {
     "title": "Lecturer Dashboard",

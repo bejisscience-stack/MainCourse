@@ -181,11 +181,11 @@ function CurrencyTooltip({ active, payload, label }: ChartTooltipProps) {
 }
 
 // ─── Date Range Picker ──────────────────────────────────────────────
-const PRESET_RANGES: { key: LecturerDateRangeKey; label: string }[] = [
-  { key: "7d", label: "7D" },
-  { key: "30d", label: "30D" },
-  { key: "90d", label: "90D" },
-  { key: "all", label: "All" },
+const PRESET_RANGES: { key: LecturerDateRangeKey; labelKey: string }[] = [
+  { key: "7d", labelKey: "lecturerAnalytics.preset7d" },
+  { key: "30d", labelKey: "lecturerAnalytics.preset30d" },
+  { key: "90d", labelKey: "lecturerAnalytics.preset90d" },
+  { key: "all", labelKey: "lecturerAnalytics.presetAll" },
 ];
 
 function DateRangePicker({
@@ -195,9 +195,10 @@ function DateRangePicker({
   value: LecturerDateRangeKey;
   onChange: (k: LecturerDateRangeKey) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="flex gap-1 bg-charcoal-100 dark:bg-navy-800/50 rounded-lg p-1">
-      {PRESET_RANGES.map(({ key, label }) => (
+      {PRESET_RANGES.map(({ key, labelKey }) => (
         <button
           key={key}
           onClick={() => onChange(key)}
@@ -207,7 +208,7 @@ function DateRangePicker({
               : "text-charcoal-500 dark:text-navy-400 hover:text-charcoal-900 dark:hover:text-gray-100"
           }`}
         >
-          {label}
+          {t(labelKey)}
         </button>
       ))}
     </div>
@@ -382,7 +383,7 @@ function LecturerAnalytics() {
                   tick={{ fontSize: 12 }}
                   tickFormatter={(v) => {
                     const d = new Date(v);
-                    return `${d.getMonth() + 1}/${d.getDate()}`;
+                    return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
                   }}
                 />
                 <YAxis
