@@ -88,11 +88,6 @@
       "community": "Active Community"
     },
     "courseShowcase": {
-      "title": "Popular Courses",
-      "subtitle": "Compare quickly, choose confidently, and enroll in minutes.",
-      "popularTitle": "Top picks this week",
-      "popularSubtitle": "High-rated and high-demand courses",
-      "viewAll": "View all courses",
       "viewCategory": "View category",
       "errorTitle": "Unable to load courses",
       "errorBody": "Please refresh and try again.",
@@ -208,7 +203,8 @@
     "featuredCarousel": {
       "badge": "Featured Course",
       "defaultDescription": "Learn practical digital skills with expert guidance and real outcomes.",
-      "primaryCta": "Enroll now",
+      "primaryCta_guest": "Register Now",
+      "primaryCta_buy": "Buy",
       "secondaryCta": "Browse courses",
       "lecturerCta": "Open Dashboard",
       "imageFallback": "Course preview",

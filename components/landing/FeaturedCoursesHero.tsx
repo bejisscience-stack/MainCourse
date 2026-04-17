@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useCourses } from "@/hooks/useCourses";
 import { useI18n } from "@/contexts/I18nContext";
 import { useUser } from "@/hooks/useUser";
+import { useEnrollments } from "@/hooks/useEnrollments";
 import { formatPriceInGel } from "@/lib/currency";
 
 export default function FeaturedCoursesHero() {
   const { t, isReady } = useI18n();
   const { user, role } = useUser();
   const { courses, isLoading, error } = useCourses("All");
+  const { isEnrollmentActive } = useEnrollments(user?.id ?? null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const featuredCourses = useMemo(() => {
@@ -64,16 +66,42 @@ export default function FeaturedCoursesHero() {
           100,
       )
     : null;
-  const enrollmentHref = !user
-    ? `/signup?redirect=${encodeURIComponent(`/courses?pendingEnroll=course:${course.id}`)}`
-    : `/courses?pendingEnroll=course:${course.id}`;
+
+  const primaryCta = ((): { label: string; href: string } => {
+    if (role === "lecturer") {
+      return {
+        label: isReady
+          ? t("home.featuredCarousel.lecturerCta")
+          : "Open Dashboard",
+        href: "/lecturer/dashboard",
+      };
+    }
+    if (!user) {
+      return {
+        label: isReady
+          ? t("home.featuredCarousel.primaryCta_guest")
+          : "Register Now",
+        href: `/signup?redirect=${encodeURIComponent(`/courses?pendingEnroll=course:${course.id}`)}`,
+      };
+    }
+    if (isEnrollmentActive(course.id)) {
+      return {
+        label: isReady ? t("courses.goToCourse") : "Go To Course",
+        href: `/courses/${course.id}/chat?channel=lectures`,
+      };
+    }
+    return {
+      label: isReady ? t("home.featuredCarousel.primaryCta_buy") : "Buy",
+      href: `/courses?pendingEnroll=course:${course.id}`,
+    };
+  })();
 
   return (
     <section className="pt-24 md:pt-28 px-4 sm:px-6 lg:px-8 pb-10 md:pb-12">
       <div className="max-w-7xl mx-auto relative">
         <div className="rounded-3xl overflow-hidden bg-charcoal-950 dark:bg-navy-900 shadow-soft-2xl">
           <div className="grid lg:grid-cols-2 h-[400px] md:h-[480px] lg:h-[540px]">
-            <div className="h-full p-8 md:p-12 lg:p-16 flex flex-col text-white bg-charcoal-950 dark:bg-navy-900">
+            <div className="h-full px-8 py-8 md:px-12 md:py-10 lg:px-16 lg:py-12 flex flex-col text-white bg-charcoal-950 dark:bg-navy-900">
               <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-300 mb-5">
                 {isReady ? t("home.featuredCarousel.badge") : "Featured Course"}
               </p>
@@ -109,26 +137,13 @@ export default function FeaturedCoursesHero() {
                 )}
               </div>
 
-              <div className="mt-auto pt-6 flex flex-wrap gap-3">
-                {role === "lecturer" ? (
-                  <Link
-                    href="/lecturer/dashboard"
-                    className="inline-flex items-center justify-center h-11 px-6 rounded-xl bg-white text-charcoal-950 hover:bg-gray-200 font-semibold transition-colors"
-                  >
-                    {isReady
-                      ? t("home.featuredCarousel.lecturerCta")
-                      : "Open Dashboard"}
-                  </Link>
-                ) : (
-                  <Link
-                    href={enrollmentHref}
-                    className="inline-flex items-center justify-center h-11 px-6 rounded-xl bg-white text-charcoal-950 hover:bg-gray-200 font-semibold transition-colors"
-                  >
-                    {isReady
-                      ? t("home.featuredCarousel.primaryCta")
-                      : "Enroll now"}
-                  </Link>
-                )}
+              <div className="mt-6 md:mt-8 flex flex-wrap gap-3">
+                <Link
+                  href={primaryCta.href}
+                  className="inline-flex items-center justify-center h-11 px-6 rounded-xl bg-white text-charcoal-950 hover:bg-gray-200 font-semibold transition-colors"
+                >
+                  {primaryCta.label}
+                </Link>
                 <Link
                   href="/courses"
                   className="inline-flex items-center justify-center h-11 px-6 rounded-xl border border-white/30 text-white hover:bg-white/10 font-medium transition-colors"
