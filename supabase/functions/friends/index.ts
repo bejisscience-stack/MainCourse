@@ -1,4 +1,9 @@
-import { getCorsHeaders, handleCors, jsonResponse, errorResponse } from "../_shared/cors.ts";
+import {
+  getCorsHeaders,
+  handleCors,
+  jsonResponse,
+  errorResponse,
+} from "../_shared/cors.ts";
 import { getAuthenticatedUser } from "../_shared/auth.ts";
 
 Deno.serve(async (req: Request) => {
@@ -18,8 +23,8 @@ Deno.serve(async (req: Request) => {
     if (req.method === "GET") {
       const { data: friendships, error: friendshipsError } = await supabase
         .from("friendships")
-        .select("friend_id")
-        .eq("user_id", user.id);
+        .select("user_id, friend_id")
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
 
       if (friendshipsError) {
         console.error("Error fetching friendships:", friendshipsError);
@@ -30,22 +35,43 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ friends: [] }, 200, cors);
       }
 
-      const friendIds = friendships.map((f: { friend_id: string }) => f.friend_id);
+      const friendIds = Array.from(
+        new Set(
+          friendships
+            .map((f: { user_id: string; friend_id: string }) =>
+              f.user_id === user.id ? f.friend_id : f.user_id,
+            )
+            .filter((id: string) => id && id !== user.id),
+        ),
+      );
 
-      const { data: profiles, error: profilesError } = await supabase
-        .rpc("get_safe_profiles", { user_ids: friendIds });
+      if (friendIds.length === 0) {
+        return jsonResponse({ friends: [] }, 200, cors);
+      }
+
+      const { data: profiles, error: profilesError } = await supabase.rpc(
+        "get_safe_profiles",
+        { user_ids: friendIds },
+      );
 
       if (profilesError) {
         console.error("Error fetching friend profiles:", profilesError);
         return errorResponse("Failed to fetch friend profiles", 500, cors);
       }
 
-      const friends = (profiles || []).map((p: { id: string; username: string; avatar_url: string; role: string }) => ({
-        id: p.id,
-        username: p.username,
-        avatarUrl: p.avatar_url,
-        role: p.role,
-      }));
+      const friends = (profiles || []).map(
+        (p: {
+          id: string;
+          username: string;
+          avatar_url: string;
+          role: string;
+        }) => ({
+          id: p.id,
+          username: p.username,
+          avatarUrl: p.avatar_url,
+          role: p.role,
+        }),
+      );
 
       return jsonResponse({ friends }, 200, cors);
     }
@@ -59,8 +85,10 @@ Deno.serve(async (req: Request) => {
         return errorResponse("Missing friendId parameter", 400, cors);
       }
 
-      const { error: unfriendError } = await supabase
-        .rpc("unfriend_user", { uid: user.id, friend: friendId });
+      const { error: unfriendError } = await supabase.rpc("unfriend_user", {
+        uid: user.id,
+        friend: friendId,
+      });
 
       if (unfriendError) {
         console.error("Error unfriending user:", unfriendError);

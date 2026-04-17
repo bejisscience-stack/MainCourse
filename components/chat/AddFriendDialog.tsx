@@ -3,12 +3,15 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { normalizeProfileUsername } from "@/lib/username";
+import type { Friend } from "@/types/dm";
 
 interface AddFriendDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSendRequest: (userId: string) => Promise<void>;
+  onMessageFriend: (userId: string) => Promise<void>;
   currentUserId: string;
+  friends: Friend[];
   existingFriendIds: string[];
 }
 
@@ -23,13 +26,16 @@ export default function AddFriendDialog({
   isOpen,
   onClose,
   onSendRequest,
+  onMessageFriend,
   currentUserId,
+  friends,
   existingFriendIds,
 }: AddFriendDialogProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [sendingTo, setSendingTo] = useState<string | null>(null);
+  const [messagingTo, setMessagingTo] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -102,6 +108,18 @@ export default function AddFriendDialog({
     }
   };
 
+  const handleMessageFriend = async (userId: string) => {
+    setMessagingTo(userId);
+    setError(null);
+    try {
+      await onMessageFriend(userId);
+    } catch (err: any) {
+      setError(err.message || "Failed to open direct message");
+    } finally {
+      setMessagingTo(null);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -163,6 +181,59 @@ export default function AddFriendDialog({
           </div>
           {error && <p className="mt-2 text-red-400 text-xs">{error}</p>}
         </div>
+
+        {/* Existing friends */}
+        {friends.length > 0 && (
+          <div className="px-6 pb-3">
+            <div className="text-[11px] uppercase tracking-wider text-gray-500 mb-2">
+              Friends
+            </div>
+            <div className="space-y-1 max-h-40 overflow-y-auto chat-scrollbar">
+              {friends.map((friend) => {
+                const isMessaging = messagingTo === friend.id;
+                return (
+                  <div
+                    key={friend.id}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-navy-900/40 border border-navy-800/60"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-navy-900/70 border border-navy-800/60 flex items-center justify-center text-xs font-semibold text-emerald-200 overflow-hidden flex-shrink-0">
+                      {friend.avatarUrl ? (
+                        <img
+                          src={friend.avatarUrl}
+                          alt={friend.username}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        friend.username.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-gray-200 text-sm font-medium truncate">
+                        {friend.username}
+                      </div>
+                      {friend.role && friend.role !== "student" && (
+                        <div className="text-[11px] text-emerald-400/80 capitalize">
+                          {friend.role}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleMessageFriend(friend.id)}
+                      disabled={isMessaging}
+                      className="text-xs text-emerald-400 hover:text-emerald-300 px-3 py-1.5 rounded-lg border border-emerald-500/30 hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all disabled:opacity-50"
+                    >
+                      {isMessaging ? (
+                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-emerald-400" />
+                      ) : (
+                        "Message"
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Results */}
         <div className="px-6 pb-6 max-h-80 overflow-y-auto chat-scrollbar">

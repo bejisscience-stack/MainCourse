@@ -262,6 +262,18 @@ export default function LayoutContainer({
     await rejectRequest(requestId);
   };
 
+  const handleMessageFriend = async (friendId: string) => {
+    const channel = await openOrCreateChannel(friendId);
+    if (!channel) {
+      throw new Error("Could not open direct message");
+    }
+
+    setActiveServerId("home");
+    setActiveDMChannelId(channel.id);
+    setActiveChannelId(null);
+    setShowAddFriend(false);
+  };
+
   // Find the active DM channel's other user info for ChatArea
   const activeDMChannel = dmChannels.find((c) => c.id === activeDMChannelId);
 
@@ -503,7 +515,9 @@ export default function LayoutContainer({
         onSendRequest={async (userId) => {
           await sendRequest(userId);
         }}
+        onMessageFriend={handleMessageFriend}
         currentUserId={currentUserId}
+        friends={friends}
         existingFriendIds={friends.map((f) => f.id)}
       />
       <FriendRequestsDialog
