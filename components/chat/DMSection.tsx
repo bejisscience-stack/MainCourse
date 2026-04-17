@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from "react";
 import type { DMChannel } from "@/types/dm";
+import type { Friend } from "@/types/dm";
 
 interface DMSectionProps {
   channels: DMChannel[];
+  friends: Friend[];
   activeDMChannelId: string | null;
   onDMSelect: (channelId: string) => void;
+  onSelectFriend: (friendId: string) => void;
   onOpenAddFriend: () => void;
   pendingRequestCount: number;
   onOpenFriendRequests: () => void;
@@ -15,8 +18,10 @@ interface DMSectionProps {
 
 export default function DMSection({
   channels,
+  friends,
   activeDMChannelId,
   onDMSelect,
+  onSelectFriend,
   onOpenAddFriend,
   pendingRequestCount,
   onOpenFriendRequests,
@@ -147,6 +152,38 @@ export default function DMSection({
       {/* DM channels list */}
       {!isCollapsed && (
         <div className="space-y-0.5 px-1">
+          {friends.length > 0 && (
+            <div className="mb-2">
+              <div className="px-2.5 py-1 text-[10px] uppercase tracking-wider text-gray-500">
+                Friends
+              </div>
+              <div className="space-y-0.5">
+                {friends.map((friend) => (
+                  <button
+                    key={friend.id}
+                    onClick={() => onSelectFriend(friend.id)}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-gray-300 hover:bg-navy-800/40 hover:text-gray-100 transition-all border border-transparent hover:border-navy-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/40"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-navy-900/70 border border-navy-800/60 flex items-center justify-center text-[10px] font-semibold text-emerald-200 overflow-hidden flex-shrink-0">
+                      {friend.avatarUrl ? (
+                        <img
+                          src={friend.avatarUrl}
+                          alt={friend.username}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        friend.username.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="truncate text-sm">{friend.username}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {channels.length === 0 ? (
             <div className="px-3 py-3 text-center">
               <p className="text-gray-500 text-xs mb-2">No conversations yet</p>

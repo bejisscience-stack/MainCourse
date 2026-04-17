@@ -262,15 +262,25 @@ export default function LayoutContainer({
     await rejectRequest(requestId);
   };
 
-  const handleMessageFriend = async (friendId: string) => {
-    const channel = await openOrCreateChannel(friendId);
-    if (!channel) {
+  const openOrSelectDMByFriend = async (friendId: string) => {
+    const existingChannel = dmChannels.find((c) => c.otherUser.id === friendId);
+    const targetChannel =
+      existingChannel || (await openOrCreateChannel(friendId));
+    if (!targetChannel) {
       throw new Error("Could not open direct message");
     }
 
     setActiveServerId("home");
-    setActiveDMChannelId(channel.id);
+    setActiveDMChannelId(targetChannel.id);
     setActiveChannelId(null);
+    if (window.innerWidth < 768) {
+      setMobileMenuOpen(false);
+    }
+    await refetchDMChannels();
+  };
+
+  const handleMessageFriend = async (friendId: string) => {
+    await openOrSelectDMByFriend(friendId);
     setShowAddFriend(false);
   };
 
@@ -326,8 +336,10 @@ export default function LayoutContainer({
             <div className="flex-1 overflow-y-auto px-2.5 py-3 chat-scrollbar">
               <DMSection
                 channels={dmChannels}
+                friends={friends}
                 activeDMChannelId={activeDMChannelId}
                 onDMSelect={handleDMSelect}
+                onSelectFriend={openOrSelectDMByFriend}
                 onOpenAddFriend={() => setShowAddFriend(true)}
                 pendingRequestCount={pendingCount}
                 onOpenFriendRequests={() => setShowFriendRequests(true)}
@@ -417,8 +429,10 @@ export default function LayoutContainer({
             <div className="border-t border-navy-800/60 mt-2 pt-2 flex-shrink-0">
               <DMSection
                 channels={dmChannels}
+                friends={friends}
                 activeDMChannelId={activeDMChannelId}
                 onDMSelect={handleDMSelect}
+                onSelectFriend={openOrSelectDMByFriend}
                 onOpenAddFriend={() => setShowAddFriend(true)}
                 pendingRequestCount={pendingCount}
                 onOpenFriendRequests={() => setShowFriendRequests(true)}
