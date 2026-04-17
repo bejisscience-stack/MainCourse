@@ -37,6 +37,10 @@ const FeaturedCoursesHero = dynamic(
   },
 );
 
+const SocialProofStats = dynamic(
+  () => import("@/components/landing/SocialProofStats"),
+);
+
 export default function Home() {
   const router = useRouter();
   const { role: userRole, isLoading: userLoading } = useUser();
@@ -55,6 +59,7 @@ export default function Home() {
       <div className="relative z-10 flex-1">
         <FeaturedCoursesHero />
         <LandingCourseShowcase />
+        <SocialProofStats />
       </div>
       <Footer />
     </main>

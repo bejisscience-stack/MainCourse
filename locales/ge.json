@@ -210,7 +210,13 @@
       "imageFallback": "კურსის პრევიუ",
       "previous": "წინა კურსი",
       "next": "შემდეგი კურსი",
-      "goToSlide": "სლაიდზე გადასვლა"
+      "goToSlide": "სლაიდზე გადასვლა",
+      "byAuthor": "ავტორი: {{name}}",
+      "reviewsCount": "{{count}} შეფასება",
+      "limitedOffer": "შეზღუდული შეთავაზება",
+      "lifetimeAccess": "სამუდამო წვდომა",
+      "certificate": "სერტიფიკატი",
+      "refund": "30-დღიანი დაბრუნება"
     },
     "finalCta": {
       "title": "მზად ხარ სწავლისა და შემოსავლის დასაწყებად?",
@@ -259,6 +265,7 @@
     "playIntroVideo": "შესავალი ვიდეოს დაკვრა",
     "closeVideo": "ვიდეოს დახურვა",
     "bestseller": "ბესტსელერი",
+    "sale": "ფასდაკლება",
     "rating": "რეიტინგი",
     "ratings": "რეიტინგი",
     "unknownCourse": "უცნობი კურსი",

@@ -44,7 +44,7 @@ export default function FeaturedCoursesHero() {
   if (isLoading && courses.length === 0) {
     return (
       <section className="pt-24 md:pt-28 px-4 sm:px-6 lg:px-8 pb-10 md:pb-12">
-        <div className="max-w-7xl mx-auto rounded-3xl bg-charcoal-950/90 dark:bg-navy-900/90 h-[400px] md:h-[480px] lg:h-[540px] flex items-center justify-center">
+        <div className="max-w-7xl mx-auto rounded-3xl bg-charcoal-950/90 dark:bg-navy-900/90 h-[480px] md:h-[540px] lg:h-[600px] flex items-center justify-center">
           <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500" />
         </div>
       </section>
@@ -100,29 +100,76 @@ export default function FeaturedCoursesHero() {
     <section className="pt-24 md:pt-28 px-4 sm:px-6 lg:px-8 pb-10 md:pb-12">
       <div className="max-w-7xl mx-auto relative">
         <div className="rounded-3xl overflow-hidden bg-charcoal-950 dark:bg-navy-900 shadow-soft-2xl">
-          <div className="grid lg:grid-cols-2 h-[400px] md:h-[480px] lg:h-[540px]">
+          <div className="grid lg:grid-cols-2 h-[480px] md:h-[540px] lg:h-[600px]">
             <div className="h-full px-8 py-8 md:px-12 md:py-10 lg:px-16 lg:py-12 flex flex-col text-white bg-charcoal-950 dark:bg-navy-900">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-300 mb-5">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-300 mb-4">
                 {isReady ? t("home.featuredCarousel.badge") : "Featured Course"}
               </p>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight line-clamp-2 min-h-[72px] md:min-h-[88px] lg:min-h-[116px]">
                 {course.title}
               </h1>
-              <p className="mt-5 text-charcoal-300 dark:text-gray-300 text-sm md:text-base leading-relaxed line-clamp-3 min-h-[62px] md:min-h-[72px]">
+
+              {course.creator && (
+                <p className="mt-2 text-sm text-charcoal-300 dark:text-gray-300">
+                  {isReady
+                    ? t("home.featuredCarousel.byAuthor", {
+                        name: course.creator,
+                      })
+                    : `by ${course.creator}`}
+                </p>
+              )}
+
+              <div className="mt-3 flex flex-wrap items-center gap-3 min-h-[28px]">
+                {course.review_count > 0 && (
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <svg
+                      className="w-4 h-4 text-amber-400 fill-current"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.367 2.446a1 1 0 00-.364 1.118l1.286 3.957c.3.921-.755 1.688-1.54 1.118l-3.366-2.446a1 1 0 00-1.176 0l-3.366 2.446c-.784.57-1.838-.197-1.539-1.118l1.286-3.957a1 1 0 00-.364-1.118L2.06 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.957z" />
+                    </svg>
+                    <span className="font-semibold text-white">
+                      {course.rating.toFixed(1)}
+                    </span>
+                    <span className="text-charcoal-400">
+                      (
+                      {isReady
+                        ? t("home.featuredCarousel.reviewsCount", {
+                            count: course.review_count.toLocaleString(),
+                          })
+                        : `${course.review_count} reviews`}
+                      )
+                    </span>
+                  </div>
+                )}
+                {course.is_bestseller && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 text-xs font-semibold border border-amber-500/30">
+                    🔥 {isReady ? t("courses.bestseller") : "Bestseller"}
+                  </span>
+                )}
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 text-xs font-semibold border border-emerald-500/30 whitespace-nowrap truncate max-w-[180px]">
+                  {course.course_type}
+                </span>
+              </div>
+
+              <p className="mt-3 text-charcoal-300 dark:text-gray-300 text-sm md:text-base leading-relaxed line-clamp-2 min-h-[40px] md:min-h-[48px]">
                 {course.description ||
                   (isReady
                     ? t("home.featuredCarousel.defaultDescription")
                     : "Learn practical digital skills with expert guidance.")}
               </p>
 
-              <div className="mt-5 h-7 flex items-center gap-2.5 text-xs md:text-sm text-charcoal-300 overflow-hidden">
-                <span className="px-2 py-0.5 rounded-full bg-white/10 text-[11px] whitespace-nowrap truncate max-w-[140px] md:max-w-none">
-                  {course.course_type}
-                </span>
-              </div>
+              {hasDiscount && (
+                <p className="mt-3 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] font-bold text-red-300">
+                  🔥{" "}
+                  {isReady
+                    ? t("home.featuredCarousel.limitedOffer")
+                    : "Limited time offer"}
+                </p>
+              )}
 
-              <div className="mt-5 h-10 flex items-center gap-3">
-                <span className="text-3xl font-bold leading-none shrink-0">
+              <div className="mt-3 h-10 flex items-center gap-3">
+                <span className="text-3xl md:text-4xl font-bold leading-none shrink-0">
                   {formatPriceInGel(course.price)}
                 </span>
                 {hasDiscount && (
@@ -137,21 +184,85 @@ export default function FeaturedCoursesHero() {
                 )}
               </div>
 
-              <div className="mt-6 md:mt-8 flex flex-wrap gap-3">
+              <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
                 <Link
                   href={primaryCta.href}
-                  className="inline-flex items-center justify-center h-11 px-6 rounded-xl bg-white text-charcoal-950 hover:bg-gray-200 font-semibold transition-colors"
+                  className="inline-flex items-center justify-center gap-2 h-12 px-8 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-base shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:-translate-y-0.5 transition-all duration-200"
                 >
                   {primaryCta.label}
+                  <svg
+                    className="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M13 7l5 5m0 0l-5 5m5-5H6"
+                    />
+                  </svg>
                 </Link>
                 <Link
                   href="/courses"
-                  className="inline-flex items-center justify-center h-11 px-6 rounded-xl border border-white/30 text-white hover:bg-white/10 font-medium transition-colors"
+                  className="text-sm font-semibold text-white/70 hover:text-white underline-offset-4 hover:underline transition-colors"
                 >
                   {isReady
                     ? t("home.featuredCarousel.secondaryCta")
                     : "Browse courses"}
                 </Link>
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] md:text-xs text-charcoal-400">
+                <span className="inline-flex items-center gap-1.5">
+                  <svg
+                    className="w-3.5 h-3.5 text-emerald-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  {isReady
+                    ? t("home.featuredCarousel.lifetimeAccess")
+                    : "Lifetime access"}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <svg
+                    className="w-3.5 h-3.5 text-emerald-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  {isReady
+                    ? t("home.featuredCarousel.certificate")
+                    : "Certificate included"}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <svg
+                    className="w-3.5 h-3.5 text-emerald-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  {isReady
+                    ? t("home.featuredCarousel.refund")
+                    : "30-day refund"}
+                </span>
               </div>
             </div>
 
@@ -165,6 +276,11 @@ export default function FeaturedCoursesHero() {
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-emerald-500/10 via-charcoal-900 to-charcoal-950 dark:from-emerald-500/10 dark:via-navy-950 dark:to-navy-900 rounded-2xl" />
+              )}
+              {hasDiscount && discountPercent !== null && (
+                <div className="absolute top-6 left-6 md:top-8 md:left-8 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm md:text-base font-bold tracking-wide uppercase">
+                  -{discountPercent}% {isReady ? t("courses.sale") : "Sale"}
+                </div>
               )}
             </div>
           </div>
