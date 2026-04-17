@@ -146,7 +146,6 @@
     },
     "socialProof": {
       "students": "Students Registered",
-      "courses": "Professional Courses",
       "satisfaction": "Student Satisfaction"
     },
     "testimonials": {
@@ -214,9 +213,7 @@
       "byAuthor": "by {{name}}",
       "reviewsCount": "{{count}} reviews",
       "limitedOffer": "Limited time offer",
-      "lifetimeAccess": "Lifetime access",
-      "certificate": "Certificate included",
-      "refund": "30-day refund"
+      "lifetimeAccess": "Lifetime access"
     },
     "finalCta": {
       "title": "Ready to start learning and earning?",

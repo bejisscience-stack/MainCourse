@@ -146,7 +146,6 @@
     },
     "socialProof": {
       "students": "რეგისტრირებული სტუდენტი",
-      "courses": "პროფესიული კურსი",
       "satisfaction": "სტუდენტების კმაყოფილება"
     },
     "testimonials": {
@@ -214,9 +213,7 @@
       "byAuthor": "ავტორი: {{name}}",
       "reviewsCount": "{{count}} შეფასება",
       "limitedOffer": "შეზღუდული შეთავაზება",
-      "lifetimeAccess": "სამუდამო წვდომა",
-      "certificate": "სერტიფიკატი",
-      "refund": "30-დღიანი დაბრუნება"
+      "lifetimeAccess": "სამუდამო წვდომა"
     },
     "finalCta": {
       "title": "მზად ხარ სწავლისა და შემოსავლის დასაწყებად?",
