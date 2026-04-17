@@ -264,7 +264,7 @@ export default function ViewBotSubmissions({
                         return (
                           <tr
                             key={`${sub.id}-${idx}`}
-                            className="hover:bg-emerald-500/25/50 cursor-pointer"
+                            className="hover:bg-emerald-500/25 cursor-pointer"
                             onClick={() =>
                               setExpandedId(isExpanded ? null : sub.id)
                             }

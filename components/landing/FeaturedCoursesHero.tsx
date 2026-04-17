@@ -44,7 +44,7 @@ export default function FeaturedCoursesHero() {
   if (isLoading && courses.length === 0) {
     return (
       <section className="pt-24 md:pt-28 px-4 sm:px-6 lg:px-8 pb-10 md:pb-12">
-        <div className="max-w-7xl mx-auto rounded-3xl bg-charcoal-950/90 dark:bg-navy-900/90 h-[480px] md:h-[540px] lg:h-[600px] flex items-center justify-center">
+        <div className="max-w-7xl mx-auto rounded-3xl bg-charcoal-950/90 dark:bg-navy-900/90 min-h-[520px] lg:min-h-0 lg:h-[600px] flex items-center justify-center">
           <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500" />
         </div>
       </section>
@@ -100,12 +100,12 @@ export default function FeaturedCoursesHero() {
     <section className="pt-24 md:pt-28 px-4 sm:px-6 lg:px-8 pb-10 md:pb-12">
       <div className="max-w-7xl mx-auto relative">
         <div className="rounded-3xl overflow-hidden bg-charcoal-950 dark:bg-navy-900 shadow-soft-2xl">
-          <div className="grid lg:grid-cols-2 h-[480px] md:h-[540px] lg:h-[600px]">
-            <div className="h-full px-8 py-8 md:px-12 md:py-10 lg:px-16 lg:py-12 flex flex-col text-white bg-charcoal-950 dark:bg-navy-900">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-300 mb-4">
+          <div className="grid lg:grid-cols-2 lg:h-[600px]">
+            <div className="px-6 py-7 md:px-10 md:py-9 lg:px-16 lg:py-12 lg:h-full flex flex-col text-white bg-charcoal-950 dark:bg-navy-900 order-2 lg:order-1">
+              <p className="text-xs uppercase tracking-[0.22em] text-emerald-300 mb-3 md:mb-4">
                 {isReady ? t("home.featuredCarousel.badge") : "Featured Course"}
               </p>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight line-clamp-2 min-h-[72px] md:min-h-[88px] lg:min-h-[116px]">
+              <h1 className="text-2xl md:text-3xl lg:text-5xl font-bold leading-tight line-clamp-2 min-h-[64px] md:min-h-[80px] lg:min-h-[116px]">
                 {course.title}
               </h1>
 
@@ -214,7 +214,7 @@ export default function FeaturedCoursesHero() {
                 </Link>
               </div>
 
-              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] md:text-xs text-charcoal-400">
+              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-charcoal-400">
                 <span className="inline-flex items-center gap-1.5">
                   <svg
                     className="w-3.5 h-3.5 text-emerald-400"
@@ -234,19 +234,19 @@ export default function FeaturedCoursesHero() {
               </div>
             </div>
 
-            <div className="relative h-full bg-charcoal-950 dark:bg-navy-900 p-4 md:p-6">
+            <div className="relative bg-charcoal-950 dark:bg-navy-900 p-3 md:p-4 lg:p-6 lg:h-full order-1 lg:order-2">
               {course.thumbnail_url ? (
                 <img
                   src={course.thumbnail_url}
                   alt={course.title}
-                  className="w-full h-full object-cover rounded-2xl"
+                  className="w-full h-[220px] md:h-[280px] lg:h-full object-cover rounded-2xl"
                   loading="eager"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-emerald-500/10 via-charcoal-900 to-charcoal-950 dark:from-emerald-500/10 dark:via-navy-950 dark:to-navy-900 rounded-2xl" />
+                <div className="w-full h-[220px] md:h-[280px] lg:h-full bg-gradient-to-br from-emerald-500/10 via-charcoal-900 to-charcoal-950 dark:from-emerald-500/10 dark:via-navy-950 dark:to-navy-900 rounded-2xl" />
               )}
               {hasDiscount && discountPercent !== null && (
-                <div className="absolute top-6 left-6 md:top-8 md:left-8 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm md:text-base font-bold tracking-wide uppercase">
+                <div className="absolute top-5 left-5 md:top-8 md:left-8 bg-red-500 text-white px-2.5 py-1 md:px-4 md:py-2 rounded-lg shadow-lg text-xs md:text-base font-bold tracking-wide uppercase">
                   -{discountPercent}% {isReady ? t("courses.sale") : "Sale"}
                 </div>
               )}

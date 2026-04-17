@@ -339,8 +339,9 @@ function CourseCard({
 
           {/* Sale Badge - Top left, shown when not enrolled and on sale */}
           {!isEnrolled && discountPercent !== null && (
-            <div className="absolute top-2 left-2 bg-red-500 text-white px-2.5 py-1.5 rounded-lg z-20 shadow-md text-xs font-bold tracking-wide uppercase">
-              -{discountPercent}% {t("courses.sale")}
+            <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-md sm:rounded-lg z-20 shadow-md text-[11px] sm:text-xs font-bold tracking-wide uppercase">
+              -{discountPercent}%
+              <span className="hidden sm:inline"> {t("courses.sale")}</span>
             </div>
           )}
 

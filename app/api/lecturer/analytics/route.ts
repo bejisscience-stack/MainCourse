@@ -80,11 +80,15 @@ export async function GET(request: NextRequest) {
     });
     const totalEnrollments = enrollments.length;
 
-    // 3. Get balance transactions for revenue over time
+    // 3. Revenue from balance_transactions — the same source used for payouts.
+    //    transaction_type is 'credit'|'debit'; the semantic category is `source`.
+    //    Filter to credits from course_purchase + referral_commission.
     let balanceQuery = supabase
       .from("balance_transactions")
-      .select("amount, transaction_type, created_at")
-      .eq("user_id", lecturerId);
+      .select("amount, source, reference_id, reference_type, created_at")
+      .eq("user_id", lecturerId)
+      .eq("transaction_type", "credit")
+      .in("source", ["course_purchase", "referral_commission"]);
 
     if (fromDate) balanceQuery = balanceQuery.gte("created_at", fromDate);
     if (toEnd) balanceQuery = balanceQuery.lte("created_at", toEnd);
@@ -97,42 +101,88 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Calculate total revenue (course_purchase + referral_commission credits)
+    // Total + timeline across both sources.
     let totalRevenue = 0;
     const revenueByDate: Record<string, number> = {};
 
     (transactions || []).forEach((tx) => {
-      if (
-        tx.transaction_type === "course_purchase" ||
-        tx.transaction_type === "referral_commission"
-      ) {
-        totalRevenue += tx.amount;
-        const date = tx.created_at.split("T")[0];
-        revenueByDate[date] = (revenueByDate[date] || 0) + tx.amount;
-      }
+      const amt = Number(tx.amount);
+      totalRevenue += amt;
+      const date = tx.created_at.split("T")[0];
+      revenueByDate[date] = (revenueByDate[date] || 0) + amt;
     });
 
     const revenueOverTime = Object.entries(revenueByDate)
       .map(([date, amount]) => ({ date, amount }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    // 4. Calculate current balance (all-time, not date-filtered)
-    const { data: allTransactions, error: allTxError } = await supabase
-      .from("balance_transactions")
-      .select("amount")
-      .eq("user_id", lecturerId);
-
-    const currentBalance = (allTransactions || []).reduce(
-      (sum, tx) => sum + tx.amount,
-      0,
+    // Per-course revenue from the SAME stream, joined via enrollment_requests.
+    // Referral commissions are not tied to a specific course, so they appear
+    // only in totalRevenue. Bundle sales that reference non-enrollment_request
+    // rows likewise drop out per-course (expected; they still count in total).
+    const refIds = Array.from(
+      new Set(
+        (transactions || [])
+          .filter(
+            (tx) =>
+              tx.source === "course_purchase" &&
+              tx.reference_type === "enrollment_request" &&
+              tx.reference_id,
+          )
+          .map((tx) => tx.reference_id as string),
+      ),
     );
 
-    // 5. Build course performance
+    const refToCourse = new Map<string, string>();
+    if (refIds.length > 0) {
+      const { data: refRows, error: refErr } = await supabase
+        .from("enrollment_requests")
+        .select("id, course_id")
+        .in("id", refIds);
+      if (refErr) {
+        return NextResponse.json(
+          { error: "Failed to fetch enrollment references" },
+          { status: 500 },
+        );
+      }
+      (refRows || []).forEach((r) => refToCourse.set(r.id, r.course_id));
+    }
+
+    const revenueByCourse: Record<string, number> = {};
+    (transactions || []).forEach((tx) => {
+      if (tx.source !== "course_purchase" || !tx.reference_id) return;
+      const courseId = refToCourse.get(tx.reference_id as string);
+      if (!courseId) return;
+      revenueByCourse[courseId] =
+        (revenueByCourse[courseId] || 0) + Number(tx.amount);
+    });
+
+    // 4. Current balance — read profiles.balance, the canonical source
+    //    maintained atomically by credit_user_balance / debit_user_balance RPCs.
+    //    Summing balance_transactions.amount is wrong because amount is stored
+    //    as an unsigned magnitude with direction carried by transaction_type.
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("balance")
+      .eq("id", lecturerId)
+      .maybeSingle();
+
+    if (profileError) {
+      return NextResponse.json(
+        { error: "Failed to fetch balance" },
+        { status: 500 },
+      );
+    }
+
+    const currentBalance = Number(profile?.balance ?? 0);
+
+    // 5. Build course performance — revenue comes from balance_transactions
+    //    (net lecturer share, historical price), not enrollments * current price.
     const coursePerformance = (courses || []).map((course) => ({
       courseId: course.id,
       title: course.title,
       enrollmentCount: enrollmentsByCourse[course.id] || 0,
-      revenue: (enrollmentsByCourse[course.id] || 0) * (course.price || 0),
+      revenue: revenueByCourse[course.id] || 0,
       rating: course.rating || 0,
       reviewCount: course.review_count || 0,
     }));
