@@ -817,11 +817,10 @@ export default function MessageInput({
             });
           }
         }}
-        className={`flex items-end gap-2 bg-navy-900/70 border border-navy-800/60 rounded-xl px-3.5 py-2.5 transition-all ${
-          isFocused ? "ring-2 ring-emerald-400/40" : ""
+        className={`flex flex-col gap-1.5 bg-navy-900/70 border border-navy-800/60 rounded-2xl px-3.5 pt-2.5 pb-1.5 transition-all ${
+          isFocused ? "ring-2 ring-emerald-400/40 border-emerald-500/40" : ""
         } ${disabled || isMuted ? "opacity-60" : ""}`}
       >
-        {/* File upload button */}
         <input
           ref={fileInputRef}
           type="file"
@@ -830,65 +829,6 @@ export default function MessageInput({
           className="hidden"
           onChange={(e) => handleFileSelect(e.target.files)}
         />
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (!disabled && !isMuted && !isUploading) {
-              fileInputRef.current?.click();
-            }
-          }}
-          disabled={disabled || isMuted || isUploading}
-          className={`p-2 rounded-lg transition-all flex-shrink-0 ${
-            disabled || isMuted || isUploading
-              ? "text-gray-500 cursor-not-allowed"
-              : "text-gray-400 hover:text-emerald-300 hover:bg-emerald-500/15 active:bg-emerald-500/20"
-          }`}
-          title={
-            isMuted
-              ? "Cannot upload while muted"
-              : isUploading
-                ? "Upload in progress..."
-                : "Upload image or video"
-          }
-        >
-          {isUploading ? (
-            <svg
-              className="w-5 h-5 animate-spin"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-          ) : (
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-          )}
-        </button>
 
         {/* Textarea */}
         <textarea
@@ -903,101 +843,164 @@ export default function MessageInput({
           }
           rows={1}
           disabled={disabled || isMuted}
-          className="flex-1 bg-transparent text-gray-100 placeholder-gray-500 resize-none outline-none text-sm max-h-[200px] overflow-y-auto disabled:cursor-not-allowed py-1"
+          className="w-full bg-transparent text-gray-100 placeholder-gray-500 resize-none outline-none text-sm max-h-[200px] overflow-y-auto disabled:cursor-not-allowed py-1"
           style={{ minHeight: "24px" }}
         />
 
-        {/* Emoji button */}
-        <button
-          type="button"
-          className="flex-shrink-0 h-9 w-9 inline-flex items-center justify-center text-gray-400 hover:text-emerald-300 rounded-lg border border-transparent hover:border-navy-700/70 hover:bg-navy-800/70 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Add emoji"
-          disabled={disabled || isMuted}
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {/* Action row, separated by hairline */}
+        <div className="flex items-center gap-1 pt-1.5 border-t border-navy-800/60">
+          {/* Attach */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!disabled && !isMuted && !isUploading) {
+                fileInputRef.current?.click();
+              }
+            }}
+            disabled={disabled || isMuted || isUploading}
+            className={`flex-shrink-0 w-8 h-8 inline-flex items-center justify-center rounded-lg transition-all ${
+              disabled || isMuted || isUploading
+                ? "text-gray-500 cursor-not-allowed"
+                : "text-gray-400 hover:text-emerald-300 hover:bg-navy-800/70"
+            }`}
+            title={
+              isMuted
+                ? "Cannot upload while muted"
+                : isUploading
+                  ? "Upload in progress..."
+                  : "Upload image or video"
+            }
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        </button>
-
-        {/* Send button */}
-        <button
-          type="submit"
-          disabled={!canSend}
-          className={`p-1.5 rounded-lg transition-all ${
-            canSend
-              ? "text-white bg-emerald-500/90 hover:bg-emerald-500 cursor-pointer shadow-soft"
-              : "text-gray-500 bg-navy-900/60 cursor-not-allowed"
-          }`}
-          title={
-            isMuted
-              ? "You are muted"
-              : isUploading
-                ? "Wait for upload to finish"
-                : !canSend
-                  ? "Type a message or attach a file"
-                  : "Send message"
-          }
-        >
-          {isSending ? (
-            <svg
-              className="w-5 h-5 animate-spin"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
+            {isUploading ? (
+              <svg
+                className="w-4 h-4 animate-spin"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            ) : (
+              <svg
+                className="w-4 h-4"
+                fill="none"
                 stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-          ) : (
+                strokeWidth={1.8}
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M21 11l-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5L10.5 17.5a2 2 0 0 1-3-3L15 7"
+                />
+              </svg>
+            )}
+          </button>
+
+          {/* Emoji */}
+          <button
+            type="button"
+            className="flex-shrink-0 w-8 h-8 inline-flex items-center justify-center text-gray-400 hover:text-emerald-300 hover:bg-navy-800/70 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Add emoji"
+            disabled={disabled || isMuted}
+          >
             <svg
-              className="w-5 h-5"
+              className="w-4 h-4"
               fill="none"
               stroke="currentColor"
+              strokeWidth={1.8}
               viewBox="0 0 24 24"
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 7l5 5m0 0l-5 5m5-5H6"
+                d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 10h.01M15 10h.01M8.5 14a4 4 0 0 0 7 0"
               />
             </svg>
-          )}
-        </button>
-      </form>
+          </button>
 
-      {/* Keyboard shortcut hint */}
-      <div className="mt-1 text-xs text-gray-500 text-right opacity-0">
-        Press{" "}
-        <kbd className="px-1 py-0.5 bg-navy-800 rounded text-gray-400">
-          Enter
-        </kbd>{" "}
-        to send,{" "}
-        <kbd className="px-1 py-0.5 bg-navy-800 rounded text-gray-400">
-          Shift+Enter
-        </kbd>{" "}
-        for new line
-      </div>
+          <span className="font-mono text-[10px] text-gray-500 ml-1 hidden sm:inline">
+            ქართული · Markdown
+          </span>
+
+          <div className="flex-1" />
+
+          <span className="hidden md:inline font-mono text-[10px] text-gray-500">
+            Enter ↵ · Shift+Enter
+          </span>
+
+          {/* Send button */}
+          <button
+            type="submit"
+            disabled={!canSend}
+            className={`ml-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              canSend
+                ? "bg-emerald-500 text-navy-950 hover:bg-emerald-400 shadow-soft"
+                : "bg-navy-900/60 text-gray-500 cursor-not-allowed border border-navy-800/60"
+            }`}
+            title={
+              isMuted
+                ? "You are muted"
+                : isUploading
+                  ? "Wait for upload to finish"
+                  : !canSend
+                    ? "Type a message or attach a file"
+                    : "Send message"
+            }
+          >
+            {isSending ? (
+              <svg
+                className="w-3.5 h-3.5 animate-spin"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            ) : (
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M22 2L11 13M22 2l-7 20-4-9-9-4z"
+                />
+              </svg>
+            )}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import Message from "./Message";
 import MessageInput from "./MessageInput";
+import PinnedProjectStrip from "./PinnedProjectStrip";
 import dynamic from "next/dynamic";
 import VideoUploadDialog, {
   type ProjectSubmissionData,
@@ -765,66 +766,82 @@ function ChatArea({
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-navy-950/30 backdrop-blur-sm relative">
       {/* Channel header */}
-      <div className="h-12 px-4 border-b border-navy-800/60 flex items-center shadow-soft flex-shrink-0 bg-navy-950/60 backdrop-blur-md z-10">
-        <div className="flex items-center gap-2">
-          {/* Mobile Menu Button */}
-          <button
-            onClick={onMobileMenuClick}
-            className="md:hidden text-gray-400 hover:text-white mr-2"
+      <div className="px-4 py-3 border-b border-navy-800/60 flex items-center gap-3 shadow-soft flex-shrink-0 bg-navy-950/60 backdrop-blur-md z-10">
+        {/* Mobile Menu Button */}
+        <button
+          onClick={onMobileMenuClick}
+          className="md:hidden text-gray-400 hover:text-white"
+          aria-label="Open menu"
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
-          </button>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
+        </button>
 
-          {isDMMode && dmOtherUser ? (
-            <>
-              <div className="w-7 h-7 rounded-full bg-navy-900/70 border border-navy-800/60 flex items-center justify-center text-[10px] font-semibold text-emerald-200 overflow-hidden">
-                {dmOtherUser.avatarUrl ? (
-                  <img
-                    src={dmOtherUser.avatarUrl}
-                    alt={dmOtherUser.username}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  dmOtherUser.username.charAt(0).toUpperCase()
-                )}
-              </div>
-              <h2 className="text-gray-100 font-semibold text-sm">
+        {isDMMode && dmOtherUser ? (
+          <>
+            <div className="w-8 h-8 rounded-full bg-navy-900/70 border border-navy-800/60 flex items-center justify-center text-xs font-semibold text-emerald-200 overflow-hidden flex-shrink-0">
+              {dmOtherUser.avatarUrl ? (
+                <img
+                  src={dmOtherUser.avatarUrl}
+                  alt={dmOtherUser.username}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                dmOtherUser.username.charAt(0).toUpperCase()
+              )}
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-gray-100 font-semibold text-sm truncate">
                 {dmOtherUser.username}
               </h2>
-            </>
-          ) : (
-            <>
-              <span className="text-emerald-300 text-lg">#</span>
-              <h2 className="text-gray-100 font-semibold text-sm">
+              {!isConnected && (
+                <span className="font-mono text-[10px] text-amber-300 flex items-center gap-1 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  {t("chat.connecting")}
+                </span>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-navy-900/60 border border-navy-800/60 text-emerald-300 font-semibold text-base flex-shrink-0">
+              #
+            </span>
+            <div className="min-w-0 flex items-baseline gap-3 flex-1">
+              <h2 className="text-gray-100 font-semibold text-[15px] truncate">
                 {channel?.name}
               </h2>
-            </>
-          )}
-          {!isConnected && (
-            <span className="flex items-center gap-1 text-amber-400 text-xs">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-              {t("chat.connecting")}
-            </span>
-          )}
-        </div>
-        {!isDMMode && channel?.description && (
-          <span className="ml-4 text-gray-500 text-xs hidden md:block">
-            {channel.description}
-          </span>
+              {channel?.description && (
+                <span className="font-mono text-[11px] text-gray-500 hidden md:block truncate pl-3 border-l border-navy-800/60">
+                  {channel.description}
+                </span>
+              )}
+              {!isConnected && (
+                <span className="font-mono text-[10px] text-amber-300 flex items-center gap-1 flex-shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  {t("chat.connecting")}
+                </span>
+              )}
+            </div>
+          </>
         )}
       </div>
+
+      {/* Pinned active-project strip (course channels only) */}
+      {!isDMMode && channel?.courseId && (
+        <PinnedProjectStrip courseId={channel.courseId} />
+      )}
 
       {/* Messages container */}
       <div
@@ -878,7 +895,7 @@ function ChatArea({
             // Empty state
             <div className="flex items-center justify-center flex-1 px-4 text-gray-400">
               <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-navy-900/60 flex items-center justify-center border border-navy-800/60">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-navy-900/60 flex items-center justify-center border border-navy-800/60">
                   <svg
                     className="w-8 h-8 text-gray-500"
                     fill="none"
@@ -894,10 +911,10 @@ function ChatArea({
                   </svg>
                 </div>
                 <p className="text-base font-semibold text-gray-200 mb-1">
-                  No messages yet
+                  {t("chat.noMessagesYet")}
                 </p>
                 <p className="text-sm text-gray-500">
-                  Be the first to start the conversation.
+                  {t("chat.beFirstToStart")}
                 </p>
               </div>
             </div>
@@ -1042,36 +1059,32 @@ function ChatArea({
 
       {/* Typing indicator */}
       {typingUsers.length > 0 && (
-        <div className="px-4 py-2 text-sm text-gray-400 italic flex items-center gap-2 bg-navy-950/70 border-t border-navy-800/60">
+        <div className="px-4 py-2 text-xs text-gray-400 flex items-center gap-2 bg-navy-950/60 border-t border-navy-800/60">
           <div className="flex gap-1">
             <span
-              className="w-2 h-2 bg-emerald-400/80 rounded-full animate-bounce"
+              className="w-1 h-1 bg-emerald-400/80 rounded-full animate-bounce"
               style={{ animationDelay: "0ms" }}
-            ></span>
+            />
             <span
-              className="w-2 h-2 bg-emerald-400/80 rounded-full animate-bounce"
+              className="w-1 h-1 bg-emerald-400/80 rounded-full animate-bounce"
               style={{ animationDelay: "150ms" }}
-            ></span>
+            />
             <span
-              className="w-2 h-2 bg-emerald-400/80 rounded-full animate-bounce"
+              className="w-1 h-1 bg-emerald-400/80 rounded-full animate-bounce"
               style={{ animationDelay: "300ms" }}
-            ></span>
+            />
           </div>
-          {typingUsers.length === 1 ? (
-            <span>
-              <strong>{typingUsers[0].username}</strong> is typing...
-            </span>
-          ) : typingUsers.length === 2 ? (
-            <span>
-              <strong>{typingUsers[0].username}</strong> and{" "}
-              <strong>{typingUsers[1].username}</strong> are typing...
-            </span>
-          ) : (
-            <span>
-              <strong>{typingUsers[0].username}</strong> and{" "}
-              {typingUsers.length - 1} others are typing...
-            </span>
-          )}
+          {typingUsers.length === 1
+            ? t("chat.typingOne", { name: typingUsers[0].username })
+            : typingUsers.length === 2
+              ? t("chat.typingTwo", {
+                  a: typingUsers[0].username,
+                  b: typingUsers[1].username,
+                })
+              : t("chat.typingMany", {
+                  name: typingUsers[0].username,
+                  count: typingUsers.length - 1,
+                })}
         </div>
       )}
 

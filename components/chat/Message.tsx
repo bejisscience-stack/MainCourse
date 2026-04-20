@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { edgeFunctionUrl } from "@/lib/api-client";
 import { useUserMuteStatus } from "@/hooks/useMuteStatus";
 import { useProjectCountdown } from "@/hooks/useProjectCountdown";
+import { useI18n } from "@/contexts/I18nContext";
 import ProjectCard from "./ProjectCard";
 import type {
   Message as MessageType,
@@ -234,6 +235,7 @@ const Message = memo(function Message({
   showAvatar = true,
   isEnrolledInCourse = false,
 }: MessageProps) {
+  const { t } = useI18n();
   const [showMenu, setShowMenu] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -739,8 +741,8 @@ const Message = memo(function Message({
               </div>
 
               {isAuthorLecturer && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                  Lecturer
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-[0.12em] bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  {t("chat.lecturer")}
                 </span>
               )}
 
