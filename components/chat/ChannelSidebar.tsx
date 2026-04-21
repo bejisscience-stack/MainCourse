@@ -47,11 +47,11 @@ const LearningTile = ({ channel }: { channel: Channel }) => {
 
   return (
     <span
-      className={`w-8 h-8 rounded-lg border ${tone} flex items-center justify-center flex-shrink-0`}
+      className={`w-7 h-7 rounded-lg border ${tone} flex items-center justify-center flex-shrink-0`}
     >
       {isLectures ? (
         <svg
-          className="w-4 h-4"
+          className="w-[14px] h-[14px]"
           fill="currentColor"
           viewBox="0 0 24 24"
           aria-hidden="true"
@@ -60,7 +60,7 @@ const LearningTile = ({ channel }: { channel: Channel }) => {
         </svg>
       ) : (
         <svg
-          className="w-4 h-4"
+          className="w-[14px] h-[14px]"
           fill="none"
           stroke="currentColor"
           strokeWidth={1.8}
@@ -231,7 +231,7 @@ export default function ChannelSidebar({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-gray-500">
-              {t("chat.myCourses")}
+              {t("chat.courseLabel")}
             </div>
             <h2 className="text-gray-100 font-semibold text-[15px] mt-1 truncate">
               {server.name}
@@ -438,7 +438,7 @@ export default function ChannelSidebar({
                         )}
 
                         {isActive && (
-                          <span className="w-0.5 h-4 rounded-full bg-emerald-400 flex-shrink-0" />
+                          <span className="w-[3px] h-4 rounded-full bg-emerald-400 flex-shrink-0" />
                         )}
                       </button>
                     );

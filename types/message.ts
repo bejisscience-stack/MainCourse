@@ -1,10 +1,10 @@
-import { User } from './member';
+import { User } from "./member";
 
 export interface MessageAttachment {
   id: string;
   fileUrl: string;
   fileName: string;
-  fileType: 'image' | 'video' | 'gif';
+  fileType: "image" | "video" | "gif";
   fileSize: number;
   mimeType: string;
 }
@@ -21,6 +21,7 @@ export interface Message {
   content: string;
   timestamp: number;
   edited?: boolean;
+  pinned?: boolean;
   reactions?: Reaction[];
   replyTo?: string; // ID of message being replied to
   replyPreview?: ReplyPreview; // Preview of the message being replied to
@@ -32,4 +33,3 @@ export interface Reaction {
   count: number;
   users: string[]; // User IDs who reacted
 }
-

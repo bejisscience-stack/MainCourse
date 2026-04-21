@@ -11,6 +11,7 @@ import {
 } from "react";
 import { supabase } from "@/lib/supabase";
 import { edgeFunctionUrl } from "@/lib/api-client";
+import { useI18n } from "@/contexts/I18nContext";
 import type { MessageAttachment } from "@/types/message";
 
 interface UploadingFile {
@@ -67,6 +68,7 @@ export default function MessageInput({
   isMuted = false,
   isDMMode = false,
 }: MessageInputProps) {
+  const { t } = useI18n();
   const [content, setContent] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
@@ -587,7 +589,7 @@ export default function MessageInput({
 
       {/* Reply preview */}
       {replyTo && (
-        <div className="mb-2 px-4 py-2 bg-navy-900/60 border border-navy-800/60 border-l-4 border-emerald-400 rounded-lg flex items-start justify-between">
+        <div className="mb-2 px-4 py-2 bg-navy-900/60 border border-navy-800/60 border-l-2 border-emerald-400 rounded-r-lg flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <div className="text-xs text-emerald-300 font-medium mb-0.5 flex items-center gap-1">
               <svg
@@ -933,14 +935,40 @@ export default function MessageInput({
             </svg>
           </button>
 
+          {/* AI assistant — UI-only for now (TODO: wire to assistant flow) */}
+          <button
+            type="button"
+            onClick={() =>
+              console.log("TODO: chat.aiAssistant action not yet wired")
+            }
+            className="flex-shrink-0 w-8 h-8 inline-flex items-center justify-center text-gray-400 hover:text-emerald-300 hover:bg-navy-800/70 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title={t("chat.aiAssistant")}
+            disabled={disabled || isMuted}
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2zM19 14l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"
+              />
+            </svg>
+          </button>
+
           <span className="font-mono text-[10px] text-gray-500 ml-1 hidden sm:inline">
-            ქართული · Markdown
+            {t("chat.markdownHint")}
           </span>
 
           <div className="flex-1" />
 
           <span className="hidden md:inline font-mono text-[10px] text-gray-500">
-            Enter ↵ · Shift+Enter
+            {t("chat.sendHint")}
           </span>
 
           {/* Send button */}

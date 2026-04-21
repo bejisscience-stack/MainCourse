@@ -1,12 +1,22 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { useI18n } from "@/contexts/I18nContext";
-import ServerSidebar from "./ServerSidebar";
+import TopBar from "./TopBar";
 import ChannelSidebar from "./ChannelSidebar";
 import ChatArea from "./ChatArea";
 import ChatErrorBoundary from "./ChatErrorBoundary";
 import DMSection from "./DMSection";
+import MemberSidebar from "./MemberSidebar";
+import MobileBottomTabs from "./MobileBottomTabs";
+import TweaksPanel from "./TweaksPanel";
 import AddFriendDialog from "./AddFriendDialog";
 import FriendRequestsDialog from "./FriendRequestsDialog";
 import { useActiveServer } from "@/hooks/useActiveServer";
@@ -16,14 +26,21 @@ import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useFriends } from "@/hooks/useFriends";
 import { useFriendRequests } from "@/hooks/useFriendRequests";
 import { useDMChannels } from "@/hooks/useDMChannels";
+import {
+  ChatTweaksProvider,
+  useChatTweaks,
+} from "@/contexts/ChatTweaksContext";
 import type { Server, Channel } from "@/types/server";
+import type { Member } from "@/types/member";
 import type { EnrollmentInfo } from "@/hooks/useEnrollments";
+import "@/app/chat/chat-tokens.css";
 
 interface LayoutContainerProps {
   servers: Server[];
   currentUserId: string;
   isLecturer?: boolean;
   enrolledCourseIds?: Set<string>;
+  members?: Member[];
   onAddCourse?: () => void;
   onSendMessage?: (channelId: string, content: string | null) => void;
   onReaction?: (messageId: string, emoji: string) => void;
@@ -40,11 +57,39 @@ interface LayoutContainerProps {
   initialChannelName?: string;
 }
 
-export default function LayoutContainer({
+// Applies the Chat Redesign oklch tokens at runtime based on the user's
+// tweaks (accent hue / theme / density). Lives inside ChatTweaksProvider so
+// useChatTweaks() resolves correctly.
+function ChatTokenShell({ children }: { children: ReactNode }) {
+  const { tweaks } = useChatTweaks();
+  return (
+    <div
+      className="chat-tokens flex flex-col w-full h-full"
+      data-chat-theme={tweaks.theme}
+      data-chat-density={tweaks.density}
+      style={{ ["--accent-h" as string]: tweaks.accentHue } as CSSProperties}
+    >
+      {children}
+    </div>
+  );
+}
+
+export default function LayoutContainer(props: LayoutContainerProps) {
+  return (
+    <ChatTweaksProvider>
+      <ChatTokenShell>
+        <LayoutContainerInner {...props} />
+      </ChatTokenShell>
+    </ChatTweaksProvider>
+  );
+}
+
+function LayoutContainerInner({
   servers,
   currentUserId,
   isLecturer = false,
   enrolledCourseIds = new Set(),
+  members = [],
   onAddCourse,
   onSendMessage,
   onReaction,
@@ -61,11 +106,14 @@ export default function LayoutContainer({
   const [activeChannelId, setActiveChannelId] = useActiveChannel();
   const [channelsCollapsed, setChannelsCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showMembers, setShowMembers] = useState(true);
+  const [tweaksOpen, setTweaksOpen] = useState(false);
   const [activeDMChannelId, setActiveDMChannelId] = useState<string | null>(
     null,
   );
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showFriendRequests, setShowFriendRequests] = useState(false);
+  const handleToggleMembers = useCallback(() => setShowMembers((s) => !s), []);
   const handleMobileMenuOpen = useCallback(() => setMobileMenuOpen(true), []);
   const noopSendMessage = useCallback(() => {}, []);
   const { user, profile } = useUser();
@@ -288,111 +336,191 @@ export default function LayoutContainer({
   const activeDMChannel = dmChannels.find((c) => c.id === activeDMChannelId);
 
   return (
-    <div className="flex w-full h-full bg-navy-950/40 backdrop-blur-sm text-white overflow-hidden relative">
-      {/* Mobile Menu Overlay / Backdrop */}
-      {mobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm touch-none"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
+    <div className="flex flex-col w-full h-full bg-navy-950/40 backdrop-blur-sm text-white overflow-hidden relative">
+      {/* Top bar (course switcher + search + bell + AI + avatar) */}
+      <TopBar
+        servers={servers}
+        activeServerId={activeServerId}
+        onServerSelect={handleServerSelect}
+        onAddCourse={onAddCourse}
+        onOpenMobileMenu={() => setMobileMenuOpen(true)}
+        onOpenFriendRequests={() => setShowFriendRequests(true)}
+        onOpenTweaks={() => setTweaksOpen((o) => !o)}
+        userName={userName}
+        userAvatarUrl={userAvatarUrl}
+        isLecturer={isLecturer}
+        serverUnreadCounts={serverUnreadCounts}
+        dmUnreadCount={dmTotalUnread}
+        pendingFriendRequestCount={pendingCount}
+        onOpenDM={showDMButton ? () => handleServerSelect("home") : undefined}
+        isDMMode={isDMMode}
+      />
 
-      {/* Sidebar Container (Responsive) */}
-      <div
-        className={`
+      <div className="flex flex-1 min-h-0 relative">
+        {/* Mobile Menu Overlay / Backdrop */}
+        {mobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm touch-none"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+
+        {/* Sidebar Container (Responsive) */}
+        <div
+          className={`
         fixed inset-y-0 left-0 z-50 flex h-full transition-transform duration-300 ease-in-out md:relative md:translate-x-0
         ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:transform-none"}
       `}
-      >
-        {/* Server sidebar */}
-        <ServerSidebar
-          servers={servers}
-          activeServerId={activeServerId}
-          onServerSelect={handleServerSelect}
-          onAddCourse={onAddCourse}
-          isLecturer={isLecturer}
-          enrolledCourseIds={enrolledCourseIds}
-          showDMButton={showDMButton}
-          serverUnreadCounts={serverUnreadCounts}
-          dmUnreadCount={dmTotalUnread}
-        />
+        >
+          {/* DM Mode Sidebar */}
+          {isDMMode && (
+            <div className="w-[264px] bg-navy-950/95 md:bg-navy-950/70 border-r border-navy-800/60 flex flex-col h-full shadow-2xl md:shadow-none">
+              {/* DM Header */}
+              <div className="h-12 px-4 border-b border-navy-800/60 bg-navy-950/60 flex items-center justify-between shadow-soft flex-shrink-0">
+                <h2 className="text-gray-100 font-semibold text-sm">
+                  Direct Messages
+                </h2>
+                {dmTotalUnread > 0 && (
+                  <span className="bg-red-500 text-white text-[11px] font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-soft">
+                    {dmTotalUnread > 9 ? "9+" : dmTotalUnread}
+                  </span>
+                )}
+              </div>
 
-        {/* DM Mode Sidebar */}
-        {isDMMode && (
-          <div className="w-60 bg-navy-950/95 md:bg-navy-950/70 border-r border-navy-800/60 flex flex-col h-full shadow-2xl md:shadow-none">
-            {/* DM Header */}
-            <div className="h-12 px-4 border-b border-navy-800/60 bg-navy-950/60 flex items-center justify-between shadow-soft flex-shrink-0">
-              <h2 className="text-gray-100 font-semibold text-sm">
-                Direct Messages
-              </h2>
-              {dmTotalUnread > 0 && (
-                <span className="bg-red-500 text-white text-[11px] font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-soft">
-                  {dmTotalUnread > 9 ? "9+" : dmTotalUnread}
-                </span>
-              )}
-            </div>
-
-            {/* Friends + DM content */}
-            <div className="flex-1 overflow-y-auto px-2.5 py-3 chat-scrollbar">
-              <DMSection
-                channels={dmChannels}
-                friends={friends}
-                activeDMChannelId={activeDMChannelId}
-                onDMSelect={handleDMSelect}
-                onSelectFriend={openOrSelectDMByFriend}
-                onOpenAddFriend={() => setShowAddFriend(true)}
-                pendingRequestCount={pendingCount}
-                onOpenFriendRequests={() => setShowFriendRequests(true)}
-                totalUnread={dmTotalUnread}
-              />
-            </div>
-
-            {/* User profile footer */}
-            <div className="h-14 bg-navy-950/80 px-2 py-2 flex items-center gap-2 border-t border-navy-800/60 flex-shrink-0 mt-auto">
-              {userAvatarUrl ? (
-                <img
-                  src={userAvatarUrl}
-                  alt={userName}
-                  className="w-8 h-8 rounded-full object-cover shadow-soft"
+              {/* Friends + DM content */}
+              <div className="flex-1 overflow-y-auto px-2.5 py-3 chat-scrollbar">
+                <DMSection
+                  channels={dmChannels}
+                  friends={friends}
+                  activeDMChannelId={activeDMChannelId}
+                  onDMSelect={handleDMSelect}
+                  onSelectFriend={openOrSelectDMByFriend}
+                  onOpenAddFriend={() => setShowAddFriend(true)}
+                  pendingRequestCount={pendingCount}
+                  onOpenFriendRequests={() => setShowFriendRequests(true)}
+                  totalUnread={dmTotalUnread}
                 />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold shadow-soft">
-                  {userName ? userName.charAt(0).toUpperCase() : "U"}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="text-gray-100 text-sm font-medium truncate">
-                  {userName || "User"}
-                </div>
-                <div className="text-emerald-300 text-xs flex items-center gap-1">
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
-                  {t("chat.online")}
+              </div>
+
+              {/* User profile footer */}
+              <div className="h-14 bg-navy-950/80 px-2 py-2 flex items-center gap-2 border-t border-navy-800/60 flex-shrink-0 mt-auto">
+                {userAvatarUrl ? (
+                  <img
+                    src={userAvatarUrl}
+                    alt={userName}
+                    className="w-8 h-8 rounded-full object-cover shadow-soft"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold shadow-soft">
+                    {userName ? userName.charAt(0).toUpperCase() : "U"}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-gray-100 text-sm font-medium truncate">
+                    {userName || "User"}
+                  </div>
+                  <div className="text-emerald-300 text-xs flex items-center gap-1">
+                    <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                    {t("chat.online")}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Channels Sidebar Container */}
-        {!isDMMode && activeServer && (
-          <div className="w-60 bg-navy-950/95 md:bg-navy-950/70 border-r border-navy-800/60 flex flex-col h-full shadow-2xl md:shadow-none">
-            {/* Channels Section */}
-            <div
-              className={`flex flex-col transition-all ${channelsCollapsed ? "flex-shrink-0" : "flex-1 min-h-0"}`}
-            >
-              {/* Channels Header with Collapse Button - shown when collapsed */}
-              {channelsCollapsed ? (
-                <div className="h-12 px-4 border-b border-navy-800/60 flex items-center justify-between bg-navy-950/60 flex-shrink-0">
-                  <span className="text-gray-400 text-xs font-semibold tracking-wider">
-                    CHANNELS
-                  </span>
-                  <button
-                    onClick={() => setChannelsCollapsed(!channelsCollapsed)}
-                    className="text-gray-400 hover:text-emerald-300 transition-colors p-1 rounded-md hover:bg-navy-800/60"
-                    title="Expand channels"
-                  >
+          {/* Channels Sidebar Container */}
+          {!isDMMode && activeServer && (
+            <div className="w-[264px] bg-navy-950/95 md:bg-navy-950/70 border-r border-navy-800/60 flex flex-col h-full shadow-2xl md:shadow-none">
+              {/* Channels Section */}
+              <div
+                className={`flex flex-col transition-all ${channelsCollapsed ? "flex-shrink-0" : "flex-1 min-h-0"}`}
+              >
+                {/* Channels Header with Collapse Button - shown when collapsed */}
+                {channelsCollapsed ? (
+                  <div className="h-12 px-4 border-b border-navy-800/60 flex items-center justify-between bg-navy-950/60 flex-shrink-0">
+                    <span className="text-gray-400 text-xs font-semibold tracking-wider">
+                      CHANNELS
+                    </span>
+                    <button
+                      onClick={() => setChannelsCollapsed(!channelsCollapsed)}
+                      className="text-gray-400 hover:text-emerald-300 transition-colors p-1 rounded-md hover:bg-navy-800/60"
+                      title="Expand channels"
+                    >
+                      <svg
+                        className="w-4 h-4 transition-transform"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-hidden min-h-0">
+                    <ChannelSidebar
+                      server={activeServer}
+                      activeChannelId={activeChannelId}
+                      onChannelSelect={handleChannelSelect}
+                      onChannelCreate={onChannelCreate}
+                      onChannelUpdate={onChannelUpdate}
+                      onChannelDelete={onChannelDelete}
+                      isLecturer={isLecturer}
+                      onCollapse={() => setChannelsCollapsed(true)}
+                      getUnreadCount={getUnreadCount}
+                      markAsRead={markAsRead}
+                      totalUnread={activeServerTotalUnread}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* DM Section - below channels */}
+              <div className="border-t border-navy-800/60 mt-2 pt-2 flex-shrink-0">
+                <DMSection
+                  channels={dmChannels}
+                  friends={friends}
+                  activeDMChannelId={activeDMChannelId}
+                  onDMSelect={handleDMSelect}
+                  onSelectFriend={openOrSelectDMByFriend}
+                  onOpenAddFriend={() => setShowAddFriend(true)}
+                  pendingRequestCount={pendingCount}
+                  onOpenFriendRequests={() => setShowFriendRequests(true)}
+                  totalUnread={dmTotalUnread}
+                />
+              </div>
+
+              {/* User profile footer - at the very bottom */}
+              <div className="h-14 bg-navy-950/80 px-2 py-2 flex items-center gap-2 border-t border-navy-800/60 flex-shrink-0 mt-auto">
+                {userAvatarUrl ? (
+                  <img
+                    src={userAvatarUrl}
+                    alt={userName}
+                    className="w-8 h-8 rounded-full object-cover shadow-soft"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold shadow-soft">
+                    {userName ? userName.charAt(0).toUpperCase() : "U"}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-gray-100 text-sm font-medium truncate">
+                    {userName || "User"}
+                  </div>
+                  <div className="text-emerald-300 text-xs flex items-center gap-1">
+                    <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
+                    {t("chat.online")}
+                  </div>
+                </div>
+                <div className="flex gap-0.5">
+                  <button className="h-9 w-9 inline-flex items-center justify-center text-gray-400 hover:text-emerald-200 rounded-lg border border-navy-800/60 bg-navy-900/50 hover:bg-navy-800/70 hover:border-emerald-400/40 transition-colors">
                     <svg
-                      className="w-4 h-4 transition-transform"
+                      className="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -401,126 +529,69 @@ export default function LayoutContainer({
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
+                        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                      />
+                    </svg>
+                  </button>
+                  <button className="h-9 w-9 inline-flex items-center justify-center text-gray-400 hover:text-emerald-200 rounded-lg border border-navy-800/60 bg-navy-900/50 hover:bg-navy-800/70 hover:border-emerald-400/40 transition-colors">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                       />
                     </svg>
                   </button>
                 </div>
-              ) : (
-                <div className="flex-1 overflow-hidden min-h-0">
-                  <ChannelSidebar
-                    server={activeServer}
-                    activeChannelId={activeChannelId}
-                    onChannelSelect={handleChannelSelect}
-                    onChannelCreate={onChannelCreate}
-                    onChannelUpdate={onChannelUpdate}
-                    onChannelDelete={onChannelDelete}
-                    isLecturer={isLecturer}
-                    onCollapse={() => setChannelsCollapsed(true)}
-                    getUnreadCount={getUnreadCount}
-                    markAsRead={markAsRead}
-                    totalUnread={activeServerTotalUnread}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* DM Section - below channels */}
-            <div className="border-t border-navy-800/60 mt-2 pt-2 flex-shrink-0">
-              <DMSection
-                channels={dmChannels}
-                friends={friends}
-                activeDMChannelId={activeDMChannelId}
-                onDMSelect={handleDMSelect}
-                onSelectFriend={openOrSelectDMByFriend}
-                onOpenAddFriend={() => setShowAddFriend(true)}
-                pendingRequestCount={pendingCount}
-                onOpenFriendRequests={() => setShowFriendRequests(true)}
-                totalUnread={dmTotalUnread}
-              />
-            </div>
-
-            {/* User profile footer - at the very bottom */}
-            <div className="h-14 bg-navy-950/80 px-2 py-2 flex items-center gap-2 border-t border-navy-800/60 flex-shrink-0 mt-auto">
-              {userAvatarUrl ? (
-                <img
-                  src={userAvatarUrl}
-                  alt={userName}
-                  className="w-8 h-8 rounded-full object-cover shadow-soft"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold shadow-soft">
-                  {userName ? userName.charAt(0).toUpperCase() : "U"}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="text-gray-100 text-sm font-medium truncate">
-                  {userName || "User"}
-                </div>
-                <div className="text-emerald-300 text-xs flex items-center gap-1">
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full"></span>
-                  {t("chat.online")}
-                </div>
-              </div>
-              <div className="flex gap-0.5">
-                <button className="h-9 w-9 inline-flex items-center justify-center text-gray-400 hover:text-emerald-200 rounded-lg border border-navy-800/60 bg-navy-900/50 hover:bg-navy-800/70 hover:border-emerald-400/40 transition-colors">
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                    />
-                  </svg>
-                </button>
-                <button className="h-9 w-9 inline-flex items-center justify-center text-gray-400 hover:text-emerald-200 rounded-lg border border-navy-800/60 bg-navy-900/50 hover:bg-navy-800/70 hover:border-emerald-400/40 transition-colors">
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                </button>
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Chat area */}
+        <ChatErrorBoundary>
+          <ChatArea
+            channel={activeDMChannelId ? null : activeChannel}
+            currentUserId={currentUserId}
+            isLecturer={isLecturer}
+            onSendMessage={onSendMessage || noopSendMessage}
+            onReaction={onReaction}
+            isEnrolledInCourse={isEnrolledInCourse}
+            enrollmentInfo={enrollmentInfo}
+            onReEnrollRequest={onReEnrollRequest}
+            onMobileMenuClick={handleMobileMenuOpen}
+            dmChannelId={activeDMChannelId}
+            dmOtherUser={activeDMChannel?.otherUser || null}
+            showMembers={showMembers}
+            onToggleMembers={handleToggleMembers}
+          />
+        </ChatErrorBoundary>
+
+        {/* Member sidebar (course channels only, toggleable) */}
+        {!isDMMode && activeServer && showMembers && members.length > 0 && (
+          <div className="hidden md:flex w-[240px] flex-shrink-0 border-l border-navy-800/60 bg-navy-950/70">
+            <MemberSidebar
+              members={members}
+              onlineMembers={members.filter((m) => m.status === "online")}
+              offlineMembers={members.filter((m) => m.status !== "online")}
+              onCollapse={handleToggleMembers}
+              friendIds={friends.map((f) => f.id)}
+            />
           </div>
         )}
       </div>
-
-      {/* Chat area */}
-      <ChatErrorBoundary>
-        <ChatArea
-          channel={activeDMChannelId ? null : activeChannel}
-          currentUserId={currentUserId}
-          isLecturer={isLecturer}
-          onSendMessage={onSendMessage || noopSendMessage}
-          onReaction={onReaction}
-          isEnrolledInCourse={isEnrolledInCourse}
-          enrollmentInfo={enrollmentInfo}
-          onReEnrollRequest={onReEnrollRequest}
-          onMobileMenuClick={handleMobileMenuOpen}
-          dmChannelId={activeDMChannelId}
-          dmOtherUser={activeDMChannel?.otherUser || null}
-        />
-      </ChatErrorBoundary>
 
       {/* Friend Dialogs */}
       <AddFriendDialog
@@ -543,6 +614,23 @@ export default function LayoutContainer({
         onReject={handleRejectRequest}
         isLoading={requestsLoading}
       />
+
+      <TweaksPanel
+        open={tweaksOpen}
+        onClose={() => setTweaksOpen(false)}
+        showMembers={showMembers}
+        onToggleMembers={handleToggleMembers}
+      />
+
+      {/* Mobile bottom tabs (course channels only) */}
+      {!isDMMode && activeServer && (
+        <MobileBottomTabs
+          activeServer={activeServer}
+          activeChannelId={activeChannelId}
+          onChannelSelect={handleChannelSelect}
+          onOpenMyMenu={() => setMobileMenuOpen(true)}
+        />
+      )}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import ChatNavigation from "@/components/chat/ChatNavigation";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import { useEnrollments } from "@/hooks/useEnrollments";
+import { useCourses } from "@/hooks/useCourses";
 import { useI18n } from "@/contexts/I18nContext";
 import { normalizeProfileUsername } from "@/lib/username";
 import type { Server, Channel } from "@/types/server";
@@ -20,6 +21,7 @@ export default function StudentChatPage() {
   const { enrolledCourseIds, isLoading: enrollmentsLoading } = useEnrollments(
     user?.id || null,
   );
+  const { courses: allCourses } = useCourses("All");
   const [servers, setServers] = useState<Server[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -276,7 +278,7 @@ export default function StudentChatPage() {
                 "radial-gradient(ellipse at 50% 25%, rgba(16, 185, 129, 0.12), transparent 60%)",
             }}
           >
-            <div className="text-center max-w-xl relative">
+            <div className="text-center max-w-[780px] relative w-full">
               <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-gray-500 mb-3">
                 {t("chat.home")}
               </div>
@@ -286,6 +288,37 @@ export default function StudentChatPage() {
               <p className="mt-4 text-[15px] text-gray-400 leading-relaxed text-pretty max-w-[52ch] mx-auto">
                 {t("chat.noEnrolledCoursesDescription")}
               </p>
+              {allCourses.length > 0 && (
+                <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+                  {allCourses.slice(0, 3).map((course) => (
+                    <Link
+                      key={course.id}
+                      href={`/courses/${course.id}`}
+                      className="p-4 rounded-xl border border-navy-800/70 bg-navy-900/60 hover:border-emerald-500/40 hover:bg-navy-900/80 transition-colors flex flex-col gap-3"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-[10px] bg-navy-800/80 text-emerald-200 grid place-items-center font-semibold">
+                          {course.title.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-mono text-[10px] text-gray-500 truncate">
+                          {course.course_type}
+                        </span>
+                      </div>
+                      <div className="text-[15px] font-semibold text-gray-100 leading-tight line-clamp-2">
+                        {course.title}
+                      </div>
+                      <div className="flex items-center justify-between mt-auto">
+                        <span className="font-mono text-[12px] text-gray-200">
+                          ₾ {course.price}
+                        </span>
+                        <span className="text-[12px] text-gray-300 px-2.5 py-1 rounded-lg border border-navy-800/70">
+                          {t("chat.browseCourses")} →
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
               <Link
                 href="/courses"
                 className="mt-8 inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-navy-950 font-semibold px-6 py-3 rounded-xl transition-colors shadow-soft"
@@ -315,6 +348,7 @@ export default function StudentChatPage() {
               currentUserId={user.id}
               isLecturer={false}
               enrolledCourseIds={enrolledCourseIds}
+              members={members}
               onSendMessage={handleSendMessage}
               onReaction={handleReaction}
             />

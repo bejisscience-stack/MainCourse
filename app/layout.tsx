@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Noto_Sans_Georgian, JetBrains_Mono } from "next/font/google";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import "./globals.css";
@@ -44,6 +44,22 @@ const inter = Inter({
   display: "swap",
   preload: true,
   variable: "--font-inter",
+});
+
+const notoGeorgian = Noto_Sans_Georgian({
+  subsets: ["georgian"],
+  display: "swap",
+  preload: true,
+  variable: "--font-noto-georgian",
+  weight: ["400", "500", "600", "700"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+  variable: "--font-jb-mono",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -110,7 +126,7 @@ export default async function RootLayout({
   return (
     <html
       lang={initialLanguage}
-      className={`${inter.variable} dark`}
+      className={`${inter.variable} ${notoGeorgian.variable} ${jetbrainsMono.variable} dark`}
       suppressHydrationWarning
     >
       <head>

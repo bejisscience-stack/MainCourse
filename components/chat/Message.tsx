@@ -7,6 +7,7 @@ import { edgeFunctionUrl } from "@/lib/api-client";
 import { useUserMuteStatus } from "@/hooks/useMuteStatus";
 import { useProjectCountdown } from "@/hooks/useProjectCountdown";
 import { useI18n } from "@/contexts/I18nContext";
+import { useChatTweaks } from "@/contexts/ChatTweaksContext";
 import ProjectCard from "./ProjectCard";
 import type {
   Message as MessageType,
@@ -41,6 +42,7 @@ interface MessageProps {
   courseId?: string;
   showAvatar?: boolean;
   isEnrolledInCourse?: boolean;
+  forceBubbles?: boolean;
 }
 
 const formatTimestamp = (timestamp: number) => {
@@ -234,8 +236,11 @@ const Message = memo(function Message({
   courseId,
   showAvatar = true,
   isEnrolledInCourse = false,
+  forceBubbles = false,
 }: MessageProps) {
   const { t } = useI18n();
+  const { tweaks } = useChatTweaks();
+  const isBubbleStyle = forceBubbles || tweaks.messageStyle === "bubbles";
   const [showMenu, setShowMenu] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -585,22 +590,28 @@ const Message = memo(function Message({
       ref={messageRef}
       data-message-id={message.id}
       className={`group px-4 hover:bg-navy-800/25 transition-colors duration-150 relative ${
-        showAvatar ? "pt-3 mt-1" : "py-1"
+        showAvatar ? "mt-1" : ""
       } ${isFailed ? "bg-red-500/10" : ""}`}
+      style={{
+        paddingTop: showAvatar
+          ? "calc(var(--density-y, 12px) + 4px)"
+          : "calc(var(--density-y, 12px) / 2)",
+        paddingBottom: "calc(var(--density-y, 12px) / 2)",
+      }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div className={`flex gap-4 ${isOwn ? "flex-row-reverse" : ""}`}>
+      <div className={`flex gap-3.5 ${isOwn ? "flex-row-reverse" : ""}`}>
         {/* Avatar */}
-        <div className="flex-shrink-0 w-10">
+        <div className="flex-shrink-0 w-9">
           {isOwn ? (
             // empty spacer — no avatar for own messages (Messenger style)
-            <div className="w-10" />
+            <div className="w-9" />
           ) : showAvatar ? (
             <div
-              className={`w-10 h-10 rounded-full bg-navy-900/70 flex items-center justify-center font-semibold text-sm overflow-hidden shadow-soft ${
+              className={`w-9 h-9 rounded-full bg-navy-900/70 flex items-center justify-center font-semibold text-sm overflow-hidden shadow-soft ${
                 isAuthorLecturer
-                  ? "ring-2 ring-amber-400/60 border border-amber-500/30 text-amber-200"
+                  ? "ring-2 ring-emerald-400/60 border border-emerald-500/30 text-emerald-200"
                   : "border border-navy-800/70 text-emerald-200"
               }`}
             >
@@ -618,8 +629,8 @@ const Message = memo(function Message({
               )}
             </div>
           ) : (
-            <div className="w-10 h-5 flex items-center justify-center">
-              <span className="text-[10px] text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="w-9 h-5 flex items-center justify-center">
+              <span className="font-mono text-[10px] text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
                 {new Date(message.timestamp).toLocaleTimeString("en-US", {
                   hour: "2-digit",
                   minute: "2-digit",
@@ -638,7 +649,7 @@ const Message = memo(function Message({
           {message.replyPreview && (
             <div
               onClick={scrollToOriginal}
-              className="mb-2 pl-3 pr-2 py-1.5 border-l-2 border-emerald-400/60 bg-navy-900/50 rounded-lg text-xs cursor-pointer hover:bg-navy-800/60 transition-colors flex items-center gap-2 group/reply max-w-3xl"
+              className="mb-2 pl-3 pr-2 py-1.5 border-l-2 border-emerald-400 bg-navy-900/60 rounded-r-lg text-xs cursor-pointer hover:bg-navy-800/60 transition-colors flex items-center gap-2 group/reply max-w-3xl"
             >
               <svg
                 className="w-3.5 h-3.5 text-emerald-300/80 flex-shrink-0"
@@ -670,9 +681,9 @@ const Message = memo(function Message({
             <div className="flex items-center gap-2 mb-1">
               <div className="relative" ref={userMenuRef}>
                 <span
-                  className={`font-semibold text-[15px] hover:underline cursor-pointer ${
+                  className={`font-semibold text-[14px] hover:underline cursor-pointer ${
                     isAuthorLecturer
-                      ? "text-amber-300 hover:text-amber-200"
+                      ? "text-emerald-200 hover:text-emerald-100"
                       : "text-gray-100"
                   } ${canMute ? "hover:text-emerald-300" : ""}`}
                   onClick={(e) => {
@@ -741,14 +752,33 @@ const Message = memo(function Message({
               </div>
 
               {isAuthorLecturer && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-[0.12em] bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-200 border border-emerald-500/40">
                   {t("chat.lecturer")}
                 </span>
               )}
 
-              <span className="text-gray-500 text-xs font-normal">
+              <span className="font-mono text-[11px] text-gray-500">
                 {formatTimestamp(message.timestamp)}
               </span>
+              {message.pinned && (
+                <span className="font-mono text-[10px] text-amber-300 flex items-center gap-1">
+                  <svg
+                    className="w-2.5 h-2.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M14 3l7 7-4 2v6l-3-3-5 5v-5l-3-3 6-4z"
+                    />
+                  </svg>
+                  {t("chat.pinned")}
+                </span>
+              )}
               {message.edited && (
                 <span className="text-gray-600 text-xs italic">(edited)</span>
               )}
@@ -784,10 +814,10 @@ const Message = memo(function Message({
             <div
               className={
                 isOwn
-                  ? `bg-emerald-600/80 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[75%] inline-block text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? "opacity-50" : isFailed ? "opacity-70" : ""}`
-                  : isAuthorLecturer
-                    ? `bg-amber-500/10 border border-amber-500/20 text-gray-100 rounded-2xl rounded-tl-sm px-4 py-2 max-w-[75%] inline-block text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? "opacity-50" : isFailed ? "opacity-70" : ""}`
-                    : `text-gray-100 text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? "opacity-50" : isFailed ? "opacity-70" : ""}`
+                  ? `bg-emerald-600/80 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[75%] inline-block text-[14.5px] whitespace-pre-wrap break-words leading-[1.55] ${isPending ? "opacity-50" : isFailed ? "opacity-70" : ""}`
+                  : isBubbleStyle
+                    ? `inline-block px-3.5 py-2 border ${isAuthorLecturer ? "bg-emerald-500/10 border-emerald-500/30 text-gray-100" : "bg-navy-800/60 border-navy-800/80 text-gray-100"} rounded-[4px_16px_16px_16px] max-w-[min(640px,80%)] text-[14.5px] whitespace-pre-wrap break-words leading-[1.55] ${isPending ? "opacity-50" : isFailed ? "opacity-70" : ""}`
+                    : `text-gray-100 text-[14.5px] whitespace-pre-wrap break-words leading-[1.55] ${isPending ? "opacity-50" : isFailed ? "opacity-70" : ""}`
               }
             >
               {message.content}
@@ -892,7 +922,7 @@ const Message = memo(function Message({
         {/* Hover action menu */}
         {showMenu && !isPending && !isFailed && (
           <div
-            className={`absolute ${isOwn ? "left-4" : "right-4"} -top-5 flex items-center gap-1 bg-navy-950/90 backdrop-blur-xl border border-navy-700/60 rounded-xl shadow-soft-xl px-1.5 py-1.5 z-20 animate-in fade-in slide-in-from-bottom-2 duration-200`}
+            className={`absolute ${isOwn ? "left-2" : "right-2"} top-2 flex items-center gap-[2px] bg-navy-900/95 backdrop-blur-xl border border-navy-700/60 rounded-[10px] shadow-soft-xl p-[3px] z-20 animate-in fade-in duration-200`}
           >
             {/* Reaction picker trigger */}
             <div className="relative">
@@ -945,6 +975,78 @@ const Message = memo(function Message({
                   strokeLinejoin="round"
                   strokeWidth={2}
                   d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                />
+              </svg>
+            </button>
+
+            {/* Bookmark — UI-only for now (TODO: persist saved messages) */}
+            <button
+              onClick={() =>
+                console.log("TODO: chat.bookmark for message", message.id)
+              }
+              className="p-2 hover:bg-navy-800/70 rounded-lg text-gray-400 hover:text-amber-300 transition-all duration-200"
+              title={t("chat.bookmark")}
+            >
+              <svg
+                className="w-[18px] h-[18px]"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 3h12v18l-6-4-6 4z"
+                />
+              </svg>
+            </button>
+
+            {/* Ask AI — UI-only for now */}
+            <button
+              onClick={() =>
+                console.log("TODO: chat.aiAssistant for message", message.id)
+              }
+              className="p-2 hover:bg-navy-800/70 rounded-lg text-gray-400 hover:text-emerald-300 transition-all duration-200"
+              title={t("chat.aiAssistant")}
+            >
+              <svg
+                className="w-[18px] h-[18px]"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2zM19 14l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"
+                />
+              </svg>
+            </button>
+
+            {/* Translate — UI-only for now */}
+            <button
+              onClick={() =>
+                console.log("TODO: chat.translate for message", message.id)
+              }
+              className="p-2 hover:bg-navy-800/70 rounded-lg text-gray-400 hover:text-emerald-300 transition-all duration-200"
+              title={t("chat.translate")}
+            >
+              <svg
+                className="w-[18px] h-[18px]"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4 6h9M7 3v3M4 6c0 6 6 8 6 8M11 12s3-3 3-6M13 20l4-10 4 10M15 17h4"
                 />
               </svg>
             </button>

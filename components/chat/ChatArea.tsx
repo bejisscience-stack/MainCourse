@@ -45,6 +45,44 @@ interface ChatAreaProps {
   onMobileMenuClick?: () => void;
   dmChannelId?: string | null;
   dmOtherUser?: { id: string; username: string; avatarUrl: string } | null;
+  showMembers?: boolean;
+  onToggleMembers?: () => void;
+}
+
+// Render the mono-pill date divider between messages from different days.
+function DateDivider({
+  timestamp,
+  t,
+}: {
+  timestamp: number;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const today = now.toDateString();
+  const yesterday = new Date(now.getTime() - 86400000).toDateString();
+  const target = date.toDateString();
+  let label: string;
+  if (target === today) {
+    label = t("chat.today");
+  } else if (target === yesterday) {
+    label = t("chat.yesterday");
+  } else {
+    label = date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+    });
+  }
+  return (
+    <div className="flex items-center gap-2.5 my-2 px-4">
+      <span className="flex-1 h-px bg-navy-800/40" />
+      <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-gray-500 px-2.5 py-[3px] rounded-full border border-navy-800/60 bg-navy-900/40">
+        {label}
+      </span>
+      <span className="flex-1 h-px bg-navy-800/40" />
+    </div>
+  );
 }
 
 function ChatArea({
@@ -60,6 +98,8 @@ function ChatArea({
   onMobileMenuClick,
   dmChannelId = null,
   dmOtherUser = null,
+  showMembers = true,
+  onToggleMembers,
 }: ChatAreaProps) {
   const { t } = useI18n();
   const isEnrollmentExpired = !isEnrolledInCourse;
@@ -834,6 +874,85 @@ function ChatArea({
                 </span>
               )}
             </div>
+
+            {/* Channel header right-side actions (pin / search / members) */}
+            <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() =>
+                  console.log("TODO: chat.pin channel-level pinned list")
+                }
+                className="w-8 h-8 inline-flex items-center justify-center rounded-[10px] text-gray-400 hover:text-emerald-300 hover:bg-navy-800/60 transition-colors"
+                title={t("chat.pin")}
+                aria-label={t("chat.pin")}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M14 3l7 7-4 2v6l-3-3-5 5v-5l-3-3 6-4z"
+                  />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => console.log("TODO: chat.search channel search")}
+                className="w-8 h-8 inline-flex items-center justify-center rounded-[10px] text-gray-400 hover:text-emerald-300 hover:bg-navy-800/60 transition-colors"
+                title={t("chat.search")}
+                aria-label={t("chat.search")}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M11 4a7 7 0 1 1-4.95 11.95L3 19M15.95 15.95l5 5"
+                  />
+                </svg>
+              </button>
+              {onToggleMembers && (
+                <button
+                  type="button"
+                  onClick={onToggleMembers}
+                  className={`w-8 h-8 inline-flex items-center justify-center rounded-[10px] transition-colors ${
+                    showMembers
+                      ? "bg-emerald-500/15 text-emerald-200 border border-emerald-500/40"
+                      : "text-gray-400 hover:text-emerald-300 hover:bg-navy-800/60 border border-transparent"
+                  }`}
+                  title={t("chat.membersToggle")}
+                  aria-label={t("chat.membersToggle")}
+                  aria-pressed={showMembers}
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -990,6 +1109,17 @@ function ChatArea({
                         prevMessage.user.id !== message.user.id
                       );
 
+                    const prevDayKey =
+                      prevMessage && "timestamp" in prevMessage
+                        ? new Date(prevMessage.timestamp).toDateString()
+                        : null;
+                    const currentDayKey =
+                      "timestamp" in message
+                        ? new Date(message.timestamp).toDateString()
+                        : null;
+                    const showDateDivider =
+                      !!currentDayKey && currentDayKey !== prevDayKey;
+
                     const isFailed = "failed" in message && message.failed;
                     const tempId =
                       "tempId" in message ? message.tempId : undefined;
@@ -1009,20 +1139,25 @@ function ChatArea({
                     }
 
                     return (
-                      <Message
-                        key={message.id}
-                        message={messageWithRetry}
-                        currentUserId={currentUserId}
-                        onReply={handleReply}
-                        onReaction={handleReaction}
-                        isLecturer={isLecturer}
-                        channelId={
-                          isDMMode ? dmChannelId || "" : channel?.id || ""
-                        }
-                        courseId={isDMMode ? undefined : channel?.courseId}
-                        showAvatar={showAvatar}
-                        isEnrolledInCourse={isEnrolledInCourse}
-                      />
+                      <div key={message.id}>
+                        {showDateDivider && "timestamp" in message && (
+                          <DateDivider timestamp={message.timestamp} t={t} />
+                        )}
+                        <Message
+                          message={messageWithRetry}
+                          currentUserId={currentUserId}
+                          onReply={handleReply}
+                          onReaction={handleReaction}
+                          isLecturer={isLecturer}
+                          channelId={
+                            isDMMode ? dmChannelId || "" : channel?.id || ""
+                          }
+                          courseId={isDMMode ? undefined : channel?.courseId}
+                          showAvatar={showAvatar}
+                          isEnrolledInCourse={isEnrolledInCourse}
+                          forceBubbles={isDMMode}
+                        />
+                      </div>
                     );
                   });
                 })()}
@@ -1059,7 +1194,23 @@ function ChatArea({
 
       {/* Typing indicator */}
       {typingUsers.length > 0 && (
-        <div className="px-4 py-2 text-xs text-gray-400 flex items-center gap-2 bg-navy-950/60 border-t border-navy-800/60">
+        <div className="px-4 py-2 text-[12px] text-gray-400 flex items-center gap-2.5 bg-navy-950/60 border-t border-navy-800/60">
+          <div className="w-6 h-6 rounded-full bg-navy-900/70 border border-navy-800/70 flex items-center justify-center text-[11px] font-semibold text-emerald-200 flex-shrink-0">
+            {(typingUsers[0].username || "U").charAt(0).toUpperCase()}
+          </div>
+          <span>
+            {typingUsers.length === 1
+              ? t("chat.typingOne", { name: typingUsers[0].username })
+              : typingUsers.length === 2
+                ? t("chat.typingTwo", {
+                    a: typingUsers[0].username,
+                    b: typingUsers[1].username,
+                  })
+                : t("chat.typingMany", {
+                    name: typingUsers[0].username,
+                    count: typingUsers.length - 1,
+                  })}
+          </span>
           <div className="flex gap-1">
             <span
               className="w-1 h-1 bg-emerald-400/80 rounded-full animate-bounce"
@@ -1074,17 +1225,6 @@ function ChatArea({
               style={{ animationDelay: "300ms" }}
             />
           </div>
-          {typingUsers.length === 1
-            ? t("chat.typingOne", { name: typingUsers[0].username })
-            : typingUsers.length === 2
-              ? t("chat.typingTwo", {
-                  a: typingUsers[0].username,
-                  b: typingUsers[1].username,
-                })
-              : t("chat.typingMany", {
-                  name: typingUsers[0].username,
-                  count: typingUsers.length - 1,
-                })}
         </div>
       )}
 

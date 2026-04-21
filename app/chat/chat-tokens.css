@@ -1,0 +1,55 @@
+/* Chat design tokens — scoped to the chat root via the .chat-tokens class.
+   Values mirror the moody-dark / warm-dark / light variants from the
+   Chat Redesign prototype. --accent-h is set at runtime by the Tweaks panel.
+*/
+.chat-tokens {
+  --bg-0: oklch(0.17 0.012 250);
+  --bg-1: oklch(0.2 0.012 250);
+  --bg-2: oklch(0.235 0.013 250);
+  --bg-3: oklch(0.28 0.015 250);
+  --line: oklch(0.32 0.01 250 / 0.7);
+  --line-soft: oklch(0.3 0.01 250 / 0.4);
+  --ink-0: oklch(0.97 0.005 250);
+  --ink-1: oklch(0.86 0.008 250);
+  --ink-2: oklch(0.66 0.012 250);
+  --ink-3: oklch(0.5 0.015 250);
+  --accent-h: 165;
+  --accent: oklch(0.78 0.14 var(--accent-h));
+  --accent-ink: oklch(0.92 0.08 var(--accent-h));
+  --accent-wash: oklch(0.78 0.14 var(--accent-h) / 0.12);
+  --warn: oklch(0.82 0.14 75);
+  --warn-wash: oklch(0.82 0.14 75 / 0.12);
+  --density-y: 12px;
+  --density-x: 14px;
+}
+
+.chat-tokens[data-chat-theme="warm"] {
+  --bg-0: oklch(0.19 0.012 60);
+  --bg-1: oklch(0.22 0.013 60);
+  --bg-2: oklch(0.255 0.014 60);
+  --bg-3: oklch(0.3 0.016 60);
+  --line: oklch(0.34 0.012 60 / 0.7);
+}
+
+.chat-tokens[data-chat-theme="light"] {
+  --bg-0: oklch(0.985 0.003 90);
+  --bg-1: oklch(0.97 0.004 90);
+  --bg-2: oklch(0.95 0.005 90);
+  --bg-3: oklch(0.92 0.008 90);
+  --line: oklch(0.85 0.008 90);
+  --line-soft: oklch(0.9 0.005 90 / 0.7);
+  --ink-0: oklch(0.2 0.01 250);
+  --ink-1: oklch(0.32 0.012 250);
+  --ink-2: oklch(0.5 0.012 250);
+  --ink-3: oklch(0.65 0.012 250);
+}
+
+.chat-tokens[data-chat-density="compact"] {
+  --density-y: 6px;
+  --density-x: 10px;
+}
+
+.chat-tokens[data-chat-density="cozy"] {
+  --density-y: 16px;
+  --density-x: 16px;
+}
