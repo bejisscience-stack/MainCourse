@@ -27,9 +27,14 @@ export async function middleware(request: NextRequest) {
   // 2. script-src uses nonce-based allowlisting which prevents XSS script execution
   // 3. Migrating to nonce-based styles requires Tailwind config changes and is tracked as a future improvement
   // To migrate: configure Tailwind to use CSS-in-JS with nonce support, or extract all styles to external stylesheets
+  const isDev = process.env.NODE_ENV !== "production";
+  const scriptSrc = isDev
+    ? `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://us-assets.i.posthog.com https://connect.facebook.net`
+    : `script-src 'self' 'nonce-${nonce}' https://us-assets.i.posthog.com https://connect.facebook.net`;
+
   const cspHeader = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://us-assets.i.posthog.com https://connect.facebook.net`,
+    scriptSrc,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https://bvptqdmhuumjbyfnjxdt.supabase.co https://nbecbsbuerdtakxkrduw.supabase.co https://*.supabase.in https://www.facebook.com",
     "font-src 'self'",

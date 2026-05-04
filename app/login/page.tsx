@@ -14,6 +14,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const { user, role: userRole, isLoading: authLoading } = useUser();
   const [authRedirecting, setAuthRedirecting] = useState(false);
+  const [authLoadTimedOut, setAuthLoadTimedOut] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +47,20 @@ function LoginForm() {
     isSubmittingRef.current = false;
     navigationStartedRef.current = false;
   }, []);
+
+  useEffect(() => {
+    if (!authLoading) {
+      setAuthLoadTimedOut(false);
+      return;
+    }
+
+    // Avoid indefinite loading UI when auth/session bootstrap gets stuck.
+    const timeoutId = setTimeout(() => {
+      setAuthLoadTimedOut(true);
+    }, 5000);
+
+    return () => clearTimeout(timeoutId);
+  }, [authLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,7 +224,7 @@ function LoginForm() {
     }
   };
 
-  if (authLoading || authRedirecting) {
+  if ((authLoading && !authLoadTimedOut) || authRedirecting) {
     return <LoadingFallback />;
   }
 

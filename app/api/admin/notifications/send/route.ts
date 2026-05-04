@@ -179,6 +179,7 @@ async function resolveEmails(
   target_course_id?: string,
   target_user_ids?: string[],
   target_emails?: string[],
+  respect_marketing_consent: boolean = true,
 ): Promise<{ emails: string[]; error?: string }> {
   const allEmails = new Set<string>();
 
@@ -193,10 +194,30 @@ async function resolveEmails(
     );
     if (error) return { emails: [], error };
 
-    if (userIds.length > 0) {
+    let filteredUserIds = userIds;
+
+    // Filter to only users who consented to marketing emails (default behaviour)
+    if (respect_marketing_consent && filteredUserIds.length > 0) {
+      const { data: consenting, error: consentError } = await serviceSupabase
+        .from("profiles")
+        .select("id")
+        .in("id", filteredUserIds)
+        .eq("marketing_emails_consent", true);
+
+      if (consentError) {
+        console.error(
+          "[Admin Notifications API] Failed to filter by marketing consent:",
+          consentError,
+        );
+        return { emails: [], error: "Failed to resolve email recipients" };
+      }
+      filteredUserIds = (consenting || []).map((row: any) => row.id);
+    }
+
+    if (filteredUserIds.length > 0) {
       const { data: profiles, error: profileError } = await serviceSupabase.rpc(
         "get_decrypted_profiles",
-        { p_user_ids: userIds },
+        { p_user_ids: filteredUserIds },
       );
 
       if (profileError) {
@@ -296,6 +317,7 @@ export async function POST(request: NextRequest) {
       language = "both",
       email_target,
       target_emails,
+      respect_marketing_consent = true,
     } = body;
 
     const message_html = sanitizeMessageHtml(body.message_html);
@@ -490,6 +512,7 @@ export async function POST(request: NextRequest) {
         target_course_id,
         target_user_ids,
         target_emails,
+        respect_marketing_consent,
       );
 
       if (emailResolveError) {

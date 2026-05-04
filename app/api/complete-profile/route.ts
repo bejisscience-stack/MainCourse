@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    const { username, role } = parsed.data;
+    const { username, role, marketingEmailsConsent } = parsed.data;
 
     const supabase = createServiceRoleClient(token);
 
@@ -56,10 +56,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Update profile — set is_approved=false when becoming a lecturer
+    const nowIso = new Date().toISOString();
     const updatePayload: Record<string, unknown> = {
       username,
       role,
       profile_completed: true,
+      terms_accepted: true,
+      terms_accepted_at: nowIso,
+      marketing_emails_consent: marketingEmailsConsent,
+      marketing_emails_consent_at: marketingEmailsConsent ? nowIso : null,
     };
     if (role === "lecturer") {
       updatePayload.is_approved = false;

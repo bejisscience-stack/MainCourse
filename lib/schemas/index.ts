@@ -44,4 +44,5 @@ export const completeProfileSchema = z.object({
     .max(30)
     .regex(/^[a-zA-Z0-9_]+$/),
   role: z.enum(["student", "lecturer"]),
+  marketingEmailsConsent: z.boolean().optional().default(false),
 });

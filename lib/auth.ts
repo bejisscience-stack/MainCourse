@@ -7,6 +7,7 @@ export interface SignUpData {
   role?: "student" | "lecturer";
   signupReferralCode?: string;
   redirectAfterConfirm?: string;
+  marketingEmailsConsent?: boolean;
 }
 
 export interface SignInData {
@@ -21,6 +22,7 @@ export async function signUp({
   role = "student",
   signupReferralCode,
   redirectAfterConfirm,
+  marketingEmailsConsent = false,
 }: SignUpData) {
   // Validate username format
   if (!username || username.trim().length < 3 || username.trim().length > 30) {
@@ -65,6 +67,7 @@ export async function signUp({
         signup_referral_code: signupReferralCode
           ? signupReferralCode.toUpperCase().trim()
           : null,
+        marketing_emails_consent: !!marketingEmailsConsent,
       },
     },
   });

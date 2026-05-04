@@ -16,6 +16,8 @@ export default function CompleteProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -36,6 +38,12 @@ export default function CompleteProfilePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!termsAccepted) {
+      setError(t("auth.agreeToTermsRequired"));
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -52,7 +60,11 @@ export default function CompleteProfilePage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ username: username.trim(), role }),
+        body: JSON.stringify({
+          username: username.trim(),
+          role,
+          marketingEmailsConsent: marketingConsent,
+        }),
       });
 
       const contentType = response.headers.get("content-type");
@@ -198,10 +210,51 @@ export default function CompleteProfilePage() {
               </div>
             </div>
 
+            {/* Consent checkboxes */}
+            <div className="space-y-3 text-sm text-charcoal-700 dark:text-gray-300">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  required
+                  className="w-4 h-4 mt-0.5 text-emerald-500 border-charcoal-300 dark:border-navy-600 rounded bg-white dark:bg-navy-700 focus:ring-emerald-500 dark:focus:ring-emerald-400"
+                />
+                <span>
+                  {t("auth.agreeToTermsLabel")}{" "}
+                  <Link
+                    href="/terms-and-conditions"
+                    className="font-semibold text-charcoal-950 dark:text-emerald-400 hover:text-charcoal-700 dark:hover:text-emerald-300 transition-colors underline"
+                    target="_blank"
+                  >
+                    {t("auth.termsAndConditions")}
+                  </Link>{" "}
+                  {t("auth.and")}{" "}
+                  <Link
+                    href="/privacy-policy"
+                    className="font-semibold text-charcoal-950 dark:text-emerald-400 hover:text-charcoal-700 dark:hover:text-emerald-300 transition-colors underline"
+                    target="_blank"
+                  >
+                    {t("auth.privacyPolicy")}
+                  </Link>
+                  <span className="text-red-500 ml-1">*</span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={marketingConsent}
+                  onChange={(e) => setMarketingConsent(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 text-emerald-500 border-charcoal-300 dark:border-navy-600 rounded bg-white dark:bg-navy-700 focus:ring-emerald-500 dark:focus:ring-emerald-400"
+                />
+                <span>{t("auth.agreeToMarketingLabel")}</span>
+              </label>
+            </div>
+
             <div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !termsAccepted}
                 className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-charcoal-950 dark:bg-emerald-500 hover:bg-charcoal-800 dark:hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? t("auth.completingSetup") : t("auth.completeSetup")}

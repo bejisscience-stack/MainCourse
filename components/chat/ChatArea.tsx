@@ -561,8 +561,18 @@ export default function ChatArea({
 
       const { message: createdMessage } = await response.json();
 
-      // Create project with pending_payment status if budget > 0
-      const needsPayment = data.budget > 0;
+      // Free-project lecturers (admin-granted) skip the Keepz payment flow.
+      // The DB trigger trg_set_project_pending_payment is the authoritative
+      // gate; this client check exists only to skip the unnecessary redirect.
+      const { data: lecturerProfile } = await supabase
+        .from("profiles")
+        .select("can_create_free_projects")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      const isExempt = lecturerProfile?.can_create_free_projects === true;
+
+      // Create project with pending_payment status if budget > 0 and not exempt
+      const needsPayment = data.budget > 0 && !isExempt;
       const { data: projectRecord, error: projectError } = await supabase
         .from("projects")
         .insert({

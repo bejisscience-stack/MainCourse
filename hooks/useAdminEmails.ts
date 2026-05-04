@@ -14,6 +14,7 @@ export interface AdminEmailEntry {
   enrolled_courses_count: number;
   last_email_sent_at: string | null;
   total_emails_sent: number;
+  marketing_emails_consent: boolean;
 }
 
 async function fetchAdminEmails(): Promise<AdminEmailEntry[]> {
