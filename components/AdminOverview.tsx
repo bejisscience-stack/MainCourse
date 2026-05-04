@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
+import { useAdminRealtimeInvalidation } from "@/hooks/useAdminRealtimeInvalidation";
+import { useI18n } from "@/contexts/I18nContext";
 import type { AnalyticsOverview, UserAnalytics } from "@/types/analytics";
 
 // ─── Fetcher (same pattern as useAdminAnalytics) ────────────────────
@@ -80,6 +83,49 @@ function SkeletonQuickActions() {
         <div className="h-10 w-40 bg-gray-200 rounded-lg animate-pulse" />
         <div className="h-10 w-36 bg-gray-200 rounded-lg animate-pulse" />
       </div>
+    </div>
+  );
+}
+
+function LiveStatus({
+  isLiveConnected,
+  isValidating,
+  lastUpdated,
+}: {
+  isLiveConnected: boolean;
+  isValidating: boolean;
+  lastUpdated: Date | null;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium ${
+          isLiveConnected
+            ? "bg-emerald-50 text-emerald-700"
+            : "bg-amber-50 text-amber-700"
+        }`}
+      >
+        <span
+          className={`h-2 w-2 rounded-full ${
+            isLiveConnected ? "bg-emerald-500" : "bg-amber-500"
+          }`}
+        />
+        {isLiveConnected
+          ? t("adminDashboard.live")
+          : t("adminDashboard.polling")}
+      </span>
+      {isValidating && <span>{t("adminDashboard.syncing")}</span>}
+      {lastUpdated && (
+        <span>
+          {t("adminDashboard.updated")}{" "}
+          {lastUpdated.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+      )}
     </div>
   );
 }
@@ -199,26 +245,55 @@ export default function AdminOverview({
   totalCourses,
   setActiveTab,
 }: AdminOverviewProps) {
+  const { t } = useI18n();
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const today = new Date().toISOString().split("T")[0];
   const params = `from=2020-01-01&to=${today}`;
 
-  const { data: overview, isLoading: overviewLoading } =
+  const {
+    data: overview,
+    isLoading: overviewLoading,
+    isValidating: overviewValidating,
+    mutate: mutateOverview,
+  } =
     useSWR<AnalyticsOverview>(
       `admin-overview-stats-${today}`,
       () =>
         fetchAnalytics<AnalyticsOverview>(
           `/api/admin/analytics/overview?${params}`,
         ),
-      { revalidateOnFocus: false, dedupingInterval: 10000 },
+      {
+        revalidateOnFocus: false,
+        dedupingInterval: 10000,
+        onSuccess: () => setLastUpdated(new Date()),
+      },
     );
 
-  const { data: users, isLoading: usersLoading } = useSWR<UserAnalytics>(
+  const {
+    data: users,
+    isLoading: usersLoading,
+    isValidating: usersValidating,
+    mutate: mutateUsers,
+  } = useSWR<UserAnalytics>(
     `admin-overview-users-${today}`,
     () => fetchAnalytics<UserAnalytics>(`/api/admin/analytics/users?${params}`),
-    { revalidateOnFocus: false, dedupingInterval: 10000 },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 10000,
+      onSuccess: () => setLastUpdated(new Date()),
+    },
   );
 
+  const { isConnected: isLiveConnected } = useAdminRealtimeInvalidation({
+    channelName: "admin-overview",
+    onChange: () => {
+      void mutateOverview();
+      void mutateUsers();
+    },
+  });
+
   const isLoading = overviewLoading || usersLoading;
+  const isValidating = overviewValidating || usersValidating;
 
   if (isLoading) {
     return (
@@ -237,42 +312,54 @@ export default function AdminOverview({
     users?.roleDistribution.find((r) => r.role === "student")?.count ?? 0;
   const lecturerCount =
     users?.roleDistribution.find((r) => r.role === "lecturer")?.count ?? 0;
+  const totalEnrollments =
+    (overview?.totalEnrollments ?? 0) + (overview?.totalBundleEnrollments ?? 0);
+  const totalRevenue =
+    (overview?.totalRevenue ?? 0) + (overview?.totalBundleRevenue ?? 0);
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <LiveStatus
+          isLiveConnected={isLiveConnected}
+          isValidating={isValidating}
+          lastUpdated={lastUpdated}
+        />
+      </div>
+
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <StatCard
-          label="Total Courses"
+          label={t("adminOverview.totalCourses")}
           value={totalCourses}
           icon={<BookIcon />}
           iconBg="bg-navy-100"
           iconColor="text-navy-900"
         />
         <StatCard
-          label="Total Students"
+          label={t("adminOverview.totalStudents")}
           value={studentCount}
           icon={<AcademicCapIcon />}
           iconBg="bg-blue-100"
           iconColor="text-blue-900"
         />
         <StatCard
-          label="Total Lecturers"
+          label={t("adminOverview.totalLecturers")}
           value={lecturerCount}
           icon={<BriefcaseIcon />}
           iconBg="bg-amber-100"
           iconColor="text-amber-900"
         />
         <StatCard
-          label="Total Enrollments"
-          value={overview?.totalEnrollments ?? 0}
+          label={t("adminOverview.totalEnrollments")}
+          value={totalEnrollments}
           icon={<ClipboardCheckIcon />}
           iconBg="bg-green-100"
           iconColor="text-green-900"
         />
         <StatCard
-          label="Total Revenue"
-          value={`₾${(overview?.totalRevenue ?? 0).toLocaleString()}`}
+          label={t("adminOverview.totalRevenue")}
+          value={`₾${totalRevenue.toLocaleString()}`}
           icon={<CurrencyIcon />}
           iconBg="bg-emerald-100"
           iconColor="text-emerald-900"
@@ -282,26 +369,26 @@ export default function AdminOverview({
       {/* Quick Actions */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Quick Actions
+          {t("adminOverview.quickActions")}
         </h3>
         <div className="flex flex-wrap gap-3">
           <button
             onClick={() => setActiveTab("courses")}
             className="px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm font-medium"
           >
-            View All Courses
+            {t("adminOverview.viewAllCourses")}
           </button>
           <button
             onClick={() => setActiveTab("withdrawals")}
             className="px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm font-medium"
           >
-            View Withdrawals
+            {t("adminOverview.viewWithdrawals")}
           </button>
           <button
             onClick={() => setActiveTab("lecturers")}
             className="px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm font-medium"
           >
-            View Lecturers
+            {t("adminOverview.viewLecturers")}
           </button>
         </div>
       </div>

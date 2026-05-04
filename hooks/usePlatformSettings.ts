@@ -1,5 +1,6 @@
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
+import { useAdminRealtimeInvalidation } from "@/hooks/useAdminRealtimeInvalidation";
 
 interface PlatformSettings {
   min_withdrawal_gel: number;
@@ -15,29 +16,50 @@ const DEFAULTS: PlatformSettings = {
   featured_course_id: null,
 };
 
+const PLATFORM_SETTINGS_LIVE_TABLES = ["platform_settings"] as const;
+
 async function fetchPlatformSettings(): Promise<PlatformSettings> {
-  const {
+  let {
     data: { session },
   } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    const {
+      data: { session: refreshed },
+    } = await supabase.auth.refreshSession();
+    session = refreshed;
+  }
+
   const token = session?.access_token;
-
   if (!token) {
-    return DEFAULTS;
+    throw new Error("Not authenticated");
   }
 
-  const response = await fetch("/api/admin/settings", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
 
-  if (!response.ok) {
-    return DEFAULTS;
+  try {
+    const response = await fetch("/api/admin/settings", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Cache-Control": "no-cache",
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return response.json();
 }
 
 export function usePlatformSettings() {
-  const { data, error, isLoading, mutate } = useSWR<PlatformSettings>(
+  const { data, error, isLoading, isValidating, mutate } = useSWR<PlatformSettings>(
     "platform-settings",
     fetchPlatformSettings,
     {
@@ -47,6 +69,14 @@ export function usePlatformSettings() {
     },
   );
 
+  useAdminRealtimeInvalidation({
+    channelName: "platform-settings-live",
+    tables: PLATFORM_SETTINGS_LIVE_TABLES,
+    onChange: () => {
+      void mutate();
+    },
+  });
+
   return {
     minWithdrawal: data?.min_withdrawal_gel ?? DEFAULTS.min_withdrawal_gel,
     subscriptionPrice:
@@ -54,7 +84,8 @@ export function usePlatformSettings() {
     featuredCourseId: data?.featured_course_id ?? null,
     updatedAt: data?.updated_at,
     updatedBy: data?.updated_by,
-    isLoading,
+    isLoading: isLoading && !data,
+    isValidating,
     error,
     mutate,
   };

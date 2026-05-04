@@ -4,9 +4,72 @@ import {
   isAuthError,
   internalError,
 } from "@/lib/admin-auth";
+import {
+  fetchGrossRevenuePayments,
+  grossPaymentAmount,
+  grossPaymentDate,
+  type GrossRevenuePayment,
+} from "@/lib/admin-analytics";
 import type { FinancialAnalytics, BalanceFlowDay } from "@/types/analytics";
 
 export const dynamic = "force-dynamic";
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+async function fetchCourseRequestMap(
+  serviceSupabase: any,
+  payments: GrossRevenuePayment[],
+): Promise<Map<string, Record<string, any>>> {
+  const ids = Array.from(
+    new Set(payments.map((payment) => payment.reference_id)),
+  );
+  const rows: Record<string, any>[] = [];
+
+  for (const idChunk of chunk(ids, 200)) {
+    const { data, error } = await serviceSupabase
+      .from("enrollment_requests")
+      .select("id, courses(lecturer_id)")
+      .in("id", idChunk);
+
+    if (error) throw error;
+    rows.push(...(data || []));
+  }
+
+  return new Map(rows.map((row) => [row.id, row]));
+}
+
+async function fetchBundleRequestMap(
+  serviceSupabase: any,
+  payments: GrossRevenuePayment[],
+): Promise<Map<string, Record<string, any>>> {
+  const ids = Array.from(
+    new Set(payments.map((payment) => payment.reference_id)),
+  );
+  const rows: Record<string, any>[] = [];
+
+  for (const idChunk of chunk(ids, 200)) {
+    const { data, error } = await serviceSupabase
+      .from("bundle_enrollment_requests")
+      .select("id, course_bundles(lecturer_id)")
+      .in("id", idChunk);
+
+    if (error) throw error;
+    rows.push(...(data || []));
+  }
+
+  return new Map(rows.map((row) => [row.id, row]));
+}
+
+function singleRelation(value: unknown): Record<string, any> | null {
+  if (Array.isArray(value)) return value[0] || null;
+  return (value as Record<string, any> | null) || null;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,29 +87,14 @@ export async function GET(request: NextRequest) {
     const toDate = searchParams.get("to") || now.toISOString().split("T")[0];
     const toEnd = toDate + "T23:59:59Z";
 
-    // Run independent queries in parallel — ALL queries respect date range
+    // Run independent queries in parallel. Gross revenue comes from successful Keepz payments.
     const [
-      approvedEnrollmentsResult,
-      approvedBundlesResult,
+      grossPayments,
       transactionsResult,
       balancesResult,
       withdrawalsResult,
     ] = await Promise.all([
-      // 1. Approved enrollments in date range (for revenue over time + by lecturer + AOV + totalEarned)
-      serviceSupabase
-        .from("enrollment_requests")
-        .select("created_at, course_id, courses(price, lecturer_id)")
-        .eq("status", "approved")
-        .gte("created_at", fromDate)
-        .lte("created_at", toEnd),
-
-      // 2. Approved bundle enrollments in date range
-      serviceSupabase
-        .from("bundle_enrollment_requests")
-        .select("created_at, course_bundles(price)")
-        .eq("status", "approved")
-        .gte("created_at", fromDate)
-        .lte("created_at", toEnd),
+      fetchGrossRevenuePayments(serviceSupabase, { fromDate, toDate }),
 
       // 3. Balance transactions in date range
       serviceSupabase
@@ -66,20 +114,26 @@ export async function GET(request: NextRequest) {
         .lte("created_at", toEnd),
     ]);
 
-    const approvedEnrollments = approvedEnrollmentsResult.data || [];
-    const approvedBundles = approvedBundlesResult.data || [];
+    const coursePayments = grossPayments.filter(
+      (payment) => payment.payment_type === "course_enrollment",
+    );
+    const bundlePayments = grossPayments.filter(
+      (payment) => payment.payment_type === "bundle_enrollment",
+    );
+    const [courseRequestMap, bundleRequestMap] = await Promise.all([
+      fetchCourseRequestMap(serviceSupabase, coursePayments),
+      fetchBundleRequestMap(serviceSupabase, bundlePayments),
+    ]);
 
     // --- 1. Revenue over time (daily aggregation) ---
     const revenueMap = new Map<string, number>();
-    for (const e of approvedEnrollments) {
-      const date = e.created_at.split("T")[0];
-      const price = Number((e.courses as any)?.price || 0);
-      revenueMap.set(date, (revenueMap.get(date) || 0) + price);
-    }
-    for (const b of approvedBundles) {
-      const date = b.created_at.split("T")[0];
-      const price = Number((b.course_bundles as any)?.price || 0);
-      revenueMap.set(date, (revenueMap.get(date) || 0) + price);
+    for (const payment of grossPayments) {
+      const date = grossPaymentDate(payment);
+      if (!date) continue;
+      revenueMap.set(
+        date,
+        (revenueMap.get(date) || 0) + grossPaymentAmount(payment),
+      );
     }
     const revenueOverTime = Array.from(revenueMap.entries())
       .map(([date, amount]) => ({
@@ -90,9 +144,18 @@ export async function GET(request: NextRequest) {
 
     // --- 2. Revenue by lecturer (same date-filtered enrollments) ---
     const lecturerMap = new Map<string, number>();
-    for (const e of approvedEnrollments) {
-      const lecturerId = (e.courses as any)?.lecturer_id;
-      const price = Number((e.courses as any)?.price || 0);
+    for (const payment of coursePayments) {
+      const request = courseRequestMap.get(payment.reference_id);
+      const lecturerId = singleRelation(request?.courses)?.lecturer_id;
+      const price = grossPaymentAmount(payment);
+      if (lecturerId) {
+        lecturerMap.set(lecturerId, (lecturerMap.get(lecturerId) || 0) + price);
+      }
+    }
+    for (const payment of bundlePayments) {
+      const request = bundleRequestMap.get(payment.reference_id);
+      const lecturerId = singleRelation(request?.course_bundles)?.lecturer_id;
+      const price = grossPaymentAmount(payment);
       if (lecturerId) {
         lecturerMap.set(lecturerId, (lecturerMap.get(lecturerId) || 0) + price);
       }
@@ -121,7 +184,7 @@ export async function GET(request: NextRequest) {
 
     // --- 3. Average order value (from date-filtered enrollments + bundles) ---
     const totalRevenue = revenueOverTime.reduce((sum, d) => sum + d.amount, 0);
-    const totalOrders = approvedEnrollments.length + approvedBundles.length;
+    const totalOrders = grossPayments.length;
     const averageOrderValue =
       totalOrders > 0
         ? Math.round((totalRevenue / totalOrders) * 100) / 100

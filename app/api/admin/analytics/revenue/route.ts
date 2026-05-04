@@ -4,6 +4,11 @@ import {
   isAuthError,
   internalError,
 } from "@/lib/admin-auth";
+import {
+  fetchGrossRevenuePayments,
+  grossPaymentAmount,
+  type GrossRevenuePayment,
+} from "@/lib/admin-analytics";
 import type {
   RevenueData,
   CourseRevenue,
@@ -11,6 +16,58 @@ import type {
 } from "@/types/analytics";
 
 export const dynamic = "force-dynamic";
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+async function fetchCourseRequestMap(
+  serviceSupabase: any,
+  payments: GrossRevenuePayment[],
+): Promise<Map<string, Record<string, any>>> {
+  const ids = Array.from(
+    new Set(payments.map((payment) => payment.reference_id)),
+  );
+  const rows: Record<string, any>[] = [];
+
+  for (const idChunk of chunk(ids, 200)) {
+    const { data, error } = await serviceSupabase
+      .from("enrollment_requests")
+      .select("id, course_id, courses(id, title, course_type, price)")
+      .in("id", idChunk);
+
+    if (error) throw error;
+    rows.push(...(data || []));
+  }
+
+  return new Map(rows.map((row) => [row.id, row]));
+}
+
+async function fetchBundleRequestMap(
+  serviceSupabase: any,
+  payments: GrossRevenuePayment[],
+): Promise<Map<string, Record<string, any>>> {
+  const ids = Array.from(
+    new Set(payments.map((payment) => payment.reference_id)),
+  );
+  const rows: Record<string, any>[] = [];
+
+  for (const idChunk of chunk(ids, 200)) {
+    const { data, error } = await serviceSupabase
+      .from("bundle_enrollment_requests")
+      .select("id, bundle_id, course_bundles(id, title, price)")
+      .in("id", idChunk);
+
+    if (error) throw error;
+    rows.push(...(data || []));
+  }
+
+  return new Map(rows.map((row) => [row.id, row]));
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,40 +80,23 @@ export async function GET(request: NextRequest) {
     const fromDate = searchParams.get("from");
     const toDate = searchParams.get("to");
 
-    let enrollmentQuery = serviceSupabase
-      .from("enrollment_requests")
-      .select("id, course_id, courses(id, title, course_type, price)")
-      .eq("status", "approved");
-
-    let bundleQuery = serviceSupabase
-      .from("bundle_enrollment_requests")
-      .select("id, bundle_id, course_bundles(id, title, price)")
-      .eq("status", "approved");
-
-    if (fromDate) {
-      enrollmentQuery = enrollmentQuery.gte("created_at", fromDate);
-      bundleQuery = bundleQuery.gte("created_at", fromDate);
-    }
-    if (toDate) {
-      const toEnd = toDate + "T23:59:59Z";
-      enrollmentQuery = enrollmentQuery.lte("created_at", toEnd);
-      bundleQuery = bundleQuery.lte("created_at", toEnd);
-    }
-
-    const [
-      enrollmentsResult,
-      bundleEnrollmentsResult,
-      coursesResult,
-      bundlesResult,
-    ] = await Promise.all([
-      enrollmentQuery,
-      bundleQuery,
+    const [grossPayments, coursesResult, bundlesResult] = await Promise.all([
+      fetchGrossRevenuePayments(serviceSupabase, { fromDate, toDate }),
       serviceSupabase.from("courses").select("id, title, course_type, price"),
       serviceSupabase.from("course_bundles").select("id, title, price"),
     ]);
 
-    const enrollments = enrollmentsResult.data || [];
-    const bundleEnrollments = bundleEnrollmentsResult.data || [];
+    const coursePayments = grossPayments.filter(
+      (payment) => payment.payment_type === "course_enrollment",
+    );
+    const bundlePayments = grossPayments.filter(
+      (payment) => payment.payment_type === "bundle_enrollment",
+    );
+    const [courseRequestMap, bundleRequestMap] = await Promise.all([
+      fetchCourseRequestMap(serviceSupabase, coursePayments),
+      fetchBundleRequestMap(serviceSupabase, bundlePayments),
+    ]);
+
     const allCourses = coursesResult.data || [];
 
     // Initialize all courses with 0 revenue
@@ -72,14 +112,28 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Count enrollments and revenue per course
-    for (const er of enrollments) {
-      const courseId = er.course_id;
-      const price = Number((er as Record<string, any>).courses?.price || 0);
+    // Count gross paid Keepz enrollments and revenue per course.
+    for (const payment of coursePayments) {
+      const request = courseRequestMap.get(payment.reference_id);
+      const courseId = request?.course_id || "unknown";
+      const price = grossPaymentAmount(payment);
       const existing = courseRevenueMap.get(courseId);
       if (existing) {
         existing.enrollmentCount += 1;
         existing.totalRevenue += price;
+      } else {
+        courseRevenueMap.set(courseId, {
+          courseId,
+          courseTitle:
+            (request?.courses as Record<string, any> | null)?.title ||
+            "Unknown Course",
+          courseType:
+            (request?.courses as Record<string, any> | null)?.course_type ||
+            "Unknown",
+          price,
+          enrollmentCount: 1,
+          totalRevenue: price,
+        });
       }
     }
 
@@ -96,16 +150,25 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Aggregate bundle enrollments
-    for (const ber of bundleEnrollments) {
-      const bundleId = ber.bundle_id;
-      const price = Number(
-        (ber as Record<string, any>).course_bundles?.price || 0,
-      );
+    // Aggregate gross paid Keepz bundle enrollments.
+    for (const payment of bundlePayments) {
+      const request = bundleRequestMap.get(payment.reference_id);
+      const bundleId = request?.bundle_id || "unknown";
+      const price = grossPaymentAmount(payment);
       const existing = bundleRevenueMap.get(bundleId);
       if (existing) {
         existing.enrollmentCount += 1;
         existing.totalRevenue += price;
+      } else {
+        bundleRevenueMap.set(bundleId, {
+          bundleId,
+          bundleTitle:
+            (request?.course_bundles as Record<string, any> | null)?.title ||
+            "Unknown Bundle",
+          price,
+          enrollmentCount: 1,
+          totalRevenue: price,
+        });
       }
     }
 
@@ -113,9 +176,12 @@ export async function GET(request: NextRequest) {
       (a, b) => b.totalRevenue - a.totalRevenue,
     );
 
-    const totalRevenue = courses.reduce((sum, c) => sum + c.totalRevenue, 0);
-    const totalBundleRevenue = Array.from(bundleRevenueMap.values()).reduce(
-      (sum, b) => sum + b.totalRevenue,
+    const totalRevenue = coursePayments.reduce(
+      (sum, payment) => sum + grossPaymentAmount(payment),
+      0,
+    );
+    const totalBundleRevenue = bundlePayments.reduce(
+      (sum, payment) => sum + grossPaymentAmount(payment),
       0,
     );
 

@@ -4,6 +4,10 @@ import {
   isAuthError,
   internalError,
 } from "@/lib/admin-auth";
+import {
+  fetchGrossRevenuePayments,
+  grossPaymentAmount,
+} from "@/lib/admin-analytics";
 import type { AnalyticsOverview } from "@/types/analytics";
 
 export const dynamic = "force-dynamic";
@@ -19,66 +23,48 @@ export async function GET(request: NextRequest) {
     const fromDate = searchParams.get("from");
     const toDate = searchParams.get("to");
 
-    // Build queries with optional date filtering
-    let enrollmentQuery = serviceSupabase
-      .from("enrollment_requests")
-      .select("id, course_id, courses(price)")
-      .eq("status", "approved");
-
     let referralQuery = serviceSupabase
       .from("referrals")
       .select("*", { count: "exact", head: true });
 
-    let bundleQuery = serviceSupabase
-      .from("bundle_enrollment_requests")
-      .select("id, bundle_id, course_bundles(price)")
-      .eq("status", "approved");
-
     let projectQuery = serviceSupabase.from("projects").select("id, budget");
 
     if (fromDate) {
-      enrollmentQuery = enrollmentQuery.gte("created_at", fromDate);
       referralQuery = referralQuery.gte("created_at", fromDate);
-      bundleQuery = bundleQuery.gte("created_at", fromDate);
       projectQuery = projectQuery.gte("created_at", fromDate);
     }
     if (toDate) {
       const toEnd = toDate + "T23:59:59Z";
-      enrollmentQuery = enrollmentQuery.lte("created_at", toEnd);
       referralQuery = referralQuery.lte("created_at", toEnd);
-      bundleQuery = bundleQuery.lte("created_at", toEnd);
       projectQuery = projectQuery.lte("created_at", toEnd);
     }
 
     const [
       waitingListResult,
-      enrollmentsResult,
       referralsResult,
       projectsResult,
-      bundleEnrollmentsResult,
+      grossPayments,
     ] = await Promise.all([
       serviceSupabase
         .from("coming_soon_emails")
         .select("*", { count: "exact", head: true }),
-      enrollmentQuery,
       referralQuery,
       projectQuery,
-      bundleQuery,
+      fetchGrossRevenuePayments(serviceSupabase, { fromDate, toDate }),
     ]);
 
-    const enrollments = enrollmentsResult.data || [];
-    const totalRevenue = enrollments.reduce(
-      (sum: number, er: Record<string, any>) => {
-        return sum + Number(er.courses?.price || 0);
-      },
+    const coursePayments = grossPayments.filter(
+      (payment) => payment.payment_type === "course_enrollment",
+    );
+    const bundlePayments = grossPayments.filter(
+      (payment) => payment.payment_type === "bundle_enrollment",
+    );
+    const totalRevenue = coursePayments.reduce(
+      (sum, payment) => sum + grossPaymentAmount(payment),
       0,
     );
-
-    const bundleEnrollments = bundleEnrollmentsResult.data || [];
-    const totalBundleRevenue = bundleEnrollments.reduce(
-      (sum: number, ber: Record<string, any>) => {
-        return sum + Number(ber.course_bundles?.price || 0);
-      },
+    const totalBundleRevenue = bundlePayments.reduce(
+      (sum, payment) => sum + grossPaymentAmount(payment),
       0,
     );
 
@@ -93,12 +79,12 @@ export async function GET(request: NextRequest) {
     const overview: AnalyticsOverview = {
       waitingListCount: waitingListResult.count || 0,
       totalRevenue,
-      totalEnrollments: enrollments.length,
+      totalEnrollments: coursePayments.length,
       totalReferrals: referralsResult.count || 0,
       totalProjects: projects.length,
       totalProjectBudget,
       totalBundleRevenue,
-      totalBundleEnrollments: bundleEnrollments.length,
+      totalBundleEnrollments: bundlePayments.length,
     };
 
     return NextResponse.json(overview, {

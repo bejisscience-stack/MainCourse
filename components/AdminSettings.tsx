@@ -14,6 +14,8 @@ export default function AdminSettings() {
     featuredCourseId,
     updatedAt,
     isLoading,
+    isValidating,
+    error,
     mutate,
   } = usePlatformSettings();
   const { courses } = useCourses("All");
@@ -58,9 +60,15 @@ export default function AdminSettings() {
 
     setSaving(true);
     try {
-      const {
+      let {
         data: { session },
       } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        const {
+          data: { session: refreshed },
+        } = await supabase.auth.refreshSession();
+        session = refreshed;
+      }
       const token = session?.access_token;
       if (!token) throw new Error("Not authenticated");
 
@@ -107,6 +115,23 @@ export default function AdminSettings() {
         <h2 className="text-xl font-bold text-navy-900 mb-6">
           {t("adminSettings.title")}
         </h2>
+
+        {error && (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                {t("adminSettings.fallbackWarning")}: {error.message}
+              </span>
+              <button
+                type="button"
+                onClick={() => void mutate()}
+                className="w-fit rounded-md bg-amber-100 px-3 py-1.5 font-semibold text-amber-900 transition-colors hover:bg-amber-200"
+              >
+                {t("adminSettings.retry")}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Min Withdrawal */}
@@ -206,7 +231,7 @@ export default function AdminSettings() {
             disabled={saving}
             className="px-6 py-3 bg-navy-900 text-white font-semibold rounded-lg hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {saving ? t("common.loading") : t("adminSettings.save")}
+            {saving || isValidating ? t("common.loading") : t("adminSettings.save")}
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
+import { useAdminRealtimeInvalidation } from "@/hooks/useAdminRealtimeInvalidation";
 
 export interface AdminEmailEntry {
   email: string;
@@ -16,6 +17,13 @@ export interface AdminEmailEntry {
   total_emails_sent: number;
   marketing_emails_consent: boolean;
 }
+
+const ADMIN_EMAIL_LIVE_TABLES = [
+  "profiles",
+  "coming_soon_emails",
+  "enrollments",
+  "email_send_history",
+] as const;
 
 async function fetchAdminEmails(): Promise<AdminEmailEntry[]> {
   const {
@@ -50,6 +58,14 @@ export function useAdminEmails() {
       dedupingInterval: 30000,
     },
   );
+
+  useAdminRealtimeInvalidation({
+    channelName: "admin-emails-live",
+    tables: ADMIN_EMAIL_LIVE_TABLES,
+    onChange: () => {
+      void mutate();
+    },
+  });
 
   return {
     emails: data || [],

@@ -1,5 +1,6 @@
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
+import { useAdminRealtimeInvalidation } from "@/hooks/useAdminRealtimeInvalidation";
 
 export interface LecturerApproval {
   id: string;
@@ -11,6 +12,8 @@ export interface LecturerApproval {
   created_at: string;
   updated_at: string;
 }
+
+const LECTURER_APPROVAL_LIVE_TABLES = ["profiles"] as const;
 
 async function fetchAdminLecturerApprovals(): Promise<LecturerApproval[]> {
   const {
@@ -71,6 +74,14 @@ export function useAdminLecturerApprovals(status?: string) {
       },
     },
   );
+
+  useAdminRealtimeInvalidation({
+    channelName: "admin-lecturer-approvals-live",
+    tables: LECTURER_APPROVAL_LIVE_TABLES,
+    onChange: () => {
+      void mutate();
+    },
+  });
 
   // Filter client-side based on status
   const filteredLecturers = (() => {

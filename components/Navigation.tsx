@@ -100,7 +100,7 @@ function Navigation() {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
-            {userRole !== "lecturer" && (
+            {userRole !== "lecturer" && userRole !== "admin" && (
               <>
                 <Link
                   href="/courses"

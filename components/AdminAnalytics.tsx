@@ -22,6 +22,7 @@ import {
   useAdminAnalytics,
   type DateRangeKey,
 } from "@/hooks/useAdminAnalytics";
+import { useI18n } from "@/contexts/I18nContext";
 import type {
   CourseRevenue,
   ReferralByCourse,
@@ -397,12 +398,12 @@ function ChartBox({
 }
 
 // ─── Date Range Picker with Custom ──────────────────────────────────
-const PRESET_RANGES: { key: DateRangeKey; label: string }[] = [
-  { key: "7d", label: "7D" },
-  { key: "30d", label: "30D" },
-  { key: "90d", label: "90D" },
-  { key: "1y", label: "1Y" },
-  { key: "all", label: "All" },
+const PRESET_RANGES: { key: DateRangeKey; labelKey: string }[] = [
+  { key: "7d", labelKey: "adminAnalytics.dateRange7d" },
+  { key: "30d", labelKey: "adminAnalytics.dateRange30d" },
+  { key: "90d", labelKey: "adminAnalytics.dateRange90d" },
+  { key: "1y", labelKey: "adminAnalytics.dateRange1y" },
+  { key: "all", labelKey: "adminAnalytics.dateRangeAll" },
 ];
 
 function DateRangePicker({
@@ -418,6 +419,7 @@ function DateRangePicker({
   customTo: string;
   onCustomChange: (from: string, to: string) => void;
 }) {
+  const { t } = useI18n();
   const [showCustom, setShowCustom] = useState(value === "custom");
   const [fromInput, setFromInput] = useState(customFrom);
   const [toInput, setToInput] = useState(customTo);
@@ -449,7 +451,7 @@ function DateRangePicker({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-        {PRESET_RANGES.map(({ key, label }) => (
+        {PRESET_RANGES.map(({ key, labelKey }) => (
           <button
             key={key}
             onClick={() => handlePreset(key)}
@@ -459,7 +461,7 @@ function DateRangePicker({
                 : "text-gray-600 hover:text-gray-900"
             }`}
           >
-            {label}
+            {t(labelKey)}
           </button>
         ))}
         <button
@@ -470,7 +472,7 @@ function DateRangePicker({
               : "text-gray-600 hover:text-gray-900"
           }`}
         >
-          Custom
+          {t("adminAnalytics.dateRangeCustom")}
         </button>
       </div>
       {showCustom && (
@@ -481,7 +483,9 @@ function DateRangePicker({
             onChange={(e) => setFromInput(e.target.value)}
             className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <span className="text-gray-500 text-sm">to</span>
+          <span className="text-gray-500 text-sm">
+            {t("adminAnalytics.dateRangeTo")}
+          </span>
           <input
             type="date"
             value={toInput}
@@ -493,7 +497,7 @@ function DateRangePicker({
             disabled={!fromInput || !toInput || fromInput > toInput}
             className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            Apply
+            {t("adminAnalytics.apply")}
           </button>
         </div>
       )}
@@ -501,8 +505,85 @@ function DateRangePicker({
   );
 }
 
+function LiveStatus({
+  isLiveConnected,
+  isValidating,
+  lastUpdated,
+}: {
+  isLiveConnected: boolean;
+  isValidating: boolean;
+  lastUpdated: Date | null;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium ${
+          isLiveConnected
+            ? "bg-emerald-50 text-emerald-700"
+            : "bg-amber-50 text-amber-700"
+        }`}
+      >
+        <span
+          className={`h-2 w-2 rounded-full ${
+            isLiveConnected ? "bg-emerald-500" : "bg-amber-500"
+          }`}
+        />
+        {isLiveConnected
+          ? t("adminDashboard.live")
+          : t("adminDashboard.polling")}
+      </span>
+      {isValidating && <span>{t("adminDashboard.syncing")}</span>}
+      {lastUpdated && (
+        <span>
+          {t("adminDashboard.updated")}{" "}
+          {lastUpdated.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function AnalyticsHeader({
+  isLiveConnected,
+  isValidating,
+  lastUpdated,
+  children,
+}: {
+  isLiveConnected: boolean;
+  isValidating: boolean;
+  lastUpdated: Date | null;
+  children?: React.ReactNode;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <div>
+        <h2 className="text-2xl font-bold text-navy-900">
+          {t("adminAnalytics.title")}
+        </h2>
+        <p className="text-gray-600 mt-1">{t("adminAnalytics.subtitle")}</p>
+        <div className="mt-3">
+          <LiveStatus
+            isLiveConnected={isLiveConnected}
+            isValidating={isValidating}
+            lastUpdated={lastUpdated}
+          />
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 // ─── Main Component ──────────────────────────────────────────────────
 function AdminAnalytics() {
+  const { t } = useI18n();
   const {
     overview,
     revenue,
@@ -519,26 +600,31 @@ function AdminAnalytics() {
     customFrom,
     customTo,
     setCustomDateRange,
+    mutate,
+    isValidating,
+    isLiveConnected,
+    lastUpdated,
   } = useAdminAnalytics();
 
   // ── Error State ──
   if (error) {
     return (
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-navy-900">Analytics</h2>
-          <p className="text-gray-600 mt-1">Platform analytics and insights</p>
-        </div>
+        <AnalyticsHeader
+          isLiveConnected={isLiveConnected}
+          isValidating={isValidating}
+          lastUpdated={lastUpdated}
+        />
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
           <p className="text-red-700 font-medium mb-3">
-            Failed to load analytics data
+            {t("adminAnalytics.failedToLoad")}
           </p>
           <p className="text-red-600 text-sm mb-4">{error.message}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => void mutate()}
             className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
           >
-            Retry
+            {t("adminAnalytics.retry")}
           </button>
         </div>
       </div>
@@ -549,10 +635,11 @@ function AdminAnalytics() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-navy-900">Analytics</h2>
-          <p className="text-gray-600 mt-1">Platform analytics and insights</p>
-        </div>
+        <AnalyticsHeader
+          isLiveConnected={isLiveConnected}
+          isValidating={isValidating}
+          lastUpdated={lastUpdated}
+        />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <CardSkeleton key={i} />
@@ -624,7 +711,7 @@ function AdminAnalytics() {
   );
 
   const roleData = (users?.roleDistribution ?? []).map((r, i) => ({
-    name: r.role.charAt(0).toUpperCase() + r.role.slice(1),
+    name: t(`adminAnalytics.roles.${r.role}`),
     value: r.count,
     color: ROLE_COLORS[r.role] || PIE_COLORS[i % PIE_COLORS.length],
   }));
@@ -632,11 +719,11 @@ function AdminAnalytics() {
   return (
     <div className="space-y-8">
       {/* Header + Date Range Picker */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-navy-900">Analytics</h2>
-          <p className="text-gray-600 mt-1">Platform analytics and insights</p>
-        </div>
+      <AnalyticsHeader
+        isLiveConnected={isLiveConnected}
+        isValidating={isValidating}
+        lastUpdated={lastUpdated}
+      >
         <DateRangePicker
           value={dateRangeKey}
           onChange={setDateRangeKey}
@@ -644,52 +731,52 @@ function AdminAnalytics() {
           customTo={customTo}
           onCustomChange={setCustomDateRange}
         />
-      </div>
+      </AnalyticsHeader>
 
       {/* ══════════════════════════════════════════════════════════════════
           ALL CARDS — Overview + Users + Engagement + Financial + Operations
           ══════════════════════════════════════════════════════════════════ */}
-      <Section title="Key Metrics">
+      <Section title={t("adminAnalytics.keyMetrics")}>
         <div className="space-y-6">
           {/* Overview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard
-              label="Total Revenue"
+              label={t("adminAnalytics.totalRevenue")}
               value={formatCurrency(totalRevenue)}
               icon={Icons.currency("text-green-600")}
               iconBg="bg-green-100"
               iconColor="text-green-600"
             />
             <StatCard
-              label="Total Enrollments"
+              label={t("adminAnalytics.totalEnrollments")}
               value={totalEnrollments}
               icon={Icons.enrollment("text-purple-600")}
               iconBg="bg-purple-100"
               iconColor="text-purple-600"
             />
             <StatCard
-              label="Active Referrals"
+              label={t("adminAnalytics.activeReferrals")}
               value={overview?.totalReferrals ?? 0}
               icon={Icons.referral("text-orange-600")}
               iconBg="bg-orange-100"
               iconColor="text-orange-600"
             />
             <StatCard
-              label="Total Projects"
+              label={t("adminAnalytics.totalProjects")}
               value={overview?.totalProjects ?? 0}
               icon={Icons.project("text-indigo-600")}
               iconBg="bg-indigo-100"
               iconColor="text-indigo-600"
             />
             <StatCard
-              label="Project Budget"
+              label={t("adminAnalytics.projectBudget")}
               value={formatCurrency(overview?.totalProjectBudget ?? 0)}
               icon={Icons.budget("text-emerald-600")}
               iconBg="bg-emerald-100"
               iconColor="text-emerald-600"
             />
             <StatCard
-              label="Waiting List"
+              label={t("adminAnalytics.waitingList")}
               value={overview?.waitingListCount ?? 0}
               icon={Icons.users("text-blue-600")}
               iconBg="bg-blue-100"
@@ -700,40 +787,44 @@ function AdminAnalytics() {
           {/* User Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
-              label="Total Users"
+              label={t("adminAnalytics.totalUsers")}
               value={users?.totalUsers ?? "—"}
               icon={Icons.users("text-blue-600")}
               iconBg="bg-blue-100"
               iconColor="text-blue-600"
             />
             <StatCard
-              label="Daily Active"
+              label={t("adminAnalytics.dailyActiveUsers")}
               value={users?.dau ?? "—"}
               icon={Icons.chart("text-cyan-600")}
               iconBg="bg-cyan-100"
               iconColor="text-cyan-600"
             />
             <StatCard
-              label="Weekly Active"
+              label={t("adminAnalytics.weeklyActiveUsers")}
               value={users?.wau ?? "—"}
               icon={Icons.chart("text-teal-600")}
               iconBg="bg-teal-100"
               iconColor="text-teal-600"
             />
             <StatCard
-              label="Monthly Active"
+              label={t("adminAnalytics.monthlyActiveUsers")}
               value={users?.mau ?? "—"}
               icon={Icons.chart("text-indigo-600")}
               iconBg="bg-indigo-100"
               iconColor="text-indigo-600"
-              subtitle={users ? `Stickiness: ${users.stickiness}%` : undefined}
+              subtitle={
+                users
+                  ? `${t("adminAnalytics.stickiness")}: ${users.stickiness}%`
+                  : undefined
+              }
             />
           </div>
 
           {/* Growth + Engagement + Financial Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
-              label="Signup Growth"
+              label={t("adminAnalytics.signupGrowthRate")}
               value={
                 users
                   ? `${users.signupGrowthRate > 0 ? "+" : ""}${users.signupGrowthRate}%`
@@ -754,25 +845,25 @@ function AdminAnalytics() {
                   ? "text-green-600"
                   : "text-red-600"
               }
-              subtitle="vs. prior period"
+              subtitle={t("adminAnalytics.vsPriorPeriod")}
             />
             <StatCard
-              label="Profile Completion"
+              label={t("adminAnalytics.profileCompletion")}
               value={users ? `${users.profileCompletionRate}%` : "—"}
               icon={Icons.users("text-purple-600")}
               iconBg="bg-purple-100"
               iconColor="text-purple-600"
             />
             <StatCard
-              label="Conversion Rate"
+              label={t("adminAnalytics.conversionRate")}
               value={engagement ? `${engagement.conversionRate}%` : "—"}
               icon={Icons.trending("text-blue-600")}
               iconBg="bg-blue-100"
               iconColor="text-blue-600"
-              subtitle={`Avg ${engagement?.avgEnrollmentsPerUser?.toFixed(1) ?? "—"} enrollments/user`}
+              subtitle={`${t("adminAnalytics.avgShort")} ${engagement?.avgEnrollmentsPerUser?.toFixed(1) ?? "—"} ${t("adminAnalytics.enrollmentsPerUser")}`}
             />
             <StatCard
-              label="Avg Order Value"
+              label={t("adminAnalytics.avgOrderValue")}
               value={
                 financial ? formatCurrency(financial.averageOrderValue) : "—"
               }
@@ -785,7 +876,7 @@ function AdminAnalytics() {
           {/* Financial + Enrollment Status Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
-              label="Outstanding Balances"
+              label={t("adminAnalytics.outstandingBalances")}
               value={
                 financial ? formatCurrency(financial.outstandingBalances) : "—"
               }
@@ -794,31 +885,31 @@ function AdminAnalytics() {
               iconColor="text-yellow-600"
             />
             <StatCard
-              label="Total Paid Out"
+              label={t("adminAnalytics.totalPaidOut")}
               value={financial ? formatCurrency(financial.totalPaidOut) : "—"}
               icon={Icons.currency("text-red-600")}
               iconBg="bg-red-100"
               iconColor="text-red-600"
             />
             <StatCard
-              label="Total Earned"
+              label={t("adminAnalytics.totalEarned")}
               value={financial ? formatCurrency(financial.totalEarned) : "—"}
               icon={Icons.trending("text-emerald-600")}
               iconBg="bg-emerald-100"
               iconColor="text-emerald-600"
               subtitle={
                 financial
-                  ? `Avg withdrawal: ${formatCurrency(financial.avgWithdrawalAmount)}`
+                  ? `${t("adminAnalytics.avgWithdrawal")}: ${formatCurrency(financial.avgWithdrawalAmount)}`
                   : undefined
               }
             />
             <StatCard
-              label="Pending Requests"
+              label={t("adminAnalytics.pendingRequests")}
               value={engagement?.enrollmentFunnel.pending ?? "—"}
               icon={Icons.clock("text-yellow-600")}
               iconBg="bg-yellow-100"
               iconColor="text-yellow-600"
-              subtitle={`${engagement?.enrollmentFunnel.approved ?? 0} approved, ${engagement?.enrollmentFunnel.rejected ?? 0} rejected`}
+              subtitle={`${engagement?.enrollmentFunnel.approved ?? 0} ${t("adminAnalytics.approved")}, ${engagement?.enrollmentFunnel.rejected ?? 0} ${t("adminAnalytics.rejected")}`}
             />
           </div>
 
@@ -828,7 +919,7 @@ function AdminAnalytics() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-medium text-gray-600">
-                  Pending Enrollments
+                  {t("adminAnalytics.pendingEnrollments")}
                 </p>
                 <div
                   className={`w-10 h-10 ${operational ? ageBg(operational.pendingEnrollments.oldestAgeHours) : "bg-gray-100"} rounded-lg flex items-center justify-center`}
@@ -847,7 +938,7 @@ function AdminAnalytics() {
                 <p
                   className={`text-sm mt-1 ${ageColor(operational.pendingEnrollments.oldestAgeHours)}`}
                 >
-                  Oldest:{" "}
+                  {t("adminAnalytics.oldest")}:{" "}
                   {formatHours(operational.pendingEnrollments.oldestAgeHours)}
                 </p>
               )}
@@ -857,7 +948,7 @@ function AdminAnalytics() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-medium text-gray-600">
-                  Pending Withdrawals
+                  {t("adminAnalytics.pendingWithdrawals")}
                 </p>
                 <div
                   className={`w-10 h-10 ${operational ? ageBg(operational.pendingWithdrawals.oldestAgeHours) : "bg-gray-100"} rounded-lg flex items-center justify-center`}
@@ -875,13 +966,13 @@ function AdminAnalytics() {
               {operational && operational.pendingWithdrawals.count > 0 && (
                 <>
                   <p className="text-sm text-gray-600 mt-1">
-                    Total:{" "}
+                    {t("adminAnalytics.total")}:{" "}
                     {formatCurrency(operational.pendingWithdrawals.totalAmount)}
                   </p>
                   <p
                     className={`text-sm ${ageColor(operational.pendingWithdrawals.oldestAgeHours)}`}
                   >
-                    Oldest:{" "}
+                    {t("adminAnalytics.oldest")}:{" "}
                     {formatHours(operational.pendingWithdrawals.oldestAgeHours)}
                   </p>
                 </>
@@ -892,7 +983,7 @@ function AdminAnalytics() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-medium text-gray-600">
-                  Pending Lecturers
+                  {t("adminAnalytics.pendingLecturers")}
                 </p>
                 <div
                   className={`w-10 h-10 ${operational ? ageBg(operational.pendingLecturers.oldestAgeHours) : "bg-gray-100"} rounded-lg flex items-center justify-center`}
@@ -911,7 +1002,7 @@ function AdminAnalytics() {
                 <p
                   className={`text-sm mt-1 ${ageColor(operational.pendingLecturers.oldestAgeHours)}`}
                 >
-                  Oldest:{" "}
+                  {t("adminAnalytics.oldest")}:{" "}
                   {formatHours(operational.pendingLecturers.oldestAgeHours)}
                 </p>
               )}
@@ -919,7 +1010,7 @@ function AdminAnalytics() {
 
             {/* Processing Times */}
             <StatCard
-              label="Avg Enrollment Processing"
+              label={t("adminAnalytics.avgEnrollmentProcessing")}
               value={
                 operational
                   ? formatHours(operational.avgEnrollmentProcessingHours)
@@ -934,7 +1025,7 @@ function AdminAnalytics() {
               }
             />
             <StatCard
-              label="Avg Withdrawal Processing"
+              label={t("adminAnalytics.avgWithdrawalProcessing")}
               value={
                 operational
                   ? formatHours(operational.avgWithdrawalProcessingHours)
@@ -955,14 +1046,14 @@ function AdminAnalytics() {
       {/* ══════════════════════════════════════════════════════════════════
           ALL CHARTS
           ══════════════════════════════════════════════════════════════════ */}
-      <Section title="Charts">
+      <Section title={t("adminAnalytics.charts")}>
         <div className="space-y-6">
           {/* Row 1: Trends */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartBox
-              title="Signup Trend"
+              title={t("adminAnalytics.signupTrend")}
               empty={(users?.newSignups?.length ?? 0) === 0}
-              emptyText="No signup data for this period"
+              emptyText={t("adminAnalytics.noSignupDataForPeriod")}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={users?.newSignups}>
@@ -984,16 +1075,16 @@ function AdminAnalytics() {
                     stroke="#3b82f6"
                     strokeWidth={2}
                     dot={false}
-                    name="Signups"
+                    name={t("adminAnalytics.signups")}
                   />
                 </LineChart>
               </ResponsiveContainer>
             </ChartBox>
 
             <ChartBox
-              title="Revenue Over Time"
+              title={t("adminAnalytics.revenueOverTime")}
               empty={(financial?.revenueOverTime?.length ?? 0) === 0}
-              emptyText="No revenue data for this period"
+              emptyText={t("adminAnalytics.noRevenueDataForPeriod")}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={financial?.revenueOverTime}>
@@ -1011,7 +1102,7 @@ function AdminAnalytics() {
                     stroke="#10b981"
                     strokeWidth={2}
                     dot={false}
-                    name="Revenue"
+                    name={t("adminAnalytics.revenue")}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -1021,9 +1112,9 @@ function AdminAnalytics() {
           {/* Row 2: Messages + Active Courses */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartBox
-              title="Messages Per Day"
+              title={t("adminAnalytics.messagesPerDay")}
               empty={(engagement?.messagesPerDay?.length ?? 0) === 0}
-              emptyText="No message data for this period"
+              emptyText={t("adminAnalytics.noMessageDataForPeriod")}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={engagement?.messagesPerDay}>
@@ -1045,16 +1136,16 @@ function AdminAnalytics() {
                     stroke="#6366f1"
                     strokeWidth={2}
                     dot={false}
-                    name="Messages"
+                    name={t("adminAnalytics.messages")}
                   />
                 </LineChart>
               </ResponsiveContainer>
             </ChartBox>
 
             <ChartBox
-              title="Most Active Courses"
+              title={t("adminAnalytics.mostActiveCourses")}
               empty={(engagement?.mostActiveCourses?.length ?? 0) === 0}
-              emptyText="No course activity data"
+              emptyText={t("adminAnalytics.noCourseActivityData")}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
@@ -1079,7 +1170,7 @@ function AdminAnalytics() {
                     dataKey="messages"
                     fill="#8b5cf6"
                     radius={[4, 4, 0, 0]}
-                    name="Messages"
+                    name={t("adminAnalytics.messages")}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -1089,9 +1180,9 @@ function AdminAnalytics() {
           {/* Row 3: Revenue by Course + Revenue by Lecturer */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartBox
-              title="Revenue by Course"
+              title={t("adminAnalytics.revenueByCourse")}
               empty={revenueChartData.length === 0}
-              emptyText="No revenue data available"
+              emptyText={t("adminAnalytics.noRevenueDataAvailable")}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={revenueChartData}>
@@ -1109,9 +1200,9 @@ function AdminAnalytics() {
             </ChartBox>
 
             <ChartBox
-              title="Revenue by Lecturer"
+              title={t("adminAnalytics.revenueByLecturer")}
               empty={(financial?.revenueByLecturer?.length ?? 0) === 0}
-              emptyText="No lecturer revenue data"
+              emptyText={t("adminAnalytics.noLecturerRevenueData")}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
@@ -1132,7 +1223,7 @@ function AdminAnalytics() {
                     dataKey="revenue"
                     fill="#f59e0b"
                     radius={[4, 4, 0, 0]}
-                    name="Revenue"
+                    name={t("adminAnalytics.revenue")}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -1142,9 +1233,9 @@ function AdminAnalytics() {
           {/* Row 4: Balance Flow + Withdrawal Trend */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartBox
-              title="Balance Flow by Source"
+              title={t("adminAnalytics.balanceFlowBySource")}
               empty={(financial?.balanceFlow?.length ?? 0) === 0}
-              emptyText="No balance flow data for this period"
+              emptyText={t("adminAnalytics.noBalanceFlowDataForPeriod")}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={financial?.balanceFlow}>
@@ -1163,7 +1254,7 @@ function AdminAnalytics() {
                     fill="#3b82f6"
                     stroke="#3b82f6"
                     fillOpacity={0.6}
-                    name="Referral"
+                    name={t("adminAnalytics.referral")}
                   />
                   <Area
                     type="monotone"
@@ -1172,7 +1263,7 @@ function AdminAnalytics() {
                     fill="#10b981"
                     stroke="#10b981"
                     fillOpacity={0.6}
-                    name="Course Purchase"
+                    name={t("adminAnalytics.coursePurchase")}
                   />
                   <Area
                     type="monotone"
@@ -1181,7 +1272,7 @@ function AdminAnalytics() {
                     fill="#ef4444"
                     stroke="#ef4444"
                     fillOpacity={0.6}
-                    name="Withdrawal"
+                    name={t("adminAnalytics.withdrawal")}
                   />
                   <Area
                     type="monotone"
@@ -1190,7 +1281,7 @@ function AdminAnalytics() {
                     fill="#f59e0b"
                     stroke="#f59e0b"
                     fillOpacity={0.6}
-                    name="Admin Adjust"
+                    name={t("adminAnalytics.adminAdjust")}
                   />
                   <Legend />
                 </AreaChart>
@@ -1198,9 +1289,9 @@ function AdminAnalytics() {
             </ChartBox>
 
             <ChartBox
-              title="Withdrawal Trend"
+              title={t("adminAnalytics.withdrawalTrend")}
               empty={(financial?.withdrawalTrend?.length ?? 0) === 0}
-              emptyText="No withdrawal data for this period"
+              emptyText={t("adminAnalytics.noWithdrawalDataForPeriod")}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={financial?.withdrawalTrend}>
@@ -1218,7 +1309,7 @@ function AdminAnalytics() {
                     stroke="#ef4444"
                     strokeWidth={2}
                     dot={false}
-                    name="Amount"
+                    name={t("adminAnalytics.amount")}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -1228,9 +1319,9 @@ function AdminAnalytics() {
           {/* Row 5: Referrals + Projects + Distributions */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartBox
-              title="Referral Activations by Course"
+              title={t("adminAnalytics.referralActivationsByCourse")}
               empty={referralChartData.length === 0}
-              emptyText="No referral data available"
+              emptyText={t("adminAnalytics.noReferralDataAvailable")}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={referralChartData}>
@@ -1252,9 +1343,9 @@ function AdminAnalytics() {
             </ChartBox>
 
             <ChartBox
-              title="Projects by Course"
+              title={t("adminAnalytics.projectsByCourse")}
               empty={projectChartData.length === 0}
-              emptyText="No project data available"
+              emptyText={t("adminAnalytics.noProjectDataAvailable")}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={projectChartData}>
@@ -1279,9 +1370,9 @@ function AdminAnalytics() {
           {/* Row 6: Pie Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartBox
-              title="Role Distribution"
+              title={t("adminAnalytics.roleDistribution")}
               empty={roleData.length === 0}
-              emptyText="No user data available"
+              emptyText={t("adminAnalytics.noUserDataAvailable")}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -1316,9 +1407,9 @@ function AdminAnalytics() {
             </ChartBox>
 
             <ChartBox
-              title="Platform Distribution"
+              title={t("adminAnalytics.platformDistribution")}
               empty={platformData.length === 0}
-              emptyText="No platform data available"
+              emptyText={t("adminAnalytics.noPlatformDataAvailable")}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -1358,34 +1449,34 @@ function AdminAnalytics() {
       {/* ══════════════════════════════════════════════════════════════════
           DETAIL TABLES
           ══════════════════════════════════════════════════════════════════ */}
-      <Section title="Detail Tables">
+      <Section title={t("adminAnalytics.detailTables")}>
         <div className="space-y-6">
           {/* Course Revenue Table */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-navy-900">
-                Course Revenue
+                {t("adminAnalytics.courseRevenue")}
               </h3>
             </div>
             {courseRevenueRows.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
+                <table className="min-w-[720px] w-full text-sm">
+                  <thead className="sticky top-0 z-10">
                     <tr className="bg-gray-50 text-left">
                       <th className="px-6 py-3 font-semibold text-gray-700">
-                        Course
+                        {t("adminAnalytics.course")}
                       </th>
                       <th className="px-6 py-3 font-semibold text-gray-700">
-                        Type
+                        {t("adminAnalytics.type")}
                       </th>
                       <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                        Price
+                        {t("adminAnalytics.price")}
                       </th>
                       <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                        Enrollments
+                        {t("adminAnalytics.enrollments")}
                       </th>
                       <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                        Revenue
+                        {t("adminAnalytics.revenue")}
                       </th>
                     </tr>
                   </thead>
@@ -1415,7 +1506,9 @@ function AdminAnalytics() {
                   </tbody>
                   <tfoot>
                     <tr className="bg-gray-50 font-semibold">
-                      <td className="px-6 py-3 text-gray-900">Total</td>
+                      <td className="px-6 py-3 text-gray-900">
+                        {t("adminAnalytics.total")}
+                      </td>
                       <td className="px-6 py-3" />
                       <td className="px-6 py-3" />
                       <td className="px-6 py-3 text-right text-gray-900">
@@ -1430,7 +1523,7 @@ function AdminAnalytics() {
               </div>
             ) : (
               <p className="text-gray-500 text-center py-8">
-                No revenue data available
+                {t("adminAnalytics.noRevenueDataAvailable")}
               </p>
             )}
           </div>
@@ -1439,25 +1532,25 @@ function AdminAnalytics() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-navy-900">
-                Top Referrers
+                {t("adminAnalytics.topReferrers")}
               </h3>
             </div>
             {topReferrers.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
+                <table className="min-w-[680px] w-full text-sm">
+                  <thead className="sticky top-0 z-10">
                     <tr className="bg-gray-50 text-left">
                       <th className="px-6 py-3 font-semibold text-gray-700">
-                        User
+                        {t("adminAnalytics.user")}
                       </th>
                       <th className="px-6 py-3 font-semibold text-gray-700">
-                        Referral Code
+                        {t("adminAnalytics.referralCode")}
                       </th>
                       <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                        Activations
+                        {t("adminAnalytics.activations")}
                       </th>
                       <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                        Commission Earned
+                        {t("adminAnalytics.commissionEarned")}
                       </th>
                     </tr>
                   </thead>
@@ -1491,7 +1584,7 @@ function AdminAnalytics() {
               </div>
             ) : (
               <p className="text-gray-500 text-center py-8">
-                No referral data available
+                {t("adminAnalytics.noReferralDataAvailable")}
               </p>
             )}
           </div>
@@ -1500,28 +1593,28 @@ function AdminAnalytics() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-navy-900">
-                Projects by Course
+                {t("adminAnalytics.projectsByCourse")}
               </h3>
             </div>
             {projectRows.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
+                <table className="min-w-[760px] w-full text-sm">
+                  <thead className="sticky top-0 z-10">
                     <tr className="bg-gray-50 text-left">
                       <th className="px-6 py-3 font-semibold text-gray-700">
-                        Course
+                        {t("adminAnalytics.course")}
                       </th>
                       <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                        Projects
+                        {t("adminAnalytics.projects")}
                       </th>
                       <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                        Total Budget
+                        {t("adminAnalytics.totalBudget")}
                       </th>
                       <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                        Avg Budget
+                        {t("adminAnalytics.avgBudget")}
                       </th>
                       <th className="px-6 py-3 font-semibold text-gray-700 text-right">
-                        Submissions
+                        {t("adminAnalytics.submissions")}
                       </th>
                     </tr>
                   </thead>
@@ -1553,7 +1646,7 @@ function AdminAnalytics() {
               </div>
             ) : (
               <p className="text-gray-500 text-center py-8">
-                No project data available
+                {t("adminAnalytics.noProjectDataAvailable")}
               </p>
             )}
           </div>
@@ -1562,7 +1655,7 @@ function AdminAnalytics() {
           {(engagement?.coursesWithZeroEnrollments?.length ?? 0) > 0 && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <h4 className="text-sm font-semibold text-yellow-800 mb-2">
-                Courses with Zero Enrollments (
+                {t("adminAnalytics.zeroEnrollmentCourses")} (
                 {engagement!.coursesWithZeroEnrollments.length})
               </h4>
               <div className="flex flex-wrap gap-2">

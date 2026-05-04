@@ -36,6 +36,7 @@ yarn-error.log*
 
 # MCP config (contains access tokens)
 .mcp.json
+.codex/
 
 # vercel
 .vercel

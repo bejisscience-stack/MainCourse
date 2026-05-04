@@ -49,6 +49,8 @@ const AdminFreeProjectLecturers = dynamic(
 );
 import { useUser } from "@/hooks/useUser";
 import { useCourses } from "@/hooks/useCourses";
+import { useAdminRealtimeInvalidation } from "@/hooks/useAdminRealtimeInvalidation";
+import { useI18n } from "@/contexts/I18nContext";
 import { supabase } from "@/lib/supabase";
 import type { Course } from "@/components/CourseCard";
 
@@ -63,6 +65,12 @@ type TabType =
   | "email-manager"
   | "analytics"
   | "settings";
+
+const ADMIN_SHELL_LIVE_TABLES = [
+  "courses",
+  "profiles",
+  "platform_settings",
+] as const;
 
 // Retry with exponential backoff utility
 async function retryWithBackoff<T>(
@@ -99,6 +107,7 @@ async function retryWithBackoff<T>(
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const { t } = useI18n();
   const {
     user,
     role: userRole,
@@ -111,7 +120,20 @@ export default function AdminDashboard() {
   const [isAdminVerified, setIsAdminVerified] = useState<boolean | null>(null); // Direct DB verification
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
 
-  const { courses, isLoading: coursesLoading } = useCourses("All");
+  const {
+    courses,
+    isLoading: coursesLoading,
+    mutate: mutateCourses,
+  } = useCourses("All");
+  const { isConnected: isShellLiveConnected } = useAdminRealtimeInvalidation({
+    channelName: "admin-dashboard-shell",
+    enabled: isAdminVerified === true || userRole === "admin",
+    tables: ADMIN_SHELL_LIVE_TABLES,
+    onChange: () => {
+      void mutateCourses();
+      void mutateUser();
+    },
+  });
 
   // Direct database check on mount - bypass hook cache
   // Only run once on mount, not when dependencies change
@@ -275,6 +297,26 @@ export default function AdminDashboard() {
   };
 
   const totalCourses = courses.length;
+  const formatGel = (amount: number) =>
+    `₾${Number(amount || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })}`;
+  const tabs: Array<{ key: TabType; label: string }> = [
+    { key: "overview", label: t("adminDashboard.tabs.overview") },
+    { key: "view-bot", label: t("adminDashboard.tabs.viewBot") },
+    { key: "withdrawals", label: t("adminDashboard.tabs.withdrawals") },
+    { key: "lecturers", label: t("adminDashboard.tabs.lecturers") },
+    { key: "projects", label: t("adminDashboard.tabs.projects") },
+    {
+      key: "courses",
+      label: t("adminDashboard.tabs.courses", { count: totalCourses }),
+    },
+    { key: "notifications", label: t("adminDashboard.tabs.notifications") },
+    { key: "email-manager", label: t("adminDashboard.tabs.emailManager") },
+    { key: "analytics", label: t("adminDashboard.tabs.analytics") },
+    { key: "settings", label: t("adminDashboard.tabs.settings") },
+  ];
 
   // Show loading while checking admin status via direct DB query
   if (isCheckingAdmin || (isAdminVerified === null && userLoading)) {
@@ -285,7 +327,9 @@ export default function AdminDashboard() {
         <div className="relative z-10 pt-24 pb-16 flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-navy-900 mb-4"></div>
-            <p className="text-navy-700">Verifying admin access...</p>
+            <p className="text-navy-700">
+              {t("adminDashboard.verifyingAccess")}
+            </p>
           </div>
         </div>
       </main>
@@ -310,118 +354,49 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-3 mb-4">
               <h1 className="text-4xl md:text-5xl font-bold text-navy-900">
-                Admin Dashboard
+                {t("adminDashboard.title")}
               </h1>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+                  isShellLiveConnected
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-amber-50 text-amber-700"
+                }`}
+              >
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    isShellLiveConnected ? "bg-emerald-500" : "bg-amber-500"
+                  }`}
+                />
+                {isShellLiveConnected
+                  ? t("adminDashboard.live")
+                  : t("adminDashboard.polling")}
+              </span>
             </div>
             <p className="text-lg text-navy-600">
-              Manage courses and system access
+              {t("adminDashboard.subtitle")}
             </p>
           </div>
 
           {/* Tabs */}
-          <div className="flex flex-wrap gap-3 mb-8 border-b border-navy-200">
-            <button
-              onClick={() => setActiveTab("overview")}
-              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
-                activeTab === "overview"
-                  ? "text-navy-900 border-navy-900"
-                  : "text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300"
-              }`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab("view-bot")}
-              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
-                activeTab === "view-bot"
-                  ? "text-navy-900 border-navy-900"
-                  : "text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300"
-              }`}
-            >
-              View Bot
-            </button>
-            <button
-              onClick={() => setActiveTab("withdrawals")}
-              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
-                activeTab === "withdrawals"
-                  ? "text-navy-900 border-navy-900"
-                  : "text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300"
-              }`}
-            >
-              Withdrawals
-            </button>
-            <button
-              onClick={() => setActiveTab("lecturers")}
-              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
-                activeTab === "lecturers"
-                  ? "text-navy-900 border-navy-900"
-                  : "text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300"
-              }`}
-            >
-              Lecturers
-            </button>
-            <button
-              onClick={() => setActiveTab("projects")}
-              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
-                activeTab === "projects"
-                  ? "text-navy-900 border-navy-900"
-                  : "text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300"
-              }`}
-            >
-              Projects
-            </button>
-            <button
-              onClick={() => setActiveTab("courses")}
-              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
-                activeTab === "courses"
-                  ? "text-navy-900 border-navy-900"
-                  : "text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300"
-              }`}
-            >
-              All Courses ({totalCourses})
-            </button>
-            <button
-              onClick={() => setActiveTab("notifications")}
-              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
-                activeTab === "notifications"
-                  ? "text-navy-900 border-navy-900"
-                  : "text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300"
-              }`}
-            >
-              Send Notifications
-            </button>
-            <button
-              onClick={() => setActiveTab("email-manager")}
-              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
-                activeTab === "email-manager"
-                  ? "text-navy-900 border-navy-900"
-                  : "text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300"
-              }`}
-            >
-              Email Manager
-            </button>
-            <button
-              onClick={() => setActiveTab("analytics")}
-              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
-                activeTab === "analytics"
-                  ? "text-navy-900 border-navy-900"
-                  : "text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300"
-              }`}
-            >
-              Analytics
-            </button>
-            <button
-              onClick={() => setActiveTab("settings")}
-              className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
-                activeTab === "settings"
-                  ? "text-navy-900 border-navy-900"
-                  : "text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300"
-              }`}
-            >
-              Settings
-            </button>
+          <div className="mb-8 overflow-x-auto border-b border-navy-200">
+            <div className="flex min-w-max gap-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`whitespace-nowrap px-4 sm:px-5 py-3 text-sm sm:text-base font-semibold transition-colors border-b-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-400 focus-visible:ring-offset-2 ${
+                    activeTab === tab.key
+                      ? "text-navy-900 border-navy-900"
+                      : "text-navy-600 border-transparent hover:text-navy-900 hover:border-navy-300"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Messages */}
@@ -512,11 +487,15 @@ export default function AdminDashboard() {
                 {coursesLoading ? (
                   <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
                     <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-navy-900 mb-4"></div>
-                    <p className="text-navy-700">Loading courses...</p>
+                    <p className="text-navy-700">
+                      {t("adminDashboard.coursesLoading")}
+                    </p>
                   </div>
                 ) : courses.length === 0 ? (
                   <div className="bg-navy-50 border border-navy-100 rounded-lg p-8 text-center text-navy-700">
-                    <p className="text-lg font-medium">No courses found</p>
+                    <p className="text-lg font-medium">
+                      {t("adminDashboard.noCourses")}
+                    </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -534,13 +513,13 @@ export default function AdminDashboard() {
                           </p>
                           <div className="flex items-center justify-between">
                             <span className="text-xl font-bold text-navy-900">
-                              ${course.price}
+                              {formatGel(course.price)}
                             </span>
                             <Link
                               href={`/courses/${course.id}/chat?channel=lectures`}
                               className="px-4 py-2 bg-navy-900 text-white rounded-lg hover:bg-navy-800 transition-colors text-sm font-semibold"
                             >
-                              Open Chat
+                              {t("adminDashboard.openChat")}
                             </Link>
                           </div>
                         </div>

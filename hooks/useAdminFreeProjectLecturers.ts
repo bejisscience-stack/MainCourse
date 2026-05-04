@@ -1,5 +1,6 @@
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
+import { useAdminRealtimeInvalidation } from "@/hooks/useAdminRealtimeInvalidation";
 
 export interface FreeProjectLecturer {
   id: string;
@@ -11,6 +12,8 @@ export interface FreeProjectLecturer {
   created_at: string;
   updated_at: string;
 }
+
+const FREE_PROJECT_LECTURER_LIVE_TABLES = ["profiles"] as const;
 
 async function fetchFreeProjectLecturers(): Promise<FreeProjectLecturer[]> {
   const {
@@ -63,6 +66,14 @@ export function useAdminFreeProjectLecturers() {
       fallbackData: [],
     },
   );
+
+  useAdminRealtimeInvalidation({
+    channelName: "admin-free-project-lecturers-live",
+    tables: FREE_PROJECT_LECTURER_LIVE_TABLES,
+    onChange: () => {
+      void mutate();
+    },
+  });
 
   const setExempt = async (lecturerId: string, allowed: boolean) => {
     const token = (await supabase.auth.getSession()).data.session?.access_token;

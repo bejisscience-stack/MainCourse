@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
+import { useAdminRealtimeInvalidation } from "@/hooks/useAdminRealtimeInvalidation";
 import type {
   AnalyticsOverview,
   RevenueData,
@@ -136,17 +137,22 @@ export interface AdminAnalyticsResult {
   customFrom: string;
   customTo: string;
   setCustomDateRange: (from: string, to: string) => void;
+  mutate: () => Promise<AllAnalytics | undefined>;
+  isValidating: boolean;
+  isLiveConnected: boolean;
+  lastUpdated: Date | null;
 }
 
 export function useAdminAnalytics(): AdminAnalyticsResult {
   const [dateRangeKey, setDateRangeKey] = useState<DateRangeKey>("30d");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const dateRange = getDateRange(dateRangeKey, customFrom, customTo);
   const swrKey = `admin-analytics-${dateRangeKey}-${dateRange.from}-${dateRange.to}`;
 
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
     swrKey,
     () => fetchAllAnalytics(dateRange),
     {
@@ -154,8 +160,18 @@ export function useAdminAnalytics(): AdminAnalyticsResult {
       revalidateOnReconnect: true,
       dedupingInterval: 5000,
       refreshInterval: 30000,
+      onSuccess: () => {
+        setLastUpdated(new Date());
+      },
     },
   );
+
+  const { isConnected: isLiveConnected } = useAdminRealtimeInvalidation({
+    channelName: `admin-analytics:${swrKey}`,
+    onChange: () => {
+      void mutate();
+    },
+  });
 
   const handleSetDateRange = useCallback((key: DateRangeKey) => {
     setDateRangeKey(key);
@@ -183,5 +199,9 @@ export function useAdminAnalytics(): AdminAnalyticsResult {
     customFrom,
     customTo,
     setCustomDateRange: handleSetCustomDateRange,
+    mutate,
+    isValidating,
+    isLiveConnected,
+    lastUpdated,
   };
 }
