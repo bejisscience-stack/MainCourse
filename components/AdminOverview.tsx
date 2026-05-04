@@ -183,6 +183,7 @@ type TabType =
   | "view-bot"
   | "withdrawals"
   | "lecturers"
+  | "projects"
   | "courses"
   | "notifications"
   | "email-manager"
