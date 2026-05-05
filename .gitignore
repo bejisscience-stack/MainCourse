@@ -84,3 +84,9 @@ production-schema-export.json
 
 # Playwright MCP test artifacts
 .playwright-mcp/
+
+# Git worktrees (local checkouts, not for commit)
+.worktrees/
+
+# Claude Code runtime locks
+.claude/scheduled_tasks.lock

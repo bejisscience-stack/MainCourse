@@ -29,6 +29,9 @@ const AdminWithdrawals = dynamic(
   () => import("@/components/AdminWithdrawals"),
   { ssr: false },
 );
+const AdminKyc = dynamic(() => import("@/components/AdminKyc"), {
+  ssr: false,
+});
 const AdminLecturerApprovals = dynamic(
   () => import("@/components/AdminLecturerApprovals"),
   { ssr: false },
@@ -58,6 +61,7 @@ type TabType =
   | "overview"
   | "view-bot"
   | "withdrawals"
+  | "kyc"
   | "lecturers"
   | "projects"
   | "courses"
@@ -110,10 +114,15 @@ export default function AdminDashboard() {
   const { t } = useI18n();
   const {
     user,
+    profile,
     role: userRole,
     isLoading: userLoading,
     mutate: mutateUser,
   } = useUser();
+  // For privilege-bearing checks, trust only the DB-resolved profile.role —
+  // never the user_metadata fallback in `userRole`. The fallback is fine for
+  // non-protected UI (homepage links, etc.) but must not unlock /admin.
+  const profileRole = profile?.role ?? null;
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -127,7 +136,7 @@ export default function AdminDashboard() {
   } = useCourses("All");
   const { isConnected: isShellLiveConnected } = useAdminRealtimeInvalidation({
     channelName: "admin-dashboard-shell",
-    enabled: isAdminVerified === true || userRole === "admin",
+    enabled: isAdminVerified === true || profileRole === "admin",
     tables: ADMIN_SHELL_LIVE_TABLES,
     onChange: () => {
       void mutateCourses();
@@ -219,8 +228,9 @@ export default function AdminDashboard() {
           );
         }
         if (isMounted) {
-          // On persistent failure, check if hook has admin status as fallback
-          if (userRole === "admin") {
+          // On persistent failure, fall back to the DB-loaded profile.role
+          // only — never user_metadata.role.
+          if (profileRole === "admin") {
             setIsAdminVerified(true);
           } else {
             setIsAdminVerified(false);
@@ -256,21 +266,21 @@ export default function AdminDashboard() {
       return;
     }
 
-    // If hook also confirms admin, allow access (fallback)
-    if (userRole === "admin" && !userLoading) {
+    // If profile.role confirms admin (DB-only — no metadata), allow access
+    if (profileRole === "admin" && !userLoading) {
       hasRedirected.current = false;
       return;
     }
 
-    // If direct verification failed AND hook doesn't confirm admin, redirect (only once)
+    // If direct verification failed AND profile.role isn't admin, redirect (only once)
     if (
       isAdminVerified === false &&
-      userRole !== "admin" &&
+      profileRole !== "admin" &&
       !userLoading &&
       !hasRedirected.current
     ) {
       hasRedirected.current = true;
-      if (userRole === "lecturer") {
+      if (profileRole === "lecturer") {
         router.push("/lecturer/dashboard");
       } else {
         router.push("/");
@@ -284,7 +294,14 @@ export default function AdminDashboard() {
       router.push("/login");
       return;
     }
-  }, [isAdminVerified, isCheckingAdmin, user, userRole, userLoading, router]);
+  }, [
+    isAdminVerified,
+    isCheckingAdmin,
+    user,
+    profileRole,
+    userLoading,
+    router,
+  ]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("en-US", {
@@ -306,6 +323,7 @@ export default function AdminDashboard() {
     { key: "overview", label: t("adminDashboard.tabs.overview") },
     { key: "view-bot", label: t("adminDashboard.tabs.viewBot") },
     { key: "withdrawals", label: t("adminDashboard.tabs.withdrawals") },
+    { key: "kyc", label: t("adminDashboard.tabs.kyc") || "KYC" },
     { key: "lecturers", label: t("adminDashboard.tabs.lecturers") },
     { key: "projects", label: t("adminDashboard.tabs.projects") },
     {
@@ -341,8 +359,8 @@ export default function AdminDashboard() {
     return null;
   }
 
-  // Only render if admin is verified (either by direct check or hook confirms admin)
-  if (isAdminVerified !== true && userRole !== "admin") {
+  // Only render if admin is verified — DB-only, no metadata fallback.
+  if (isAdminVerified !== true && profileRole !== "admin") {
     return null;
   }
 
@@ -448,6 +466,16 @@ export default function AdminDashboard() {
               }
             >
               <AdminWithdrawals />
+            </ErrorBoundary>
+          )}
+
+          {activeTab === "kyc" && (
+            <ErrorBoundary
+              onError={(error) =>
+                console.error("[Admin Dashboard] KYC section error:", error)
+              }
+            >
+              <AdminKyc />
             </ErrorBoundary>
           )}
 

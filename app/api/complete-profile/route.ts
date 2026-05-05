@@ -55,11 +55,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update profile — set is_approved=false when becoming a lecturer
+    // Update profile — never write `role` here. handle_new_user always inserts
+    // role='student'; promotion to 'lecturer' happens only through the admin
+    // SECURITY DEFINER RPC approve_lecturer_account. If the applicant chose
+    // 'lecturer', we record their intent via lecturer_status='pending' and
+    // leave is_approved=false so the admin queue picks them up.
     const nowIso = new Date().toISOString();
     const updatePayload: Record<string, unknown> = {
       username,
-      role,
       profile_completed: true,
       terms_accepted: true,
       terms_accepted_at: nowIso,
@@ -67,6 +70,7 @@ export async function POST(request: NextRequest) {
       marketing_emails_consent_at: marketingEmailsConsent ? nowIso : null,
     };
     if (role === "lecturer") {
+      updatePayload.lecturer_status = "pending";
       updatePayload.is_approved = false;
     }
 

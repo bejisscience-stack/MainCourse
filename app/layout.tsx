@@ -39,6 +39,14 @@ const ProfileCompletionGuard = dynamic(
   },
 );
 
+const WelcomeDiscountBanner = dynamic(
+  () => import("@/components/WelcomeDiscountBanner"),
+  {
+    ssr: false,
+    loading: () => null,
+  },
+);
+
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
@@ -177,7 +185,11 @@ export default async function RootLayout({
                 <Suspense fallback={null}>
                   <ReferralCapture />
                 </Suspense>
-                <div className="min-h-full w-full overflow-x-hidden">
+                <WelcomeDiscountBanner />
+                <div
+                  className="min-h-full w-full overflow-x-hidden"
+                  style={{ paddingTop: "var(--welcome-banner-h, 0px)" }}
+                >
                   {children}
                 </div>
                 <Toaster

@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 import EnrollmentModal from "./EnrollmentModal";
 import { useI18n } from "@/contexts/I18nContext";
 import { useUser } from "@/hooks/useUser";
+import { useWelcomeDiscount } from "@/hooks/useWelcomeDiscount";
 import { formatPriceInGel } from "@/lib/currency";
+import { hasWelcomeDiscount } from "@/lib/pricing";
 import { useIntroVideoUrl } from "@/hooks/useIntroVideoUrl";
+import WelcomeDiscountCountdown from "./WelcomeDiscountCountdown";
 
 export interface Course {
   id: string;
@@ -50,6 +53,7 @@ function CourseCard({
   const { t } = useI18n();
   const router = useRouter();
   const { user } = useUser();
+  const { active: welcomeActive } = useWelcomeDiscount();
   const [isVideoExpanded, setIsVideoExpanded] = useState(false);
   const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
   const introVideoSrc = useIntroVideoUrl(course.intro_video_url);
@@ -72,6 +76,18 @@ function CourseCard({
     () => (safeOriginalPrice ? formatPriceInGel(safeOriginalPrice) : null),
     [safeOriginalPrice],
   );
+
+  // Welcome-discount display logic.
+  // - Course must have an original_price > price for any discount UI to apply.
+  // - Anonymous: show discounted price + "Sign up to lock in this price" note.
+  // - Logged-in + window active: show discounted price + countdown.
+  // - Logged-in + window expired: show original price only (no strikethrough).
+  const courseHasDiscount = hasWelcomeDiscount({
+    price: safePrice,
+    original_price: safeOriginalPrice,
+  });
+  const showDiscounted = courseHasDiscount && (!user || welcomeActive);
+  const showLockInNote = courseHasDiscount && !user;
 
   const handleThumbnailClick = useCallback(
     (e: React.MouseEvent) => {
@@ -394,17 +410,33 @@ function CourseCard({
             </div>
 
             {/* Price */}
-            <div className="flex items-center space-x-2 pt-1">
-              <span className="text-xl font-semibold text-charcoal-950 dark:text-white">
-                {formattedPrice}
-              </span>
-              {formattedOriginalPrice &&
-                safeOriginalPrice &&
-                safeOriginalPrice > safePrice && (
+            <div className="pt-1 space-y-1">
+              <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
+                <span
+                  className={`text-xl font-semibold ${
+                    showDiscounted
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-charcoal-950 dark:text-white"
+                  }`}
+                >
+                  {showDiscounted
+                    ? formattedPrice
+                    : (formattedOriginalPrice ?? formattedPrice)}
+                </span>
+                {showDiscounted && formattedOriginalPrice && (
                   <span className="text-sm text-charcoal-400 dark:text-gray-500 line-through">
                     {formattedOriginalPrice}
                   </span>
                 )}
+                {showDiscounted && user && welcomeActive && (
+                  <WelcomeDiscountCountdown variant="compact" />
+                )}
+              </div>
+              {showLockInNote && (
+                <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+                  {t("welcomeDiscount.lockInPrice")}
+                </p>
+              )}
             </div>
           </div>
 

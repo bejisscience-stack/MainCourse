@@ -128,6 +128,18 @@ export async function POST(request: NextRequest) {
 
     if (rpcError) {
       console.error("Error creating withdrawal request:", rpcError);
+      // KYC gate sentinel from migration 217 — match exact code+message to
+      // avoid false positives from any other RPC that happens to surface a
+      // similar string in user input.
+      const rpcCode = (rpcError as { code?: string }).code;
+      const rpcMessage =
+        typeof rpcError.message === "string" ? rpcError.message.trim() : "";
+      if (rpcCode === "P0001" && rpcMessage === "KYC verification required") {
+        return NextResponse.json(
+          { error: "kyc_required", message: "KYC verification required" },
+          { status: 403 },
+        );
+      }
       return NextResponse.json(
         { error: "Failed to create withdrawal request" },
         { status: 400 },

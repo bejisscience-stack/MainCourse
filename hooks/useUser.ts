@@ -6,12 +6,14 @@ import type { User } from "@supabase/supabase-js";
 interface Profile {
   id: string;
   role: string | null;
+  is_approved?: boolean | null;
   username: string | null;
   avatar_url?: string | null;
   signup_referral_code?: string | null;
   referred_for_course_id?: string | null;
   first_login_completed?: boolean | null;
   profile_completed?: boolean | null;
+  welcome_discount_expires_at?: string | null;
 }
 
 interface UserData {
@@ -34,7 +36,7 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
     const { data, error } = await supabase
       .from("profiles")
       .select(
-        "id, role, username, avatar_url, signup_referral_code, referred_for_course_id, first_login_completed, profile_completed",
+        "id, role, is_approved, username, avatar_url, signup_referral_code, referred_for_course_id, first_login_completed, profile_completed, welcome_discount_expires_at",
       )
       .eq("id", userId)
       .maybeSingle();
@@ -80,20 +82,11 @@ async function fetchUserData(): Promise<UserData> {
       profile = null;
     }
 
-    // Always prioritize profile role over metadata (database is source of truth)
+    // Always prioritize profile role over metadata (database is source of truth).
+    // Falling back to user_metadata.role for the in-memory return is safe because
+    // it only affects UI routing — it never writes to the DB. Role elevation
+    // requires the admin-only approve_lecturer_account RPC.
     const role = profile?.role || user.user_metadata?.role || null;
-
-    // Normalize role if needed (non-blocking) - but only if role is lecturer
-    // Don't update if it's admin
-    if (role === "lecturer" && profile && profile.role !== "lecturer") {
-      supabase
-        .from("profiles")
-        .update({ role: "lecturer", is_approved: false })
-        .eq("id", user.id)
-        .then(() => {
-          // Silently handle role update
-        });
-    }
 
     return { user, profile, role };
   } catch (err: any) {

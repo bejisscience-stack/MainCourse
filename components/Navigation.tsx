@@ -79,7 +79,10 @@ function Navigation() {
   }, [router, t]);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/70 dark:bg-navy-950/70 backdrop-blur-xl border-b border-charcoal-100/30 dark:border-navy-800/30">
+    <nav
+      className="fixed left-0 right-0 z-50 bg-white/70 dark:bg-navy-950/70 backdrop-blur-xl border-b border-charcoal-100/30 dark:border-navy-800/30"
+      style={{ top: "var(--welcome-banner-h, 0px)" }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}

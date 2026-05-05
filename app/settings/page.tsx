@@ -9,6 +9,8 @@ import { useUser } from "@/hooks/useUser";
 import { useI18n } from "@/contexts/I18nContext";
 import { useBalance } from "@/hooks/useBalance";
 import { useWithdrawalRequests } from "@/hooks/useWithdrawalRequests";
+import { useKycStatus } from "@/hooks/useKycStatus";
+import KycModal from "@/components/KycModal";
 import { useRealtimeWithdrawalRequests } from "@/hooks/useRealtimeWithdrawalRequests";
 import { useRealtimeUserProfile } from "@/hooks/useRealtimeUserProfile";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
@@ -110,6 +112,15 @@ export default function SettingsPage() {
   const [withdrawalSuccess, setWithdrawalSuccess] = useState(false);
   const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
   const [showTransactionHistory, setShowTransactionHistory] = useState(false);
+
+  // KYC gate
+  const {
+    status: kycStatus,
+    submission: kycSubmission,
+    isLoading: kycLoading,
+    mutate: mutateKyc,
+  } = useKycStatus(user?.id || null);
+  const [showKycModal, setShowKycModal] = useState(false);
 
   // Profile update state
   const [profileUsername, setProfileUsername] = useState("");
@@ -447,11 +458,21 @@ export default function SettingsPage() {
       setTimeout(() => setWithdrawalSuccess(false), 5000);
     } catch (err: any) {
       console.error("Error requesting withdrawal:", err);
-      setWithdrawalError(
-        err.message ||
-          t("settings.failedToRequestWithdrawal") ||
-          "Failed to request withdrawal",
-      );
+      // Defense-in-depth: if the server enforces the KYC gate, route the user
+      // back into the KYC modal even if the client thought they were verified.
+      const message: string = err?.message || "";
+      if (/kyc_required|KYC verification required/i.test(message)) {
+        setShowWithdrawalForm(false);
+        await mutateKyc();
+        setShowKycModal(true);
+        setWithdrawalError(null);
+      } else {
+        setWithdrawalError(
+          message ||
+            t("settings.failedToRequestWithdrawal") ||
+            "Failed to request withdrawal",
+        );
+      }
     } finally {
       setIsRequestingWithdrawal(false);
     }
@@ -988,16 +1009,64 @@ export default function SettingsPage() {
                       <h3 className="text-lg font-medium text-charcoal-950 dark:text-white">
                         {t("settings.withdrawFunds") || "Withdraw Funds"}
                       </h3>
-                      {!showWithdrawalForm && balance >= 0.1 && (
+                      {kycLoading ? (
+                        <div className="h-10 w-44 bg-charcoal-100 dark:bg-navy-700 rounded-xl animate-pulse" />
+                      ) : kycStatus === "verified" ? (
+                        !showWithdrawalForm &&
+                        balance >= 0.1 && (
+                          <button
+                            onClick={() => setShowWithdrawalForm(true)}
+                            className="px-4 py-2 bg-emerald-500 text-white font-semibold rounded-xl hover:bg-emerald-600 transition-all duration-200"
+                          >
+                            {t("settings.requestWithdrawal") ||
+                              "Request Withdrawal"}
+                          </button>
+                        )
+                      ) : kycStatus === "pending" ? (
+                        <span className="px-3 py-1.5 text-sm bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-lg">
+                          {t("kyc.banners.pendingShort") ||
+                            "Verification in review"}
+                        </span>
+                      ) : kycStatus === "rejected" ? (
                         <button
-                          onClick={() => setShowWithdrawalForm(true)}
+                          onClick={() => setShowKycModal(true)}
                           className="px-4 py-2 bg-emerald-500 text-white font-semibold rounded-xl hover:bg-emerald-600 transition-all duration-200"
                         >
-                          {t("settings.requestWithdrawal") ||
-                            "Request Withdrawal"}
+                          {t("kyc.banners.resubmit") || "Resubmit verification"}
                         </button>
+                      ) : (
+                        balance >= 0.1 && (
+                          <button
+                            onClick={() => setShowKycModal(true)}
+                            className="px-4 py-2 bg-emerald-500 text-white font-semibold rounded-xl hover:bg-emerald-600 transition-all duration-200"
+                          >
+                            {t("kyc.banners.startVerification") ||
+                              "Verify identity"}
+                          </button>
+                        )
                       )}
                     </div>
+
+                    {!kycLoading && kycStatus === "pending" && (
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 mb-4">
+                        <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                          {t("kyc.banners.pending") ||
+                            "Your identity is being reviewed. Withdrawals will unlock once your documents are approved."}
+                        </p>
+                      </div>
+                    )}
+
+                    {!kycLoading && kycStatus === "rejected" && (
+                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-4">
+                        <p className="text-sm text-red-800 dark:text-red-300">
+                          {t("kyc.banners.rejected") ||
+                            "Your identity verification was rejected. Please resubmit your documents."}
+                          {kycSubmission?.admin_notes
+                            ? ` — ${kycSubmission.admin_notes}`
+                            : ""}
+                        </p>
+                      </div>
+                    )}
 
                     {balance < minWithdrawal && (
                       <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
@@ -1629,6 +1698,16 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      <KycModal
+        isOpen={showKycModal}
+        onClose={() => setShowKycModal(false)}
+        currentStatus={kycStatus}
+        submission={kycSubmission}
+        onSubmitted={() => {
+          mutateKyc();
+        }}
+      />
     </main>
   );
 }

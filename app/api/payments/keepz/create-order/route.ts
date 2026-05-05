@@ -9,6 +9,7 @@ import { randomUUID } from "crypto";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { paymentLimiter, rateLimitResponse } from "@/lib/rate-limit";
 import { paymentOrderSchema } from "@/lib/schemas";
+import { isWelcomeWindowActive, resolveChargeAmount } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -42,12 +43,25 @@ export async function POST(request: NextRequest) {
     const supabase = createServerSupabaseClient(token);
     const adminSupabase = createServiceRoleClient();
 
+    // Welcome-discount window: server is authoritative. Fetched once and
+    // applied to course/bundle paths; the regular price (original_price) is
+    // charged once the user's window has expired, regardless of what the
+    // client renders.
+    const { data: discountProfile } = await supabase
+      .from("profiles")
+      .select("welcome_discount_expires_at")
+      .eq("id", user.id)
+      .maybeSingle();
+    const welcomeWindowActive = isWelcomeWindowActive(
+      (discountProfile as any)?.welcome_discount_expires_at ?? null,
+    );
+
     // 3. Validate reference and get amount
     let amount: number;
     if (paymentType === "course_enrollment") {
       const { data: enrollment, error } = await supabase
         .from("enrollment_requests")
-        .select("id, status, user_id, courses(price)")
+        .select("id, status, user_id, courses(price, original_price)")
         .eq("id", referenceId)
         .eq("user_id", user.id)
         .eq("status", "pending")
@@ -60,7 +74,17 @@ export async function POST(request: NextRequest) {
       }
       // courses is joined as object
       const course = enrollment.courses as any;
-      amount = course?.price || 0;
+      const resolved = resolveChargeAmount(
+        {
+          price: Number(course?.price) || 0,
+          original_price:
+            course?.original_price != null
+              ? Number(course.original_price)
+              : null,
+        },
+        welcomeWindowActive,
+      );
+      amount = resolved.amount;
       if (amount <= 0) {
         return NextResponse.json(
           { error: "Invalid course price" },
@@ -70,7 +94,7 @@ export async function POST(request: NextRequest) {
     } else if (paymentType === "bundle_enrollment") {
       const { data: bundleReq, error } = await supabase
         .from("bundle_enrollment_requests")
-        .select("id, status, user_id, course_bundles(price)")
+        .select("id, status, user_id, course_bundles(price, original_price)")
         .eq("id", referenceId)
         .eq("user_id", user.id)
         .eq("status", "pending")
@@ -82,7 +106,17 @@ export async function POST(request: NextRequest) {
         );
       }
       const bundle = bundleReq.course_bundles as any;
-      amount = bundle?.price || 0;
+      const resolved = resolveChargeAmount(
+        {
+          price: Number(bundle?.price) || 0,
+          original_price:
+            bundle?.original_price != null
+              ? Number(bundle.original_price)
+              : null,
+        },
+        welcomeWindowActive,
+      );
+      amount = resolved.amount;
       if (amount <= 0) {
         return NextResponse.json(
           { error: "Invalid bundle price" },
@@ -145,7 +179,7 @@ export async function POST(request: NextRequest) {
     // 4. Idempotency check — existing active payment for this reference
     const { data: existing } = await supabase
       .from("keepz_payments")
-      .select("id, checkout_url, status, created_at, keepz_order_id")
+      .select("id, checkout_url, status, created_at, keepz_order_id, amount")
       .eq("payment_type", paymentType)
       .eq("reference_id", referenceId)
       .in("status", ["pending", "created"])
@@ -156,7 +190,15 @@ export async function POST(request: NextRequest) {
       const ageMs = Date.now() - new Date(existing.created_at).getTime();
       const FIVE_MINUTES = 5 * 60 * 1000;
 
-      if (ageMs < FIVE_MINUTES && existing.checkout_url) {
+      // Welcome-discount safety: a cached checkout from before the user's
+      // 12h window expired could otherwise let them pay the discounted price
+      // after the window closed. If the freshly-resolved amount differs from
+      // the existing payment row, treat it as stale and fall through to
+      // the Keepz verification + expire branch below.
+      const existingAmount = Number((existing as any).amount) || 0;
+      const amountsMatch = Math.abs(existingAmount - amount) < 0.005;
+
+      if (ageMs < FIVE_MINUTES && existing.checkout_url && amountsMatch) {
         return NextResponse.json({
           checkoutUrl: existing.checkout_url,
           paymentId: existing.id,

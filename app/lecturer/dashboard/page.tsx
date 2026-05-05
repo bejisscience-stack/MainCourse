@@ -17,7 +17,7 @@ export default function LecturerDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useI18n();
-  const { user, profile, role: userRole, isLoading: userLoading } = useUser();
+  const { user, profile, isLoading: userLoading } = useUser();
   const {
     courses,
     isLoading: coursesLoading,
@@ -63,16 +63,23 @@ export default function LecturerDashboard() {
   const [bundles, setBundles] = useState<any[]>([]);
   const [bundlesLoading, setBundlesLoading] = useState(false);
 
-  // Redirect if not lecturer or not logged in
+  // Authoritative role check — DB-only. The metadata-fallback `userRole` from
+  // useUser() is fine for non-protected UI, but route guards must rely on
+  // profile.role + profile.is_approved (the same fields course-creation RLS
+  // checks). An unapproved lecturer should not see the dashboard shell either.
+  const isApprovedLecturer =
+    profile?.role === "lecturer" && profile?.is_approved === true;
+
+  // Redirect if not an approved lecturer or not logged in
   useEffect(() => {
     if (!userLoading) {
       if (!user) {
         router.push("/login");
-      } else if (userRole !== "lecturer") {
+      } else if (!isApprovedLecturer) {
         router.push("/");
       }
     }
-  }, [user, userRole, userLoading, router]);
+  }, [user, isApprovedLecturer, userLoading, router]);
 
   // Check for createCourse query parameter and open modal
   useEffect(() => {
@@ -80,13 +87,13 @@ export default function LecturerDashboard() {
       searchParams.get("createCourse") === "true" &&
       !userLoading &&
       user &&
-      userRole === "lecturer"
+      isApprovedLecturer
     ) {
       handleOpenModal();
       // Remove the query parameter from URL without navigating
       router.replace("/lecturer/dashboard", { scroll: false });
     }
-  }, [searchParams, userLoading, user, userRole]);
+  }, [searchParams, userLoading, user, isApprovedLecturer]);
 
   const loading = userLoading || coursesLoading;
 

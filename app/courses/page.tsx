@@ -16,6 +16,9 @@ import useSWR from "swr";
 import { useI18n } from "@/contexts/I18nContext";
 import BundleEnrollmentModal from "@/components/BundleEnrollmentModal";
 import { formatPriceInGel } from "@/lib/currency";
+import { hasWelcomeDiscount } from "@/lib/pricing";
+import { useWelcomeDiscount } from "@/hooks/useWelcomeDiscount";
+import WelcomeDiscountCountdown from "@/components/WelcomeDiscountCountdown";
 import { toast } from "sonner";
 
 type FilterType = "All" | "Editing" | "Content Creation" | "Website Creation";
@@ -46,6 +49,7 @@ function CoursesPageContent() {
     useState(false);
 
   const { user, profile, role: userRole, isLoading: userLoading } = useUser();
+  const { active: welcomeActive } = useWelcomeDiscount();
 
   // Meta Pixel: ViewContent event on mount
   useEffect(() => {
@@ -678,20 +682,58 @@ function CoursesPageContent() {
                       {/* Bundle Footer */}
                       <div className="mt-auto p-5 pt-0">
                         <div className="flex items-center justify-between mb-4 pt-4 border-t border-purple-100 dark:border-purple-800/50">
-                          <div>
-                            <p className="text-xs text-charcoal-500 dark:text-gray-500">
-                              {t("courses.bundlePrice")}
-                            </p>
-                            <p className="text-2xl font-bold text-charcoal-950 dark:text-white">
-                              {formatPriceInGel(bundle.price)}
-                            </p>
-                            {totalOriginalPrice > bundle.price && (
-                              <p className="text-xs text-charcoal-400 dark:text-gray-500 line-through">
-                                {formatPriceInGel(totalOriginalPrice)}{" "}
-                                {t("courses.total")}
-                              </p>
-                            )}
-                          </div>
+                          {(() => {
+                            const bundleHasDiscount = hasWelcomeDiscount({
+                              price: bundle.price,
+                              original_price: bundle.original_price ?? null,
+                            });
+                            const showDiscounted =
+                              bundleHasDiscount && (!user || welcomeActive);
+                            const showLockInNote = bundleHasDiscount && !user;
+                            const headerAmount = showDiscounted
+                              ? bundle.price
+                              : (bundle.original_price ?? bundle.price);
+                            return (
+                              <div>
+                                <p className="text-xs text-charcoal-500 dark:text-gray-500">
+                                  {t("courses.bundlePrice")}
+                                </p>
+                                <div className="flex items-baseline flex-wrap gap-x-2">
+                                  <p
+                                    className={`text-2xl font-bold ${
+                                      showDiscounted
+                                        ? "text-emerald-600 dark:text-emerald-400"
+                                        : "text-charcoal-950 dark:text-white"
+                                    }`}
+                                  >
+                                    {formatPriceInGel(headerAmount)}
+                                  </p>
+                                  {showDiscounted && bundle.original_price && (
+                                    <span className="text-sm text-charcoal-400 dark:text-gray-500 line-through">
+                                      {formatPriceInGel(bundle.original_price)}
+                                    </span>
+                                  )}
+                                </div>
+                                {showDiscounted && user && welcomeActive && (
+                                  <div className="mt-1">
+                                    <WelcomeDiscountCountdown variant="compact" />
+                                  </div>
+                                )}
+                                {showLockInNote && (
+                                  <p className="mt-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+                                    {t("welcomeDiscount.lockInPrice")}
+                                  </p>
+                                )}
+                                {!showDiscounted &&
+                                  totalOriginalPrice > headerAmount && (
+                                    <p className="text-xs text-charcoal-400 dark:text-gray-500 line-through">
+                                      {formatPriceInGel(totalOriginalPrice)}{" "}
+                                      {t("courses.total")}
+                                    </p>
+                                  )}
+                              </div>
+                            );
+                          })()}
                         </div>
                         {isEnrolled ? (
                           <a

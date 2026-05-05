@@ -548,6 +548,10 @@
     "withdrawalApprovedMessage": "Your withdrawal request has been approved",
     "withdrawalRejected": "Withdrawal Rejected",
     "withdrawalRejectedMessage": "Your withdrawal request has been rejected",
+    "kycApproved": "Identity Verified",
+    "kycApprovedMessage": "Your identity has been verified. You can now request withdrawals.",
+    "kycRejected": "Identity Verification Rejected",
+    "kycRejectedMessage": "Your identity verification was rejected. Please resubmit your documents.",
     "adminMessage": "Admin Message",
     "system": "System Notification"
   },
@@ -1139,6 +1143,134 @@
     "rejectedMessage": "Your subscription request was declined. Please contact support if you believe this is an error.",
     "resubscribe": "Try Again"
   },
+  "kyc": {
+    "modal": {
+      "title": "Verify your identity",
+      "subtitle": "Upload your ID and a selfie so we can confirm your identity before paying out withdrawals."
+    },
+    "banners": {
+      "startVerification": "Verify identity",
+      "pending": "Your identity is being reviewed. Withdrawals will unlock once your documents are approved.",
+      "pendingShort": "Verification in review",
+      "rejected": "Your identity verification was rejected. Please resubmit your documents.",
+      "resubmit": "Resubmit verification",
+      "verified": "Identity verified"
+    },
+    "steps": {
+      "docType": {
+        "title": "Choose a document",
+        "subtitle": "Pick the document you want to use to verify your identity.",
+        "idCard": "ID Card",
+        "passport": "Passport",
+        "driversLicense": "Driver's License",
+        "idCardDesc": "Both sides of your national ID card.",
+        "passportDesc": "The main photo page of your passport.",
+        "driversLicenseDesc": "Both sides of your driver's licence."
+      },
+      "docFront": {
+        "title": "Upload the front",
+        "helper": "Take a clear, well-lit photo of the front of your document. Make sure all four corners are visible.",
+        "choose": "Click to upload"
+      },
+      "docBack": {
+        "title": "Upload the back",
+        "helper": "Now the back side. All edges and text should be readable.",
+        "choose": "Click to upload"
+      },
+      "phone": {
+        "title": "Mobile phone number",
+        "label": "Phone number",
+        "helper": "Enter the mobile number we should use to contact you about this withdrawal.",
+        "placeholder": "+995 5XX XX XX XX"
+      },
+      "selfie": {
+        "title": "Take a selfie",
+        "subtitle": "We use this to confirm the document belongs to you. Make sure your face is well-lit and centered.",
+        "startCamera": "Try again",
+        "capture": "Take photo",
+        "retake": "Retake",
+        "usePhoto": "Use this photo",
+        "requesting": "Requesting camera access..."
+      },
+      "review": {
+        "title": "Review and submit",
+        "subtitle": "Double-check the details below before sending for review.",
+        "docType": "Document",
+        "phone": "Phone",
+        "submit": "Submit for review",
+        "submitting": "Submitting...",
+        "pendingTitle": "Submitted for review",
+        "pendingBody": "We're reviewing your documents. You'll be notified when verification is complete — usually within one business day."
+      },
+      "rejected": {
+        "title": "Your previous submission was rejected",
+        "adminNote": "Reviewer note",
+        "resubmit": "Submit new documents"
+      }
+    },
+    "errors": {
+      "cameraDenied": "Camera access was denied. Allow camera permission in your browser settings to continue.",
+      "cameraUnavailable": "We couldn't access a camera. Please use a device with a working camera.",
+      "fileTooLarge": "File is too large. Maximum size is {{max}} MB.",
+      "invalidImage": "Please upload a JPG, PNG, or WEBP image.",
+      "invalidPhone": "Please enter a valid Georgian mobile number (+995 followed by 9 digits).",
+      "uploadFailed": "Upload failed. Please try again.",
+      "submitFailed": "Failed to submit verification. Please try again.",
+      "alreadyPending": "A verification submission is already pending review."
+    },
+    "nav": {
+      "next": "Next",
+      "back": "Back",
+      "cancel": "Cancel",
+      "close": "Close"
+    }
+  },
+  "adminKyc": {
+    "title": "Identity verifications",
+    "subtitle": "Review user-submitted ID documents and selfies before unlocking withdrawals.",
+    "filterAll": "All",
+    "filterPending": "Pending",
+    "filterVerified": "Verified",
+    "filterRejected": "Rejected",
+    "statusPending": "Pending",
+    "statusVerified": "Verified",
+    "statusRejected": "Rejected",
+    "username": "Username",
+    "email": "Email",
+    "docType": "Document",
+    "phone": "Phone",
+    "submittedAt": "Submitted",
+    "status": "Status",
+    "actions": "Actions",
+    "docTypeIdCard": "ID Card",
+    "docTypePassport": "Passport",
+    "docTypeDriversLicense": "Driver's License",
+    "docFront": "Front",
+    "docBack": "Back",
+    "selfie": "Selfie",
+    "viewDocs": "View documents",
+    "loadingSignedUrls": "Loading documents...",
+    "approve": "Approve",
+    "reject": "Reject",
+    "processing": "Processing...",
+    "approveTitle": "Approve identity verification",
+    "approveMessage": "Approve identity verification for {{username}}?",
+    "approveNotesPlaceholder": "Optional notes for internal records",
+    "rejectTitle": "Reject identity verification",
+    "rejectMessage": "Reject identity verification for {{username}}?",
+    "rejectReason": "Reason",
+    "rejectReasonPlaceholder": "Explain why this submission is being rejected (visible to user)",
+    "rejectReasonRequired": "A reason is required",
+    "confirmApprove": "Confirm approve",
+    "confirmReject": "Confirm reject",
+    "approveError": "Failed to approve KYC submission",
+    "rejectError": "Failed to reject KYC submission",
+    "noSubmissions": "No KYC submissions yet.",
+    "noSubmissionsForFilter": "No {{status}} KYC submissions.",
+    "unknown": "Unknown",
+    "processedAt": "Processed: {{date}}",
+    "adminNotes": "Admin notes"
+  },
   "adminWithdrawals": {
     "title": "Withdrawal Requests",
     "subtitle": "Manage user withdrawal requests",
@@ -1254,6 +1386,7 @@
       "overview": "Overview",
       "viewBot": "View Bot",
       "withdrawals": "Withdrawals",
+      "kyc": "KYC",
       "lecturers": "Lecturers",
       "projects": "Projects",
       "courses": "All Courses ({{count}})",
@@ -1427,5 +1560,12 @@
     "lastEmailed": "Last Emailed",
     "totalSent": "Total Sent",
     "name": "Name"
+  },
+  "welcomeDiscount": {
+    "lockInPrice": "Sign up to lock in this price",
+    "timeLeftLabel": "Time left",
+    "bannerTitle": "Your welcome discount is active!",
+    "bannerSubtitle": "Enroll at the lower price before the timer runs out.",
+    "bannerCta": "Browse courses"
   }
 }

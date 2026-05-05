@@ -150,14 +150,9 @@ function LoginForm() {
         }
 
         resolvedRole = profile?.role || user.user_metadata?.role || null;
-
-        // Normalize stored role if metadata says lecturer but profile missing
-        if (resolvedRole === "lecturer" && profile?.role !== "lecturer") {
-          await supabase
-            .from("profiles")
-            .update({ role: "lecturer", is_approved: false })
-            .eq("id", user.id);
-        }
+        // Note: role escalation via user_metadata is intentionally not
+        // mirrored to profiles.role here. The DB is the source of truth;
+        // promotion to lecturer requires the admin-only approval flow.
       } catch {
         // Use metadata role as fallback
         resolvedRole = user.user_metadata?.role || null;

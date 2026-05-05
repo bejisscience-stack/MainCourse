@@ -6,6 +6,9 @@ import { usePostHog } from "posthog-js/react";
 import type { Course } from "./CourseCard";
 import { useI18n } from "@/contexts/I18nContext";
 import { useUser } from "@/hooks/useUser";
+import { useWelcomeDiscount } from "@/hooks/useWelcomeDiscount";
+import { hasWelcomeDiscount } from "@/lib/pricing";
+import WelcomeDiscountCountdown from "./WelcomeDiscountCountdown";
 import { supabase } from "@/lib/supabase";
 import { getReferral } from "@/lib/referral-storage";
 import { useSavedCards, type SavedCard } from "@/hooks/useSavedCards";
@@ -40,7 +43,8 @@ export default function EnrollmentModal({
   isReEnrollment = false,
 }: EnrollmentModalProps) {
   const { t } = useI18n();
-  const { profile } = useUser();
+  const { user, profile } = useUser();
+  const { active: welcomeActive } = useWelcomeDiscount();
   const posthog = usePostHog();
   const {
     cards,
@@ -763,18 +767,51 @@ export default function EnrollmentModal({
             )}
 
             {/* Price header */}
-            <div className="p-5 pb-4 md:pt-6">
-              <div className="flex items-baseline gap-2.5">
-                <span className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
-                  ₾{price.toFixed(2)}
-                </span>
-                {course.original_price && course.original_price > price && (
-                  <span className="text-base text-gray-400 dark:text-gray-500 line-through">
-                    ₾{course.original_price.toFixed(2)}
-                  </span>
-                )}
-              </div>
-            </div>
+            {(() => {
+              const courseHasDiscount = hasWelcomeDiscount({
+                price,
+                original_price: course.original_price ?? null,
+              });
+              const showDiscounted =
+                courseHasDiscount && (!user || welcomeActive);
+              const showLockInNote = courseHasDiscount && !user;
+              const headerAmount = showDiscounted
+                ? price
+                : (course.original_price ?? price);
+              return (
+                <div className="p-5 pb-4 md:pt-6">
+                  <div className="flex items-baseline flex-wrap gap-x-2.5 gap-y-1">
+                    <span
+                      className={`text-3xl font-bold tracking-tight ${
+                        showDiscounted
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-charcoal-950 dark:text-white"
+                      }`}
+                    >
+                      ₾{headerAmount.toFixed(2)}
+                    </span>
+                    {showDiscounted && course.original_price && (
+                      <span className="text-base text-gray-400 dark:text-gray-500 line-through">
+                        ₾{course.original_price.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                  {showDiscounted && user && welcomeActive && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                        {t("welcomeDiscount.timeLeftLabel")}
+                      </span>
+                      <WelcomeDiscountCountdown variant="compact" />
+                    </div>
+                  )}
+                  {showLockInNote && (
+                    <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                      {t("welcomeDiscount.lockInPrice")}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="border-t border-gray-100 dark:border-navy-700/50" />
 
