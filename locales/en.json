@@ -156,6 +156,7 @@
     "profileUpdated": "Profile updated successfully!",
     "usernameAlreadyTaken": "This username is already taken",
     "invalidUsername": "Username must be 3-30 characters with only letters, numbers and underscores",
+    "usernameMissing": "You don't have a username yet. Type one above to get started.",
     "failedToUpdateProfile": "Failed to update profile",
     "saveProfile": "Save Profile",
     "referralCode": "Your Referral Code",

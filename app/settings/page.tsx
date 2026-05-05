@@ -130,6 +130,7 @@ export default function SettingsPage() {
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasInitializedProfile = useRef(false);
 
   // Password update state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -147,12 +148,13 @@ export default function SettingsPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
-  // Initialize profile fields when data loads
+  // Initialize profile fields once when data first loads. Using a ref instead
+  // of a truthiness gate on `userProfile.username` so users with a null
+  // username still get the field seeded (empty string) and the form is usable.
   useEffect(() => {
-    if (userProfile) {
-      if (userProfile.username && !profileUsername) {
-        setProfileUsername(userProfile.username);
-      }
+    if (userProfile && !hasInitializedProfile.current) {
+      hasInitializedProfile.current = true;
+      setProfileUsername(userProfile.username ?? "");
       if (userProfile.avatar_url !== undefined) {
         setProfileAvatarUrl(userProfile.avatar_url || null);
       }
@@ -236,6 +238,10 @@ export default function SettingsPage() {
         };
       }
       throw new Error(error.message || "Failed to update profile");
+    }
+
+    if (!result) {
+      throw new Error(t("settings.failedToUpdateProfile"));
     }
 
     return result;
@@ -792,6 +798,11 @@ export default function SettingsPage() {
                     <p className="text-xs text-charcoal-500 dark:text-gray-400 mt-1">
                       {t("settings.usernameHint")}
                     </p>
+                    {!userProfile?.username && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                        {t("settings.usernameMissing")}
+                      </p>
+                    )}
                   </div>
 
                   {profileError && (
