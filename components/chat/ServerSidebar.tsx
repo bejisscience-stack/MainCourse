@@ -19,6 +19,7 @@ interface ServerSidebarProps {
   enrolledCourseIds?: Set<string>;
   showDMButton?: boolean;
   serverUnreadCounts?: Map<string, number>;
+  dmUnreadCount?: number;
 }
 
 export default function ServerSidebar({
@@ -30,6 +31,7 @@ export default function ServerSidebar({
   enrolledCourseIds = new Set(),
   showDMButton = true,
   serverUnreadCounts = new Map(),
+  dmUnreadCount = 0,
 }: ServerSidebarProps) {
   const [hoveredServerId, setHoveredServerId] = useState<string | null>(null);
   const [enrollmentModal, setEnrollmentModal] = useState<{
@@ -124,18 +126,25 @@ export default function ServerSidebar({
         {/* Home/Direct Messages button */}
         {showDMButton && (
           <>
-            <button
-              className={`w-12 h-12 rounded-2xl bg-emerald-500/90 hover:bg-emerald-500 transition-all duration-200 flex items-center justify-center text-white font-semibold text-sm shadow-soft ${
-                activeServerId === "home"
-                  ? "ring-2 ring-emerald-400/50 shadow-glow"
-                  : ""
-              } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70`}
-              onClick={() => onServerSelect("home")}
-              onMouseEnter={() => setHoveredServerId("home")}
-              onMouseLeave={() => setHoveredServerId(null)}
-            >
-              <span>DM</span>
-            </button>
+            <div className="relative">
+              <button
+                className={`w-12 h-12 rounded-2xl bg-emerald-500/90 hover:bg-emerald-500 transition-all duration-200 flex items-center justify-center text-white font-semibold text-sm shadow-soft ${
+                  activeServerId === "home"
+                    ? "ring-2 ring-emerald-400/50 shadow-glow"
+                    : ""
+                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70`}
+                onClick={() => onServerSelect("home")}
+                onMouseEnter={() => setHoveredServerId("home")}
+                onMouseLeave={() => setHoveredServerId(null)}
+              >
+                <span>DM</span>
+              </button>
+              {dmUnreadCount > 0 && activeServerId !== "home" && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-semibold min-w-[18px] h-[18px] flex items-center justify-center rounded-full shadow-soft">
+                  {dmUnreadCount > 9 ? "9+" : dmUnreadCount}
+                </span>
+              )}
+            </div>
             <div className="w-8 h-px bg-navy-800/70"></div>
           </>
         )}

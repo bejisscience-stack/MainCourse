@@ -73,6 +73,7 @@ export default function KycModal({
   // selfie
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const selfieFileInputRef = useRef<HTMLInputElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   // Token bumped on every stop / new request so an in-flight getUserMedia
   // promise that resolves AFTER the user navigates or closes the modal can
@@ -196,6 +197,7 @@ export default function KycModal({
       setPermState("unavailable");
       return;
     }
+    setFileError(null);
     setPermState("requesting");
     const myReqId = ++cameraReqRef.current;
     try {
@@ -262,6 +264,26 @@ export default function KycModal({
     setSelfiePreview(null);
     void startCamera();
   }, [selfiePreview, startCamera]);
+
+  const handleSelfieUpload = (file: File | null) => {
+    setFileError(null);
+    if (!file) return;
+    if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+      setFileError(t("kyc.errors.invalidImage"));
+      return;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      setFileError(
+        t("kyc.errors.fileTooLarge", { max: bytesToMb(MAX_FILE_BYTES) }),
+      );
+      return;
+    }
+    stopCameraImpl();
+    if (selfiePreview) URL.revokeObjectURL(selfiePreview);
+    setSelfieBlob(file);
+    setSelfiePreview(URL.createObjectURL(file));
+    setPermState("idle");
+  };
 
   // Manage camera lifecycle. isOpen is in deps so closing the modal stops the
   // stream even when the parent flips showKycModal directly without going
@@ -609,7 +631,7 @@ export default function KycModal({
             alt="selfie"
             className="aspect-square w-full rounded-2xl object-cover"
           />
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
               onClick={retakeSelfie}
@@ -617,6 +639,23 @@ export default function KycModal({
             >
               {t("kyc.steps.selfie.retake")}
             </button>
+            <button
+              type="button"
+              onClick={() => selfieFileInputRef.current?.click()}
+              className="flex-1 rounded-xl border border-charcoal-300 bg-white px-4 py-3 font-medium text-charcoal-950 hover:bg-charcoal-50 dark:border-navy-600 dark:bg-navy-700 dark:text-white dark:hover:bg-navy-600"
+            >
+              {t("kyc.steps.selfie.uploadFromDevice")}
+            </button>
+            <input
+              ref={selfieFileInputRef}
+              type="file"
+              accept={ACCEPTED_MIME_TYPES.join(",")}
+              className="hidden"
+              onChange={(e) => {
+                handleSelfieUpload(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
+            />
           </div>
         </div>
       ) : (
@@ -628,6 +667,34 @@ export default function KycModal({
               playsInline
               muted
               className="aspect-square w-full object-cover"
+            />
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => void startCamera()}
+              disabled={permState === "requesting"}
+              className="flex-1 rounded-xl border border-charcoal-300 bg-white px-4 py-3 font-medium text-charcoal-950 hover:bg-charcoal-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-navy-600 dark:bg-navy-700 dark:text-white dark:hover:bg-navy-600"
+            >
+              {t("kyc.steps.selfie.startCamera")}
+            </button>
+            <button
+              type="button"
+              onClick={() => selfieFileInputRef.current?.click()}
+              className="flex-1 rounded-xl border border-charcoal-300 bg-white px-4 py-3 font-medium text-charcoal-950 hover:bg-charcoal-50 dark:border-navy-600 dark:bg-navy-700 dark:text-white dark:hover:bg-navy-600"
+            >
+              {t("kyc.steps.selfie.uploadFromDevice")}
+            </button>
+            <input
+              ref={selfieFileInputRef}
+              type="file"
+              accept={ACCEPTED_MIME_TYPES.join(",")}
+              className="hidden"
+              onChange={(e) => {
+                handleSelfieUpload(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
             />
           </div>
 
@@ -669,6 +736,12 @@ export default function KycModal({
           <canvas ref={canvasRef} className="hidden" />
         </>
       )}
+
+      {fileError ? (
+        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+          {fileError}
+        </div>
+      ) : null}
     </div>
   );
 
@@ -822,18 +895,18 @@ export default function KycModal({
 
   const dialogContent = (
     <div
-      className="fixed inset-0 z-[9999] overflow-y-auto bg-black/80 dark:bg-black/90"
+      className="fixed inset-0 z-[9999] overflow-y-auto bg-black/80 p-4 dark:bg-black/90 sm:p-6"
       onClick={handleClose}
     >
       <div
-        className="relative flex min-h-full w-full flex-col bg-white dark:bg-navy-800"
+        className="relative mx-auto flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-charcoal-200 bg-white shadow-2xl dark:border-navy-600 dark:bg-navy-800"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={handleClose}
           disabled={isSubmitting || permState === "requesting"}
           aria-label={t("common.close") || "Close"}
-          className="fixed right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-charcoal-100 text-charcoal-600 shadow-lg transition-colors hover:bg-charcoal-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-navy-700 dark:text-gray-300 dark:hover:bg-navy-600"
+          className="absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-charcoal-100 text-charcoal-600 shadow-lg transition-colors hover:bg-charcoal-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-navy-700 dark:text-gray-300 dark:hover:bg-navy-600"
         >
           <svg
             className="h-5 w-5"
@@ -850,7 +923,7 @@ export default function KycModal({
           </svg>
         </button>
 
-        <div className="mx-auto w-full max-w-2xl px-4 py-10 md:px-6 md:py-16">
+        <div className="max-h-[88vh] overflow-y-auto px-4 py-8 sm:px-6 sm:py-10">
           {/* Header + progress */}
           <div className="mb-8 space-y-3">
             <h2 className="text-3xl font-bold text-charcoal-950 dark:text-white">

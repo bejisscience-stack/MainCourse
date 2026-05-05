@@ -710,6 +710,11 @@ export default function EnrollmentModal({
                 {course.title}
               </h2>
               <p className="text-sm text-white/70 mt-1">{course.creator}</p>
+              {course.description && (
+                <p className="text-xs lg:text-sm text-white/85 mt-2 max-h-20 lg:max-h-24 overflow-y-auto whitespace-pre-wrap pr-1 pointer-events-auto drop-shadow-md">
+                  {course.description}
+                </p>
+              )}
             </div>
           </div>
 

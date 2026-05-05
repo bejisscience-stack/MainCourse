@@ -254,7 +254,47 @@
     "online": "ონლაინ",
     "myProfile": "ჩემი პროფილი",
     "myCourses": "ჩემი კურსები",
-    "home": "მთავარი"
+    "home": "მთავარი",
+    "directMessages": "პირადი შეტყობინებები",
+    "selectConversation": "აირჩიეთ საუბარი",
+    "messageUser": "მიწერეთ @{username}",
+    "isTyping": "წერს…"
+  },
+  "friends": {
+    "title": "მეგობრები",
+    "addFriend": "მეგობრის დამატება",
+    "searchPlaceholder": "მოძებნეთ მომხმარებლის სახელით",
+    "searchMinChars": "შეიყვანეთ მინიმუმ 2 სიმბოლო",
+    "noResults": "მომხმარებლები ვერ მოიძებნა",
+    "tabs": {
+      "conversations": "ჩატები",
+      "friends": "მეგობრები",
+      "requests": "მოთხოვნები",
+      "incoming": "შემოსული",
+      "outgoing": "გაგზავნილი"
+    },
+    "actions": {
+      "add": "დამატება",
+      "cancel": "გაუქმება",
+      "accept": "მიღება",
+      "decline": "უარყოფა",
+      "remove": "წაშლა",
+      "message": "მიწერა"
+    },
+    "status": {
+      "pendingOut": "მოთხოვნა გაგზავნილია",
+      "pendingIn": "გსურთ მეგობრობა?",
+      "friends": "უკვე მეგობრები ხართ"
+    },
+    "empty": {
+      "friends": "ჯერ მეგობრები არ გყავთ",
+      "incoming": "შემოსული მოთხოვნები არ არის",
+      "outgoing": "გაგზავნილი მოთხოვნები არ არის",
+      "conversations": "ჯერ საუბრები არ არის"
+    },
+    "confirm": {
+      "removeFriend": "გსურთ ამ მეგობრის წაშლა?"
+    }
   },
   "lectures": {
     "title": "ლექციები",
@@ -1189,6 +1229,7 @@
         "startCamera": "სცადეთ თავიდან",
         "capture": "გადაღება",
         "retake": "ხელახლა გადაღება",
+        "uploadFromDevice": "ატვირთვა მოწყობილობიდან",
         "usePhoto": "ამ ფოტოს გამოყენება",
         "requesting": "კამერაზე წვდომის მოთხოვნა..."
       },
@@ -1366,6 +1407,65 @@
       "paidAccess": "ფასიანი (ნაგულისხმევი)"
     }
   },
+  "adminStudentProjectAccess": {
+    "title": "სტუდენტების პროექტებზე წვდომა",
+    "subtitle": "მიეცით, გააგრძელეთ ან გააუქმეთ სტუდენტის უფასო წვდომა პროექტებზე. დააყენეთ ნებისმიერი ვადა — სამუდამოს ჩათვლით — ფასიანი გამოწერის გარეშე.",
+    "liveSync": "ცოცხალი",
+    "searchPlaceholder": "ძიება სახელით, ელ-ფოსტით ან მომხმარებლის სახელით",
+    "clearSearch": "ძიების გასუფთავება",
+    "filterAll": "ყველა",
+    "filterActive": "აქტიური",
+    "filterExpiringSoon": "ისლება ≤ 7 დღე",
+    "filterExpired": "ვადაგასული",
+    "filterNever": "წვდომის გარეშე",
+    "selectAll": "ხილული რიგების არჩევა",
+    "selectRow": "რიგის არჩევა",
+    "selectedCount": "{{count}} არჩეული",
+    "bulkGrant": "მინიჭება არჩეულებზე:",
+    "clearSelection": "არჩევანის გასუფთავება",
+    "bulkSuccess": "წვდომა მიენიჭა {{count}} სტუდენტს.",
+    "bulkPartial": "წარმატებული: {{success}}, ვერ მოხერხდა: {{failed}}.",
+    "name": "სახელი",
+    "email": "ელ-ფოსტა",
+    "username": "მომხმარებლის სახელი",
+    "statusHeader": "წვდომის სტატუსი",
+    "actions": "მოქმედებები",
+    "statusActive": "აქტიური",
+    "statusExpiringSoon": "მთავრდება",
+    "statusExpired": "ვადაგასული",
+    "statusNever": "წვდომის გარეშე",
+    "statusLifetime": "სამუდამოდ",
+    "unnamedStudent": "უსახელო სტუდენტი",
+    "noStudents": "ფილტრის შესაბამისი სტუდენტი ვერ მოიძებნა.",
+    "manage": "მართვა",
+    "extendTooltip": "გაგრძელება 30 დღით",
+    "extendSuccess": "წვდომა გახანგრძლივდა.",
+    "grantSuccess": "პროექტებზე წვდომა მიენიჭა.",
+    "revokeSuccess": "პროექტებზე წვდომა გაუქმდა.",
+    "grantError": "პროექტებზე წვდომის განახლება ვერ მოხერხდა",
+    "modalTitle": "პროექტებზე წვდომის მართვა",
+    "currentExpiry": "მიმდინარე ვადა:",
+    "presetsHeading": "სწრაფი ვარიანტები",
+    "preset1Week": "1 კვირა",
+    "preset1Month": "1 თვე",
+    "preset3Months": "3 თვე",
+    "preset6Months": "6 თვე",
+    "preset1Year": "1 წელი",
+    "presetLifetime": "სამუდამოდ",
+    "customExpiry": "მორგებული ვადა",
+    "applyCustom": "მორგებულის გამოყენება",
+    "reasonLabel": "მიზეზი (არასავალდებულო, ჩანს მხოლოდ ლოგებში)",
+    "reasonPlaceholder": "მაგ. სტიპენდია, კონკურსის გამარჯვებული...",
+    "revokeAction": "გაუქმება ახლავე",
+    "invalidDate": "აირჩიეთ ვალიდური თარიღი და დრო.",
+    "dateInPast": "ვადა უნდა იყოს მომავალში.",
+    "kpi": {
+      "total": "სულ სტუდენტები",
+      "active": "აქტიური წვდომა",
+      "expiringSoon": "ისლება ≤ 7 დღე",
+      "never": "წვდომის გარეშე"
+    }
+  },
   "lecturerPending": {
     "title": "ანგარიში მოლოდინშია",
     "description": "თქვენი ლექტორის ანგარიში შექმნილია და ადმინისტრატორის დამტკიცებას ელოდება. თქვენი ანგარიშის განხილვისა და დამტკიცების შემდეგ, შეძლებთ ლექტორის დეშბორდზე წვდომას და კურსების შექმნას.",
@@ -1388,7 +1488,8 @@
       "withdrawals": "გატანები",
       "kyc": "იდენტიფიკაცია",
       "lecturers": "ლექტორები",
-      "projects": "პროექტები",
+      "projects": "უფასო ლექტორები",
+      "studentProjectAccess": "პროექტებზე წვდომა",
       "courses": "ყველა კურსი ({{count}})",
       "notifications": "შეტყობინებების გაგზავნა",
       "emailManager": "ელ-ფოსტის მართვა",

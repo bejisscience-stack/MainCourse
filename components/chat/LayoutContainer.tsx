@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import ServerSidebar from "./ServerSidebar";
 import ChannelSidebar from "./ChannelSidebar";
 import ChatArea from "./ChatArea";
 import ChatErrorBoundary from "./ChatErrorBoundary";
+import DirectMessagesSidebar from "./DirectMessagesSidebar";
+import DirectChatArea from "./DirectChatArea";
 import { useActiveServer } from "@/hooks/useActiveServer";
 import { useActiveChannel } from "@/hooks/useActiveChannel";
 import { useUser } from "@/hooks/useUser";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useDirectConversations } from "@/hooks/useDirectConversations";
 import type { Server, Channel } from "@/types/server";
 import type { EnrollmentInfo } from "@/hooks/useEnrollments";
 
@@ -110,6 +113,38 @@ export default function LayoutContainer({
 
   // Check if we're in DM mode (home)
   const isDMMode = activeServerId === "home";
+
+  // DM state — only meaningful when in DM mode (cheap to mount always; respects RLS).
+  const {
+    conversations: dmConversations,
+    openConversation: openDmConversation,
+    markRead: markDmRead,
+    totalUnread: dmTotalUnread,
+  } = useDirectConversations(currentUserId || null);
+
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
+
+  const activeConversation = useMemo(
+    () => dmConversations.find((c) => c.id === activeConversationId) || null,
+    [dmConversations, activeConversationId],
+  );
+
+  const handleSelectConversation = useCallback((conversationId: string) => {
+    setActiveConversationId(conversationId);
+    if (window.innerWidth < 768) {
+      setMobileMenuOpen(false);
+    }
+  }, []);
+
+  const handleOpenConversationByFriend = useCallback(
+    async (friendId: string) => {
+      const conv = await openDmConversation(friendId);
+      setActiveConversationId(conv.id);
+    },
+    [openDmConversation],
+  );
 
   const [hasAppliedInitialChannel, setHasAppliedInitialChannel] =
     useState(false);
@@ -225,7 +260,20 @@ export default function LayoutContainer({
           enrolledCourseIds={enrolledCourseIds}
           showDMButton={showDMButton}
           serverUnreadCounts={serverUnreadCounts}
+          dmUnreadCount={dmTotalUnread}
         />
+
+        {/* Direct Messages Sidebar (DM mode) */}
+        {isDMMode && (
+          <div className="w-60 bg-navy-950/95 md:bg-navy-950/70 border-r border-navy-800/60 flex flex-col h-full shadow-2xl md:shadow-none">
+            <DirectMessagesSidebar
+              conversations={dmConversations}
+              activeConversationId={activeConversationId}
+              onSelectConversation={handleSelectConversation}
+              onOpenConversationByFriend={handleOpenConversationByFriend}
+            />
+          </div>
+        )}
 
         {/* Channels Sidebar Container */}
         {!isDMMode && activeServer && (
@@ -346,17 +394,33 @@ export default function LayoutContainer({
 
       {/* Chat area */}
       <ChatErrorBoundary>
-        <ChatArea
-          channel={activeChannel}
-          currentUserId={currentUserId}
-          isLecturer={isLecturer}
-          onSendMessage={onSendMessage || (() => {})}
-          onReaction={onReaction}
-          isEnrolledInCourse={isEnrolledInCourse}
-          enrollmentInfo={enrollmentInfo}
-          onReEnrollRequest={onReEnrollRequest}
-          onMobileMenuClick={() => setMobileMenuOpen(true)}
-        />
+        {isDMMode ? (
+          activeConversation ? (
+            <DirectChatArea
+              conversation={activeConversation}
+              currentUserId={currentUserId}
+              currentUsername={userName}
+              onMarkRead={markDmRead}
+              onMobileMenuClick={() => setMobileMenuOpen(true)}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-500 text-sm bg-navy-950/40">
+              {t("chat.selectConversation")}
+            </div>
+          )
+        ) : (
+          <ChatArea
+            channel={activeChannel}
+            currentUserId={currentUserId}
+            isLecturer={isLecturer}
+            onSendMessage={onSendMessage || (() => {})}
+            onReaction={onReaction}
+            isEnrolledInCourse={isEnrolledInCourse}
+            enrollmentInfo={enrollmentInfo}
+            onReEnrollRequest={onReEnrollRequest}
+            onMobileMenuClick={() => setMobileMenuOpen(true)}
+          />
+        )}
       </ChatErrorBoundary>
     </div>
   );

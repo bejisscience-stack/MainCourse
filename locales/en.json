@@ -254,7 +254,47 @@
     "online": "Online",
     "myProfile": "My Profile",
     "myCourses": "My Courses",
-    "home": "Home"
+    "home": "Home",
+    "directMessages": "Direct Messages",
+    "selectConversation": "Select a conversation",
+    "messageUser": "Message @{username}",
+    "isTyping": "is typing…"
+  },
+  "friends": {
+    "title": "Friends",
+    "addFriend": "Add Friend",
+    "searchPlaceholder": "Search by username",
+    "searchMinChars": "Type at least 2 characters",
+    "noResults": "No users found",
+    "tabs": {
+      "conversations": "Chats",
+      "friends": "Friends",
+      "requests": "Requests",
+      "incoming": "Incoming",
+      "outgoing": "Outgoing"
+    },
+    "actions": {
+      "add": "Add",
+      "cancel": "Cancel",
+      "accept": "Accept",
+      "decline": "Decline",
+      "remove": "Remove",
+      "message": "Message"
+    },
+    "status": {
+      "pendingOut": "Request sent",
+      "pendingIn": "Wants to be friends",
+      "friends": "Already friends"
+    },
+    "empty": {
+      "friends": "No friends yet",
+      "incoming": "No incoming requests",
+      "outgoing": "No outgoing requests",
+      "conversations": "No conversations yet"
+    },
+    "confirm": {
+      "removeFriend": "Remove this friend?"
+    }
   },
   "lectures": {
     "title": "lectures",
@@ -1189,6 +1229,7 @@
         "startCamera": "Try again",
         "capture": "Take photo",
         "retake": "Retake",
+        "uploadFromDevice": "Upload from device",
         "usePhoto": "Use this photo",
         "requesting": "Requesting camera access..."
       },
@@ -1366,6 +1407,65 @@
       "paidAccess": "Paid (default)"
     }
   },
+  "adminStudentProjectAccess": {
+    "title": "Student project access",
+    "subtitle": "Grant, extend, or revoke a student's free access to projects. Set any expiry — including lifetime — without requiring a paid subscription.",
+    "liveSync": "Live",
+    "searchPlaceholder": "Search by name, email, or username",
+    "clearSearch": "Clear search",
+    "filterAll": "All",
+    "filterActive": "Active",
+    "filterExpiringSoon": "Expiring ≤ 7d",
+    "filterExpired": "Expired",
+    "filterNever": "No access",
+    "selectAll": "Select all visible rows",
+    "selectRow": "Select row",
+    "selectedCount": "{{count}} selected",
+    "bulkGrant": "Grant to selected:",
+    "clearSelection": "Clear selection",
+    "bulkSuccess": "Granted access to {{count}} students.",
+    "bulkPartial": "Granted to {{success}}, failed for {{failed}}.",
+    "name": "Name",
+    "email": "Email",
+    "username": "Username",
+    "statusHeader": "Access status",
+    "actions": "Actions",
+    "statusActive": "Active until",
+    "statusExpiringSoon": "Ends",
+    "statusExpired": "Expired",
+    "statusNever": "No access",
+    "statusLifetime": "Lifetime",
+    "unnamedStudent": "Unnamed student",
+    "noStudents": "No students match these filters.",
+    "manage": "Manage",
+    "extendTooltip": "Extend by 30 days",
+    "extendSuccess": "Access extended.",
+    "grantSuccess": "Project access granted.",
+    "revokeSuccess": "Project access revoked.",
+    "grantError": "Could not update project access",
+    "modalTitle": "Manage project access",
+    "currentExpiry": "Current expiry:",
+    "presetsHeading": "Quick presets",
+    "preset1Week": "1 week",
+    "preset1Month": "1 month",
+    "preset3Months": "3 months",
+    "preset6Months": "6 months",
+    "preset1Year": "1 year",
+    "presetLifetime": "Lifetime",
+    "customExpiry": "Custom expiry",
+    "applyCustom": "Apply custom",
+    "reasonLabel": "Reason (optional, audit log only)",
+    "reasonPlaceholder": "e.g. Scholarship grant, course-prize winner...",
+    "revokeAction": "Revoke now",
+    "invalidDate": "Please pick a valid date and time.",
+    "dateInPast": "Expiry must be in the future.",
+    "kpi": {
+      "total": "Total students",
+      "active": "Active access",
+      "expiringSoon": "Expiring ≤ 7d",
+      "never": "No access"
+    }
+  },
   "lecturerPending": {
     "title": "Account Pending Approval",
     "description": "Your lecturer account has been created and is pending admin approval. Once your account is reviewed and approved, you will be able to access the lecturer dashboard and create courses.",
@@ -1388,7 +1488,8 @@
       "withdrawals": "Withdrawals",
       "kyc": "KYC",
       "lecturers": "Lecturers",
-      "projects": "Projects",
+      "projects": "Free Lecturers",
+      "studentProjectAccess": "Project Access",
       "courses": "All Courses ({{count}})",
       "notifications": "Send Notifications",
       "emailManager": "Email Manager",

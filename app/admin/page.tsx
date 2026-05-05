@@ -50,6 +50,10 @@ const AdminFreeProjectLecturers = dynamic(
   () => import("@/components/AdminFreeProjectLecturers"),
   { ssr: false },
 );
+const AdminStudentProjectAccess = dynamic(
+  () => import("@/components/AdminStudentProjectAccess"),
+  { ssr: false },
+);
 import { useUser } from "@/hooks/useUser";
 import { useCourses } from "@/hooks/useCourses";
 import { useAdminRealtimeInvalidation } from "@/hooks/useAdminRealtimeInvalidation";
@@ -64,6 +68,7 @@ type TabType =
   | "kyc"
   | "lecturers"
   | "projects"
+  | "student-project-access"
   | "courses"
   | "notifications"
   | "email-manager"
@@ -327,6 +332,10 @@ export default function AdminDashboard() {
     { key: "lecturers", label: t("adminDashboard.tabs.lecturers") },
     { key: "projects", label: t("adminDashboard.tabs.projects") },
     {
+      key: "student-project-access",
+      label: t("adminDashboard.tabs.studentProjectAccess"),
+    },
+    {
       key: "courses",
       label: t("adminDashboard.tabs.courses", { count: totalCourses }),
     },
@@ -502,6 +511,19 @@ export default function AdminDashboard() {
               }
             >
               <AdminFreeProjectLecturers />
+            </ErrorBoundary>
+          )}
+
+          {activeTab === "student-project-access" && (
+            <ErrorBoundary
+              onError={(error) =>
+                console.error(
+                  "[Admin Dashboard] Student Project Access section error:",
+                  error,
+                )
+              }
+            >
+              <AdminStudentProjectAccess />
             </ErrorBoundary>
           )}
 

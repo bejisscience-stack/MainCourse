@@ -35,6 +35,10 @@ interface MessageInputProps {
   isSending?: boolean;
   channelId?: string;
   isMuted?: boolean;
+  // Optional upload-target overrides. Defaults preserve course-chat behavior.
+  uploadEndpoint?: string; // defaults to "chat-media"
+  uploadIdParamName?: string; // defaults to "chatId"
+  uploadIdValue?: string; // defaults to channelId
 }
 
 const ALLOWED_IMAGE_TYPES = [
@@ -64,6 +68,9 @@ export default function MessageInput({
   isSending = false,
   channelId,
   isMuted = false,
+  uploadEndpoint = "chat-media",
+  uploadIdParamName = "chatId",
+  uploadIdValue,
 }: MessageInputProps) {
   const [content, setContent] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -224,7 +231,8 @@ export default function MessageInput({
 
   const uploadFile = useCallback(
     async (file: File): Promise<MessageAttachment | null> => {
-      if (!channelId) return null;
+      const targetId = uploadIdValue ?? channelId;
+      if (!targetId) return null;
 
       // Validate file type
       if (!ALLOWED_TYPES.includes(file.type)) {
@@ -263,7 +271,7 @@ export default function MessageInput({
 
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("chatId", channelId);
+        formData.append(uploadIdParamName, targetId);
 
         // Use XMLHttpRequest for progress tracking
         const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -292,7 +300,7 @@ export default function MessageInput({
           xhr.ontimeout = () => reject(new Error("Upload timed out"));
           xhr.timeout = 30000; // 30 second timeout
 
-          xhr.open("POST", edgeFunctionUrl("chat-media"));
+          xhr.open("POST", edgeFunctionUrl(uploadEndpoint));
           xhr.setRequestHeader(
             "Authorization",
             `Bearer ${session.access_token}`,
@@ -345,12 +353,13 @@ export default function MessageInput({
         throw err;
       }
     },
-    [channelId],
+    [channelId, uploadIdValue, uploadIdParamName, uploadEndpoint],
   );
 
   const handleFileSelect = useCallback(
     async (files: FileList | null) => {
-      if (!files || files.length === 0 || !channelId) return;
+      const targetId = uploadIdValue ?? channelId;
+      if (!files || files.length === 0 || !targetId) return;
 
       setError(null);
 
@@ -411,7 +420,7 @@ export default function MessageInput({
         setUploadingFiles((prev) => prev.filter((f) => f.status !== "error"));
       }, 5000);
     },
-    [channelId, uploadFile],
+    [channelId, uploadIdValue, uploadFile],
   );
 
   const handleDragEnter = useCallback(
