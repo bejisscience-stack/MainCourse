@@ -13,6 +13,8 @@ interface DirectMessagesSidebarProps {
   activeConversationId: string | null;
   onSelectConversation: (conversationId: string) => void;
   onOpenConversationByFriend: (friendId: string) => Promise<void>;
+  onCollapse?: () => void;
+  totalUnread?: number;
 }
 
 export default function DirectMessagesSidebar({
@@ -20,6 +22,8 @@ export default function DirectMessagesSidebar({
   activeConversationId,
   onSelectConversation,
   onOpenConversationByFriend,
+  onCollapse,
+  totalUnread = 0,
 }: DirectMessagesSidebarProps) {
   const { t } = useI18n();
   const [tab, setTab] = useState<Tab>("conversations");
@@ -102,25 +106,53 @@ export default function DirectMessagesSidebar({
         <h2 className="text-gray-100 font-semibold text-sm truncate flex-1">
           {t("chat.directMessages")}
         </h2>
-        <button
-          onClick={() => setShowAddFriend(true)}
-          className="text-gray-400 hover:text-emerald-300 p-1 rounded-md hover:bg-navy-800/60 transition-colors"
-          title={t("friends.addFriend")}
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="flex items-center gap-1">
+          {totalUnread > 0 && (
+            <span className="bg-red-500 text-white text-[11px] font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-soft">
+              {totalUnread > 9 ? "9+" : totalUnread}
+            </span>
+          )}
+          {onCollapse && (
+            <button
+              onClick={onCollapse}
+              className="text-gray-400 hover:text-emerald-300 transition-colors p-1 rounded-md hover:bg-navy-800/60"
+              title="Collapse direct messages"
+            >
+              <svg
+                className="w-4 h-4 transition-transform rotate-180"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={() => setShowAddFriend(true)}
+            className="text-gray-400 hover:text-emerald-300 p-1 rounded-md hover:bg-navy-800/60 transition-colors"
+            title={t("friends.addFriend")}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-        </button>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="flex border-b border-navy-800/60 bg-navy-950/40">

@@ -629,7 +629,7 @@ export default function KycModal({
           <img
             src={selfiePreview}
             alt="selfie"
-            className="aspect-square w-full rounded-2xl object-cover"
+            className="h-[260px] w-full rounded-2xl object-cover sm:h-[320px]"
           />
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
@@ -660,14 +660,38 @@ export default function KycModal({
         </div>
       ) : (
         <>
-          <div className="overflow-hidden rounded-2xl bg-black">
+          <div className="relative overflow-hidden rounded-2xl bg-black">
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
-              className="aspect-square w-full object-cover"
+              className="h-[260px] w-full object-cover sm:h-[320px]"
             />
+            {permState === "requesting" && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 text-sm text-white">
+                <svg
+                  className="h-8 w-8 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+                <span>{t("kyc.steps.selfie.requesting")}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">

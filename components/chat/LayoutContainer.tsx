@@ -16,6 +16,8 @@ import { useDirectConversations } from "@/hooks/useDirectConversations";
 import type { Server, Channel } from "@/types/server";
 import type { EnrollmentInfo } from "@/hooks/useEnrollments";
 
+type ActiveChatKind = "channel" | "dm";
+
 interface LayoutContainerProps {
   servers: Server[];
   currentUserId: string;
@@ -57,6 +59,10 @@ export default function LayoutContainer({
   const [activeServerId, setActiveServerId] = useActiveServer();
   const [activeChannelId, setActiveChannelId] = useActiveChannel();
   const [channelsCollapsed, setChannelsCollapsed] = useState(false);
+  const [dmsCollapsed, setDmsCollapsed] = useState(false);
+  const [activeChatKind, setActiveChatKind] = useState<ActiveChatKind>(
+    activeServerId === "home" ? "dm" : "channel",
+  );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, profile } = useUser();
   const { t } = useI18n();
@@ -76,7 +82,7 @@ export default function LayoutContainer({
     );
   }, [servers]);
 
-  const { getUnreadCount, markAsRead, totalUnread } = useUnreadMessages({
+  const { getUnreadCount, markAsRead } = useUnreadMessages({
     channelIds: allChannelIds,
     enabled: servers.length > 0,
   });
@@ -111,10 +117,10 @@ export default function LayoutContainer({
       .flatMap((cat) => cat.channels)
       .find((ch) => ch.id === activeChannelId) || null;
 
-  // Check if we're in DM mode (home)
+  // The home rail still opens a full-height DM sidebar; courses show DMs below channels.
   const isDMMode = activeServerId === "home";
 
-  // DM state — only meaningful when in DM mode (cheap to mount always; respects RLS).
+  // DM state is shared by the full DM view and the embedded course sidebar section.
   const {
     conversations: dmConversations,
     openConversation: openDmConversation,
@@ -133,6 +139,7 @@ export default function LayoutContainer({
 
   const handleSelectConversation = useCallback((conversationId: string) => {
     setActiveConversationId(conversationId);
+    setActiveChatKind("dm");
     if (window.innerWidth < 768) {
       setMobileMenuOpen(false);
     }
@@ -142,6 +149,10 @@ export default function LayoutContainer({
     async (friendId: string) => {
       const conv = await openDmConversation(friendId);
       setActiveConversationId(conv.id);
+      setActiveChatKind("dm");
+      if (window.innerWidth < 768) {
+        setMobileMenuOpen(false);
+      }
     },
     [openDmConversation],
   );
@@ -206,6 +217,7 @@ export default function LayoutContainer({
   const handleServerSelect = (serverId: string) => {
     const newServer = servers.find((s) => s.id === serverId);
     setActiveServerId(serverId);
+    setActiveChatKind(serverId === "home" ? "dm" : "channel");
 
     // Try to find a matching channel in the new server before clearing
     if (newServer && activeChannelId) {
@@ -226,6 +238,7 @@ export default function LayoutContainer({
 
   const handleChannelSelect = (channelId: string) => {
     setActiveChannelId(channelId);
+    setActiveChatKind("channel");
     // Close mobile menu on component selection usually handled by parent or self
     // We can close it here to be safe
     if (window.innerWidth < 768) {
@@ -271,6 +284,7 @@ export default function LayoutContainer({
               activeConversationId={activeConversationId}
               onSelectConversation={handleSelectConversation}
               onOpenConversationByFriend={handleOpenConversationByFriend}
+              totalUnread={dmTotalUnread}
             />
           </div>
         )}
@@ -288,6 +302,13 @@ export default function LayoutContainer({
                   <span className="text-gray-400 text-xs font-semibold tracking-wider">
                     CHANNELS
                   </span>
+                  {activeServerTotalUnread > 0 && (
+                    <span className="bg-red-500 text-white text-[11px] font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-soft ml-auto mr-2">
+                      {activeServerTotalUnread > 9
+                        ? "9+"
+                        : activeServerTotalUnread}
+                    </span>
+                  )}
                   <button
                     onClick={() => setChannelsCollapsed(!channelsCollapsed)}
                     className="text-gray-400 hover:text-emerald-300 transition-colors p-1 rounded-md hover:bg-navy-800/60"
@@ -322,6 +343,54 @@ export default function LayoutContainer({
                     getUnreadCount={getUnreadCount}
                     markAsRead={markAsRead}
                     totalUnread={activeServerTotalUnread}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Direct Messages Section */}
+            <div
+              className={`flex flex-col transition-all border-t border-navy-800/60 ${dmsCollapsed ? "flex-shrink-0" : "flex-1 min-h-0"}`}
+            >
+              {dmsCollapsed ? (
+                <div className="h-12 px-4 border-b border-navy-800/60 flex items-center justify-between bg-navy-950/60 flex-shrink-0">
+                  <span className="text-gray-400 text-xs font-semibold tracking-wider uppercase truncate">
+                    {t("chat.directMessages")}
+                  </span>
+                  {dmTotalUnread > 0 && (
+                    <span className="bg-red-500 text-white text-[11px] font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-soft ml-auto mr-2">
+                      {dmTotalUnread > 9 ? "9+" : dmTotalUnread}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setDmsCollapsed(!dmsCollapsed)}
+                    className="text-gray-400 hover:text-emerald-300 transition-colors p-1 rounded-md hover:bg-navy-800/60"
+                    title="Expand direct messages"
+                  >
+                    <svg
+                      className="w-4 h-4 transition-transform"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex-1 overflow-hidden min-h-0">
+                  <DirectMessagesSidebar
+                    conversations={dmConversations}
+                    activeConversationId={activeConversationId}
+                    onSelectConversation={handleSelectConversation}
+                    onOpenConversationByFriend={handleOpenConversationByFriend}
+                    onCollapse={() => setDmsCollapsed(true)}
+                    totalUnread={dmTotalUnread}
                   />
                 </div>
               )}
@@ -394,7 +463,7 @@ export default function LayoutContainer({
 
       {/* Chat area */}
       <ChatErrorBoundary>
-        {isDMMode ? (
+        {activeChatKind === "dm" ? (
           activeConversation ? (
             <DirectChatArea
               conversation={activeConversation}
