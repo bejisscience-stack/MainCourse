@@ -5,6 +5,7 @@ import {
   errorResponse,
 } from "../_shared/cors.ts";
 import { getAuthenticatedUser, checkIsAdmin } from "../_shared/auth.ts";
+import { detectMime } from "../_shared/sniff.ts";
 
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
@@ -118,6 +119,16 @@ Deno.serve(async (req: Request) => {
     const arrayBuffer = await file.arrayBuffer();
     const fileData = new Uint8Array(arrayBuffer);
 
+    const sniffedMime = detectMime(fileData.subarray(0, 32));
+    if (!sniffedMime || !ALLOWED_TYPES.includes(sniffedMime)) {
+      return errorResponse(
+        "File content does not match an allowed type",
+        400,
+        cors,
+      );
+    }
+    const safeMimeType = sniffedMime;
+
     let uploadError: Error | null = null;
     let uploadData: { path: string } | null = null;
 
@@ -125,7 +136,7 @@ Deno.serve(async (req: Request) => {
       const result = await supabase.storage
         .from("chat-media")
         .upload(filePath, fileData, {
-          contentType: mimeType,
+          contentType: safeMimeType,
           upsert: false,
           cacheControl: "3600",
         });
@@ -143,7 +154,7 @@ Deno.serve(async (req: Request) => {
         const retryResult = await supabase.storage
           .from("chat-media")
           .upload(retryPath, fileData, {
-            contentType: mimeType,
+            contentType: safeMimeType,
             upsert: true,
             cacheControl: "3600",
           });
@@ -164,21 +175,17 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Failed to upload file" }, 500, cors);
     }
 
-    const { data: urlData } = supabase.storage
-      .from("chat-media")
-      .getPublicUrl(uploadData?.path || filePath);
-    const fileUrl = urlData.publicUrl;
-    if (!fileUrl)
-      return errorResponse("Failed to generate file URL", 500, cors);
+    // chat-media is private (mig 235); return the bucket-relative path. The
+    // client persists this path; reads are signed on demand.
+    const storedPath = uploadData?.path || filePath;
 
     return jsonResponse(
       {
-        url: fileUrl,
-        fileUrl,
+        path: storedPath,
         fileName: originalName,
         fileType,
         fileSize: file.size,
-        mimeType,
+        mimeType: safeMimeType,
       },
       201,
       cors,

@@ -148,6 +148,7 @@ export default function SettingsPage() {
   // Delete account state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   // Initialize profile fields once when data first loads. Using a ref instead
@@ -613,9 +614,15 @@ export default function SettingsPage() {
   };
 
   const handleDeleteAccount = async () => {
-    if (deleteConfirmText !== "Delete" || isDeletingAccount) return;
+    if (
+      deleteConfirmText !== "Delete" ||
+      deletePassword.length === 0 ||
+      isDeletingAccount
+    )
+      return;
 
     setIsDeletingAccount(true);
+    let invalidPassword = false;
     try {
       const {
         data: { session },
@@ -629,13 +636,18 @@ export default function SettingsPage() {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({ password: deletePassword }),
       });
 
       if (!response.ok) {
         const data = await response.json();
         if (data.error === "role_cannot_delete") {
           toast.error(t("settings.deleteAccountLecturerBlocked"));
+        } else if (data.error === "invalid_password") {
+          invalidPassword = true;
+          toast.error(t("settings.currentPasswordIncorrect"));
         } else {
           toast.error(t("settings.deleteAccountError"));
         }
@@ -650,8 +662,11 @@ export default function SettingsPage() {
       toast.error(t("settings.deleteAccountError"));
     } finally {
       setIsDeletingAccount(false);
-      setShowDeleteModal(false);
-      setDeleteConfirmText("");
+      if (!invalidPassword) {
+        setShowDeleteModal(false);
+        setDeleteConfirmText("");
+      }
+      setDeletePassword("");
     }
   };
 
@@ -1661,12 +1676,28 @@ export default function SettingsPage() {
               />
             </div>
 
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-charcoal-700 dark:text-gray-300 mb-2">
+                {t("settings.deleteAccountPasswordLabel")}
+              </label>
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder={t("settings.deleteAccountPasswordPlaceholder")}
+                className="w-full px-4 py-2.5 border border-charcoal-200 dark:border-navy-600 rounded-xl bg-white dark:bg-navy-900 text-charcoal-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
+                disabled={isDeletingAccount}
+                autoComplete="current-password"
+              />
+            </div>
+
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => {
                   setShowDeleteModal(false);
                   setDeleteConfirmText("");
+                  setDeletePassword("");
                 }}
                 disabled={isDeletingAccount}
                 className="flex-1 px-4 py-2.5 bg-charcoal-100 dark:bg-navy-700 text-charcoal-700 dark:text-gray-300 font-medium rounded-xl hover:bg-charcoal-200 dark:hover:bg-navy-600 transition-all duration-200 disabled:opacity-50"
@@ -1676,7 +1707,11 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={handleDeleteAccount}
-                disabled={deleteConfirmText !== "Delete" || isDeletingAccount}
+                disabled={
+                  deleteConfirmText !== "Delete" ||
+                  deletePassword.length === 0 ||
+                  isDeletingAccount
+                }
                 className="flex-1 px-4 py-2.5 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isDeletingAccount ? (

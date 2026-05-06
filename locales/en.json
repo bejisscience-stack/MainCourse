@@ -214,7 +214,9 @@
     "deleteAccountConfirmButton": "Permanently Delete Account",
     "deleteAccountLecturerBlocked": "Lecturers and administrators cannot delete their accounts directly. Please contact an administrator.",
     "accountDeleted": "Your account has been deleted.",
-    "deleteAccountError": "Failed to delete account. Please try again."
+    "deleteAccountError": "Failed to delete account. Please try again.",
+    "deleteAccountPasswordLabel": "Confirm your password",
+    "deleteAccountPasswordPlaceholder": "Enter your current password"
   },
   "courseCard": {
     "bestseller": "Bestseller",

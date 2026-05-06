@@ -5,6 +5,7 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import { adminLimiter, rateLimitResponse } from "@/lib/rate-limit";
 import { logAdminAction } from "@/lib/audit-log";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +63,9 @@ export async function GET(request: NextRequest) {
         { status: 403 },
       );
     }
+
+    const { allowed, retryAfterMs } = await adminLimiter.check(user.id);
+    if (!allowed) return rateLimitResponse(retryAfterMs);
 
     // Parse status filter from query params
     const { searchParams } = new URL(request.url);

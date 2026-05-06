@@ -214,7 +214,9 @@
     "deleteAccountConfirmButton": "ანგარიშის სამუდამოდ წაშლა",
     "deleteAccountLecturerBlocked": "ლექტორებს და ადმინისტრატორებს არ შეუძლიათ ანგარიშის პირდაპირ წაშლა. გთხოვთ დაუკავშირდეთ ადმინისტრატორს.",
     "accountDeleted": "თქვენი ანგარიში წაიშალა.",
-    "deleteAccountError": "ანგარიშის წაშლა ვერ მოხერხდა. გთხოვთ სცადოთ თავიდან."
+    "deleteAccountError": "ანგარიშის წაშლა ვერ მოხერხდა. გთხოვთ სცადოთ თავიდან.",
+    "deleteAccountPasswordLabel": "დაადასტურეთ თქვენი პაროლი",
+    "deleteAccountPasswordPlaceholder": "შეიყვანეთ მიმდინარე პაროლი"
   },
   "courseCard": {
     "bestseller": "ბესტსელერი",

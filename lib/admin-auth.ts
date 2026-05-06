@@ -4,6 +4,7 @@ import {
   createServiceRoleClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
+import { adminLimiter, rateLimitResponse } from "@/lib/rate-limit";
 
 interface AdminAuthResult {
   token: string;
@@ -47,6 +48,9 @@ export async function verifyAdminRequest(
   } catch {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
+
+  const { allowed, retryAfterMs } = await adminLimiter.check(user.id);
+  if (!allowed) return rateLimitResponse(retryAfterMs);
 
   return {
     token,

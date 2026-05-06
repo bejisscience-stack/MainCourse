@@ -220,14 +220,22 @@ async function fetchAttachments(messageId: string) {
       .eq("message_id", messageId);
 
     if (attachments && attachments.length > 0) {
-      return attachments.map((att: any) => ({
-        id: att.id,
-        fileUrl: att.file_url,
-        fileName: att.file_name,
-        fileType: att.file_type,
-        fileSize: att.file_size,
-        mimeType: att.mime_type,
-      }));
+      return attachments.map((att: any) => {
+        // chat-media is private (mig 235). Legacy https://... rows pass
+        // through as fileUrl; path-only rows surface as filePath so the
+        // renderer signs them per render via useSignedChatMediaUrl.
+        const value = att.file_url;
+        const isLegacyUrl =
+          typeof value === "string" && value.startsWith("https://");
+        return {
+          id: att.id,
+          fileName: att.file_name,
+          fileType: att.file_type,
+          fileSize: att.file_size,
+          mimeType: att.mime_type,
+          ...(isLegacyUrl ? { fileUrl: value } : { filePath: value }),
+        };
+      });
     }
   } catch {
     // Silent fail for attachments

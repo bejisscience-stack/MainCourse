@@ -4,6 +4,11 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import {
+  generalLimiter,
+  rateLimitResponse,
+  getClientIP,
+} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +25,11 @@ export async function GET(request: NextRequest) {
       console.error("Auth error:", userError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { allowed, retryAfterMs } = await generalLimiter.check(
+      getClientIP(request),
+    );
+    if (!allowed) return rateLimitResponse(retryAfterMs);
 
     // Create Supabase client for database operations
     const supabase = createServerSupabaseClient(token);

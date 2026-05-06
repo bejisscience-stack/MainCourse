@@ -15,7 +15,6 @@ export const dynamic = "force-dynamic";
 
 export async function DELETE(request: NextRequest) {
   try {
-    // 1. Verify auth token
     const token = getTokenFromHeader(request);
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -29,7 +28,18 @@ export async function DELETE(request: NextRequest) {
     const rl = await accountLimiter.check(getClientIP(request));
     if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
-    // 2. Fetch profile to check role
+    const body = await request
+      .json()
+      .catch(() => ({}) as Record<string, unknown>);
+    const password = (body as { password?: unknown }).password;
+    if (
+      typeof password !== "string" ||
+      password.length < 1 ||
+      password.length > 200
+    ) {
+      return NextResponse.json({ error: "invalid_request" }, { status: 400 });
+    }
+
     const supabase = createServerSupabaseClient(token);
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
@@ -42,7 +52,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    // 3. Block lecturers and admins
     if (profile.role === "lecturer" || profile.role === "admin") {
       return NextResponse.json(
         { error: "role_cannot_delete" },
@@ -50,20 +59,32 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // 4. Use service role to clean up non-cascading rows and delete auth user
+    if (!user.email) {
+      return NextResponse.json({ error: "invalid_request" }, { status: 400 });
+    }
+    const reauthClient = createServerSupabaseClient(token);
+    const { error: reauthError } = await reauthClient.auth.signInWithPassword({
+      email: user.email,
+      password,
+    });
+    if (reauthError) {
+      return NextResponse.json({ error: "invalid_password" }, { status: 401 });
+    }
+
     const serviceSupabase = createServiceRoleClient();
 
-    // Delete rows from tables that lack ON DELETE CASCADE
-    // Order matters: payment_audit_log references keepz_payments(id), so delete it first
-    const { error: auditDeleteError } = await serviceSupabase
+    // Anonymize financial rows (preserve audit trail) instead of deleting.
+    // payment_audit_log references keepz_payments(id); update order does not
+    // matter for SET user_id = NULL since we are not touching that FK.
+    const { error: auditAnonError } = await serviceSupabase
       .from("payment_audit_log")
-      .delete()
+      .update({ user_id: null })
       .eq("user_id", user.id);
 
-    if (auditDeleteError) {
+    if (auditAnonError) {
       console.error(
-        "[DeleteAccount] Audit log cleanup error:",
-        auditDeleteError,
+        "[DeleteAccount] Audit log anonymize error:",
+        auditAnonError,
       );
       return NextResponse.json(
         { error: "Failed to delete account" },
@@ -71,15 +92,15 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { error: paymentsDeleteError } = await serviceSupabase
+    const { error: paymentsAnonError } = await serviceSupabase
       .from("keepz_payments")
-      .delete()
+      .update({ user_id: null })
       .eq("user_id", user.id);
 
-    if (paymentsDeleteError) {
+    if (paymentsAnonError) {
       console.error(
-        "[DeleteAccount] Payments cleanup error:",
-        paymentsDeleteError,
+        "[DeleteAccount] Payments anonymize error:",
+        paymentsAnonError,
       );
       return NextResponse.json(
         { error: "Failed to delete account" },
@@ -87,7 +108,27 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // 5. Delete auth user — this cascades to profiles and all other FK tables
+    // Self-action audit tombstone. Direct service-role INSERT because
+    // insert_audit_log RPC blocks non-admin callers (migrations 153, 177).
+    // Best-effort: failure here does not abort the deletion.
+    const { error: auditInsertError } = await serviceSupabase
+      .from("audit_log")
+      .insert({
+        admin_user_id: user.id,
+        action: "self_account_deleted",
+        target_table: "auth.users",
+        target_id: user.id,
+        metadata: { initiated_at: new Date().toISOString() },
+        ip_address: getClientIP(request),
+      });
+
+    if (auditInsertError) {
+      console.error(
+        "[DeleteAccount] Audit tombstone insert error:",
+        auditInsertError,
+      );
+    }
+
     const { error: deleteError } = await serviceSupabase.auth.admin.deleteUser(
       user.id,
     );

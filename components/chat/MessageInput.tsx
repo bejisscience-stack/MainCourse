@@ -11,7 +11,42 @@ import {
 } from "react";
 import { supabase } from "@/lib/supabase";
 import { edgeFunctionUrl } from "@/lib/api-client";
+import { useSignedChatMediaUrl } from "@/hooks/useSignedChatMediaUrl";
+import { useSignedDmMediaUrl } from "@/hooks/useSignedDmMediaUrl";
 import type { MessageAttachment } from "@/types/message";
+
+/**
+ * Renders the post-upload preview thumbnail. After privatization, chat-media
+ * uploads return only a `filePath` — the preview must sign it via the
+ * bucket-appropriate hook just like the message renderer does.
+ */
+function AttachmentPreviewImage({
+  attachment,
+  bucket,
+}: {
+  attachment: MessageAttachment;
+  bucket: "chat-media" | "dm-media";
+}) {
+  const dmResult = useSignedDmMediaUrl(
+    bucket === "dm-media" ? (attachment.filePath ?? null) : null,
+  );
+  const chatResult = useSignedChatMediaUrl(
+    bucket === "chat-media" ? (attachment.filePath ?? null) : null,
+  );
+  const signedUrl =
+    bucket === "dm-media" ? dmResult.signedUrl : chatResult.signedUrl;
+  const src = attachment.filePath ? signedUrl : attachment.fileUrl;
+  if (!src) {
+    return <div className="h-20 w-20 bg-navy-900/60" />;
+  }
+  return (
+    <img
+      src={src}
+      alt={attachment.fileName}
+      className="h-20 w-20 object-cover"
+    />
+  );
+}
 
 interface UploadingFile {
   id: string;
@@ -759,10 +794,11 @@ export default function MessageInput({
             <div key={att.id || index} className="relative group">
               {att.fileType === "image" || att.fileType === "gif" ? (
                 <div className="relative rounded-lg overflow-hidden border border-navy-800/60 bg-navy-900/50">
-                  <img
-                    src={att.fileUrl}
-                    alt={att.fileName}
-                    className="h-20 w-20 object-cover"
+                  <AttachmentPreviewImage
+                    attachment={att}
+                    bucket={
+                      uploadEndpoint === "dm-media" ? "dm-media" : "chat-media"
+                    }
                   />
                   <button
                     onClick={() => removeAttachment(index)}

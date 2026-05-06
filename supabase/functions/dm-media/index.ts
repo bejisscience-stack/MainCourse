@@ -5,6 +5,7 @@ import {
   errorResponse,
 } from "../_shared/cors.ts";
 import { getAuthenticatedUser } from "../_shared/auth.ts";
+import { detectMime } from "../_shared/sniff.ts";
 
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
@@ -90,6 +91,16 @@ Deno.serve(async (req: Request) => {
     const arrayBuffer = await file.arrayBuffer();
     const fileData = new Uint8Array(arrayBuffer);
 
+    const sniffedMime = detectMime(fileData.subarray(0, 32));
+    if (!sniffedMime || !ALLOWED_TYPES.includes(sniffedMime)) {
+      return errorResponse(
+        "File content does not match an allowed type",
+        400,
+        cors,
+      );
+    }
+    const safeMimeType = sniffedMime;
+
     let uploadError: Error | null = null;
     let uploadData: { path: string } | null = null;
 
@@ -97,7 +108,7 @@ Deno.serve(async (req: Request) => {
       const result = await supabase.storage
         .from("dm-media")
         .upload(filePath, fileData, {
-          contentType: mimeType,
+          contentType: safeMimeType,
           upsert: false,
           cacheControl: "3600",
         });
@@ -115,7 +126,7 @@ Deno.serve(async (req: Request) => {
         const retryResult = await supabase.storage
           .from("dm-media")
           .upload(retryPath, fileData, {
-            contentType: mimeType,
+            contentType: safeMimeType,
             upsert: true,
             cacheControl: "3600",
           });
@@ -158,7 +169,7 @@ Deno.serve(async (req: Request) => {
         fileName: originalName,
         fileType,
         fileSize: file.size,
-        mimeType,
+        mimeType: safeMimeType,
       },
       201,
       cors,

@@ -9,6 +9,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import { useUserMuteStatus } from "@/hooks/useMuteStatus";
 import { useProjectCountdown } from "@/hooks/useProjectCountdown";
 import { useSignedDmMediaUrl } from "@/hooks/useSignedDmMediaUrl";
+import { useSignedChatMediaUrl } from "@/hooks/useSignedChatMediaUrl";
 import ProjectCard from "./ProjectCard";
 import type {
   Message as MessageType,
@@ -46,6 +47,7 @@ interface MessageProps {
   courseId?: string;
   showAvatar?: boolean;
   isEnrolledInCourse?: boolean;
+  bucket?: "chat-media" | "dm-media";
 }
 
 const formatTimestamp = (timestamp: number) => {
@@ -153,19 +155,26 @@ const ImageModal = memo(function ImageModal({
 // Media attachment component
 const MediaAttachment = memo(function MediaAttachment({
   attachment,
+  bucket = "chat-media",
 }: {
   attachment: MessageAttachment;
+  bucket?: "chat-media" | "dm-media";
 }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isImageExpanded, setIsImageExpanded] = useState(false);
 
-  // For private dm-media attachments (filePath set) we resolve a fresh signed
-  // URL via the API. Public-bucket attachments (chat-media) keep using
-  // attachment.fileUrl directly.
-  const { signedUrl, error: signedError } = useSignedDmMediaUrl(
-    attachment.filePath,
+  // Both buckets are private — when filePath is set, sign per render via the
+  // bucket-appropriate hook. fileUrl (legacy public chat-media URL) is the
+  // pre-mig-238 fallback for chat-media rows that haven't been backfilled.
+  const dmResult = useSignedDmMediaUrl(
+    bucket === "dm-media" ? attachment.filePath : null,
   );
+  const chatResult = useSignedChatMediaUrl(
+    bucket === "chat-media" ? attachment.filePath : null,
+  );
+  const { signedUrl, error: signedError } =
+    bucket === "dm-media" ? dmResult : chatResult;
   const resolvedUrl = attachment.filePath ? signedUrl : attachment.fileUrl;
   const isResolving = !!attachment.filePath && !signedUrl && !signedError;
   const isUnreachable = !!attachment.filePath && !!signedError;
@@ -267,6 +276,7 @@ const Message = memo(function Message({
   courseId,
   showAvatar = true,
   isEnrolledInCourse = false,
+  bucket = "chat-media",
 }: MessageProps) {
   const { t } = useI18n();
   const [showMenu, setShowMenu] = useState(false);
@@ -881,7 +891,11 @@ const Message = memo(function Message({
           {message.attachments && message.attachments.length > 0 && (
             <div className="mt-2 space-y-2">
               {message.attachments.map((att) => (
-                <MediaAttachment key={att.id} attachment={att} />
+                <MediaAttachment
+                  key={att.id}
+                  attachment={att}
+                  bucket={bucket}
+                />
               ))}
             </div>
           )}

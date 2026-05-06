@@ -106,7 +106,11 @@ function PinnedMessagesBar({
           type="button"
           onClick={onToggleExpanded}
           aria-expanded={isExpanded}
-          title={isExpanded ? t("chat.hidePinnedMessages") : t("chat.showPinnedMessages")}
+          title={
+            isExpanded
+              ? t("chat.hidePinnedMessages")
+              : t("chat.showPinnedMessages")
+          }
           className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-navy-800/70 hover:text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/40"
         >
           <ChevronDown
@@ -670,11 +674,7 @@ export default function ChatArea({
     if (!messageElement) return false;
 
     messageElement.scrollIntoView({ behavior: "smooth", block: "center" });
-    messageElement.classList.add(
-      "ring-2",
-      "ring-amber-400",
-      "bg-amber-500/10",
-    );
+    messageElement.classList.add("ring-2", "ring-amber-400", "bg-amber-500/10");
     window.setTimeout(() => {
       messageElement.classList.remove(
         "ring-2",
@@ -738,7 +738,9 @@ export default function ChatArea({
         throw new Error("Not authenticated. Please log in again.");
       }
 
-      // Upload video file if provided
+      // Upload video file if provided. chat-media is private (mig 235) — we
+      // persist the bucket-relative path; reads (ProjectCard, ProjectDetailsModal)
+      // discriminate path-vs-external-URL and sign on demand.
       let videoUrl = data.videoLink;
       let attachments: any[] = [];
 
@@ -764,22 +766,17 @@ export default function ChatArea({
           throw new Error(`Failed to upload video: ${uploadError.message}`);
         }
 
-        const { data: urlData } = supabase.storage
-          .from("chat-media")
-          .getPublicUrl(filePath);
-
-        if (urlData?.publicUrl) {
-          videoUrl = urlData.publicUrl;
-          attachments = [
-            {
-              fileUrl: urlData.publicUrl,
-              fileName: data.videoFile.name,
-              fileType: "video",
-              fileSize: data.videoFile.size,
-              mimeType: data.videoFile.type,
-            },
-          ];
-        }
+        const storedPath = uploadData?.path || filePath;
+        videoUrl = storedPath;
+        attachments = [
+          {
+            filePath: storedPath,
+            fileName: data.videoFile.name,
+            fileType: "video",
+            fileSize: data.videoFile.size,
+            mimeType: data.videoFile.type,
+          },
+        ];
       }
 
       // Create a simple message content (for display purposes)

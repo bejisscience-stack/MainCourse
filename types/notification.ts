@@ -68,7 +68,11 @@ export interface AdminNotificationPayload {
   email_target?: "profiles" | "coming_soon" | "both" | "specific";
   target_emails?: string[];
   message_html?: { en?: string; ge?: string };
-  respect_marketing_consent?: boolean;
+  category?:
+    | "marketing"
+    | "transactional_security"
+    | "transactional_terms"
+    | "transactional_account";
 }
 
 export interface NotificationsResponse {

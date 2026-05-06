@@ -55,6 +55,13 @@ function AdminNotificationSender() {
   const [manualEmails, setManualEmails] = useState("");
   const [emailSearchQuery, setEmailSearchQuery] = useState("");
 
+  const [category, setCategory] = useState<
+    | "marketing"
+    | "transactional_security"
+    | "transactional_terms"
+    | "transactional_account"
+  >("marketing");
+
   const [titleEn, setTitleEn] = useState("");
   const [titleGe, setTitleGe] = useState("");
   const [messageEn, setMessageEn] = useState("");
@@ -97,7 +104,7 @@ function AdminNotificationSender() {
       setIsLoading(true);
       // First get all profile IDs
       const { data: idData, error: idError } = await supabase
-        .from("profiles")
+        .from("profiles_safe")
         .select("id");
 
       if (idError || !idData || idData.length === 0) {
@@ -152,7 +159,7 @@ function AdminNotificationSender() {
 
       // First get all profile IDs
       const { data: idData, error: idError } = await supabase
-        .from("profiles")
+        .from("profiles_safe")
         .select("id");
 
       if (idError || !idData || idData.length === 0) return;
@@ -335,6 +342,7 @@ function AdminNotificationSender() {
           }),
         language: notifLanguage,
         channel,
+        category,
         ...(showEmailTargeting && { email_target: emailTarget }),
         ...(resolvedTargetEmails && { target_emails: resolvedTargetEmails }),
       };
@@ -398,6 +406,7 @@ function AdminNotificationSender() {
       setShowPreview(false);
       setMessageHtmlEn("");
       setMessageHtmlGe("");
+      setCategory("marketing");
 
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err: any) {
@@ -526,6 +535,39 @@ function AdminNotificationSender() {
               Both
             </button>
           </div>
+        </div>
+
+        {/* Category Selector */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-900 mb-3">
+            Category
+          </label>
+          <select
+            value={category}
+            onChange={(e) =>
+              setCategory(
+                e.target.value as
+                  | "marketing"
+                  | "transactional_security"
+                  | "transactional_terms"
+                  | "transactional_account",
+              )
+            }
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy-500 focus:border-navy-500 text-gray-900"
+          >
+            <option value="marketing">Marketing</option>
+            <option value="transactional_security">
+              Transactional — Security
+            </option>
+            <option value="transactional_terms">Transactional — Terms</option>
+            <option value="transactional_account">
+              Transactional — Account
+            </option>
+          </select>
+          <p className="mt-2 text-xs text-gray-500">
+            Marketing emails respect each user&apos;s marketing consent.
+            Transactional categories override consent and are audited.
+          </p>
         </div>
 
         {/* Language Selector */}

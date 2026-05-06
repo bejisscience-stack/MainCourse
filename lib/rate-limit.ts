@@ -95,13 +95,20 @@ export const generalLimiter = wrapLimiter(_generalLimiter);
 export const writeLimiter = wrapLimiter(_writeLimiter);
 export const accountLimiter = wrapLimiter(_accountLimiter);
 
-// INFRA-04: DigitalOcean App Platform appends the real client IP as the rightmost entry
-// in X-Forwarded-For. Clients can prepend fake entries but cannot control the last one.
 export function getClientIP(request: NextRequest): string {
+  // DigitalOcean App Platform appends the real client IP last in XFF.
+  // Other platforms put it first. TRUSTED_PROXY_HOPS lets us be explicit.
+  // Default 1 = take the rightmost (DO behavior).
+  const hops = Math.max(1, parseInt(process.env.TRUSTED_PROXY_HOPS || "1", 10));
   const xff = request.headers.get("x-forwarded-for");
   if (xff) {
-    const parts = xff.split(",");
-    return parts[parts.length - 1].trim() || "unknown";
+    const parts = xff
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (parts.length === 0) return "unknown";
+    const idx = Math.max(0, parts.length - hops);
+    return parts[idx] || "unknown";
   }
   return request.headers.get("x-real-ip") || "127.0.0.1";
 }

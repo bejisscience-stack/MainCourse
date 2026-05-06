@@ -5,6 +5,8 @@ import {
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { isValidUUID } from "@/lib/validation";
+import { adminLimiter, rateLimitResponse } from "@/lib/rate-limit";
+import { logAdminAction } from "@/lib/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +49,9 @@ export async function GET(
       );
     }
 
+    const { allowed, retryAfterMs } = await adminLimiter.check(user.id);
+    if (!allowed) return rateLimitResponse(retryAfterMs);
+
     const { submissionId } = await params;
     if (!isValidUUID(submissionId)) {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
@@ -86,6 +91,15 @@ export async function GET(
       sign(submission.doc_back_path),
       sign(submission.selfie_path),
     ]);
+
+    await logAdminAction(
+      request,
+      user.id,
+      "kyc_documents_viewed",
+      "kyc_submissions",
+      submissionId,
+      { ttl: SIGNED_URL_TTL_SECONDS },
+    );
 
     return NextResponse.json(
       {

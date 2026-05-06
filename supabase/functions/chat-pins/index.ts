@@ -52,12 +52,17 @@ async function fetchPinnedMessages(supabase: any, chatId: string) {
     .in("id", messageIds);
 
   if (messagesError) {
-    console.error("[Chat Pins] Failed to fetch pinned message rows:", messagesError);
+    console.error(
+      "[Chat Pins] Failed to fetch pinned message rows:",
+      messagesError,
+    );
     throw new Error("Failed to fetch pinned messages");
   }
 
   const messageRows = (messages || []) as MessageRow[];
-  const messageMap = new Map(messageRows.map((message) => [message.id, message]));
+  const messageMap = new Map(
+    messageRows.map((message) => [message.id, message]),
+  );
   const visibleMessageIds = messageRows.map((message) => message.id);
   const userIds = [
     ...new Set([
@@ -87,13 +92,19 @@ async function fetchPinnedMessages(supabase: any, chatId: string) {
 
   for (const attachment of attachmentsResult.data || []) {
     const existing = attachmentMap.get(attachment.message_id) || [];
+    // chat-media is private (mig 235). Legacy https://... rows pass through
+    // as fileUrl; path-only rows surface as filePath so the client renderer
+    // signs them per render via useSignedChatMediaUrl.
+    const value = attachment.file_url;
+    const isLegacyUrl =
+      typeof value === "string" && value.startsWith("https://");
     existing.push({
       id: attachment.id,
-      fileUrl: attachment.file_url,
       fileName: attachment.file_name,
       fileType: attachment.file_type,
       fileSize: attachment.file_size,
       mimeType: attachment.mime_type,
+      ...(isLegacyUrl ? { fileUrl: value } : { filePath: value }),
     });
     attachmentMap.set(attachment.message_id, existing);
   }
@@ -173,7 +184,11 @@ Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
-  if (req.method !== "GET" && req.method !== "POST" && req.method !== "DELETE") {
+  if (
+    req.method !== "GET" &&
+    req.method !== "POST" &&
+    req.method !== "DELETE"
+  ) {
     return errorResponse("Method not allowed", 405, cors);
   }
 
@@ -185,7 +200,8 @@ Deno.serve(async (req: Request) => {
     if (req.method === "GET") {
       const url = new URL(req.url);
       const chatId = url.searchParams.get("chatId");
-      if (!chatId) return errorResponse("chatId query parameter is required", 400, cors);
+      if (!chatId)
+        return errorResponse("chatId query parameter is required", 400, cors);
 
       const pins = await fetchPinnedMessages(supabase, chatId);
       return jsonResponse({ pins }, 200, cors);
@@ -203,10 +219,15 @@ Deno.serve(async (req: Request) => {
       }
 
       const { channel, course } = await getChannelAndCourse(supabase, chatId);
-      if (!channel || !course) return errorResponse("Channel not found", 404, cors);
+      if (!channel || !course)
+        return errorResponse("Channel not found", 404, cors);
 
       if (!(await canManagePins(supabase, user.id, course))) {
-        return errorResponse("Forbidden: Only the lecturer can pin messages", 403, cors);
+        return errorResponse(
+          "Forbidden: Only the lecturer can pin messages",
+          403,
+          cors,
+        );
       }
 
       const { data: message, error: messageError } = await supabase
@@ -220,7 +241,10 @@ Deno.serve(async (req: Request) => {
         return errorResponse("Failed to fetch message", 500, cors);
       }
       if (!message) return errorResponse("Message not found", 404, cors);
-      if (message.channel_id !== chatId || message.course_id !== channel.course_id) {
+      if (
+        message.channel_id !== chatId ||
+        message.course_id !== channel.course_id
+      ) {
         return errorResponse("Message does not belong to this chat", 400, cors);
       }
 
@@ -246,16 +270,22 @@ Deno.serve(async (req: Request) => {
     const chatId = url.searchParams.get("chatId");
     const messageId = url.searchParams.get("messageId");
 
-    if (!chatId) return errorResponse("chatId query parameter is required", 400, cors);
+    if (!chatId)
+      return errorResponse("chatId query parameter is required", 400, cors);
     if (!messageId) {
       return errorResponse("messageId query parameter is required", 400, cors);
     }
 
     const { channel, course } = await getChannelAndCourse(supabase, chatId);
-    if (!channel || !course) return errorResponse("Channel not found", 404, cors);
+    if (!channel || !course)
+      return errorResponse("Channel not found", 404, cors);
 
     if (!(await canManagePins(supabase, user.id, course))) {
-      return errorResponse("Forbidden: Only the lecturer can unpin messages", 403, cors);
+      return errorResponse(
+        "Forbidden: Only the lecturer can unpin messages",
+        403,
+        cors,
+      );
     }
 
     const { error: deleteError } = await supabase
@@ -273,7 +303,8 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ pins }, 200, cors);
   } catch (error) {
     console.error("[Chat Pins] Error:", error);
-    const message = error instanceof Error ? error.message : "Internal server error";
+    const message =
+      error instanceof Error ? error.message : "Internal server error";
     return errorResponse(message, 500, cors);
   }
 });

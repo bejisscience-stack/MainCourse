@@ -20,9 +20,10 @@ async function checkAdmin(supabase: any, userId: string): Promise<boolean> {
 }
 
 // Escape characters that have special meaning inside a PostgREST .or() filter.
-// `,` separates clauses, `*` is the wildcard inside ilike patterns.
+// `,` separates clauses, `*` is the wildcard inside ilike patterns,
+// and `%`/`_` are SQL LIKE wildcards.
 function escapeForOrFilter(value: string): string {
-  return value.replace(/[,*]/g, " ").trim();
+  return value.replace(/[,*%_]/g, " ").trim();
 }
 
 // GET: list students with their project_access_expires_at status.
@@ -53,15 +54,13 @@ export async function GET(request: NextRequest) {
     const serviceSupabase = createServiceRoleClient(token);
     let query = serviceSupabase
       .from("profiles")
-      .select(
-        "id, email, username, full_name, avatar_url, project_access_expires_at, created_at",
-      )
+      .select("id, username, avatar_url, project_access_expires_at, created_at")
       .eq("role", "student");
 
+    // email/full_name are NULL on profiles (PII encrypted) — search by username only.
+    // A separate admin RPC is required for searching encrypted PII; tracked as follow-up.
     if (q) {
-      query = query.or(
-        `username.ilike.%${q}%,email.ilike.%${q}%,full_name.ilike.%${q}%`,
-      );
+      query = query.ilike("username", `%${q}%`);
     }
 
     const { data, error } = await query
@@ -77,8 +76,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "An error occurred" }, { status: 500 });
     }
 
+    const baseStudents = data || [];
+    const ids = baseStudents.map((s) => s.id);
+    let students: any[] = baseStudents;
+    if (ids.length > 0) {
+      const { data: decrypted, error: decErr } = await serviceSupabase.rpc(
+        "get_decrypted_profiles",
+        { p_user_ids: ids },
+      );
+      if (decErr) {
+        console.error(
+          "[Student Project Access API] decrypt rpc error:",
+          decErr,
+        );
+      }
+      const decryptedRows: any[] = decrypted || [];
+      const byId = new Map<string, any>(decryptedRows.map((d) => [d.id, d]));
+      students = baseStudents.map((s) => ({
+        ...s,
+        email: byId.get(s.id)?.email ?? null,
+        full_name: byId.get(s.id)?.full_name ?? null,
+      }));
+    }
+
     const now = Date.now();
-    const students = data || [];
     const counts = {
       total: students.length,
       active: 0,

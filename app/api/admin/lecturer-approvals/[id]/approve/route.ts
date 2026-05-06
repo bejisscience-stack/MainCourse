@@ -74,13 +74,14 @@ export async function POST(
       return NextResponse.json({ error: "An error occurred" }, { status: 500 });
     }
 
-    // Fetch the lecturer profile for notification + email
+    // Fetch the lecturer profile for notification + email.
+    // email/full_name are encrypted on profiles — use the decrypt RPC.
     const serviceSupabase = createServiceRoleClient(token);
-    const { data: lecturerProfile, error: profileError } = await serviceSupabase
-      .from("profiles")
-      .select("id, email, username, full_name")
-      .eq("id", id)
-      .single();
+    const { data: decrypted, error: profileError } = await serviceSupabase.rpc(
+      "get_decrypted_profile",
+      { p_user_id: id },
+    );
+    const lecturerProfile = Array.isArray(decrypted) ? decrypted[0] : decrypted;
 
     if (profileError) {
       console.error(

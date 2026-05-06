@@ -2,13 +2,15 @@ import { User } from "./member";
 
 export interface MessageAttachment {
   id: string;
-  fileUrl: string;
   fileName: string;
   fileType: "image" | "video" | "gif";
   fileSize: number;
   mimeType: string;
-  // When set, the attachment lives in a private bucket and the renderer must
-  // resolve a signed URL via the appropriate API rather than using fileUrl.
+  // Exactly one of `fileUrl` or `filePath` is set:
+  //   - `filePath`: bucket-relative path; renderer signs per render via the
+  //     bucket-appropriate hook (private chat-media / private dm-media).
+  //   - `fileUrl`: legacy public URL (chat-media rows pre-mig 238 backfill).
+  fileUrl?: string;
   filePath?: string;
 }
 

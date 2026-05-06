@@ -7,7 +7,13 @@ import { useI18n } from "@/contexts/I18nContext";
 import { useUser } from "@/hooks/useUser";
 import { useEnrollments } from "@/hooks/useEnrollments";
 import { useProjectAccess } from "@/hooks/useProjectAccess";
+import { useSignedChatMediaUrl } from "@/hooks/useSignedChatMediaUrl";
 import { formatPriceInGel } from "@/lib/currency";
+
+/** True when value is a chat-media bucket-relative path (no scheme). */
+function isChatMediaStoragePath(value: string | null | undefined): boolean {
+  return !!value && !value.includes("://");
+}
 import ProjectSubscriptionModal from "./ProjectSubscriptionModal";
 import type { ActiveProject } from "@/hooks/useActiveProjects";
 
@@ -76,6 +82,17 @@ export default function ProjectDetailsModal({
   const { hasProjectAccess } = useProjectAccess(user?.id);
   const [mounted, setMounted] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+
+  // After mig 235, project.video_link may be a chat-media path. Resolve to a
+  // signed URL for the "Reference Video" link below; YouTube / external URLs
+  // pass through unchanged.
+  const videoLinkPath = isChatMediaStoragePath(project?.video_link)
+    ? (project?.video_link ?? null)
+    : null;
+  const { signedUrl: signedVideoLink } = useSignedChatMediaUrl(videoLinkPath);
+  const resolvedVideoLink = videoLinkPath
+    ? signedVideoLink
+    : (project?.video_link ?? null);
 
   useEffect(() => {
     setMounted(true);
@@ -493,13 +510,13 @@ export default function ProjectDetailsModal({
           )}
 
           {/* Reference Video */}
-          {project.video_link && (
+          {project.video_link && resolvedVideoLink && (
             <div>
               <h3 className="text-sm font-semibold text-charcoal-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                 {t("activeProjects.referenceVideo")}
               </h3>
               <a
-                href={project.video_link}
+                href={resolvedVideoLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium transition-colors"

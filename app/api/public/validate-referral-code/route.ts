@@ -63,6 +63,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Return validation result
+    await new Promise((r) =>
+      setTimeout(r, 100 + Math.floor(Math.random() * 100)),
+    );
     return NextResponse.json({
       valid: !!profile,
       message: profile ? "Valid referral code" : "Invalid referral code",

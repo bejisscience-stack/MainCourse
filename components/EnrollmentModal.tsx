@@ -557,6 +557,7 @@ export default function EnrollmentModal({
   if (!isOpen || !mounted || typeof document === "undefined") return null;
 
   const price = course.price || 0;
+  const courseDescription = course.description?.trim();
   const isPayDisabled =
     isSubmitting ||
     referralValidation === "validating" ||
@@ -710,11 +711,6 @@ export default function EnrollmentModal({
                 {course.title}
               </h2>
               <p className="text-sm text-white/70 mt-1">{course.creator}</p>
-              {course.description && (
-                <p className="text-xs lg:text-sm text-white/85 mt-2 max-h-20 lg:max-h-24 overflow-y-auto whitespace-pre-wrap pr-1 pointer-events-auto drop-shadow-md">
-                  {course.description}
-                </p>
-              )}
             </div>
           </div>
 
@@ -1103,6 +1099,12 @@ export default function EnrollmentModal({
                   </>
                 )}
               </button>
+
+              {courseDescription && (
+                <p className="mt-3 max-h-28 overflow-y-auto pr-1 text-sm leading-relaxed text-charcoal-600 dark:text-gray-300 whitespace-pre-wrap break-words">
+                  {courseDescription}
+                </p>
+              )}
 
               <div
                 role="checkbox"

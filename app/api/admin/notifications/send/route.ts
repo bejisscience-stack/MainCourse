@@ -62,6 +62,25 @@ export const dynamic = "force-dynamic";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+type NotificationCategory =
+  | "marketing"
+  | "transactional_security"
+  | "transactional_terms"
+  | "transactional_account";
+
+const TRANSACTIONAL_CATEGORIES = new Set<NotificationCategory>([
+  "transactional_security",
+  "transactional_terms",
+  "transactional_account",
+]);
+
+const ALLOWED_CATEGORIES: NotificationCategory[] = [
+  "marketing",
+  "transactional_security",
+  "transactional_terms",
+  "transactional_account",
+];
+
 // Helper function to check if user is admin using RPC function (bypasses RLS)
 async function checkAdmin(supabase: any, userId: string): Promise<boolean> {
   try {
@@ -317,8 +336,14 @@ export async function POST(request: NextRequest) {
       language = "both",
       email_target,
       target_emails,
-      respect_marketing_consent = true,
     } = body;
+
+    const category: NotificationCategory =
+      (body.category as NotificationCategory) || "marketing";
+    if (!ALLOWED_CATEGORIES.includes(category)) {
+      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+    }
+    const effectiveRespectConsent = !TRANSACTIONAL_CATEGORIES.has(category);
 
     const message_html = sanitizeMessageHtml(body.message_html);
 
@@ -512,7 +537,7 @@ export async function POST(request: NextRequest) {
         target_course_id,
         target_user_ids,
         target_emails,
-        respect_marketing_consent,
+        effectiveRespectConsent,
       );
 
       if (emailResolveError) {
@@ -593,6 +618,8 @@ export async function POST(request: NextRequest) {
           inAppCount,
           emailSent,
           emailFailed,
+          category,
+          override_consent: !effectiveRespectConsent,
         },
       );
     } catch (e) {

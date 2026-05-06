@@ -5,6 +5,11 @@ import {
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { isValidUUID } from "@/lib/validation";
+import {
+  accountLimiter,
+  rateLimitResponse,
+  getClientIP,
+} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +24,11 @@ export async function GET(request: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { allowed, retryAfterMs } = await accountLimiter.check(
+      getClientIP(request),
+    );
+    if (!allowed) return rateLimitResponse(retryAfterMs);
 
     const supabase = createServerSupabaseClient(token);
 
@@ -69,6 +79,11 @@ export async function DELETE(request: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { allowed, retryAfterMs } = await accountLimiter.check(
+      getClientIP(request),
+    );
+    if (!allowed) return rateLimitResponse(retryAfterMs);
 
     const { cardId } = await request.json();
     if (!cardId) {

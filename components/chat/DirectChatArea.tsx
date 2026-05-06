@@ -236,6 +236,7 @@ export default function DirectChatArea({
             key={m.id}
             message={m as MessageType}
             currentUserId={currentUserId}
+            bucket="dm-media"
           />
         ))}
       </div>

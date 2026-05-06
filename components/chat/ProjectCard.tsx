@@ -11,6 +11,13 @@ import { useI18n } from "@/contexts/I18nContext";
 import { useProjectCountdown } from "@/hooks/useProjectCountdown";
 import { useProjectBudget } from "@/hooks/useProjectBudget";
 import { useProjectAccess } from "@/hooks/useProjectAccess";
+import { useSignedChatMediaUrl } from "@/hooks/useSignedChatMediaUrl";
+
+/** True when value is a chat-media bucket-relative path (no scheme), false
+ *  for external/legacy https URLs and YouTube links. */
+function isChatMediaStoragePath(value: string | null | undefined): boolean {
+  return !!value && !value.includes("://");
+}
 
 /** Extract YouTube video ID from various URL formats, or null if not YouTube */
 function getYouTubeId(url: string): string | null {
@@ -140,6 +147,16 @@ export default function ProjectCard({
   const [isDeleting, setIsDeleting] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [isRetryingPayment, setIsRetryingPayment] = useState(false);
+
+  // Project videos uploaded via ChatArea after mig 235 land as a chat-media
+  // path in `project.videoLink`. Resolve to a signed URL for rendering.
+  const videoLinkPath = isChatMediaStoragePath(project.videoLink)
+    ? project.videoLink || null
+    : null;
+  const { signedUrl: signedVideoLink } = useSignedChatMediaUrl(videoLinkPath);
+  const resolvedVideoLink = videoLinkPath
+    ? signedVideoLink
+    : (project.videoLink ?? null);
 
   const isPendingPayment = project.status === "pending_payment";
 
@@ -985,7 +1002,11 @@ export default function ProjectCard({
                 </h4>
                 <div className="bg-navy-900/50 rounded-lg border border-navy-800/60 overflow-hidden">
                   {(() => {
-                    const ytId = getYouTubeId(project.videoLink!);
+                    // YouTube takes precedence over storage-path resolution
+                    // since YouTube URLs are never chat-media paths.
+                    const ytId = videoLinkPath
+                      ? null
+                      : getYouTubeId(project.videoLink!);
                     if (ytId) {
                       return (
                         <>
@@ -1021,10 +1042,17 @@ export default function ProjectCard({
                         </>
                       );
                     }
+                    if (videoLinkPath && !resolvedVideoLink) {
+                      return (
+                        <div className="aspect-video flex items-center justify-center text-gray-400 text-sm">
+                          Loading video…
+                        </div>
+                      );
+                    }
                     return (
                       <>
                         <video
-                          src={project.videoLink}
+                          src={resolvedVideoLink ?? undefined}
                           controls
                           preload="metadata"
                           className="w-full max-h-[400px] bg-black"
@@ -1033,7 +1061,7 @@ export default function ProjectCard({
                         </video>
                         <div className="p-3 flex justify-end">
                           <a
-                            href={project.videoLink}
+                            href={resolvedVideoLink ?? "#"}
                             download
                             className="inline-flex items-center gap-2 px-4 py-2 bg-navy-800/70 hover:bg-navy-700 text-white text-sm font-medium rounded-lg transition-colors"
                           >

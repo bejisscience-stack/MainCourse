@@ -9,6 +9,34 @@ import { createServiceRoleClient } from "../_shared/supabase.ts";
 
 const VALID_REACTIONS = new Set(["👍", "❤️", "😂", "😮", "😢", "🙏"]);
 
+interface AttachmentRow {
+  id: string;
+  message_id?: string;
+  file_url: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  mime_type: string;
+}
+
+// chat-media is private (mig 235). Rows whose file_url is still a legacy
+// https:// public URL keep flowing as `fileUrl` (passthrough — the URL stops
+// resolving once mig 235 lands and mig 238 will rewrite these to path form).
+// Path-only rows are emitted as `filePath`; the client renderer signs them
+// per render via useSignedChatMediaUrl.
+function mapAttachmentRow(att: AttachmentRow) {
+  const value = att.file_url;
+  const isLegacyUrl = typeof value === "string" && value.startsWith("https://");
+  return {
+    id: att.id,
+    fileName: att.file_name,
+    fileType: att.file_type,
+    fileSize: att.file_size,
+    mimeType: att.mime_type,
+    ...(isLegacyUrl ? { fileUrl: value } : { filePath: value }),
+  };
+}
+
 interface ReactionRow {
   message_id: string;
   user_id: string;
@@ -104,7 +132,10 @@ Deno.serve(async (req: Request) => {
           .maybeSingle();
 
       if (existingError) {
-        console.error("[Chat] Failed to fetch existing reaction:", existingError);
+        console.error(
+          "[Chat] Failed to fetch existing reaction:",
+          existingError,
+        );
         return errorResponse("Failed to update reaction", 500, cors);
       }
 
@@ -141,7 +172,10 @@ Deno.serve(async (req: Request) => {
           .order("created_at", { ascending: true });
 
       if (reactionsError) {
-        console.error("[Chat] Failed to fetch saved reactions:", reactionsError);
+        console.error(
+          "[Chat] Failed to fetch saved reactions:",
+          reactionsError,
+        );
         return errorResponse("Failed to fetch reactions", 500, cors);
       }
 
@@ -281,7 +315,11 @@ Deno.serve(async (req: Request) => {
           message_id: message.id,
           channel_id: chatId,
           course_id: channel.course_id,
-          file_url: att.fileUrl || att.url || att.file_url,
+          // After privatization, the client forwards a path from the upload
+          // edge fn (as `filePath` per MessageInput) — store it as-is in
+          // file_url. Older clients still send `fileUrl` (full public URL).
+          file_url:
+            att.filePath || att.path || att.fileUrl || att.url || att.file_url,
           file_name: att.fileName || att.name || att.file_name || "attachment",
           file_type: att.fileType || att.type || att.file_type || "image",
           file_size: att.fileSize || att.size || att.file_size || 0,
@@ -313,14 +351,7 @@ Deno.serve(async (req: Request) => {
           .select("id, file_url, file_name, file_type, file_size, mime_type")
           .eq("message_id", message.id);
         if (attData && attData.length > 0) {
-          savedAttachments = attData.map((a) => ({
-            id: a.id,
-            fileUrl: a.file_url,
-            fileName: a.file_name,
-            fileType: a.file_type,
-            fileSize: a.file_size,
-            mimeType: a.mime_type,
-          }));
+          savedAttachments = attData.map(mapAttachmentRow);
         }
       }
 
@@ -475,27 +506,26 @@ Deno.serve(async (req: Request) => {
       replyMessagesResult,
       attachmentsResult,
       reactionsResult,
-    ] =
-      await Promise.all([
-        supabase.rpc("get_safe_profiles", { user_ids: userIds }),
-        replyIds.length > 0
-          ? supabase
-              .from("messages")
-              .select("id, content, user_id")
-              .in("id", replyIds)
-          : Promise.resolve({ data: null }),
-        supabase
-          .from("message_attachments")
-          .select(
-            "id, message_id, file_url, file_name, file_type, file_size, mime_type",
-          )
-          .in("message_id", messageIds),
-        serviceSupabase
-          .from("message_reactions")
-          .select("message_id, user_id, emoji")
-          .in("message_id", messageIds)
-          .order("created_at", { ascending: true }),
-      ]);
+    ] = await Promise.all([
+      supabase.rpc("get_safe_profiles", { user_ids: userIds }),
+      replyIds.length > 0
+        ? supabase
+            .from("messages")
+            .select("id, content, user_id")
+            .in("id", replyIds)
+        : Promise.resolve({ data: null }),
+      supabase
+        .from("message_attachments")
+        .select(
+          "id, message_id, file_url, file_name, file_type, file_size, mime_type",
+        )
+        .in("message_id", messageIds),
+      serviceSupabase
+        .from("message_reactions")
+        .select("message_id, user_id, emoji")
+        .in("message_id", messageIds)
+        .order("created_at", { ascending: true }),
+    ]);
 
     if (reactionsResult.error) {
       console.error("[Chat] Failed to fetch reactions:", reactionsResult.error);
@@ -536,14 +566,7 @@ Deno.serve(async (req: Request) => {
       for (const att of attachmentsResult.data) {
         if (!attachmentMap.has(att.message_id))
           attachmentMap.set(att.message_id, []);
-        attachmentMap.get(att.message_id).push({
-          id: att.id,
-          fileUrl: att.file_url,
-          fileName: att.file_name,
-          fileType: att.file_type,
-          fileSize: att.file_size,
-          mimeType: att.mime_type,
-        });
+        attachmentMap.get(att.message_id).push(mapAttachmentRow(att));
       }
     }
 

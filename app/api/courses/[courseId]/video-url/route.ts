@@ -6,6 +6,11 @@ import {
   createServerSupabaseClient,
 } from "@/lib/supabase-server";
 import { isValidUUID } from "@/lib/validation";
+import {
+  generalLimiter,
+  rateLimitResponse,
+  getClientIP,
+} from "@/lib/rate-limit";
 
 export async function GET(
   request: NextRequest,
@@ -44,6 +49,11 @@ export async function GET(
   if (userError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const { allowed, retryAfterMs } = await generalLimiter.check(
+    getClientIP(request),
+  );
+  if (!allowed) return rateLimitResponse(retryAfterMs);
 
   // Authorization: enrolled, lecturer, or admin
   const supabase = createServerSupabaseClient(token);

@@ -5,6 +5,7 @@ import {
 } from "@/lib/supabase-server";
 import { getOrderStatus } from "@/lib/keepz";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import { paymentLimiter, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { allowed, retryAfterMs } = await paymentLimiter.check(user.id);
+    if (!allowed) return rateLimitResponse(retryAfterMs);
+
     const supabase = createServiceRoleClient();
 
     // Find stale "created" payments (older than 30 seconds)
@@ -39,7 +43,8 @@ export async function GET(request: NextRequest) {
       .eq("user_id", user.id)
       .eq("status", "created")
       .lt("created_at", thirtySecondsAgo)
-      .not("keepz_order_id", "is", null);
+      .not("keepz_order_id", "is", null)
+      .limit(5);
 
     if (fetchError || !stalePayments?.length) {
       return NextResponse.json({ verified: 0, recovered: 0 });

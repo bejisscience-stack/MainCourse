@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     if (userIds.length > 0) {
       const { data: profiles } = await supabase
-        .from("profiles")
+        .from("profiles_safe")
         .select("id, username, avatar_url")
         .in("id", userIds);
 
