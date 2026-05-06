@@ -304,6 +304,43 @@ export default function LecturerDashboard() {
     });
   };
 
+  // Defined before the keydown effect so it can go in the dep array without
+  // hitting a TDZ. Memoized so the effect captures the latest `isUploading`
+  // instead of a stale closure from when the modal first opened.
+  const handleCloseModal = useCallback(() => {
+    if (isUploading) {
+      const confirmClose = window.confirm(
+        "Upload is in progress. Are you sure you want to close? The upload will be cancelled.",
+      );
+      if (!confirmClose) {
+        return;
+      }
+    }
+
+    setShowModal(false);
+    setEditingCourse(null);
+    setCurrentStep(1);
+    setVideoFile(null);
+    setThumbnailFile(null);
+    setVideoUploadProgress(0);
+    setThumbnailUploadProgress(0);
+    setIsUploading(false);
+    setError(null);
+    setFormData({
+      title: "",
+      description: "",
+      course_type: "Editing",
+      price: "",
+      original_price: "",
+      author: "",
+      creator: "",
+      intro_video_url: "",
+      thumbnail_url: "",
+      is_bestseller: false,
+      referral_commission_percentage: "0",
+    });
+  }, [isUploading]);
+
   // Handle ESC key to close modal
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -322,8 +359,7 @@ export default function LecturerDashboard() {
       document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "unset";
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showModal]);
+  }, [showModal, handleCloseModal]);
 
   const handleOpenModal = async (course?: Course) => {
     setVideoFile(null);
@@ -402,42 +438,6 @@ export default function LecturerDashboard() {
     }
     setShowModal(true);
   };
-
-  // Memoized so the keydown effect captures the latest `isUploading` instead
-  // of a stale closure from the render where the modal first opened.
-  const handleCloseModal = useCallback(() => {
-    if (isUploading) {
-      const confirmClose = window.confirm(
-        "Upload is in progress. Are you sure you want to close? The upload will be cancelled.",
-      );
-      if (!confirmClose) {
-        return;
-      }
-    }
-
-    setShowModal(false);
-    setEditingCourse(null);
-    setCurrentStep(1);
-    setVideoFile(null);
-    setThumbnailFile(null);
-    setVideoUploadProgress(0);
-    setThumbnailUploadProgress(0);
-    setIsUploading(false);
-    setError(null);
-    setFormData({
-      title: "",
-      description: "",
-      course_type: "Editing",
-      price: "",
-      original_price: "",
-      author: "",
-      creator: "",
-      intro_video_url: "",
-      thumbnail_url: "",
-      is_bestseller: false,
-      referral_commission_percentage: "0",
-    });
-  }, [isUploading]);
 
   const uploadFile = async (
     file: File,

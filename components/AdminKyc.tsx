@@ -516,6 +516,9 @@ function DocPreview({ label, url }: { label: string; url: string | null }) {
     <div className="bg-white border border-gray-200 rounded-lg p-3">
       <p className="text-xs font-medium text-gray-500 mb-2">{label}</p>
       <a href={url} target="_blank" rel="noopener noreferrer">
+        {/* Supabase signed URL — next/image's optimizer would cache the
+            optimized variant past the URL signature's TTL, so admins would
+            see stale or broken images. Bypass the optimizer with <img>. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={url}

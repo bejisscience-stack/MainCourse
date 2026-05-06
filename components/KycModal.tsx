@@ -177,6 +177,9 @@ export default function KycModal({
       if (selfie) URL.revokeObjectURL(selfie);
       stopCameraImpl();
     };
+    // Run-once mount/unmount cleanup. Deps intentionally empty: stopCameraImpl
+    // only touches refs, and revoking the latest object URLs at unmount is the
+    // whole point — re-running the cleanup mid-lifecycle would be wrong.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -287,7 +290,10 @@ export default function KycModal({
 
   // Manage camera lifecycle. isOpen is in deps so closing the modal stops the
   // stream even when the parent flips showKycModal directly without going
-  // through handleClose.
+  // through handleClose. startCamera/stopCameraImpl are deliberately omitted
+  // from deps: stopCameraImpl is recreated every render (would cause a
+  // stream-restart loop), and we only want this effect to fire on the precise
+  // lifecycle transitions captured here, not on every callback identity bump.
   useEffect(() => {
     if (isOpen && step === "selfie" && !selfieBlob) {
       void startCamera();
@@ -534,6 +540,8 @@ export default function KycModal({
           className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-charcoal-300 bg-charcoal-50/50 p-6 text-center transition-colors hover:border-emerald-400 dark:border-navy-600 dark:bg-navy-700/40"
         >
           {preview ? (
+            // blob: URL — next/image can't optimize blobs and these are
+            // revoked on unmount, so caching would point at a dead URL.
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={preview}
@@ -625,6 +633,8 @@ export default function KycModal({
 
       {selfiePreview ? (
         <div className="space-y-3">
+          {/* blob: URL from camera capture — next/image can't optimize blobs
+              and the URL is revoked on unmount. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={selfiePreview}
@@ -799,6 +809,8 @@ export default function KycModal({
         </div>
 
         <div className="grid grid-cols-3 gap-3">
+          {/* All three previews are blob: URLs — next/image can't optimize
+              blobs, and they're revoked on unmount. */}
           {docFrontPreview ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img

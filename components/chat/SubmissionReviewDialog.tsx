@@ -120,23 +120,21 @@ export default function SubmissionReviewDialog({
     }
   }, [isOpen, platforms]);
 
-  // Load existing reviews only once when dialog opens
+  // Load existing reviews only once when dialog opens. Use the boolean
+  // `hasPlatforms` instead of the `platforms` array so the effect doesn't
+  // re-run on every render (the array gets a new identity each time), but
+  // does fire if platforms appear after the dialog has already opened.
   const hasLoadedRef = useRef(false);
+  const hasPlatforms = platforms.length > 0;
   useEffect(() => {
-    if (
-      isOpen &&
-      platforms.length > 0 &&
-      submissionId &&
-      !hasLoadedRef.current
-    ) {
+    if (isOpen && hasPlatforms && submissionId && !hasLoadedRef.current) {
       loadExistingReviews();
       hasLoadedRef.current = true;
     }
     if (!isOpen) {
       hasLoadedRef.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, submissionId]); // Only depend on isOpen and submissionId
+  }, [isOpen, submissionId, hasPlatforms, loadExistingReviews]);
 
   const saveReviewForPlatform = useCallback(
     async (platform: string) => {
