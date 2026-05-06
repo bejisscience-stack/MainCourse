@@ -1,9 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import {
+  Check,
+  ChevronDown,
+  MessageCircle,
+  Paperclip,
+  Plus,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { useI18n } from "@/contexts/I18nContext";
 import { useFriends } from "@/hooks/useFriends";
 import type { DirectConversation } from "@/types/direct-message";
+import type { User } from "@/types/member";
 import AddFriendDialog from "./AddFriendDialog";
 
 type Tab = "conversations" | "friends" | "requests";
@@ -15,6 +25,109 @@ interface DirectMessagesSidebarProps {
   onOpenConversationByFriend: (friendId: string) => Promise<void>;
   onCollapse?: () => void;
   totalUnread?: number;
+}
+
+const tabItems: Tab[] = ["conversations", "friends", "requests"];
+
+const getInitial = (username?: string | null) =>
+  (username?.trim().charAt(0) || "U").toUpperCase();
+
+function UserAvatar({
+  user,
+  size = "md",
+}: {
+  user: Pick<User, "username" | "avatarUrl"> | null;
+  size?: "sm" | "md";
+}) {
+  const sizeClass = size === "md" ? "h-8 w-8" : "h-7 w-7";
+  const textClass = size === "md" ? "text-xs" : "text-[11px]";
+  const username = user?.username || "User";
+
+  if (user?.avatarUrl) {
+    return (
+      <img
+        src={user.avatarUrl}
+        alt={username}
+        className={`${sizeClass} flex-shrink-0 rounded-full object-cover shadow-soft ring-1 ring-navy-700/70`}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`${sizeClass} ${textClass} flex flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 font-semibold text-white shadow-soft ring-1 ring-emerald-300/30`}
+    >
+      {getInitial(username)}
+    </div>
+  );
+}
+
+function EmptyState({ children }: { children: ReactNode }) {
+  return (
+    <div className="mx-1 my-3 rounded-xl border border-dashed border-navy-800/70 bg-navy-900/20 px-3 py-4 text-center text-xs leading-5 text-gray-500">
+      {children}
+    </div>
+  );
+}
+
+function SectionHeading({
+  children,
+  count,
+  className = "",
+}: {
+  children: ReactNode;
+  count?: number;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between px-1.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 ${className}`}
+    >
+      <span className="truncate">{children}</span>
+      {count ? (
+        <span className="ml-2 rounded-full bg-navy-800/80 px-1.5 py-0.5 text-[10px] text-gray-300">
+          {count > 9 ? "9+" : count}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+type ActionTone = "primary" | "success" | "danger" | "muted";
+
+function IconActionButton({
+  label,
+  tone = "muted",
+  children,
+  className = "",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  label: string;
+  tone?: ActionTone;
+  children: ReactNode;
+}) {
+  const toneClass = {
+    primary:
+      "border-emerald-400/40 bg-emerald-500/90 text-white hover:bg-emerald-500 shadow-soft",
+    success:
+      "border-emerald-400/30 bg-emerald-500/15 text-emerald-200 hover:border-emerald-300/50 hover:bg-emerald-500/25 hover:text-white",
+    danger:
+      "border-navy-800/70 bg-navy-900/50 text-gray-400 hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-200",
+    muted:
+      "border-navy-800/70 bg-navy-900/50 text-gray-400 hover:border-navy-700/80 hover:bg-navy-800/70 hover:text-gray-100",
+  }[tone];
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      className={`inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border transition-all disabled:cursor-wait disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/40 ${toneClass} ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
 }
 
 export default function DirectMessagesSidebar({
@@ -103,7 +216,7 @@ export default function DirectMessagesSidebar({
   return (
     <div className="w-full h-full bg-navy-950/70 border-r border-navy-800/60 flex flex-col relative overflow-hidden">
       <div className="h-12 px-4 border-b border-navy-800/60 bg-navy-950/60 flex items-center justify-between shadow-soft flex-shrink-0">
-        <h2 className="text-gray-100 font-semibold text-sm truncate flex-1">
+        <h2 className="text-gray-100 font-semibold text-sm truncate flex-1 pr-2">
           {t("chat.directMessages")}
         </h2>
         <div className="flex items-center gap-1">
@@ -113,87 +226,60 @@ export default function DirectMessagesSidebar({
             </span>
           )}
           {onCollapse && (
-            <button
+            <IconActionButton
+              label="Collapse direct messages"
               onClick={onCollapse}
-              className="text-gray-400 hover:text-emerald-300 transition-colors p-1 rounded-md hover:bg-navy-800/60"
-              title="Collapse direct messages"
+              className="h-7 w-7 border-transparent bg-transparent"
             >
-              <svg
-                className="w-4 h-4 transition-transform rotate-180"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
+              <ChevronDown className="h-4 w-4 rotate-180" />
+            </IconActionButton>
           )}
-          <button
+          <IconActionButton
+            label={t("friends.addFriend")}
             onClick={() => setShowAddFriend(true)}
-            className="text-gray-400 hover:text-emerald-300 p-1 rounded-md hover:bg-navy-800/60 transition-colors"
-            title={t("friends.addFriend")}
+            className="h-7 w-7 border-transparent bg-transparent"
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-          </button>
+            <Plus className="h-4 w-4" />
+          </IconActionButton>
         </div>
       </div>
 
-      <div className="flex border-b border-navy-800/60 bg-navy-950/40">
-        {(
-          [
-            ["conversations", t("friends.tabs.conversations")],
-            ["friends", t("friends.tabs.friends")],
-            ["requests", t("friends.tabs.requests")],
-          ] as [Tab, string][]
-        ).map(([id, label]) => {
-          const active = tab === id;
-          return (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={`flex-1 text-xs font-semibold uppercase tracking-wider py-2 transition-colors border-b-2 ${
-                active
-                  ? "text-emerald-200 border-emerald-400"
-                  : "text-gray-500 border-transparent hover:text-gray-300"
-              }`}
-            >
-              <span className="inline-flex items-center gap-1.5 justify-center">
-                {label}
-                {id === "requests" && incomingCount > 0 && (
-                  <span className="bg-red-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-soft">
-                    {incomingCount > 9 ? "9+" : incomingCount}
-                  </span>
-                )}
-              </span>
-            </button>
-          );
-        })}
+      <div className="border-b border-navy-800/60 bg-navy-950/45 p-2">
+        <div className="grid grid-cols-3 gap-1 rounded-xl border border-navy-800/60 bg-navy-900/30 p-1">
+          {tabItems.map((id) => {
+            const label = t(`friends.tabs.${id}`);
+            const active = tab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setTab(id)}
+                className={`min-w-0 rounded-lg px-1.5 py-1.5 text-[11px] font-semibold transition-all ${
+                  active
+                    ? "bg-emerald-500/15 text-emerald-200 shadow-soft"
+                    : "text-gray-500 hover:bg-navy-800/50 hover:text-gray-300"
+                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/40`}
+              >
+                <span className="inline-flex max-w-full items-center justify-center gap-1">
+                  <span className="truncate">{label}</span>
+                  {id === "requests" && incomingCount > 0 && (
+                    <span className="min-w-[16px] rounded-full bg-red-500 px-1 py-0.5 text-center text-[9px] font-semibold text-white shadow-soft">
+                      {incomingCount > 9 ? "9+" : incomingCount}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 py-2 chat-scrollbar">
+      <div className="flex-1 overflow-y-auto px-2.5 py-3 chat-scrollbar">
         {tab === "conversations" && (
-          <>
+          <div className="space-y-1">
             {conversations.length === 0 && (
-              <div className="px-4 py-6 text-sm text-gray-500 text-center">
+              <EmptyState>
                 {t("friends.empty.conversations")}
-              </div>
+              </EmptyState>
             )}
             {conversations.map((c) => {
               const active = c.id === activeConversationId;
@@ -202,175 +288,165 @@ export default function DirectMessagesSidebar({
                 <button
                   key={c.id}
                   onClick={() => onSelectConversation(c.id)}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all border border-transparent ${
+                  className={`relative w-full overflow-hidden rounded-xl border px-2.5 py-2 text-sm transition-all ${
                     active
-                      ? "bg-emerald-500/15 text-emerald-200 border-emerald-500/40 shadow-soft"
+                      ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200 shadow-soft"
                       : unread
-                        ? "text-gray-100 font-medium hover:bg-navy-800/50 hover:border-navy-700/60"
-                        : "text-gray-400 hover:bg-navy-800/40 hover:text-gray-200 hover:border-navy-700/50"
+                        ? "border-navy-700/60 bg-navy-900/30 font-medium text-gray-100 hover:bg-navy-800/50"
+                        : "border-transparent text-gray-400 hover:border-navy-700/50 hover:bg-navy-800/40 hover:text-gray-200"
                   } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/40`}
                 >
-                  {c.otherUser?.avatarUrl ? (
-                    <img
-                      src={c.otherUser.avatarUrl}
-                      alt={c.otherUser.username}
-                      className="w-7 h-7 rounded-full object-cover flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                      {(c.otherUser?.username || "U").charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="flex-1 text-left min-w-0">
-                    <div className="truncate">
-                      {c.otherUser?.username || "User"}
-                    </div>
-                    {c.lastMessage && (
-                      <div className="text-xs text-gray-500 truncate">
-                        {c.lastMessage.content
-                          ? c.lastMessage.content
-                          : c.lastMessage.hasAttachments
-                            ? "📎"
-                            : ""}
+                  <div className="flex items-center gap-2.5">
+                    <UserAvatar user={c.otherUser} />
+                    <div className="min-w-0 flex-1 text-left">
+                      <div className="truncate font-medium">
+                        {c.otherUser?.username || "User"}
                       </div>
+                      {c.lastMessage && (
+                        <div className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-gray-500">
+                          {c.lastMessage.content ? (
+                            <span className="truncate">
+                              {c.lastMessage.content}
+                            </span>
+                          ) : c.lastMessage.hasAttachments ? (
+                            <Paperclip className="h-3.5 w-3.5" />
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                    {unread && !active && (
+                      <span className="min-w-[20px] rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[11px] font-semibold text-white shadow-soft">
+                        {c.unreadCount > 9 ? "9+" : c.unreadCount}
+                      </span>
                     )}
                   </div>
-                  {unread && !active && (
-                    <span className="bg-red-500 text-white text-[11px] font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-soft">
-                      {c.unreadCount > 9 ? "9+" : c.unreadCount}
-                    </span>
+                  {active && (
+                    <span className="absolute right-2 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-emerald-300" />
                   )}
                 </button>
               );
             })}
-          </>
+          </div>
         )}
 
         {tab === "friends" && (
-          <>
+          <div className="space-y-1.5">
             {friends.length === 0 && (
-              <div className="px-4 py-6 text-sm text-gray-500 text-center">
-                {t("friends.empty.friends")}
-              </div>
+              <EmptyState>{t("friends.empty.friends")}</EmptyState>
             )}
             {friends.map((f) => (
               <div
                 key={f.friendshipId}
-                className="px-2.5 py-2 rounded-lg flex items-center gap-2.5 hover:bg-navy-800/40"
+                className="group flex items-center gap-2.5 rounded-xl border border-navy-800/45 bg-navy-900/20 px-2.5 py-2 shadow-soft transition-all hover:border-navy-700/70 hover:bg-navy-800/40"
               >
-                {f.user.avatarUrl ? (
-                  <img
-                    src={f.user.avatarUrl}
-                    alt={f.user.username}
-                    className="w-7 h-7 rounded-full object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                    {f.user.username.charAt(0).toUpperCase()}
+                <UserAvatar user={f.user} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium text-gray-100">
+                    {f.user.username}
                   </div>
-                )}
-                <div className="flex-1 text-sm text-gray-100 truncate">
-                  {f.user.username}
+                  <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-emerald-300/80">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    {t("friends.status.friends")}
+                  </div>
                 </div>
-                <button
-                  onClick={() => handleMessageFriend(f.user.id)}
-                  disabled={busyFriend === f.user.id}
-                  className="text-xs px-2.5 py-1 rounded-md bg-emerald-500/90 hover:bg-emerald-500 text-white disabled:opacity-60"
-                >
-                  {t("friends.actions.message")}
-                </button>
-                <button
-                  onClick={() => handleRemoveFriend(f.user.id)}
-                  className="text-xs px-2.5 py-1 rounded-md text-gray-400 hover:text-red-300 border border-navy-800/60"
-                  title={t("friends.actions.remove")}
-                >
-                  ×
-                </button>
+                <div className="flex items-center gap-1">
+                  <IconActionButton
+                    label={t("friends.actions.message")}
+                    tone="primary"
+                    onClick={() => handleMessageFriend(f.user.id)}
+                    disabled={busyFriend === f.user.id}
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                  </IconActionButton>
+                  <IconActionButton
+                    label={t("friends.actions.remove")}
+                    tone="danger"
+                    onClick={() => handleRemoveFriend(f.user.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </IconActionButton>
+                </div>
               </div>
             ))}
-          </>
+          </div>
         )}
 
         {tab === "requests" && (
-          <>
-            <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-              {t("friends.tabs.incoming")}
-            </div>
-            {incoming.length === 0 && (
-              <div className="px-4 py-3 text-xs text-gray-500">
-                {t("friends.empty.incoming")}
-              </div>
-            )}
-            {incoming.map((r) => (
-              <div
-                key={r.id}
-                className="px-2.5 py-2 rounded-lg flex items-center gap-2.5"
-              >
-                {r.user.avatarUrl ? (
-                  <img
-                    src={r.user.avatarUrl}
-                    alt={r.user.username}
-                    className="w-7 h-7 rounded-full object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                    {r.user.username.charAt(0).toUpperCase()}
+          <div className="space-y-3">
+            <section className="space-y-1.5">
+              <SectionHeading count={incoming.length}>
+                {t("friends.tabs.incoming")}
+              </SectionHeading>
+              {incoming.length === 0 && (
+                <EmptyState>{t("friends.empty.incoming")}</EmptyState>
+              )}
+              {incoming.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex items-center gap-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-2 shadow-soft transition-all hover:border-emerald-400/35 hover:bg-emerald-500/15"
+                >
+                  <UserAvatar user={r.user} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-gray-100">
+                      {r.user.username}
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-emerald-300/80">
+                      <UserPlus className="h-3 w-3" />
+                      {t("friends.status.pendingIn")}
+                    </div>
                   </div>
-                )}
-                <div className="flex-1 text-sm text-gray-100 truncate">
-                  {r.user.username}
+                  <div className="flex items-center gap-1">
+                    <IconActionButton
+                      label={t("friends.actions.accept")}
+                      tone="success"
+                      onClick={() => handleAcceptIncoming(r.id)}
+                    >
+                      <Check className="h-4 w-4" />
+                    </IconActionButton>
+                    <IconActionButton
+                      label={t("friends.actions.decline")}
+                      tone="danger"
+                      onClick={() => handleDeclineIncoming(r.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </IconActionButton>
+                  </div>
                 </div>
-                <button
-                  onClick={() => handleAcceptIncoming(r.id)}
-                  className="text-xs px-2.5 py-1 rounded-md bg-emerald-500/90 hover:bg-emerald-500 text-white"
-                >
-                  {t("friends.actions.accept")}
-                </button>
-                <button
-                  onClick={() => handleDeclineIncoming(r.id)}
-                  className="text-xs px-2.5 py-1 rounded-md text-gray-400 hover:text-red-300 border border-navy-800/60"
-                >
-                  {t("friends.actions.decline")}
-                </button>
-              </div>
-            ))}
+              ))}
+            </section>
 
-            <div className="mt-3 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-              {t("friends.tabs.outgoing")}
-            </div>
-            {outgoing.length === 0 && (
-              <div className="px-4 py-3 text-xs text-gray-500">
-                {t("friends.empty.outgoing")}
-              </div>
-            )}
-            {outgoing.map((r) => (
-              <div
-                key={r.id}
-                className="px-2.5 py-2 rounded-lg flex items-center gap-2.5"
-              >
-                {r.user.avatarUrl ? (
-                  <img
-                    src={r.user.avatarUrl}
-                    alt={r.user.username}
-                    className="w-7 h-7 rounded-full object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-emerald-500/90 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                    {r.user.username.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="flex-1 text-sm text-gray-100 truncate">
-                  {r.user.username}
-                </div>
-                <button
-                  onClick={() => handleCancelOutgoing(r.id)}
-                  className="text-xs px-2.5 py-1 rounded-md text-gray-400 hover:text-red-300 border border-navy-800/60"
+            <section className="space-y-1.5">
+              <SectionHeading count={outgoing.length}>
+                {t("friends.tabs.outgoing")}
+              </SectionHeading>
+              {outgoing.length === 0 && (
+                <EmptyState>{t("friends.empty.outgoing")}</EmptyState>
+              )}
+              {outgoing.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex items-center gap-2.5 rounded-xl border border-navy-800/45 bg-navy-900/20 px-2.5 py-2 shadow-soft transition-all hover:border-navy-700/70 hover:bg-navy-800/40"
                 >
-                  {t("friends.actions.cancel")}
-                </button>
-              </div>
-            ))}
-          </>
+                  <UserAvatar user={r.user} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-gray-100">
+                      {r.user.username}
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-gray-500">
+                      {t("friends.status.pendingOut")}
+                    </div>
+                  </div>
+                  <IconActionButton
+                    label={t("friends.actions.cancel")}
+                    tone="danger"
+                    onClick={() => handleCancelOutgoing(r.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </IconActionButton>
+                </div>
+              ))}
+            </section>
+          </div>
         )}
       </div>
 

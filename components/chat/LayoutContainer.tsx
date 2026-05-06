@@ -64,7 +64,7 @@ export default function LayoutContainer({
     activeServerId === "home" ? "dm" : "channel",
   );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, profile } = useUser();
+  const { user, profile, role } = useUser();
   const { t } = useI18n();
 
   // Derive username and avatar from useUser() profile
@@ -482,6 +482,7 @@ export default function LayoutContainer({
             channel={activeChannel}
             currentUserId={currentUserId}
             isLecturer={isLecturer}
+            canManagePins={isLecturer || role === "admin"}
             onSendMessage={onSendMessage || (() => {})}
             onReaction={onReaction}
             isEnrolledInCourse={isEnrolledInCourse}

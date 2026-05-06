@@ -231,7 +231,17 @@
     "directMessages": "Direct Messages",
     "selectConversation": "Select a conversation",
     "messageUser": "Message @{username}",
-    "isTyping": "is typing…"
+    "isTyping": "is typing…",
+    "pinnedMessages": "Pinned messages",
+    "pinnedMessage": "Pinned",
+    "showPinnedMessages": "Show pinned messages",
+    "hidePinnedMessages": "Hide pinned messages",
+    "pinMessage": "Pin message",
+    "unpinMessage": "Unpin message",
+    "pinnedBy": "Pinned by {{username}}",
+    "pinnedAttachment": "Attachment",
+    "pinnedEmptyMessage": "Pinned message",
+    "pinnedMessageUnavailable": "That pinned message is not available in the loaded chat history."
   },
   "friends": {
     "addFriend": "Add Friend",

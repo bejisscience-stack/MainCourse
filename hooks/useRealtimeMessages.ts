@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { normalizeProfileUsername } from "@/lib/username";
-import type { Message, ReplyPreview } from "@/types/message";
+import type { Message, Reaction, ReplyPreview } from "@/types/message";
 
 // Global profile cache for instant lookups
 const profileCache = new Map<
@@ -16,6 +16,7 @@ interface UseRealtimeMessagesOptions {
   onNewMessage?: (message: Message) => void;
   onMessageUpdate?: (message: Message) => void;
   onMessageDelete?: (messageId: string) => void;
+  onMessageReaction?: (messageId: string, reactions: Reaction[]) => void;
 }
 
 // Max reconnection settings
@@ -240,6 +241,7 @@ export function useRealtimeMessages({
   onNewMessage,
   onMessageUpdate,
   onMessageDelete,
+  onMessageReaction,
 }: UseRealtimeMessagesOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const subscriptionRef = useRef<any>(null);
@@ -247,14 +249,20 @@ export function useRealtimeMessages({
     onNewMessage,
     onMessageUpdate,
     onMessageDelete,
+    onMessageReaction,
   });
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
 
   // Keep callbacks fresh
   useEffect(() => {
-    callbacksRef.current = { onNewMessage, onMessageUpdate, onMessageDelete };
-  }, [onNewMessage, onMessageUpdate, onMessageDelete]);
+    callbacksRef.current = {
+      onNewMessage,
+      onMessageUpdate,
+      onMessageDelete,
+      onMessageReaction,
+    };
+  }, [onNewMessage, onMessageUpdate, onMessageDelete, onMessageReaction]);
 
   useEffect(() => {
     if (!enabled || !channelId) {
@@ -288,6 +296,18 @@ export function useRealtimeMessages({
             const message = payload.payload;
             if (message?.id) {
               callbacksRef.current.onNewMessage?.(message);
+            }
+          },
+        )
+        .on(
+          "broadcast",
+          { event: "message_reaction" },
+          (payload: {
+            payload?: { messageId?: string; reactions?: Reaction[] };
+          }) => {
+            const { messageId, reactions } = payload.payload || {};
+            if (messageId && Array.isArray(reactions)) {
+              callbacksRef.current.onMessageReaction?.(messageId, reactions);
             }
           },
         )

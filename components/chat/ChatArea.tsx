@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Message from "./Message";
 import MessageInput from "./MessageInput";
 import dynamic from "next/dynamic";
+import { ChevronDown, Pin, PinOff } from "lucide-react";
 import VideoUploadDialog, {
   type ProjectSubmissionData,
 } from "./VideoUploadDialog";
@@ -19,8 +20,11 @@ import type { Channel } from "@/types/server";
 import type {
   Message as MessageType,
   MessageAttachment,
+  PinnedMessage,
+  Reaction,
 } from "@/types/message";
 import { useChatMessages } from "@/hooks/useChatMessages";
+import { usePinnedMessages } from "@/hooks/usePinnedMessages";
 import { useRealtimeTyping } from "@/hooks/useRealtimeTyping";
 import { useMuteStatus } from "@/hooks/useMuteStatus";
 import { supabase } from "@/lib/supabase";
@@ -40,6 +44,124 @@ interface ChatAreaProps {
   onReEnrollRequest?: () => void;
   onMobileMenuClick?: () => void;
   markAsRead?: (channelId: string) => void | Promise<void>;
+  canManagePins?: boolean;
+}
+
+function PinnedMessagesBar({
+  pinnedMessages,
+  isExpanded,
+  canManagePins,
+  pendingMessageId,
+  jumpError,
+  onToggleExpanded,
+  onJumpToMessage,
+  onUnpin,
+}: {
+  pinnedMessages: PinnedMessage[];
+  isExpanded: boolean;
+  canManagePins: boolean;
+  pendingMessageId: string | null;
+  jumpError: string | null;
+  onToggleExpanded: () => void;
+  onJumpToMessage: (messageId: string) => void;
+  onUnpin: (messageId: string) => void;
+}) {
+  const { t } = useI18n();
+  const latestPin = pinnedMessages[0];
+  if (!latestPin) return null;
+
+  const getPreview = (pin: PinnedMessage) => {
+    if (pin.preview) return pin.preview;
+    if (pin.message.attachments?.length) return t("chat.pinnedAttachment");
+    return t("chat.pinnedEmptyMessage");
+  };
+
+  return (
+    <div className="border-b border-navy-800/60 bg-navy-950/80 backdrop-blur-md shadow-soft flex-shrink-0 z-10">
+      <div className="flex min-h-11 items-center gap-2 px-4 py-2">
+        <button
+          type="button"
+          onClick={() => onJumpToMessage(latestPin.messageId)}
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-navy-900/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/40"
+        >
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-500/10 text-amber-300">
+            <Pin className="h-3.5 w-3.5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-2 text-[11px] font-semibold uppercase text-amber-300">
+              {t("chat.pinnedMessages")}
+              {pinnedMessages.length > 1 && (
+                <span className="rounded-full bg-navy-800/80 px-1.5 py-0.5 text-[10px] text-gray-300">
+                  {pinnedMessages.length}
+                </span>
+              )}
+            </span>
+            <span className="block truncate text-sm text-gray-200">
+              {latestPin.message.user.username}: {getPreview(latestPin)}
+            </span>
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onToggleExpanded}
+          aria-expanded={isExpanded}
+          title={isExpanded ? t("chat.hidePinnedMessages") : t("chat.showPinnedMessages")}
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-navy-800/70 hover:text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/40"
+        >
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+          />
+        </button>
+      </div>
+
+      {jumpError && (
+        <div className="px-6 pb-2 text-xs text-amber-200">{jumpError}</div>
+      )}
+
+      {isExpanded && (
+        <div className="max-h-64 overflow-y-auto border-t border-navy-800/50 px-4 py-2 chat-scrollbar">
+          <div className="space-y-1">
+            {pinnedMessages.map((pin) => (
+              <div
+                key={pin.id}
+                className="flex items-center gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-navy-900/55"
+              >
+                <button
+                  type="button"
+                  onClick={() => onJumpToMessage(pin.messageId)}
+                  className="min-w-0 flex-1 text-left focus-visible:outline-none"
+                >
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span className="font-medium text-gray-300 truncate">
+                      {pin.message.user.username}
+                    </span>
+                    <span className="truncate">
+                      {t("chat.pinnedBy", { username: pin.pinnedBy.username })}
+                    </span>
+                  </div>
+                  <div className="truncate text-sm text-gray-200">
+                    {getPreview(pin)}
+                  </div>
+                </button>
+                {canManagePins && (
+                  <button
+                    type="button"
+                    onClick={() => onUnpin(pin.messageId)}
+                    disabled={pendingMessageId === pin.messageId}
+                    title={t("chat.unpinMessage")}
+                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-200 disabled:cursor-wait disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/30"
+                  >
+                    <PinOff className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ChatArea({
@@ -54,6 +176,7 @@ export default function ChatArea({
   onReEnrollRequest,
   onMobileMenuClick,
   markAsRead,
+  canManagePins = isLecturer,
 }: ChatAreaProps) {
   const { t } = useI18n();
   const isEnrollmentExpired = !isEnrolledInCourse;
@@ -85,6 +208,8 @@ export default function ChatArea({
   useEffect(() => {
     if (prevChannelIdRef.current !== channel?.id) {
       setReplyTo(undefined);
+      setShowPinnedMessages(false);
+      setPinnedJumpError(null);
       userScrolledUpRef.current = false;
       prevChannelIdRef.current = channel?.id || null;
     }
@@ -102,13 +227,33 @@ export default function ChatArea({
     removePendingMessage,
     replacePendingMessage,
     loadMore,
+    loadUntilMessage,
+    updateMessage,
     addReaction,
     refetch,
     broadcastMessage,
+    broadcastReaction,
   } = useChatMessages({
     channelId: channel?.id || null,
     enabled: !!channel,
   });
+
+  const {
+    pinnedMessages,
+    pinnedMessageIds,
+    pendingMessageId: pendingPinMessageId,
+    pinMessage,
+    unpinMessage,
+  } = usePinnedMessages({
+    channelId: channel?.id || null,
+    enabled: !!channel && channel.type !== "lectures",
+  });
+  const [showPinnedMessages, setShowPinnedMessages] = useState(false);
+  const [pinnedJumpError, setPinnedJumpError] = useState<string | null>(null);
+  const pinnedMessageMap = useMemo(
+    () => new Map(pinnedMessages.map((pin) => [pin.messageId, pin])),
+    [pinnedMessages],
+  );
 
   // Store messages ref for timeout check
   const messagesRef = useRef(messages);
@@ -435,11 +580,68 @@ export default function ChatArea({
   );
 
   const handleReaction = useCallback(
-    (messageId: string, emoji: string) => {
+    async (messageId: string, emoji: string) => {
+      if (!channel) return;
+
       addReaction(messageId, emoji, currentUserId);
-      onReaction?.(messageId, emoji);
+
+      try {
+        let {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          const {
+            data: { session: refreshed },
+          } = await supabase.auth.refreshSession();
+          session = refreshed;
+        }
+        if (!session?.access_token) {
+          throw new Error("Not authenticated. Please log in again.");
+        }
+
+        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        const response = await fetch(edgeFunctionUrl("chat-messages"), {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+            ...(anonKey && { apikey: anonKey }),
+          },
+          body: JSON.stringify({
+            chatId: channel.id,
+            messageId,
+            emoji,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to save reaction");
+        }
+
+        const data = await response.json();
+        const reactions: Reaction[] = Array.isArray(data.reactions)
+          ? data.reactions
+          : [];
+
+        updateMessage(messageId, {
+          reactions: reactions.length > 0 ? reactions : undefined,
+        });
+        broadcastReaction(messageId, reactions);
+        onReaction?.(messageId, emoji);
+      } catch (error) {
+        addReaction(messageId, emoji, currentUserId);
+        console.error("Error saving reaction:", error);
+      }
     },
-    [addReaction, currentUserId, onReaction],
+    [
+      channel,
+      addReaction,
+      currentUserId,
+      updateMessage,
+      broadcastReaction,
+      onReaction,
+    ],
   );
 
   const handleRetry = useCallback(
@@ -460,6 +662,58 @@ export default function ChatArea({
     userScrolledUpRef.current = false;
     scrollToBottom("smooth");
   }, [scrollToBottom]);
+
+  const scrollToMessage = useCallback((messageId: string) => {
+    const messageElement = document.querySelector(
+      `[data-message-id="${messageId}"]`,
+    );
+    if (!messageElement) return false;
+
+    messageElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    messageElement.classList.add(
+      "ring-2",
+      "ring-amber-400",
+      "bg-amber-500/10",
+    );
+    window.setTimeout(() => {
+      messageElement.classList.remove(
+        "ring-2",
+        "ring-amber-400",
+        "bg-amber-500/10",
+      );
+    }, 2200);
+    return true;
+  }, []);
+
+  const handlePinnedMessageClick = useCallback(
+    async (messageId: string) => {
+      setPinnedJumpError(null);
+      if (scrollToMessage(messageId)) return;
+
+      const found = await loadUntilMessage(messageId);
+      window.setTimeout(() => {
+        if (!found || !scrollToMessage(messageId)) {
+          setPinnedJumpError(t("chat.pinnedMessageUnavailable"));
+        }
+      }, 80);
+    },
+    [loadUntilMessage, scrollToMessage, t],
+  );
+
+  const handleTogglePin = useCallback(
+    async (messageId: string) => {
+      try {
+        if (pinnedMessageIds.has(messageId)) {
+          await unpinMessage(messageId);
+        } else {
+          await pinMessage(messageId);
+        }
+      } catch (error) {
+        console.error("Failed to update pinned message:", error);
+      }
+    },
+    [pinMessage, pinnedMessageIds, unpinMessage],
+  );
 
   // Handle project submission
   const handleProjectSubmit = useCallback(
@@ -742,6 +996,19 @@ export default function ChatArea({
         )}
       </div>
 
+      <PinnedMessagesBar
+        pinnedMessages={pinnedMessages}
+        isExpanded={showPinnedMessages}
+        canManagePins={canManagePins}
+        pendingMessageId={pendingPinMessageId}
+        jumpError={pinnedJumpError}
+        onToggleExpanded={() => setShowPinnedMessages((value) => !value)}
+        onJumpToMessage={handlePinnedMessageClick}
+        onUnpin={(messageId) => {
+          handleTogglePin(messageId);
+        }}
+      />
+
       {/* Messages container */}
       <div
         ref={messagesContainerRef}
@@ -894,6 +1161,15 @@ export default function ChatArea({
                           onRetry: () => handleRetry(tempId || ""),
                         }
                       : message;
+                    const pin = pinnedMessageMap.get(message.id);
+                    const messageWithPin = pin
+                      ? {
+                          ...messageWithRetry,
+                          pinned: true,
+                          pinnedAt: pin.pinnedAt,
+                          pinnedBy: pin.pinnedBy,
+                        }
+                      : messageWithRetry;
 
                     if (
                       !message ||
@@ -906,10 +1182,13 @@ export default function ChatArea({
                     return (
                       <Message
                         key={message.id}
-                        message={messageWithRetry}
+                        message={messageWithPin}
                         currentUserId={currentUserId}
                         onReply={handleReply}
                         onReaction={handleReaction}
+                        onTogglePin={handleTogglePin}
+                        canPinMessages={canManagePins}
+                        isPinning={pendingPinMessageId === message.id}
                         isLecturer={isLecturer}
                         channelId={channel.id}
                         courseId={channel.courseId}

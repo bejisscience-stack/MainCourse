@@ -236,10 +236,7 @@ export default function LecturerChatPage() {
   };
 
   const handleReaction = async (messageId: string, emoji: string) => {
-    if (!user) return;
-
-    // TODO: Save reaction to database
-    console.log("Adding reaction:", { messageId, emoji, userId: user.id });
+    // Reactions are persisted by ChatArea; this callback is kept for LayoutContainer compatibility.
   };
 
   const handleChannelCreate = async (channel: Omit<Channel, "id">) => {

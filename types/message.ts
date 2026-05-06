@@ -25,6 +25,12 @@ export interface Message {
   replyTo?: string; // ID of message being replied to
   replyPreview?: ReplyPreview; // Preview of the message being replied to
   attachments?: MessageAttachment[]; // Media attachments
+  pinned?: boolean;
+  pinnedAt?: number;
+  pinnedBy?: {
+    id: string;
+    username: string;
+  };
 }
 
 export interface Reaction {
@@ -33,3 +39,16 @@ export interface Reaction {
   users: string[]; // User IDs who reacted
 }
 
+export interface PinnedMessage {
+  id: string;
+  messageId: string;
+  channelId: string;
+  courseId: string;
+  pinnedAt: number;
+  pinnedBy: {
+    id: string;
+    username: string;
+  };
+  message: Message;
+  preview: string;
+}

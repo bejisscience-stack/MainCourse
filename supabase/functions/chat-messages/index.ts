@@ -6,17 +6,151 @@ import {
 } from "../_shared/cors.ts";
 import { getAuthenticatedUser, checkIsAdmin } from "../_shared/auth.ts";
 
+const VALID_REACTIONS = new Set(["👍", "❤️", "😂", "😮", "😢", "🙏"]);
+
+interface ReactionRow {
+  message_id: string;
+  user_id: string;
+  emoji: string;
+}
+
+function formatReactions(rows: ReactionRow[] | null | undefined) {
+  const grouped = new Map<string, string[]>();
+
+  for (const row of rows || []) {
+    if (!VALID_REACTIONS.has(row.emoji)) continue;
+
+    let users = grouped.get(row.emoji);
+    if (!users) {
+      users = [];
+      grouped.set(row.emoji, users);
+    }
+    if (!users.includes(row.user_id)) users.push(row.user_id);
+  }
+
+  return Array.from(grouped.entries()).map(([emoji, users]) => ({
+    emoji,
+    count: users.length,
+    users,
+  }));
+}
+
+function mapReactionsByMessage(rows: ReactionRow[] | null | undefined) {
+  const rowsByMessage = new Map<string, ReactionRow[]>();
+
+  for (const row of rows || []) {
+    const messageRows = rowsByMessage.get(row.message_id) || [];
+    messageRows.push(row);
+    rowsByMessage.set(row.message_id, messageRows);
+  }
+
+  const reactionMap = new Map<string, ReturnType<typeof formatReactions>>();
+  for (const [messageId, messageRows] of rowsByMessage.entries()) {
+    reactionMap.set(messageId, formatReactions(messageRows));
+  }
+
+  return reactionMap;
+}
+
 Deno.serve(async (req: Request) => {
   const cors = getCorsHeaders(req);
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
-  if (req.method !== "GET" && req.method !== "POST")
+  if (req.method !== "GET" && req.method !== "POST" && req.method !== "PATCH")
     return errorResponse("Method not allowed", 405, cors);
 
   const auth = await getAuthenticatedUser(req);
   if ("response" in auth) return auth.response;
   const { user, supabase } = auth;
+
+  // Handle PATCH - toggle a message reaction
+  if (req.method === "PATCH") {
+    try {
+      const body = await req.json().catch(() => ({}));
+      const { chatId, messageId, emoji } = body;
+
+      if (!messageId || typeof messageId !== "string") {
+        return errorResponse("messageId is required", 400, cors);
+      }
+      if (!emoji || typeof emoji !== "string" || !VALID_REACTIONS.has(emoji)) {
+        return errorResponse("Invalid reaction emoji", 400, cors);
+      }
+
+      const { data: message, error: messageError } = await supabase
+        .from("messages")
+        .select("id, channel_id")
+        .eq("id", messageId)
+        .maybeSingle();
+
+      if (messageError) {
+        console.error("[Chat] Failed to fetch reaction message:", messageError);
+        return errorResponse("Failed to fetch message", 500, cors);
+      }
+      if (!message) return errorResponse("Message not found", 404, cors);
+      if (chatId && message.channel_id !== chatId) {
+        return errorResponse("Message does not belong to chat", 400, cors);
+      }
+
+      const { data: existingReaction, error: existingError } = await supabase
+        .from("message_reactions")
+        .select("id")
+        .eq("message_id", messageId)
+        .eq("user_id", user.id)
+        .eq("emoji", emoji)
+        .maybeSingle();
+
+      if (existingError) {
+        console.error("[Chat] Failed to fetch existing reaction:", existingError);
+        return errorResponse("Failed to update reaction", 500, cors);
+      }
+
+      if (existingReaction) {
+        const { error: deleteError } = await supabase
+          .from("message_reactions")
+          .delete()
+          .eq("id", existingReaction.id);
+
+        if (deleteError) {
+          console.error("[Chat] Failed to delete reaction:", deleteError);
+          return errorResponse("Failed to update reaction", 500, cors);
+        }
+      } else {
+        const { error: insertError } = await supabase
+          .from("message_reactions")
+          .insert({
+            message_id: messageId,
+            user_id: user.id,
+            emoji,
+          });
+
+        if (insertError) {
+          console.error("[Chat] Failed to insert reaction:", insertError);
+          return errorResponse("Failed to update reaction", 500, cors);
+        }
+      }
+
+      const { data: reactionRows, error: reactionsError } = await supabase
+        .from("message_reactions")
+        .select("message_id, user_id, emoji")
+        .eq("message_id", messageId)
+        .order("created_at", { ascending: true });
+
+      if (reactionsError) {
+        console.error("[Chat] Failed to fetch saved reactions:", reactionsError);
+        return errorResponse("Failed to fetch reactions", 500, cors);
+      }
+
+      return jsonResponse(
+        { messageId, reactions: formatReactions(reactionRows) },
+        200,
+        cors,
+      );
+    } catch (error) {
+      console.error("[Chat] Reaction error:", error);
+      return errorResponse("Internal server error", 500, cors);
+    }
+  }
 
   // Handle POST - send message
   if (req.method === "POST") {
@@ -332,7 +466,12 @@ Deno.serve(async (req: Request) => {
       .map((m) => m.reply_to_id);
     const messageIds = messages.map((m) => m.id);
 
-    const [profilesResult, replyMessagesResult, attachmentsResult] =
+    const [
+      profilesResult,
+      replyMessagesResult,
+      attachmentsResult,
+      reactionsResult,
+    ] =
       await Promise.all([
         supabase.rpc("get_safe_profiles", { user_ids: userIds }),
         replyIds.length > 0
@@ -347,7 +486,16 @@ Deno.serve(async (req: Request) => {
             "id, message_id, file_url, file_name, file_type, file_size, mime_type",
           )
           .in("message_id", messageIds),
+        supabase
+          .from("message_reactions")
+          .select("message_id, user_id, emoji")
+          .in("message_id", messageIds)
+          .order("created_at", { ascending: true }),
       ]);
+
+    if (reactionsResult.error) {
+      console.error("[Chat] Failed to fetch reactions:", reactionsResult.error);
+    }
 
     const profileMap = new Map(
       profilesResult.data?.map((p) => [p.id, p]) || [],
@@ -395,6 +543,10 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const reactionMap = reactionsResult.error
+      ? new Map()
+      : mapReactionsByMessage(reactionsResult.data);
+
     const formattedMessages = messages.map((msg) => {
       const profile = profileMap.get(msg.user_id);
       return {
@@ -413,7 +565,7 @@ Deno.serve(async (req: Request) => {
           ? replyMap.get(msg.reply_to_id)
           : undefined,
         attachments: attachmentMap.get(msg.id),
-        reactions: [],
+        reactions: reactionMap.get(msg.id) || [],
       };
     });
 

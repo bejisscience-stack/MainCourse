@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { edgeFunctionUrl } from "@/lib/api-client";
-import type { Message, MessageAttachment } from "@/types/message";
+import type { Message, MessageAttachment, Reaction } from "@/types/message";
 import {
   useRealtimeMessages,
   prefetchProfiles,
@@ -27,6 +27,28 @@ interface FailedMessage extends Message {
 }
 
 type ChatMessage = Message | PendingMessage | FailedMessage;
+
+function reactionsEqual(a?: Reaction[], b?: Reaction[]) {
+  const left = a || [];
+  const right = b || [];
+  if (left.length !== right.length) return false;
+
+  return left.every((reaction, index) => {
+    const other = right[index];
+    if (!other) return false;
+    if (reaction.emoji !== other.emoji || reaction.count !== other.count) {
+      return false;
+    }
+    if (reaction.users.length !== other.users.length) return false;
+    return reaction.users.every((userId, userIndex) => {
+      return userId === other.users[userIndex];
+    });
+  });
+}
+
+function normalizeReactions(reactions?: Reaction[]) {
+  return reactions && reactions.length > 0 ? reactions : undefined;
+}
 
 // Dedupe pending message matching
 function findMatchingPending(
@@ -54,6 +76,21 @@ export function useChatMessages({
   const messageIdsRef = useRef<Set<string>>(new Set());
   const abortControllerRef = useRef<AbortController | null>(null);
   const channelIdRef = useRef<string | null>(null);
+  const messagesStateRef = useRef<ChatMessage[]>([]);
+  const hasMoreRef = useRef(hasMore);
+  const isLoadingRef = useRef(isLoading);
+
+  useEffect(() => {
+    messagesStateRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    hasMoreRef.current = hasMore;
+  }, [hasMore]);
+
+  useEffect(() => {
+    isLoadingRef.current = isLoading;
+  }, [isLoading]);
 
   // Fetch messages - optimized for speed
   const fetchMessages = useCallback(
@@ -144,8 +181,10 @@ export function useChatMessages({
 
     if (!enabled || !channelId) {
       setMessages([]);
+      messagesStateRef.current = [];
       setError(null);
       setIsLoading(false);
+      isLoadingRef.current = false;
       messageIdsRef.current.clear();
       pendingMessagesRef.current.clear();
       channelIdRef.current = null;
@@ -158,13 +197,16 @@ export function useChatMessages({
     if (isNewChannel) {
       // Clear state immediately for new channel
       setMessages([]);
+      messagesStateRef.current = [];
       setError(null);
       setHasMore(true);
+      hasMoreRef.current = true;
       messageIdsRef.current.clear();
       pendingMessagesRef.current.clear();
     }
 
     setIsLoading(true);
+    isLoadingRef.current = true;
     setError(null);
 
     const abortController = new AbortController();
@@ -185,9 +227,12 @@ export function useChatMessages({
 
         // Update state immediately with fetched messages
         messageIdsRef.current = new Set(fetchedMessages.map((m) => m.id));
+        messagesStateRef.current = fetchedMessages;
         setMessages(fetchedMessages);
         setHasMore(fetchedMessages.length === 50);
+        hasMoreRef.current = fetchedMessages.length === 50;
         setIsLoading(false);
+        isLoadingRef.current = false;
         setError(null);
 
         // Prefetch profiles in background (non-blocking)
@@ -232,6 +277,7 @@ export function useChatMessages({
         console.error("Error fetching messages:", err);
         setError(err.message || "Failed to load messages");
         setIsLoading(false);
+        isLoadingRef.current = false;
       }
     })();
 
@@ -284,13 +330,32 @@ export function useChatMessages({
   }, []);
 
   const handleMessageUpdate = useCallback((message: Message) => {
-    setMessages((prev) => prev.map((m) => (m.id === message.id ? message : m)));
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === message.id
+          ? { ...message, reactions: message.reactions ?? m.reactions }
+          : m,
+      ),
+    );
   }, []);
 
   const handleMessageDelete = useCallback((messageId: string) => {
     messageIdsRef.current.delete(messageId);
     setMessages((prev) => prev.filter((m) => m.id !== messageId));
   }, []);
+
+  const handleMessageReaction = useCallback(
+    (messageId: string, reactions: Reaction[]) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? { ...m, reactions: normalizeReactions(reactions) }
+            : m,
+        ),
+      );
+    },
+    [],
+  );
 
   // Real-time subscription
   const { isConnected, channelRef } = useRealtimeMessages({
@@ -299,6 +364,7 @@ export function useChatMessages({
     onNewMessage: handleNewMessage,
     onMessageUpdate: handleMessageUpdate,
     onMessageDelete: handleMessageDelete,
+    onMessageReaction: handleMessageReaction,
   });
 
   // Broadcast a message to other clients via Supabase Broadcast (instant, bypasses RLS)
@@ -309,6 +375,19 @@ export function useChatMessages({
           type: "broadcast",
           event: "new_message",
           payload: message,
+        });
+      }
+    },
+    [channelRef],
+  );
+
+  const broadcastReaction = useCallback(
+    (messageId: string, reactions: Reaction[]) => {
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: "broadcast",
+          event: "message_reaction",
+          payload: { messageId, reactions },
         });
       }
     },
@@ -326,12 +405,30 @@ export function useChatMessages({
 
       setMessages((prev) => {
         const existingIds = new Set(prev.map((m) => m.id));
+        const fetchedById = new Map(fetched.map((m) => [m.id, m]));
         const missing = fetched.filter((m) => !existingIds.has(m.id));
-        if (missing.length === 0) return prev;
+        let hasUpdates = missing.length > 0;
+
+        const updated = prev.map((message) => {
+          const fetchedMessage = fetchedById.get(message.id);
+          if (!fetchedMessage) return message;
+
+          if (!reactionsEqual(message.reactions, fetchedMessage.reactions)) {
+            hasUpdates = true;
+            return {
+              ...message,
+              reactions: normalizeReactions(fetchedMessage.reactions),
+            };
+          }
+
+          return message;
+        });
+
+        if (!hasUpdates) return prev;
 
         missing.forEach((m) => messageIdsRef.current.add(m.id));
         // Merge and sort by timestamp
-        const merged = [...prev, ...missing].sort(
+        const merged = [...updated, ...missing].sort(
           (a, b) => a.timestamp - b.timestamp,
         );
         return merged;
@@ -422,18 +519,27 @@ export function useChatMessages({
 
   // Load more messages (pagination)
   const loadMore = useCallback(async () => {
-    if (!hasMore || isLoading || messages.length === 0 || !channelId) return;
+    const currentMessages = messagesStateRef.current;
+    if (
+      !hasMoreRef.current ||
+      isLoadingRef.current ||
+      currentMessages.length === 0 ||
+      !channelId
+    ) {
+      return [];
+    }
 
-    const oldestMessage = messages.find((m) => !("pending" in m));
-    if (!oldestMessage || !("timestamp" in oldestMessage)) return;
+    const oldestMessage = currentMessages.find((m) => !("pending" in m));
+    if (!oldestMessage || !("timestamp" in oldestMessage)) return [];
 
     setIsLoading(true);
+    isLoadingRef.current = true;
 
     try {
       const before = new Date(oldestMessage.timestamp).toISOString();
       const result = await fetchMessages(channelId, before);
 
-      if (!result) return;
+      if (!result) return [];
 
       const olderMessages: Message[] = result.messages || [];
 
@@ -444,17 +550,47 @@ export function useChatMessages({
             (m) => !existingIds.has(m.id),
           );
           newMessages.forEach((m) => messageIdsRef.current.add(m.id));
-          return [...newMessages, ...prev];
+          const nextMessages = [...newMessages, ...prev];
+          messagesStateRef.current = nextMessages;
+          return nextMessages;
         });
       }
 
       setHasMore(olderMessages.length === 50);
+      hasMoreRef.current = olderMessages.length === 50;
+      return olderMessages;
     } catch (err: any) {
       console.error("Error loading more messages:", err);
+      return [];
     } finally {
       setIsLoading(false);
+      isLoadingRef.current = false;
     }
-  }, [hasMore, isLoading, messages, channelId, fetchMessages]);
+  }, [channelId, fetchMessages]);
+
+  const loadUntilMessage = useCallback(
+    async (messageId: string, maxPages = 10) => {
+      if (messagesStateRef.current.some((m) => m.id === messageId)) {
+        return true;
+      }
+
+      for (let page = 0; page < maxPages; page += 1) {
+        if (!hasMoreRef.current) return false;
+
+        const olderMessages = await loadMore();
+        if (olderMessages.some((message) => message.id === messageId)) {
+          return true;
+        }
+        if (messagesStateRef.current.some((message) => message.id === messageId)) {
+          return true;
+        }
+        if (olderMessages.length === 0) return false;
+      }
+
+      return false;
+    },
+    [loadMore],
+  );
 
   const updateMessage = useCallback(
     (messageId: string, updates: Partial<Message>) => {
@@ -527,7 +663,9 @@ export function useChatMessages({
 
     setError(null);
     setMessages([]);
+    messagesStateRef.current = [];
     setIsLoading(true);
+    isLoadingRef.current = true;
     messageIdsRef.current.clear();
 
     const abortController = new AbortController();
@@ -544,13 +682,17 @@ export function useChatMessages({
 
         const fetchedMessages: Message[] = result.messages || [];
         messageIdsRef.current = new Set(fetchedMessages.map((m) => m.id));
+        messagesStateRef.current = fetchedMessages;
         setMessages(fetchedMessages);
         setHasMore(fetchedMessages.length === 50);
+        hasMoreRef.current = fetchedMessages.length === 50;
         setIsLoading(false);
+        isLoadingRef.current = false;
       } catch (err: any) {
         if (abortController.signal.aborted) return;
         setError(err.message || "Failed to load messages");
         setIsLoading(false);
+        isLoadingRef.current = false;
       }
     })();
   }, [channelId, fetchMessages]);
@@ -568,9 +710,11 @@ export function useChatMessages({
     removePendingMessage,
     replacePendingMessage,
     loadMore,
+    loadUntilMessage,
     updateMessage,
     addReaction,
     refetch,
     broadcastMessage,
+    broadcastReaction,
   };
 }

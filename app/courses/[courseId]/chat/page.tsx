@@ -411,9 +411,7 @@ export default function CourseChatPage() {
   };
 
   const handleReaction = async (messageId: string, emoji: string) => {
-    if (!user) return;
-
-    // TODO: Save reaction to database
+    // Reactions are persisted by ChatArea; this callback is kept for LayoutContainer compatibility.
   };
 
   const loading =

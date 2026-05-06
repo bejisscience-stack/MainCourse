@@ -2,8 +2,10 @@
 
 import { useState, memo, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { Pin, PinOff } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { edgeFunctionUrl } from "@/lib/api-client";
+import { useI18n } from "@/contexts/I18nContext";
 import { useUserMuteStatus } from "@/hooks/useMuteStatus";
 import { useProjectCountdown } from "@/hooks/useProjectCountdown";
 import ProjectCard from "./ProjectCard";
@@ -35,6 +37,9 @@ interface MessageProps {
   currentUserId: string;
   onReply?: (messageId: string) => void;
   onReaction?: (messageId: string, emoji: string) => void;
+  onTogglePin?: (messageId: string) => void;
+  canPinMessages?: boolean;
+  isPinning?: boolean;
   isLecturer?: boolean;
   channelId?: string;
   courseId?: string;
@@ -228,12 +233,16 @@ const Message = memo(function Message({
   currentUserId,
   onReply,
   onReaction,
+  onTogglePin,
+  canPinMessages = false,
+  isPinning = false,
   isLecturer = false,
   channelId,
   courseId,
   showAvatar = true,
   isEnrolledInCourse = false,
 }: MessageProps) {
+  const { t } = useI18n();
   const [showMenu, setShowMenu] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -531,6 +540,8 @@ const Message = memo(function Message({
   const isPending = message.pending;
   const isFailed = message.failed;
   const isOwn = message.user.id === currentUserId;
+  const canPin =
+    canPinMessages && !!onTogglePin && !isPending && !isFailed && !!channelId;
 
   // Check if project is expired using countdown hook
   const projectCountdown = useProjectCountdown(
@@ -547,7 +558,19 @@ const Message = memo(function Message({
     }
 
     return (
-      <div ref={messageRef} data-message-id={message.id} className="px-4 py-2">
+      <div
+        ref={messageRef}
+        data-message-id={message.id}
+        className="group relative px-4 py-2"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {message.pinned && (
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase text-amber-300">
+            <Pin className="h-3.5 w-3.5" />
+            <span>{t("chat.pinnedMessage")}</span>
+          </div>
+        )}
         <ProjectCard
           project={{
             id: message.id,
@@ -574,6 +597,31 @@ const Message = memo(function Message({
           courseId={courseId || ""}
           isEnrolledInCourse={isEnrolledInCourse}
         />
+        {showMenu && canPin && (
+          <div className="absolute right-4 top-0 z-20 flex items-center rounded-xl border border-navy-700/60 bg-navy-950/90 px-1.5 py-1.5 shadow-soft-xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <button
+              onClick={() => {
+                onTogglePin?.(message.id);
+                setShowMenu(false);
+              }}
+              disabled={isPinning}
+              className={`p-2 rounded-lg transition-all duration-200 disabled:cursor-wait disabled:opacity-50 ${
+                message.pinned
+                  ? "text-amber-300 hover:bg-amber-500/10 hover:text-amber-200"
+                  : "text-gray-400 hover:bg-navy-800/70 hover:text-amber-300"
+              }`}
+              title={
+                message.pinned ? t("chat.unpinMessage") : t("chat.pinMessage")
+              }
+            >
+              {message.pinned ? (
+                <PinOff className="h-[18px] w-[18px]" />
+              ) : (
+                <Pin className="h-[18px] w-[18px]" />
+              )}
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -777,6 +825,17 @@ const Message = memo(function Message({
             </div>
           )}
 
+          {message.pinned && (
+            <div
+              className={`mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase text-amber-300 ${
+                isOwn ? "justify-end" : ""
+              }`}
+            >
+              <Pin className="h-3.5 w-3.5" />
+              <span>{t("chat.pinnedMessage")}</span>
+            </div>
+          )}
+
           {/* Message text */}
           {message.content && (
             <div
@@ -946,6 +1005,32 @@ const Message = memo(function Message({
                 />
               </svg>
             </button>
+
+            {canPin && (
+              <button
+                onClick={() => {
+                  onTogglePin?.(message.id);
+                  setShowMenu(false);
+                }}
+                disabled={isPinning}
+                className={`p-2 rounded-lg transition-all duration-200 disabled:cursor-wait disabled:opacity-50 ${
+                  message.pinned
+                    ? "text-amber-300 hover:text-amber-200 hover:bg-amber-500/10"
+                    : "text-gray-400 hover:text-amber-300 hover:bg-navy-800/70"
+                }`}
+                title={
+                  message.pinned
+                    ? t("chat.unpinMessage")
+                    : t("chat.pinMessage")
+                }
+              >
+                {message.pinned ? (
+                  <PinOff className="h-[18px] w-[18px]" />
+                ) : (
+                  <Pin className="h-[18px] w-[18px]" />
+                )}
+              </button>
+            )}
 
             {/* Mute button for lecturers */}
             {canMute && (

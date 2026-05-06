@@ -231,7 +231,17 @@
     "directMessages": "პირადი შეტყობინებები",
     "selectConversation": "აირჩიეთ საუბარი",
     "messageUser": "მიწერეთ @{username}",
-    "isTyping": "წერს…"
+    "isTyping": "წერს…",
+    "pinnedMessages": "მიმაგრებული შეტყობინებები",
+    "pinnedMessage": "მიმაგრებული",
+    "showPinnedMessages": "მიმაგრებული შეტყობინებების ჩვენება",
+    "hidePinnedMessages": "მიმაგრებული შეტყობინებების დამალვა",
+    "pinMessage": "შეტყობინების მიმაგრება",
+    "unpinMessage": "შეტყობინების მოხსნა",
+    "pinnedBy": "მიამაგრა {{username}}",
+    "pinnedAttachment": "დანართი",
+    "pinnedEmptyMessage": "მიმაგრებული შეტყობინება",
+    "pinnedMessageUnavailable": "ეს მიმაგრებული შეტყობინება ჩატში ჩატვირთულ ისტორიაში ხელმისაწვდომი არ არის."
   },
   "friends": {
     "addFriend": "მეგობრის დამატება",
