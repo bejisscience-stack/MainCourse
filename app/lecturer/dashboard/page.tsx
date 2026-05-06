@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useCallback, useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Navigation from "@/components/Navigation";
@@ -403,8 +403,9 @@ export default function LecturerDashboard() {
     setShowModal(true);
   };
 
-  const handleCloseModal = () => {
-    // Warn if upload is in progress
+  // Memoized so the keydown effect captures the latest `isUploading` instead
+  // of a stale closure from the render where the modal first opened.
+  const handleCloseModal = useCallback(() => {
     if (isUploading) {
       const confirmClose = window.confirm(
         "Upload is in progress. Are you sure you want to close? The upload will be cancelled.",
@@ -436,7 +437,7 @@ export default function LecturerDashboard() {
       is_bestseller: false,
       referral_commission_percentage: "0",
     });
-  };
+  }, [isUploading]);
 
   const uploadFile = async (
     file: File,

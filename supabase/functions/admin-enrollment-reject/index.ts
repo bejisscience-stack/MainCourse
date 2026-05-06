@@ -8,6 +8,9 @@ function sanitizeText(text: string, maxLength: number = 500): string {
 }
 
 Deno.serve(async (req: Request) => {
+  console.warn(
+    `[deprecated] edge fn 'admin-enrollment-reject' invoked — caller=${req.headers.get("user-agent") ?? "unknown"} origin=${req.headers.get("origin") ?? "unknown"}`,
+  );
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 

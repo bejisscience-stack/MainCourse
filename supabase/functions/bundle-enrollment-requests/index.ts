@@ -2,6 +2,9 @@ import { handleCors, jsonResponse, errorResponse } from "../_shared/cors.ts";
 import { getAuthenticatedUser } from "../_shared/auth.ts";
 
 Deno.serve(async (req: Request) => {
+  console.warn(
+    `[deprecated] edge fn 'bundle-enrollment-requests' invoked — caller=${req.headers.get("user-agent") ?? "unknown"} origin=${req.headers.get("origin") ?? "unknown"}`,
+  );
   // Handle CORS preflight
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;

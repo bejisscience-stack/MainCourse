@@ -7,6 +7,9 @@ import {
 import { getAuthenticatedUser } from "../_shared/auth.ts";
 
 Deno.serve(async (req: Request) => {
+  console.warn(
+    `[deprecated] edge fn 'notifications-unread-count' invoked — caller=${req.headers.get("user-agent") ?? "unknown"} origin=${req.headers.get("origin") ?? "unknown"}`,
+  );
   // Handle CORS preflight
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;

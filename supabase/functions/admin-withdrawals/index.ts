@@ -8,6 +8,9 @@ import { getAuthenticatedUser, checkIsAdmin } from "../_shared/auth.ts";
 import { createServiceRoleClient } from "../_shared/supabase.ts";
 
 Deno.serve(async (req: Request) => {
+  console.warn(
+    `[deprecated] edge fn 'admin-withdrawals' invoked — caller=${req.headers.get("user-agent") ?? "unknown"} origin=${req.headers.get("origin") ?? "unknown"}`,
+  );
   const cors = getCorsHeaders(req);
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;

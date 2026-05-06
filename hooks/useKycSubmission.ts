@@ -28,7 +28,18 @@ async function uploadOne(path: string, blob: Blob): Promise<void> {
     contentType: blob.type || "image/jpeg",
   });
   if (error) {
-    throw new Error(error.message || "Upload failed");
+    const raw = error.message || "Upload failed";
+    // storage-api returns DatabaseInvalidObjectDefinition ("The database
+    // schema is invalid or incompatible.") when its own metadata cache is
+    // stale — usually after a service version bump. The DB is fine; only a
+    // Storage service restart from the Supabase Dashboard clears it.
+    if (/database schema is invalid or incompatible/i.test(raw)) {
+      console.error("[KYC upload] storage-api stale cache:", error);
+      throw new Error(
+        "Document upload service is temporarily unavailable. Please try again in a minute.",
+      );
+    }
+    throw new Error(raw);
   }
 }
 
