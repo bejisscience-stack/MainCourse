@@ -1,40 +1,34 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import type { WithdrawalRequest } from "@/types/balance";
 
 interface UseRealtimeAdminWithdrawalRequestsOptions {
   enabled?: boolean;
-  onInsert?: (request: WithdrawalRequest) => void;
-  onUpdate?: (
-    request: WithdrawalRequest,
-    oldRequest: Partial<WithdrawalRequest>,
-  ) => void;
+  onChange?: () => void;
   onConnectionChange?: (connected: boolean) => void;
 }
 
 /**
- * Hook to subscribe to real-time updates for ALL withdrawal requests (admin view)
- * Subscribes to all requests without filtering by user_id
+ * Hook to subscribe to real-time updates for ALL withdrawal requests (admin view).
+ * Fires `onChange` on any INSERT/UPDATE so the consumer can revalidate via the
+ * canonical API endpoint (which decrypts profile PII server-side). We don't
+ * embed `profiles(...)` here because `withdrawal_requests.user_id` references
+ * `auth.users(id)`, not `public.profiles(id)`, so PostgREST cannot resolve it.
  */
 export function useRealtimeAdminWithdrawalRequests({
   enabled = true,
-  onInsert,
-  onUpdate,
+  onChange,
   onConnectionChange,
 }: UseRealtimeAdminWithdrawalRequestsOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  // Use refs to avoid recreating subscription on callback changes
-  const onInsertRef = useRef(onInsert);
-  const onUpdateRef = useRef(onUpdate);
+  const onChangeRef = useRef(onChange);
   const onConnectionChangeRef = useRef(onConnectionChange);
 
   useEffect(() => {
-    onInsertRef.current = onInsert;
-    onUpdateRef.current = onUpdate;
+    onChangeRef.current = onChange;
     onConnectionChangeRef.current = onConnectionChange;
-  }, [onInsert, onUpdate, onConnectionChange]);
+  }, [onChange, onConnectionChange]);
 
   useEffect(() => {
     if (!enabled) {
@@ -57,7 +51,7 @@ export function useRealtimeAdminWithdrawalRequests({
           schema: "public",
           table: "withdrawal_requests",
         },
-        async (payload) => {
+        (payload) => {
           console.log("[RT Admin Withdrawal] INSERT received:", payload);
 
           if (
@@ -71,55 +65,7 @@ export function useRealtimeAdminWithdrawalRequests({
             return;
           }
 
-          // Fetch the full request with related data
-          const { data: request, error } = await supabase
-            .from("withdrawal_requests")
-            .select(
-              `
-              id,
-              user_id,
-              user_type,
-              amount,
-              bank_account_number,
-              status,
-              admin_notes,
-              processed_at,
-              processed_by,
-              created_at,
-              updated_at,
-              profiles (
-                id,
-                email,
-                username,
-                bank_account_number,
-                role,
-                balance
-              )
-            `,
-            )
-            .eq("id", (payload.new as { id: string }).id)
-            .single();
-
-          if (error || !request) {
-            console.error(
-              "[RT Admin Withdrawal] Error fetching request details:",
-              error,
-            );
-            onInsertRef.current?.(payload.new as WithdrawalRequest);
-            return;
-          }
-
-          // Transform to match expected type
-          const transformedRequest: WithdrawalRequest = {
-            ...request,
-            profiles: Array.isArray(request.profiles)
-              ? request.profiles.length > 0
-                ? request.profiles[0]
-                : undefined
-              : (request.profiles ?? undefined),
-          };
-
-          onInsertRef.current?.(transformedRequest);
+          onChangeRef.current?.();
         },
       )
       .on(
@@ -129,7 +75,7 @@ export function useRealtimeAdminWithdrawalRequests({
           schema: "public",
           table: "withdrawal_requests",
         },
-        async (payload) => {
+        (payload) => {
           console.log("[RT Admin Withdrawal] UPDATE received:", payload);
 
           if (
@@ -143,61 +89,7 @@ export function useRealtimeAdminWithdrawalRequests({
             return;
           }
 
-          // Fetch the full request with related data
-          const { data: request, error } = await supabase
-            .from("withdrawal_requests")
-            .select(
-              `
-              id,
-              user_id,
-              user_type,
-              amount,
-              bank_account_number,
-              status,
-              admin_notes,
-              processed_at,
-              processed_by,
-              created_at,
-              updated_at,
-              profiles (
-                id,
-                email,
-                username,
-                bank_account_number,
-                role,
-                balance
-              )
-            `,
-            )
-            .eq("id", (payload.new as { id: string }).id)
-            .single();
-
-          if (error || !request) {
-            console.error(
-              "[RT Admin Withdrawal] Error fetching request details:",
-              error,
-            );
-            onUpdateRef.current?.(
-              payload.new as WithdrawalRequest,
-              payload.old as Partial<WithdrawalRequest>,
-            );
-            return;
-          }
-
-          // Transform to match expected type
-          const transformedRequest: WithdrawalRequest = {
-            ...request,
-            profiles: Array.isArray(request.profiles)
-              ? request.profiles.length > 0
-                ? request.profiles[0]
-                : undefined
-              : (request.profiles ?? undefined),
-          };
-
-          onUpdateRef.current?.(
-            transformedRequest,
-            payload.old as Partial<WithdrawalRequest>,
-          );
+          onChangeRef.current?.();
         },
       )
       .subscribe((status, err) => {

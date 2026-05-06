@@ -23,28 +23,15 @@ export default function AdminWithdrawals() {
   const [approveNotes, setApproveNotes] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Real-time updates
+  // Real-time updates: revalidate the SWR cache via the API on any change.
+  // We don't merge realtime payloads locally because withdrawal_requests has
+  // no FK to profiles, so the canonical /api/admin/withdrawals endpoint is the
+  // only source of decrypted profile data.
   useRealtimeAdminWithdrawalRequests({
     enabled: true,
-    onInsert: useCallback(
-      (request: WithdrawalRequest) => {
-        mutate((current) => {
-          if (!current) return [request];
-          if (current.some((r) => r.id === request.id)) return current;
-          return [request, ...current];
-        }, false);
-      },
-      [mutate],
-    ),
-    onUpdate: useCallback(
-      (request: WithdrawalRequest) => {
-        mutate((current) => {
-          if (!current) return current;
-          return current.map((r) => (r.id === request.id ? request : r));
-        }, false);
-      },
-      [mutate],
-    ),
+    onChange: useCallback(() => {
+      mutate();
+    }, [mutate]),
   });
 
   // Filter requests by status
