@@ -68,8 +68,9 @@ export default function SettingsPage() {
     onRequestApproved: (request) => {
       console.log("[Settings] Withdrawal approved:", request);
       toast.success(
-        t("settings.withdrawalApproved") ||
-          `Withdrawal of ₾${request.amount.toFixed(2)} approved!`,
+        t("settings.withdrawalApproved", {
+          amount: request.amount.toFixed(2),
+        }) || `Withdrawal of ₾${request.amount.toFixed(2)} approved!`,
         { duration: 5000 },
       );
       mutateWithdrawals();
@@ -78,8 +79,9 @@ export default function SettingsPage() {
     onRequestRejected: (request) => {
       console.log("[Settings] Withdrawal rejected:", request);
       toast.error(
-        t("settings.withdrawalRejected") ||
-          `Withdrawal of ₾${request.amount.toFixed(2)} was rejected.`,
+        t("settings.withdrawalRejected", {
+          amount: request.amount.toFixed(2),
+        }) || `Withdrawal of ₾${request.amount.toFixed(2)} was rejected.`,
         { duration: 5000 },
       );
       mutateWithdrawals();

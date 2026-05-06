@@ -223,6 +223,7 @@ function CourseCard({
     () => getCourseTypeConfig(course.course_type),
     [course.course_type, getCourseTypeConfig],
   );
+  const courseDescription = course.description?.trim();
 
   return (
     <>
@@ -372,6 +373,12 @@ function CourseCard({
             <p className="text-sm text-charcoal-500 dark:text-gray-400">
               {course.author}
             </p>
+
+            {courseDescription && (
+              <p className="text-sm leading-relaxed text-charcoal-600 dark:text-gray-300 line-clamp-2 break-words">
+                {courseDescription}
+              </p>
+            )}
 
             {/* Badges: Course Type (prominent), Bestseller, Rating, Reviews */}
             <div className="flex flex-wrap items-center gap-2">

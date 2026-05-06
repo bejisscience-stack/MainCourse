@@ -12,6 +12,8 @@
     "showLess": "Show Less",
     "deleting": "Deleting..."
   },
+  "close": "Close",
+  "subscribe": "Subscribe",
   "nav": {
     "courses": "Courses",
     "myCourses": "My Courses",
@@ -119,9 +121,7 @@
   },
   "payment": {
     "referralCode": "Referral Code",
-    "referralCodePlaceholder": "Enter referral code (optional)",
-    "referralCodeDescription": "If someone referred you, enter their referral code here",
-    "failedToSubmit": "Failed to submit enrollment request. Payment screenshots were uploaded successfully. Please try again."
+    "referralCodePlaceholder": "Enter referral code (optional)"
   },
   "settings": {
     "title": "Settings",
@@ -188,6 +188,8 @@
     "processing": "Processing...",
     "submitWithdrawal": "Submit Withdrawal Request",
     "withdrawalRequestSubmitted": "Withdrawal request submitted successfully! You will be notified once it is processed.",
+    "withdrawalApproved": "Withdrawal of ₾{{amount}} approved!",
+    "withdrawalRejected": "Withdrawal of ₾{{amount}} was rejected.",
     "transactionHistory": "Transaction History",
     "referralCommission": "Referral Commission",
     "coursePurchase": "Course Purchase",
@@ -349,7 +351,10 @@
     "payAndPublish": "Pay & Publish ₾{{amount}}",
     "pendingPayment": "Pending Payment",
     "retryPayment": "Retry Payment",
-    "processingPayment": "Processing Payment..."
+    "processingPayment": "Processing Payment...",
+    "deleteProject": "Delete Project",
+    "deleteProjectConfirm": "Are you sure you want to delete this project? This action cannot be undone.",
+    "studentComment": "Student Comment"
   },
   "videoSubmission": {
     "submitYourVideo": "Submit Your Video",
@@ -838,7 +843,6 @@
     "noActiveSession": "No active session. Please sign in again.",
     "failedToCompleteProfile": "Failed to complete profile. Please try again.",
     "somethingWentWrong": "Something went wrong. Please try again.",
-    "termsAgreement": "By registering, you agree to our",
     "termsAndConditions": "Terms and Conditions",
     "and": "and",
     "privacyPolicy": "Privacy Policy",
@@ -871,7 +875,6 @@
     "viewRange": "View Range",
     "views": "views",
     "goToProject": "Go to Project",
-    "enrollInCourse": "Enroll in Course",
     "subscribeToProjects": "Buy Project Subscription",
     "viewDetails": "View Details",
     "criteria": "Criteria",
@@ -973,9 +976,6 @@
     "notScraped": "Run bot first"
   },
   "paymentMethod": {
-    "cardPayment": "Pay with Card",
-    "instant": "Instant",
-    "visaMastercard": "Visa, Mastercard",
     "pay": "Pay {{amount}}",
     "redirecting": "Redirecting to payment...",
     "acceptedMethods": "Cards, Banking, QR",

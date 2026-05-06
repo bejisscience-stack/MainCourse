@@ -12,6 +12,8 @@
     "showLess": "ნაკლების ნახვა",
     "deleting": "იშლება..."
   },
+  "close": "დახურვა",
+  "subscribe": "გამოწერა",
   "nav": {
     "courses": "კურსები",
     "myCourses": "ჩემი კურსები",
@@ -119,9 +121,7 @@
   },
   "payment": {
     "referralCode": "რეფერალური კოდი",
-    "referralCodePlaceholder": "შეიყვანეთ რეფერალური კოდი (არასავალდებულო)",
-    "referralCodeDescription": "თუ ვინმემ გირჩიეთ, შეიყვანეთ მათი რეფერალური კოდი აქ",
-    "failedToSubmit": "რეგისტრაციის მოთხოვნის გაგზავნა ვერ მოხერხდა. გადახდის სკრინშოტები წარმატებით აიტვირთა. გთხოვთ სცადოთ ხელახლა."
+    "referralCodePlaceholder": "შეიყვანეთ რეფერალური კოდი (არასავალდებულო)"
   },
   "settings": {
     "title": "პარამეტრები",
@@ -188,6 +188,8 @@
     "processing": "დამუშავება...",
     "submitWithdrawal": "თანხის გატანის მოთხოვნის გაგზავნა",
     "withdrawalRequestSubmitted": "თანხის გატანის მოთხოვნა წარმატებით გაიგზავნა! თქვენ მოგეცემათ შეტყობინება დამუშავების შემდეგ.",
+    "withdrawalApproved": "₾{{amount}}-ის გატანა დამტკიცდა!",
+    "withdrawalRejected": "₾{{amount}}-ის გატანა უარყოფილ იქნა.",
     "transactionHistory": "ტრანზაქციების ისტორია",
     "referralCommission": "რეფერალური საკომისიო",
     "coursePurchase": "კურსის შეძენა",
@@ -349,7 +351,10 @@
     "payAndPublish": "გადახდა და გამოქვეყნება ₾{{amount}}",
     "pendingPayment": "გადახდა მოლოდინშია",
     "retryPayment": "გადახდის გამეორება",
-    "processingPayment": "გადახდა მიმდინარეობს..."
+    "processingPayment": "გადახდა მიმდინარეობს...",
+    "deleteProject": "პროექტის წაშლა",
+    "deleteProjectConfirm": "დარწმუნებული ხართ, რომ გსურთ ამ პროექტის წაშლა? ეს მოქმედება შეუქცევადია.",
+    "studentComment": "სტუდენტის კომენტარი"
   },
   "videoSubmission": {
     "submitYourVideo": "წარადგინეთ თქვენი ვიდეო",
@@ -838,7 +843,6 @@
     "noActiveSession": "აქტიური სესია არ არის. გთხოვთ ხელახლა შეხვიდეთ.",
     "failedToCompleteProfile": "პროფილის შევსება ვერ მოხერხდა. გთხოვთ სცადოთ ხელახლა.",
     "somethingWentWrong": "რაღაც შეცდომა მოხდა. გთხოვთ სცადოთ ხელახლა.",
-    "termsAgreement": "რეგისტრაციით, თქვენ ეთანხმებით ჩვენს",
     "termsAndConditions": "გამოყენების პირობებს",
     "and": "და",
     "privacyPolicy": "კონფიდენციალურობის პოლიტიკას",
@@ -871,7 +875,6 @@
     "viewRange": "ნახვების დიაპაზონი",
     "views": "ნახვა",
     "goToProject": "პროექტზე გადასვლა",
-    "enrollInCourse": "კურსზე რეგისტრაცია",
     "subscribeToProjects": "პროექტების გამოწერა",
     "viewDetails": "დეტალების ნახვა",
     "criteria": "კრიტერიუმები",
@@ -973,9 +976,6 @@
     "notScraped": "ჯერ ბოტი გაუშვით"
   },
   "paymentMethod": {
-    "cardPayment": "ბარათით გადახდა",
-    "instant": "მომენტალური",
-    "visaMastercard": "Visa, Mastercard",
     "pay": "გადაიხადე {{amount}}",
     "redirecting": "გადამისამართება გადახდაზე...",
     "acceptedMethods": "ბარათები, ბანკინგი, QR",

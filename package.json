@@ -1,7 +1,10 @@
 {
-  "name": "course-website",
+  "name": "swavleba",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=18.17"
+  },
   "scripts": {
     "dev": "lsof -ti:3000 | xargs kill -9 2>/dev/null; sleep 1; next dev -H 0.0.0.0",
     "dev:debug": "lsof -ti:3000 | xargs kill -9 2>/dev/null; sleep 1; NODE_OPTIONS='--max-old-space-size=4096' next dev -H 0.0.0.0",
@@ -32,12 +35,12 @@
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.575.0",
     "next": "^14.2.35",
-    "posthog-js": "^1.353.1",
+    "posthog-js": "^1.372.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^3.7.0",
     "resend": "^6.7.0",
-    "sanitize-html": "^2.17.2",
+    "sanitize-html": "^2.17.3",
     "sonner": "^2.0.7",
     "swr": "^2.3.7",
     "tailwind-merge": "^3.5.0",

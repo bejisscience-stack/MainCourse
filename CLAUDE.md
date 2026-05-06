@@ -31,6 +31,7 @@ Georgian-language education platform serving real students. Supabase chosen for 
 - Theme: Charcoal (light) / Navy (dark) / Emerald accents — existing tokens only
 - Components: PascalCase, `'use client'` only when needed, `dynamic()` for heavy imports
 - Hooks: `useXxx` pattern, one per file in `hooks/`
+- Migrations: use `supabase migration new <descriptive_name>` (timestamp prefix). Do not hand-prefix sequential numbers — see `docs/supabase-guide.md`.
 
 ### Workflow Rules
 
