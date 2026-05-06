@@ -1,6 +1,7 @@
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
 import { useAdminRealtimeInvalidation } from "@/hooks/useAdminRealtimeInvalidation";
+import { useRealtimeReconnect } from "@/hooks/useRealtimeReconnect";
 
 export interface LecturerApproval {
   id: string;
@@ -67,7 +68,6 @@ export function useAdminLecturerApprovals(status?: string) {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 1000,
-      refreshInterval: 5000,
       fallbackData: [],
       onError: (error) => {
         console.error("[Lecturer Approvals Hook] SWR error:", error);
@@ -81,6 +81,11 @@ export function useAdminLecturerApprovals(status?: string) {
     onChange: () => {
       void mutate();
     },
+  });
+
+  // Catch up on missed events after a websocket reconnect.
+  useRealtimeReconnect(() => {
+    void mutate();
   });
 
   // Filter client-side based on status
@@ -129,7 +134,7 @@ export function useAdminLecturerApprovals(status?: string) {
       throw new Error(responseData.error || "Failed to approve lecturer");
     }
 
-    // Optimistic update — refreshInterval (5s) will confirm from DB
+    // Optimistic update — realtime postgres_changes will confirm from DB
     await mutate((currentData) => {
       if (!currentData) return currentData;
       return currentData.map((l) =>
@@ -181,7 +186,7 @@ export function useAdminLecturerApprovals(status?: string) {
       throw new Error(responseData.error || "Failed to reject lecturer");
     }
 
-    // Optimistic update — refreshInterval (5s) will confirm from DB
+    // Optimistic update — realtime postgres_changes will confirm from DB
     await mutate((currentData) => {
       if (!currentData) return currentData;
       return currentData.map((l) =>

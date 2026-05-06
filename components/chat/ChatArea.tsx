@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Message from "./Message";
 import MessageInput from "./MessageInput";
 import dynamic from "next/dynamic";
@@ -23,7 +23,6 @@ import type {
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { useRealtimeTyping } from "@/hooks/useRealtimeTyping";
 import { useMuteStatus } from "@/hooks/useMuteStatus";
-import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { supabase } from "@/lib/supabase";
 import { edgeFunctionUrl } from "@/lib/api-client";
 import { useI18n } from "@/contexts/I18nContext";
@@ -40,6 +39,7 @@ interface ChatAreaProps {
   enrollmentInfo?: EnrollmentInfo | null;
   onReEnrollRequest?: () => void;
   onMobileMenuClick?: () => void;
+  markAsRead?: (channelId: string) => void | Promise<void>;
 }
 
 export default function ChatArea({
@@ -53,6 +53,7 @@ export default function ChatArea({
   enrollmentInfo = null,
   onReEnrollRequest,
   onMobileMenuClick,
+  markAsRead,
 }: ChatAreaProps) {
   const { t } = useI18n();
   const isEnrollmentExpired = !isEnrolledInCourse;
@@ -79,13 +80,6 @@ export default function ChatArea({
     userId: currentUserId,
     enabled: !!channel,
   });
-
-  // Get unread messages hook for marking channel as read
-  const channelIds = useMemo(
-    () => (channel ? [channel.id] : []),
-    [channel?.id],
-  );
-  const { markAsRead } = useUnreadMessages({ channelIds, enabled: !!channel });
 
   // Clear replyTo when channel changes
   useEffect(() => {
@@ -143,7 +137,7 @@ export default function ChatArea({
 
   // Mark channel as read when opened or when new messages arrive
   useEffect(() => {
-    if (!channel || !currentUserId) return;
+    if (!channel || !currentUserId || !markAsRead) return;
 
     // Mark as read after a short delay to ensure the channel is viewed
     const timeoutId = setTimeout(() => {

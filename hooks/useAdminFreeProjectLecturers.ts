@@ -1,6 +1,7 @@
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
 import { useAdminRealtimeInvalidation } from "@/hooks/useAdminRealtimeInvalidation";
+import { useRealtimeReconnect } from "@/hooks/useRealtimeReconnect";
 
 export interface FreeProjectLecturer {
   id: string;
@@ -62,7 +63,6 @@ export function useAdminFreeProjectLecturers() {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 5000,
-      refreshInterval: 15000,
       fallbackData: [],
     },
   );
@@ -73,6 +73,11 @@ export function useAdminFreeProjectLecturers() {
     onChange: () => {
       void mutate();
     },
+  });
+
+  // Catch up on missed events after a websocket reconnect.
+  useRealtimeReconnect(() => {
+    void mutate();
   });
 
   const setExempt = async (lecturerId: string, allowed: boolean) => {
@@ -110,7 +115,7 @@ export function useAdminFreeProjectLecturers() {
       );
     }
 
-    // Optimistic update — refreshInterval (15s) confirms from DB.
+    // Optimistic update — realtime postgres_changes will confirm from DB.
     await mutate((currentData) => {
       if (!currentData) return currentData;
       return currentData.map((l) =>

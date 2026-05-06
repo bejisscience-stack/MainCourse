@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
 import { useAdminRealtimeInvalidation } from "@/hooks/useAdminRealtimeInvalidation";
+import { useRealtimeReconnect } from "@/hooks/useRealtimeReconnect";
 import type {
   AnalyticsOverview,
   RevenueData,
@@ -159,7 +160,6 @@ export function useAdminAnalytics(): AdminAnalyticsResult {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 5000,
-      refreshInterval: 30000,
       onSuccess: () => {
         setLastUpdated(new Date());
       },
@@ -171,6 +171,11 @@ export function useAdminAnalytics(): AdminAnalyticsResult {
     onChange: () => {
       void mutate();
     },
+  });
+
+  // Catch up on missed events after a websocket reconnect.
+  useRealtimeReconnect(() => {
+    void mutate();
   });
 
   const handleSetDateRange = useCallback((key: DateRangeKey) => {

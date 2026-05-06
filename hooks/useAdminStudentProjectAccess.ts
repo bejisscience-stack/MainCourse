@@ -2,6 +2,7 @@ import useSWR from "swr";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAdminRealtimeInvalidation } from "@/hooks/useAdminRealtimeInvalidation";
+import { useRealtimeReconnect } from "@/hooks/useRealtimeReconnect";
 
 export interface StudentProjectAccess {
   id: string;
@@ -89,7 +90,6 @@ export function useAdminStudentProjectAccess() {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 5000,
-      refreshInterval: 15000,
       keepPreviousData: true,
       fallbackData: EMPTY_RESULT,
     },
@@ -101,6 +101,11 @@ export function useAdminStudentProjectAccess() {
     onChange: () => {
       void mutate();
     },
+  });
+
+  // Catch up on missed events after a websocket reconnect.
+  useRealtimeReconnect(() => {
+    void mutate();
   });
 
   async function postPatch(

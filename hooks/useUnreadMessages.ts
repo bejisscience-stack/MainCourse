@@ -1,20 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { edgeFunctionUrl } from "@/lib/api-client";
+import { useRealtimeReconnect } from "./useRealtimeReconnect";
 
 interface UseUnreadMessagesOptions {
   channelIds: string[];
   enabled?: boolean;
 }
-
-interface UnreadState {
-  counts: Map<string, number>;
-  lastUpdate: number;
-}
-
-// Global cache for unread counts to prevent redundant fetches
-const unreadCache = new Map<string, { count: number; timestamp: number }>();
-const CACHE_TTL = 30000; // 30 seconds
 
 export function useUnreadMessages({
   channelIds,
@@ -26,6 +18,7 @@ export function useUnreadMessages({
   const [isLoading, setIsLoading] = useState(false);
   const subscriptionRef = useRef<any>(null);
   const fetchControllerRef = useRef<AbortController | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
 
   // Memoize channel IDs to prevent unnecessary re-subscriptions
   const stableChannelIds = useMemo(() => {
@@ -33,97 +26,69 @@ export function useUnreadMessages({
     return sorted;
   }, [channelIds.join(",")]);
 
-  // Fetch unread counts with caching
-  const fetchUnreadCounts = useCallback(
-    async (forceRefresh = false) => {
-      if (!enabled || stableChannelIds.length === 0) {
-        setUnreadCounts(new Map());
+  // Single batched fetch for all channels (replaces the previous
+  // N-parallel-GETs fan-out). Realtime keeps state fresh after the
+  // initial load, and useRealtimeReconnect issues a catch-up on drops.
+  const fetchUnreadCounts = useCallback(async () => {
+    if (!enabled || stableChannelIds.length === 0) {
+      setUnreadCounts(new Map());
+      return;
+    }
+
+    if (fetchControllerRef.current) {
+      fetchControllerRef.current.abort();
+    }
+    fetchControllerRef.current = new AbortController();
+
+    setIsLoading(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        setIsLoading(false);
         return;
       }
 
-      // Cancel any pending fetch
-      if (fetchControllerRef.current) {
-        fetchControllerRef.current.abort();
-      }
-      fetchControllerRef.current = new AbortController();
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const url = new URL(edgeFunctionUrl("chat-unread"));
+      url.searchParams.set("chatIds", stableChannelIds.join(","));
 
-      const now = Date.now();
-      const counts = new Map<string, number>();
-      const channelsToFetch: string[] = [];
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          ...(anonKey && { apikey: anonKey }),
+        },
+        signal: fetchControllerRef.current.signal,
+      });
 
-      // Check cache first
-      for (const channelId of stableChannelIds) {
-        const cached = unreadCache.get(channelId);
-        if (cached && !forceRefresh && now - cached.timestamp < CACHE_TTL) {
-          counts.set(channelId, cached.count);
-        } else {
-          channelsToFetch.push(channelId);
-        }
-      }
-
-      // If all cached, just update state
-      if (channelsToFetch.length === 0) {
-        setUnreadCounts(counts);
-        return;
-      }
-
-      setIsLoading(true);
-
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session) {
-          setIsLoading(false);
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token expired; let the global auth handler refresh and retry on reconnect.
           return;
         }
-
-        // Batch fetch unread counts
-        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        const promises = channelsToFetch.map(async (channelId) => {
-          try {
-            const url = new URL(edgeFunctionUrl("chat-unread"));
-            url.searchParams.set("chatId", channelId);
-
-            const response = await fetch(url.toString(), {
-              headers: {
-                Authorization: `Bearer ${session.access_token}`,
-                ...(anonKey && { apikey: anonKey }),
-              },
-              signal: fetchControllerRef.current?.signal,
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              const count = data.unreadCount || 0;
-
-              // Update cache
-              unreadCache.set(channelId, { count, timestamp: Date.now() });
-              counts.set(channelId, count);
-            } else {
-              counts.set(channelId, 0);
-            }
-          } catch (error: any) {
-            if (error.name === "AbortError") return;
-            console.warn(`Failed to fetch unread for ${channelId}:`, error);
-            counts.set(channelId, 0);
-          }
-        });
-
-        await Promise.all(promises);
-        setUnreadCounts(new Map(counts));
-      } catch (error: any) {
-        if (error.name !== "AbortError") {
-          console.error("Error fetching unread counts:", error);
-        }
-      } finally {
-        setIsLoading(false);
+        console.warn(`Failed to fetch unread counts: ${response.status}`);
+        return;
       }
-    },
-    [stableChannelIds, enabled],
-  );
 
-  // Initial fetch and setup subscription
+      const data = await response.json();
+      const counts = new Map<string, number>();
+      for (const id of stableChannelIds) {
+        counts.set(id, data?.counts?.[id] || 0);
+      }
+      setUnreadCounts(counts);
+    } catch (error: any) {
+      if (error.name !== "AbortError") {
+        console.error("Error fetching unread counts:", error);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [stableChannelIds, enabled]);
+
+  // Initial fetch + realtime subscription. Realtime is the source of truth
+  // after this; no polling.
   useEffect(() => {
     if (!enabled || stableChannelIds.length === 0) {
       if (subscriptionRef.current) {
@@ -134,15 +99,16 @@ export function useUnreadMessages({
       return;
     }
 
-    // Fetch initial counts
+    // Capture current user once for INSERT filtering
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      currentUserIdRef.current = user?.id || null;
+    });
+
     fetchUnreadCounts();
 
-    // Subscribe to new messages for real-time unread updates
     const channel = supabase
       .channel("unread-updates", {
-        config: {
-          broadcast: { self: false },
-        },
+        config: { broadcast: { self: false } },
       })
       .on(
         "postgres_changes",
@@ -157,23 +123,24 @@ export function useUnreadMessages({
             user_id?: string;
           };
           if (
-            newMessage?.channel_id &&
-            stableChannelIds.includes(newMessage.channel_id)
+            !newMessage?.channel_id ||
+            !stableChannelIds.includes(newMessage.channel_id)
           ) {
-            // Increment unread count for this channel (if not the current user's message)
-            supabase.auth.getUser().then(({ data: { user } }) => {
-              if (user && newMessage.user_id !== user.id) {
-                // Invalidate cache and refetch
-                unreadCache.delete(newMessage.channel_id!);
-                setUnreadCounts((prev) => {
-                  const newCounts = new Map(prev);
-                  const current = newCounts.get(newMessage.channel_id!) || 0;
-                  newCounts.set(newMessage.channel_id!, current + 1);
-                  return newCounts;
-                });
-              }
-            });
+            return;
           }
+          // Don't increment for messages this user sent
+          if (
+            currentUserIdRef.current &&
+            newMessage.user_id === currentUserIdRef.current
+          ) {
+            return;
+          }
+          setUnreadCounts((prev) => {
+            const next = new Map(prev);
+            const current = next.get(newMessage.channel_id!) || 0;
+            next.set(newMessage.channel_id!, current + 1);
+            return next;
+          });
         },
       )
       .on(
@@ -184,26 +151,24 @@ export function useUnreadMessages({
           table: "unread_messages",
         },
         (payload) => {
-          // Handle direct unread count updates (e.g., when marking as read)
-          const record = payload.new as {
+          // Authoritative count from server (e.g. mark-as-read)
+          const record = (payload.new || payload.old) as {
             channel_id?: string;
             unread_count?: number;
           };
           if (
-            record?.channel_id &&
-            stableChannelIds.includes(record.channel_id)
+            !record?.channel_id ||
+            !stableChannelIds.includes(record.channel_id)
           ) {
-            const count = record.unread_count || 0;
-            unreadCache.set(record.channel_id, {
-              count,
-              timestamp: Date.now(),
-            });
-            setUnreadCounts((prev) => {
-              const newCounts = new Map(prev);
-              newCounts.set(record.channel_id!, count);
-              return newCounts;
-            });
+            return;
           }
+          const count =
+            payload.eventType === "DELETE" ? 0 : record.unread_count || 0;
+          setUnreadCounts((prev) => {
+            const next = new Map(prev);
+            next.set(record.channel_id!, count);
+            return next;
+          });
         },
       )
       .subscribe();
@@ -221,59 +186,54 @@ export function useUnreadMessages({
     };
   }, [stableChannelIds, enabled, fetchUnreadCounts]);
 
-  // Mark channel as read (reset unread count)
-  const markAsRead = useCallback(
-    async (channelId: string) => {
-      // Save previous count for rollback
-      const previousCount = unreadCounts.get(channelId) || 0;
+  // Catch up after a websocket reconnect (covers tab sleep / network blips)
+  useRealtimeReconnect(() => {
+    if (enabled && stableChannelIds.length > 0) {
+      fetchUnreadCounts();
+    }
+  });
 
-      // Optimistically update
-      unreadCache.set(channelId, { count: 0, timestamp: Date.now() });
-      setUnreadCounts((prev) => {
-        const newCounts = new Map(prev);
-        newCounts.set(channelId, 0);
-        return newCounts;
+  // Mark a channel as read with optimistic update + revert on failure
+  const markAsRead = useCallback(async (channelId: string) => {
+    let previousCount = 0;
+    setUnreadCounts((prev) => {
+      previousCount = prev.get(channelId) || 0;
+      if (previousCount === 0) return prev;
+      const next = new Map(prev);
+      next.set(channelId, 0);
+      return next;
+    });
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const response = await fetch(edgeFunctionUrl("chat-unread"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          ...(anonKey && { apikey: anonKey }),
+        },
+        body: JSON.stringify({ chatId: channelId }),
       });
 
-      // Persist to server — revert on failure
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session) return;
-
-        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        const response = await fetch(edgeFunctionUrl("chat-unread"), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-            ...(anonKey && { apikey: anonKey }),
-          },
-          body: JSON.stringify({ chatId: channelId }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Mark as read failed: ${response.status}`);
-        }
-      } catch (error) {
-        console.warn("Failed to mark channel as read, reverting:", error);
-        // Revert optimistic update
-        unreadCache.set(channelId, {
-          count: previousCount,
-          timestamp: Date.now(),
-        });
-        setUnreadCounts((prev) => {
-          const newCounts = new Map(prev);
-          newCounts.set(channelId, previousCount);
-          return newCounts;
-        });
+      if (!response.ok) {
+        throw new Error(`Mark as read failed: ${response.status}`);
       }
-    },
-    [unreadCounts],
-  );
+    } catch (error) {
+      console.warn("Failed to mark channel as read, reverting:", error);
+      setUnreadCounts((prev) => {
+        const next = new Map(prev);
+        next.set(channelId, previousCount);
+        return next;
+      });
+    }
+  }, []);
 
-  // Get unread count for a specific channel
   const getUnreadCount = useCallback(
     (channelId: string): number => {
       return unreadCounts.get(channelId) || 0;
@@ -281,7 +241,6 @@ export function useUnreadMessages({
     [unreadCounts],
   );
 
-  // Check if any channel has unread messages
   const hasUnread = useMemo(() => {
     for (const count of unreadCounts.values()) {
       if (count > 0) return true;
@@ -289,7 +248,6 @@ export function useUnreadMessages({
     return false;
   }, [unreadCounts]);
 
-  // Get total unread count
   const totalUnread = useMemo(() => {
     let total = 0;
     for (const count of unreadCounts.values()) {
@@ -305,6 +263,6 @@ export function useUnreadMessages({
     totalUnread,
     getUnreadCount,
     markAsRead,
-    refetch: () => fetchUnreadCounts(true),
+    refetch: fetchUnreadCounts,
   };
 }

@@ -1,6 +1,10 @@
+import { useCallback } from "react";
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
 import type { Notification, NotificationsResponse } from "@/types/notification";
+import { useUser } from "./useUser";
+import { useRealtimeNotifications } from "./useRealtimeNotifications";
+import { useRealtimeReconnect } from "./useRealtimeReconnect";
 
 interface UseNotificationsOptions {
   page?: number;
@@ -98,6 +102,7 @@ async function markAllAsRead(): Promise<number> {
 export function useNotifications(options: UseNotificationsOptions = {}) {
   const { page = 1, limit = 20, unreadOnly = false } = options;
   const cacheKey = `notifications-${page}-${limit}-${unreadOnly}`;
+  const { user } = useUser();
 
   const { data, error, isLoading, mutate } = useSWR<NotificationsResponse>(
     cacheKey,
@@ -105,7 +110,6 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     {
       revalidateOnFocus: false,
       dedupingInterval: 1000,
-      refreshInterval: 30000,
       fallbackData: {
         notifications: [],
         total: 0,
@@ -115,6 +119,22 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       },
     },
   );
+
+  // Live updates: any change to this user's notifications refetches the list.
+  const handleChange = useCallback(() => {
+    mutate();
+  }, [mutate]);
+
+  useRealtimeNotifications({
+    userId: user?.id || null,
+    onNewNotification: handleChange,
+    onNotificationRead: handleChange,
+  });
+
+  // Catch up after a websocket reconnect.
+  useRealtimeReconnect(() => {
+    mutate();
+  });
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {

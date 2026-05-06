@@ -1,6 +1,8 @@
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
 import type { KycSubmission } from "@/types/kyc";
+import { useRealtimeKycQueue as useRealtimeKycSubscription } from "./useRealtimeKycQueue";
+import { useRealtimeReconnect } from "./useRealtimeReconnect";
 
 async function fetchAdminKycSubmissions(): Promise<KycSubmission[]> {
   const {
@@ -50,13 +52,24 @@ export function useAdminKycQueue(status?: string) {
     {
       revalidateOnFocus: false,
       dedupingInterval: 1000,
-      refreshInterval: 10000,
       fallbackData: [],
       onError: (err) => {
         console.warn("[KYC Hook] Error:", err.message);
       },
     },
   );
+
+  // Live updates via supabase_realtime (kyc_submissions added in migration 225).
+  useRealtimeKycSubscription({
+    onChange: () => {
+      void mutate();
+    },
+  });
+
+  // Catch up on missed events after a websocket reconnect.
+  useRealtimeReconnect(() => {
+    void mutate();
+  });
 
   const filtered =
     status && status !== "all"

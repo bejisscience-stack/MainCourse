@@ -8,6 +8,7 @@ import {
   getCachedUsername,
   getCachedAvatarUrl,
 } from "./useRealtimeMessages";
+import { useRealtimeReconnect } from "./useRealtimeReconnect";
 
 interface UseChatMessagesOptions {
   channelId: string | null;
@@ -340,33 +341,13 @@ export function useChatMessages({
     }
   }, [channelId, fetchMessages]);
 
-  // Visibility change: catch up on missed messages when tab becomes visible
-  useEffect(() => {
-    if (!enabled || !channelId) return;
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        syncLatestMessages();
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () =>
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [enabled, channelId, syncLatestMessages]);
-
-  // Periodic sync every 30s as a safety net (only when tab is visible)
-  useEffect(() => {
-    if (!enabled || !channelId) return;
-
-    const interval = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        syncLatestMessages();
-      }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [enabled, channelId, syncLatestMessages]);
+  // Catch up on missed messages when the websocket reconnects after a drop
+  // (covers tab sleep/wake on mobile, network blips, server restarts).
+  useRealtimeReconnect(() => {
+    if (enabled && channelId) {
+      syncLatestMessages();
+    }
+  });
 
   // Add optimistic message
   const addPendingMessage = useCallback(

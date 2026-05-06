@@ -12,6 +12,7 @@ import { useEnrollments } from "@/hooks/useEnrollments";
 import { useActiveChannel } from "@/hooks/useActiveChannel";
 import { useActiveServer } from "@/hooks/useActiveServer";
 import { useProjectAccess } from "@/hooks/useProjectAccess";
+import { useRealtimeChannels } from "@/hooks/useRealtimeChannels";
 import type { Server, Channel } from "@/types/server";
 import type { Message as MessageType } from "@/types/message";
 
@@ -341,6 +342,20 @@ export default function CourseChatPage() {
     projectAccessLoading,
     loadCourseAndChannels,
   ]);
+
+  // Live updates for channel/course changes — refetch via websocket events
+  // instead of polling. Skip while still loading auth/access checks.
+  const canSubscribeToStructure =
+    !!courseId &&
+    !!user &&
+    !userLoading &&
+    !enrollmentsLoading &&
+    !projectAccessLoading;
+  useRealtimeChannels(canSubscribeToStructure ? courseId : null, () => {
+    if (canSubscribeToStructure) {
+      loadCourseAndChannels();
+    }
+  });
 
   // Reset flags when courseId changes
   useEffect(() => {

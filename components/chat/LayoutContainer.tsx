@@ -488,6 +488,7 @@ export default function LayoutContainer({
             enrollmentInfo={enrollmentInfo}
             onReEnrollRequest={onReEnrollRequest}
             onMobileMenuClick={() => setMobileMenuOpen(true)}
+            markAsRead={markAsRead}
           />
         )}
       </ChatErrorBoundary>

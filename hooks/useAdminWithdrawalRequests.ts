@@ -1,6 +1,7 @@
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
 import type { WithdrawalRequest } from "@/types/balance";
+import { useRealtimeReconnect } from "./useRealtimeReconnect";
 
 async function fetchAdminWithdrawalRequests(
   status?: string,
@@ -57,7 +58,6 @@ export function useAdminWithdrawalRequests(status?: string) {
     {
       revalidateOnFocus: false,
       dedupingInterval: 1000,
-      refreshInterval: 10000,
       fallbackData: [], // Default to empty array
       onError: (err) => {
         // Silently handle errors when withdrawal system isn't configured
@@ -65,6 +65,12 @@ export function useAdminWithdrawalRequests(status?: string) {
       },
     },
   );
+
+  // Catch up after a websocket reconnect (drops events during disconnect).
+  // useRealtimeAdminWithdrawalRequests already mutates this cache on each event.
+  useRealtimeReconnect(() => {
+    mutate();
+  });
 
   // Filter client-side based on status
   const filteredRequests =
