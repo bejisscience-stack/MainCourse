@@ -21,6 +21,9 @@ interface AttachmentInput {
   file_size?: number;
   mimeType?: string;
   mime_type?: string;
+  filePath?: string;
+  path?: string;
+  file_path?: string;
 }
 
 function sanitize(content: string): string {
@@ -120,6 +123,7 @@ Deno.serve(async (req: Request) => {
           message_id: message.id,
           conversation_id: conversationId,
           file_url: a.fileUrl || a.url || a.file_url || "",
+          file_path: a.filePath || a.path || a.file_path || null,
           file_name: a.fileName || a.name || a.file_name || "attachment",
           file_type: a.fileType || a.type || a.file_type || "image",
           file_size: a.fileSize || a.size || a.file_size || 0,
@@ -135,11 +139,14 @@ Deno.serve(async (req: Request) => {
         } else {
           const { data: attData } = await supabase
             .from("dm_message_attachments")
-            .select("id, file_url, file_name, file_type, file_size, mime_type")
+            .select(
+              "id, file_url, file_path, file_name, file_type, file_size, mime_type",
+            )
             .eq("message_id", message.id);
           savedAttachments = (attData || []).map((a) => ({
             id: a.id,
             fileUrl: a.file_url,
+            filePath: a.file_path || undefined,
             fileName: a.file_name,
             fileType: a.file_type,
             fileSize: a.file_size,
@@ -259,7 +266,7 @@ Deno.serve(async (req: Request) => {
         supabase
           .from("dm_message_attachments")
           .select(
-            "id, message_id, file_url, file_name, file_type, file_size, mime_type",
+            "id, message_id, file_url, file_path, file_name, file_type, file_size, mime_type",
           )
           .in("message_id", messageIds),
       ]);
@@ -303,6 +310,7 @@ Deno.serve(async (req: Request) => {
       attachmentMap.get(a.message_id)!.push({
         id: a.id,
         fileUrl: a.file_url,
+        filePath: a.file_path || undefined,
         fileName: a.file_name,
         fileType: a.file_type,
         fileSize: a.file_size,

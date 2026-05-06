@@ -1,12 +1,15 @@
-import { User } from './member';
+import { User } from "./member";
 
 export interface MessageAttachment {
   id: string;
   fileUrl: string;
   fileName: string;
-  fileType: 'image' | 'video' | 'gif';
+  fileType: "image" | "video" | "gif";
   fileSize: number;
   mimeType: string;
+  // When set, the attachment lives in a private bucket and the renderer must
+  // resolve a signed URL via the appropriate API rather than using fileUrl.
+  filePath?: string;
 }
 
 export interface ReplyPreview {

@@ -43,12 +43,15 @@ async function fetchAttachments(messageId: string) {
   try {
     const { data: attachments } = await supabase
       .from("dm_message_attachments")
-      .select("id, file_url, file_name, file_type, file_size, mime_type")
+      .select(
+        "id, file_url, file_path, file_name, file_type, file_size, mime_type",
+      )
       .eq("message_id", messageId);
     if (attachments && attachments.length > 0) {
       return attachments.map((a) => ({
         id: a.id,
         fileUrl: a.file_url,
+        filePath: a.file_path || undefined,
         fileName: a.file_name,
         fileType: a.file_type as "image" | "video" | "gif",
         fileSize: a.file_size,

@@ -8,6 +8,7 @@ import { edgeFunctionUrl } from "@/lib/api-client";
 import { useI18n } from "@/contexts/I18nContext";
 import { useUserMuteStatus } from "@/hooks/useMuteStatus";
 import { useProjectCountdown } from "@/hooks/useProjectCountdown";
+import { useSignedDmMediaUrl } from "@/hooks/useSignedDmMediaUrl";
 import ProjectCard from "./ProjectCard";
 import type {
   Message as MessageType,
@@ -159,16 +160,26 @@ const MediaAttachment = memo(function MediaAttachment({
   const [hasError, setHasError] = useState(false);
   const [isImageExpanded, setIsImageExpanded] = useState(false);
 
+  // For private dm-media attachments (filePath set) we resolve a fresh signed
+  // URL via the API. Public-bucket attachments (chat-media) keep using
+  // attachment.fileUrl directly.
+  const { signedUrl, error: signedError } = useSignedDmMediaUrl(
+    attachment.filePath,
+  );
+  const resolvedUrl = attachment.filePath ? signedUrl : attachment.fileUrl;
+  const isResolving = !!attachment.filePath && !signedUrl && !signedError;
+  const isUnreachable = !!attachment.filePath && !!signedError;
+
   if (attachment.fileType === "image" || attachment.fileType === "gif") {
     return (
       <>
         <div className="relative rounded-xl overflow-hidden border border-navy-800/60 bg-navy-900/60 max-w-3xl shadow-soft">
-          {isLoading && (
+          {(isLoading || isResolving) && !hasError && !isUnreachable && (
             <div className="absolute inset-0 flex items-center justify-center bg-navy-900/70">
               <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
           )}
-          {hasError ? (
+          {hasError || isUnreachable ? (
             <div className="p-4 text-gray-300 text-sm flex items-center gap-2">
               <svg
                 className="w-5 h-5"
@@ -185,9 +196,9 @@ const MediaAttachment = memo(function MediaAttachment({
               </svg>
               Failed to load image
             </div>
-          ) : (
+          ) : resolvedUrl ? (
             <img
-              src={attachment.fileUrl}
+              src={resolvedUrl}
               alt={attachment.fileName}
               className={`max-h-96 object-contain cursor-pointer hover:opacity-90 transition-opacity ${isLoading ? "opacity-0" : "opacity-100"}`}
               loading="lazy"
@@ -198,29 +209,44 @@ const MediaAttachment = memo(function MediaAttachment({
                 setHasError(true);
               }}
             />
-          )}
+          ) : null}
         </div>
-        <ImageModal
-          imageUrl={attachment.fileUrl}
-          imageAlt={attachment.fileName}
-          isOpen={isImageExpanded}
-          onClose={() => setIsImageExpanded(false)}
-        />
+        {resolvedUrl && (
+          <ImageModal
+            imageUrl={resolvedUrl}
+            imageAlt={attachment.fileName}
+            isOpen={isImageExpanded}
+            onClose={() => setIsImageExpanded(false)}
+          />
+        )}
       </>
     );
   }
 
   if (attachment.fileType === "video") {
+    if (isUnreachable) {
+      return (
+        <div className="rounded-xl border border-navy-800/60 bg-navy-900/60 max-w-3xl p-4 text-gray-300 text-sm">
+          Failed to load video
+        </div>
+      );
+    }
     return (
       <div className="rounded-xl overflow-hidden border border-navy-800/60 bg-navy-900/60 max-w-3xl shadow-soft">
-        <video
-          src={attachment.fileUrl}
-          controls
-          className="max-h-96 w-full"
-          preload="metadata"
-        >
-          Your browser does not support the video tag.
-        </video>
+        {resolvedUrl ? (
+          <video
+            src={resolvedUrl}
+            controls
+            className="max-h-96 w-full"
+            preload="metadata"
+          >
+            Your browser does not support the video tag.
+          </video>
+        ) : (
+          <div className="h-32 flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1019,9 +1045,7 @@ const Message = memo(function Message({
                     : "text-gray-400 hover:text-amber-300 hover:bg-navy-800/70"
                 }`}
                 title={
-                  message.pinned
-                    ? t("chat.unpinMessage")
-                    : t("chat.pinMessage")
+                  message.pinned ? t("chat.unpinMessage") : t("chat.pinMessage")
                 }
               >
                 {message.pinned ? (

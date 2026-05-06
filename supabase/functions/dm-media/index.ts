@@ -136,17 +136,25 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Failed to upload file" }, 500, cors);
     }
 
-    const { data: urlData } = supabase.storage
+    const path = uploadData?.path || filePath;
+    const { data: signedData, error: signedErr } = await supabase.storage
       .from("dm-media")
-      .getPublicUrl(uploadData?.path || filePath);
-    const fileUrl = urlData.publicUrl;
-    if (!fileUrl)
+      .createSignedUrl(path, 60 * 15); // 15 min — same TTL as course videos.
+
+    if (signedErr || !signedData?.signedUrl) {
+      console.error("[dm-media] sign error", signedErr?.message);
       return errorResponse("Failed to generate file URL", 500, cors);
+    }
+
+    const fileUrl = signedData.signedUrl;
 
     return jsonResponse(
       {
         url: fileUrl,
         fileUrl,
+        signedUrl: fileUrl,
+        path,
+        filePath: path,
         fileName: originalName,
         fileType,
         fileSize: file.size,

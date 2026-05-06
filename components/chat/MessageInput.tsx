@@ -336,6 +336,7 @@ export default function MessageInput({
         return {
           id: uploadId,
           fileUrl: data.fileUrl,
+          filePath: data.filePath || data.path || undefined,
           fileName: data.fileName,
           fileType: data.fileType,
           fileSize: data.fileSize,
