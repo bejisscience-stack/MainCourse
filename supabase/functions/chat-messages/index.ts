@@ -5,6 +5,7 @@ import {
   errorResponse,
 } from "../_shared/cors.ts";
 import { getAuthenticatedUser, checkIsAdmin } from "../_shared/auth.ts";
+import { createServiceRoleClient } from "../_shared/supabase.ts";
 
 const VALID_REACTIONS = new Set(["👍", "❤️", "😂", "😮", "😢", "🙏"]);
 
@@ -62,7 +63,8 @@ Deno.serve(async (req: Request) => {
 
   const auth = await getAuthenticatedUser(req);
   if ("response" in auth) return auth.response;
-  const { user, supabase } = auth;
+  const { user, supabase, token } = auth;
+  const serviceSupabase = createServiceRoleClient(token);
 
   // Handle PATCH - toggle a message reaction
   if (req.method === "PATCH") {
@@ -92,13 +94,14 @@ Deno.serve(async (req: Request) => {
         return errorResponse("Message does not belong to chat", 400, cors);
       }
 
-      const { data: existingReaction, error: existingError } = await supabase
-        .from("message_reactions")
-        .select("id")
-        .eq("message_id", messageId)
-        .eq("user_id", user.id)
-        .eq("emoji", emoji)
-        .maybeSingle();
+      const { data: existingReaction, error: existingError } =
+        await serviceSupabase
+          .from("message_reactions")
+          .select("id")
+          .eq("message_id", messageId)
+          .eq("user_id", user.id)
+          .eq("emoji", emoji)
+          .maybeSingle();
 
       if (existingError) {
         console.error("[Chat] Failed to fetch existing reaction:", existingError);
@@ -106,7 +109,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (existingReaction) {
-        const { error: deleteError } = await supabase
+        const { error: deleteError } = await serviceSupabase
           .from("message_reactions")
           .delete()
           .eq("id", existingReaction.id);
@@ -116,7 +119,7 @@ Deno.serve(async (req: Request) => {
           return errorResponse("Failed to update reaction", 500, cors);
         }
       } else {
-        const { error: insertError } = await supabase
+        const { error: insertError } = await serviceSupabase
           .from("message_reactions")
           .insert({
             message_id: messageId,
@@ -130,11 +133,12 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      const { data: reactionRows, error: reactionsError } = await supabase
-        .from("message_reactions")
-        .select("message_id, user_id, emoji")
-        .eq("message_id", messageId)
-        .order("created_at", { ascending: true });
+      const { data: reactionRows, error: reactionsError } =
+        await serviceSupabase
+          .from("message_reactions")
+          .select("message_id, user_id, emoji")
+          .eq("message_id", messageId)
+          .order("created_at", { ascending: true });
 
       if (reactionsError) {
         console.error("[Chat] Failed to fetch saved reactions:", reactionsError);
@@ -486,7 +490,7 @@ Deno.serve(async (req: Request) => {
             "id, message_id, file_url, file_name, file_type, file_size, mime_type",
           )
           .in("message_id", messageIds),
-        supabase
+        serviceSupabase
           .from("message_reactions")
           .select("message_id, user_id, emoji")
           .in("message_id", messageIds)
