@@ -42,6 +42,9 @@ function createLimiter(
 const _loginLimiter = createLimiter("login", 5, 60);
 const _paymentLimiter = createLimiter("payment", 3, 60);
 const _referralLimiter = createLimiter("referral", 10, 60);
+// Anon (signup) referral validation: tighter cap to slow enumeration
+// (final_security_guide A-22 / SEC-013).
+const _publicReferralLimiter = createLimiter("public-referral", 5, 60);
 const _passwordResetLimiter = createLimiter("password-reset", 3, 900);
 const _adminLimiter = createLimiter("admin", 30, 60);
 const _subscribeLimiter = createLimiter("subscribe", 3, 60);
@@ -80,6 +83,7 @@ function wrapLimiter(limiter: Ratelimit) {
 export const loginLimiter = wrapLimiter(_loginLimiter);
 export const paymentLimiter = wrapLimiter(_paymentLimiter);
 export const referralLimiter = wrapLimiter(_referralLimiter);
+export const publicReferralLimiter = wrapLimiter(_publicReferralLimiter);
 export const passwordResetLimiter = wrapLimiter(_passwordResetLimiter);
 export const adminLimiter = wrapLimiter(_adminLimiter);
 export const subscribeLimiter = wrapLimiter(_subscribeLimiter);

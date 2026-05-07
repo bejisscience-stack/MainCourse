@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createServerSupabaseClient,
+  createServiceRoleClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
@@ -114,7 +115,10 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const supabase = createServerSupabaseClient(token);
+    // Service-role write: protect_profiles_privileged_columns blocks
+    // direct user-token UPDATEs of bank_account_number. Auth + IBAN format
+    // are validated above and the write is pinned to the caller's row.
+    const supabase = createServiceRoleClient(token);
 
     const { error: updateError } = await supabase
       .from("profiles")

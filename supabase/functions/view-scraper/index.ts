@@ -9,11 +9,16 @@ import { getAuthenticatedUser, checkIsAdmin } from "../_shared/auth.ts";
 import { createServiceRoleClient } from "../_shared/supabase.ts";
 
 // Inline platform detection (can't import from lib/ in Deno edge functions)
+// Exact-or-subdomain match. `tiktok.com.evil.com` does not match `tiktok.com`.
+function hostnameMatches(hostname: string, allowed: string): boolean {
+  return hostname === allowed || hostname.endsWith("." + allowed);
+}
+
 function detectPlatform(url: string): "tiktok" | "instagram" | null {
   try {
     const hostname = new URL(url).hostname.toLowerCase();
-    if (hostname.includes("tiktok.com")) return "tiktok";
-    if (hostname.includes("instagram.com")) return "instagram";
+    if (hostnameMatches(hostname, "tiktok.com")) return "tiktok";
+    if (hostnameMatches(hostname, "instagram.com")) return "instagram";
     return null;
   } catch {
     return null;

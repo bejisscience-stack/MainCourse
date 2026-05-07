@@ -6,7 +6,7 @@ import type { Message, Reaction, ReplyPreview } from "@/types/message";
 // Global profile cache for instant lookups
 const profileCache = new Map<
   string,
-  { username: string; email?: string; avatarUrl?: string; timestamp: number }
+  { username: string; avatarUrl?: string; timestamp: number }
 >();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -68,13 +68,11 @@ export async function prefetchProfiles(userIds: string[]) {
             userId: profile.id,
             profileUsername: profile.username,
             normalizedUsername: username,
-            profileEmail: profile.email,
           });
         }
 
         profileCache.set(profile.id, {
           username,
-          email: profile.email,
           avatarUrl: profile.avatar_url || "",
           timestamp: now,
         });
@@ -150,7 +148,6 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
           userId,
           profileUsername: profile.username,
           normalizedUsername: username,
-          profileEmail: profile.email,
           hasError: !!fetchError,
           error: errorMessage,
         });
@@ -158,13 +155,11 @@ async function fetchAndCacheProfile(userId: string): Promise<string> {
         console.log(`✅ Fetched profile for user ${userId}:`, {
           userId,
           username,
-          profileEmail: profile.email,
         });
       }
 
       profileCache.set(userId, {
         username,
-        email: profile.email,
         avatarUrl: profile.avatar_url || "",
         timestamp: Date.now(),
       });

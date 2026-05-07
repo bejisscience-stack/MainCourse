@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  createServiceRoleClient,
+  createServerSupabaseClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
@@ -39,57 +39,42 @@ export async function POST(request: NextRequest) {
     }
     const { username, role, marketingEmailsConsent } = parsed.data;
 
-    const supabase = createServiceRoleClient(token);
+    // User-scoped client; the SECURITY DEFINER RPC `complete_own_profile`
+    // whitelists the writable columns (username, profile_completed,
+    // terms_accepted*, marketing_emails_consent*, lecturer_status, is_approved).
+    // No service-role surface on this route.
+    const supabase = createServerSupabaseClient(token);
 
-    // Verify profile is actually incomplete (prevent abuse)
-    const { data: currentProfile } = await supabase
-      .from("profiles")
-      .select("profile_completed")
-      .eq("id", user.id)
-      .single();
+    const { data, error: rpcError } = await supabase
+      .rpc("complete_own_profile", {
+        p_username: username,
+        p_role: role,
+        p_marketing_emails_consent: marketingEmailsConsent,
+      })
+      .single<{
+        username: string;
+        role: string;
+        profile_completed: boolean;
+      }>();
 
-    if (currentProfile?.profile_completed !== false) {
-      return NextResponse.json(
-        { error: "Profile is already complete" },
-        { status: 400 },
-      );
-    }
-
-    // Update profile — never write `role` here. handle_new_user always inserts
-    // role='student'; promotion to 'lecturer' happens only through the admin
-    // SECURITY DEFINER RPC approve_lecturer_account. If the applicant chose
-    // 'lecturer', we record their intent via lecturer_status='pending' and
-    // leave is_approved=false so the admin queue picks them up.
-    const nowIso = new Date().toISOString();
-    const updatePayload: Record<string, unknown> = {
-      username,
-      profile_completed: true,
-      terms_accepted: true,
-      terms_accepted_at: nowIso,
-      marketing_emails_consent: marketingEmailsConsent,
-      marketing_emails_consent_at: marketingEmailsConsent ? nowIso : null,
-    };
-    if (role === "lecturer") {
-      updatePayload.lecturer_status = "pending";
-      updatePayload.is_approved = false;
-    }
-
-    const { data: updated, error: updateError } = await supabase
-      .from("profiles")
-      .update(updatePayload)
-      .eq("id", user.id)
-      .select("username, role, profile_completed")
-      .single();
-
-    if (updateError) {
-      console.error("Error completing profile:", updateError);
-      if (
-        updateError.message?.includes("duplicate") ||
-        updateError.message?.includes("unique") ||
-        updateError.code === "23505"
-      ) {
+    if (rpcError) {
+      const msg = rpcError.message || "";
+      if (rpcError.code === "23505" || /duplicate|unique/i.test(msg)) {
         return NextResponse.json({ error: "username_taken" }, { status: 409 });
       }
+      if (
+        rpcError.code === "22023" ||
+        /Profile already complete|Invalid role|Invalid username/i.test(msg)
+      ) {
+        return NextResponse.json(
+          { error: "Invalid request data" },
+          { status: 400 },
+        );
+      }
+      if (rpcError.code === "42501" || /Not authenticated/i.test(msg)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      console.error("Error completing profile:", rpcError);
       return NextResponse.json(
         { error: "Failed to complete profile" },
         { status: 500 },
@@ -98,8 +83,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      username: updated?.username,
-      role: updated?.role,
+      username: data?.username,
+      role: data?.role,
     });
   } catch (error: any) {
     console.error("Error in POST /api/complete-profile:", error);

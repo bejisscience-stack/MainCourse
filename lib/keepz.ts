@@ -429,6 +429,44 @@ export function decryptCallback(
 }
 
 // ---------------------------------------------------------------------------
+// redactKeepzPayload
+//
+// Allowlist projection for anything we persist into keepz_payments.callback_payload
+// or send back to the DB. Keeps only reconciliation-relevant fields and replaces
+// cardInfo.token with a SHA-256 hex digest. Mirrors the SQL helper
+// public._keepz_redact_callback (migration 244) so DB-side and TS-side stay in
+// sync — useful when writing the failed-callback branch which goes straight
+// to UPDATE without a SECURITY DEFINER function.
+// ---------------------------------------------------------------------------
+
+const KEEPZ_PAYLOAD_KEEP_KEYS = [
+  "status",
+  "orderStatus",
+  "integratorOrderId",
+  "paymentMethodType",
+  "amount",
+  "currency",
+  "paid_at",
+] as const;
+
+export function redactKeepzPayload(payload: unknown): Record<string, unknown> {
+  if (!payload || typeof payload !== "object") return {};
+  const p = payload as Record<string, any>;
+  const out: Record<string, unknown> = {};
+  for (const key of KEEPZ_PAYLOAD_KEEP_KEYS) {
+    if (p[key] !== undefined && p[key] !== null) out[key] = p[key];
+  }
+  const rawToken = p.cardInfo?.token;
+  if (typeof rawToken === "string" && rawToken.length > 0) {
+    out.cardTokenSha256 = crypto
+      .createHash("sha256")
+      .update(rawToken)
+      .digest("hex");
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // getSavedCardsFromKeepz — retrieve saved card info from Keepz by order ID
 // ---------------------------------------------------------------------------
 

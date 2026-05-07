@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase-server";
-import { decryptCallback } from "@/lib/keepz";
+import { decryptCallback, redactKeepzPayload } from "@/lib/keepz";
 import { callbackLimiter, getClientIP } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -246,11 +246,15 @@ export async function POST(request: NextRequest) {
       callbackData.orderStatus === "SUCCESS";
 
     if (isSuccess) {
+      // Pass a redacted payload to the RPC: defense in depth alongside the
+      // SQL-side _keepz_redact_callback. Keeps card mask/token/expiration out
+      // of any future audit log of RPC arguments. The RPC itself re-applies
+      // redaction before persisting (migration 244).
       const { data: rpcResult, error: rpcError } = await supabase.rpc(
         "complete_keepz_payment",
         {
           p_keepz_order_id: integratorOrderId,
-          p_callback_payload: callbackData,
+          p_callback_payload: redactKeepzPayload(callbackData),
         },
       );
       if (rpcError || rpcResult?.success === false) {
@@ -331,7 +335,10 @@ export async function POST(request: NextRequest) {
             is_active: true,
           },
           {
-            onConflict: "card_token",
+            // A-16: composite (user_id, card_token) prevents a second user
+            // saving the same physical card from silently overwriting the
+            // first user's row. Backed by idx_saved_cards_user_token (mig 245).
+            onConflict: "user_id,card_token",
           },
         );
 
@@ -345,11 +352,14 @@ export async function POST(request: NextRequest) {
     } else {
       // Never overwrite a successful payment — duplicate/delayed FAILED callbacks
       // must not corrupt completed transactions
+      // A-15: redact before persistence. The failed-callback branch writes
+      // directly without going through complete_keepz_payment, so the SQL-side
+      // _keepz_redact_callback is bypassed — apply the TS-side allowlist here.
       await supabase
         .from("keepz_payments")
         .update({
           status: "failed",
-          callback_payload: callbackData,
+          callback_payload: redactKeepzPayload(callbackData),
           updated_at: new Date().toISOString(),
         })
         .eq("keepz_order_id", integratorOrderId)

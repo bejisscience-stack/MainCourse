@@ -6,6 +6,7 @@ import {
   createServerSupabaseClient,
 } from "@/lib/supabase-server";
 import { isValidUUID } from "@/lib/validation";
+import { notificationLimiter, rateLimitResponse } from "@/lib/rate-limit";
 
 const SIGNED_URL_TTL_SECONDS = 900; // 15 min — matches course videos.
 
@@ -42,6 +43,11 @@ export async function GET(request: NextRequest) {
   if (userError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // A-18: cap signed-URL minting per user (60/60s).
+  const { allowed: rateAllowed, retryAfterMs } =
+    await notificationLimiter.check(user.id);
+  if (!rateAllowed) return rateLimitResponse(retryAfterMs);
 
   // Authorization: caller must participate in the conversation.
   const supabase = createServerSupabaseClient(token);

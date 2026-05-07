@@ -15,6 +15,17 @@ interface HealthStatus {
   };
 }
 
+// A-23: timing-safe header-secret comparison. Mirrors the helper used in
+// view-scraper/index.ts. Returns false on length mismatch or unsupported.
+function timingSafeSecretEqual(a: string, b: string): boolean {
+  try {
+    const encoder = new TextEncoder();
+    return crypto.subtle.timingSafeEqual(encoder.encode(a), encoder.encode(b));
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   const cors = getCorsHeaders(req);
   // Handle CORS preflight
@@ -26,9 +37,11 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  // SEC-11: Gate detailed health info behind a secret header
+  // SEC-11 / A-23: Gate detailed health info behind a secret header,
+  // compared in constant time.
   const healthSecret = Deno.env.get("HEALTH_CHECK_SECRET");
-  if (healthSecret && req.headers.get("x-health-secret") !== healthSecret) {
+  const provided = req.headers.get("x-health-secret") || "";
+  if (healthSecret && !timingSafeSecretEqual(provided, healthSecret)) {
     // Return minimal status without exposing internals
     return new Response(JSON.stringify({ status: "ok" }), {
       status: 200,

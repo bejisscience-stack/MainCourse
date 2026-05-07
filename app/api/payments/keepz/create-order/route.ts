@@ -4,7 +4,12 @@ import {
   createServiceRoleClient,
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
-import { createKeepzOrder, getOrderStatus, KeepzError } from "@/lib/keepz";
+import {
+  createKeepzOrder,
+  getOrderStatus,
+  KeepzError,
+  redactKeepzPayload,
+} from "@/lib/keepz";
 import { randomUUID } from "crypto";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { paymentLimiter, rateLimitResponse } from "@/lib/rate-limit";
@@ -222,7 +227,10 @@ export async function POST(request: NextRequest) {
             const { data: rpcResult, error: rpcError } =
               await adminSupabase.rpc("complete_keepz_payment", {
                 p_keepz_order_id: existing.keepz_order_id,
-                p_callback_payload: keepzStatus,
+                // A-15: send only the redacted projection. The RPC redacts
+                // again on persistence, but trimming here keeps card mask /
+                // token / expiration out of any pgsql_log of RPC params.
+                p_callback_payload: redactKeepzPayload(keepzStatus),
               });
 
             if (!rpcError && rpcResult?.success !== false) {
@@ -245,11 +253,13 @@ export async function POST(request: NextRequest) {
             orderStatus === "REJECTED" ||
             orderStatus === "CANCELLED"
           ) {
+            // A-15: redact before persistence (this branch updates directly
+            // without going through complete_keepz_payment).
             await adminSupabase
               .from("keepz_payments")
               .update({
                 status: "failed",
-                callback_payload: keepzStatus,
+                callback_payload: redactKeepzPayload(keepzStatus),
                 updated_at: new Date().toISOString(),
               })
               .eq("id", existing.id);

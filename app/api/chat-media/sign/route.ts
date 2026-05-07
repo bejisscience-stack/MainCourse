@@ -6,6 +6,7 @@ import {
   createServerSupabaseClient,
 } from "@/lib/supabase-server";
 import { isValidUUID } from "@/lib/validation";
+import { notificationLimiter, rateLimitResponse } from "@/lib/rate-limit";
 
 const SIGNED_URL_TTL_SECONDS = 3600; // 1h — matches the renderer's refresh buffer.
 
@@ -43,6 +44,13 @@ export async function GET(request: NextRequest) {
   if (userError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // A-18: cap signed-URL minting per user (60/60s) — same limiter as
+  // /api/notifications. Well above legitimate render rate (client caches
+  // signed URLs for ~50 min via Cache-Control).
+  const { allowed: rateAllowed, retryAfterMs } =
+    await notificationLimiter.check(user.id);
+  if (!rateAllowed) return rateLimitResponse(retryAfterMs);
 
   // Authorization mirrors the chat-messages GET edge fn: admin OR course
   // lecturer OR enrolled student OR (projects channel + has_project_access).

@@ -41,7 +41,12 @@ function escapeHtml(str: string): string {
 
 // Brand colors
 const BRAND_COLOR = "#1e3a5f";
-const SITE_URL = "https://wavleba.ge";
+// A-26: source the public URL from env so emails always link to the real
+// domain. The fallback is the canonical production URL — the previous
+// hardcoded value `https://wavleba.ge` was a typo (single missing `s`)
+// pointing at a domain we don't own.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://swavleba.ge";
 
 // Shared email wrapper
 const emailWrapper = (content: string) => `
@@ -58,7 +63,7 @@ const emailWrapper = (content: string) => `
     </div>
     <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
       <p>Swavleba - Online Learning Platform</p>
-      <p><a href="${SITE_URL}" style="color: ${BRAND_COLOR};">wavleba.ge</a></p>
+      <p><a href="${SITE_URL}" style="color: ${BRAND_COLOR};">swavleba.ge</a></p>
     </div>
   </div>
 </body>

@@ -538,6 +538,51 @@ export async function POST(request: NextRequest) {
 
     // ===== EMAIL NOTIFICATIONS =====
     if (sendEmail) {
+      // A-13: cap transactional bulk-overrides per admin per 24h.
+      // The marketing-consent bypass (`effectiveRespectConsent === false`,
+      // category=transactional_*) is only abuseable when fanned out to
+      // `target_type='all'`. Count prior overriding sends from this admin
+      // in the last 24h via `email_send_history` (one row per recipient)
+      // and 429 once the daily cap is reached.
+      const TRANSACTIONAL_BULK_DAILY_CAP = 1000;
+      if (
+        !effectiveRespectConsent &&
+        target_type === "all" &&
+        (email_target === "profiles" || email_target === "both")
+      ) {
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { count: recentCount, error: capError } = await serviceSupabase
+          .from("email_send_history")
+          .select("id", { count: "exact", head: true })
+          .eq("sent_by", user.id)
+          .eq("source", "admin_notification")
+          .eq("metadata->>target_type", "all")
+          .eq("metadata->>override_consent", "true")
+          .gte("created_at", since);
+
+        if (capError) {
+          console.error(
+            "[Admin Notifications API] Failed to query transactional bulk cap:",
+            capError,
+          );
+          // Fail-closed: if we can't measure, we don't allow the override.
+          return NextResponse.json(
+            { error: "Unable to verify daily transactional bulk cap" },
+            { status: 503 },
+          );
+        }
+
+        if ((recentCount ?? 0) >= TRANSACTIONAL_BULK_DAILY_CAP) {
+          return NextResponse.json(
+            {
+              error:
+                "Daily transactional bulk-send cap reached. Wait 24h or contact another admin.",
+            },
+            { status: 429 },
+          );
+        }
+      }
+
       const { emails, error: emailResolveError } = await resolveEmails(
         serviceSupabase,
         email_target!,
@@ -585,7 +630,16 @@ export async function POST(request: NextRequest) {
                       : `${title.en} | ${title.ge}`,
                 sent_by: user.id,
                 source: "admin_notification",
-                metadata: { channel, language, target_type, email_target },
+                metadata: {
+                  channel,
+                  language,
+                  target_type,
+                  email_target,
+                  category,
+                  // A-13: persist so the daily transactional-bulk cap can
+                  // count this row. Stringified for jsonb `->>` filtering.
+                  override_consent: !effectiveRespectConsent ? "true" : "false",
+                },
                 resend_message_id: resendMessageId,
               });
             } catch (historyErr) {

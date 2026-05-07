@@ -6,6 +6,7 @@ import {
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { logAdminAction } from "@/lib/audit-log";
 import { adminPaymentsActionSchema } from "@/lib/schemas";
+import { adminLimiter, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,13 @@ export async function GET(request: NextRequest) {
   if (!isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  // A-21: rate-limit admin endpoints (30/60s) — same pattern as
+  // /api/admin/notifications/send.
+  const { allowed: rateAllowed, retryAfterMs } = await adminLimiter.check(
+    user.id,
+  );
+  if (!rateAllowed) return rateLimitResponse(retryAfterMs);
 
   const statusFilter = request.nextUrl.searchParams.get("status");
   const limit = Math.min(
@@ -77,6 +85,12 @@ export async function POST(request: NextRequest) {
   if (!isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  // A-21: rate-limit admin POST as well.
+  const { allowed: rateAllowed, retryAfterMs } = await adminLimiter.check(
+    user.id,
+  );
+  if (!rateAllowed) return rateLimitResponse(retryAfterMs);
 
   const rawBody = await request.json().catch(() => null);
   const parsed = adminPaymentsActionSchema.safeParse(rawBody);

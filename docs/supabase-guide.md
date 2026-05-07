@@ -89,3 +89,23 @@ git stash pop
 - **Staging**: See CLAUDE.md for project ref. Same org
 - **CLI auth**: Use `supabase login --token <token>` (browser flow picks wrong account)
 - **CLI deploy**: Use `--project-ref` flag regardless of org shown
+
+## Known prefix collisions (forward-only handling)
+
+Eleven historical `NNN_` prefixes have two files each. Renaming is forbidden (Supabase records the filename as the migration `version` — renaming would re-run or skip migrations on environments that already recorded the old name). On a fresh `supabase db reset` filesystem-sort decides intra-prefix order; per-pair inspection (recorded below) confirms each pair touches disjoint DB objects, so the end state is order-independent in practice. For security-critical pairs, end state is additionally locked by the forward-only re-assertion migration `20260507151755_collided_prefixes_reassert.sql`.
+
+| Prefix | Pair                                                                                    | Disjoint?                              | Notes                                                                   |
+| ------ | --------------------------------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------- |
+| 103    | `allow_project_access_users_view_channels` ↔ `view_scraper_schedule_rpcs`               | yes                                    | channel RLS vs cron RPCs.                                               |
+| 104    | `allow_project_access_users_reply_to_projects` ↔ `grant_project_access_on_registration` | yes                                    | RLS policy vs trigger.                                                  |
+| 105    | `add_admin_rls_policies_project_submissions` ↔ `fix_project_access_data`                | yes                                    | RLS vs data backfill.                                                   |
+| 131    | `fix_gen_random_bytes_schema` ↔ `security_audit_fixes`                                  | yes                                    | extension fix vs assorted policy fixes.                                 |
+| 140    | `drop_search_users_function` ↔ `lecturer_approval_system`                               | yes                                    | function drop vs new tables/columns.                                    |
+| 168    | `fix_bundle_approval_overload_and_guard` ↔ `fix_keepz_payment_transaction_safety`       | yes                                    | distinct RPCs.                                                          |
+| 183    | `set_search_path_and_auth_guards` ↔ `video_enrollment_expiry_check`                     | yes                                    | search-path on assorted fns vs video access RPC.                        |
+| 224    | `add_channels_to_realtime` ↔ `privatize_dm_media`                                       | yes                                    | publication vs storage bucket.                                          |
+| 233    | `decrypt_pii_fail_closed` ↔ `restore_search_path_pg_temp`                               | yes (`decrypt_pii` vs other functions) | end state re-asserted in 20260507151755.                                |
+| 234    | `chat_media_bucket_size_cap` ↔ `extend_search_path_pg_temp`                             | yes                                    | storage bucket vs `decrypt_pii`/`encrypt_pii` search_path; re-asserted. |
+| 237    | `coming_soon_emails_no_anon_insert` ↔ `profiles_drop_broad_read_policies`               | yes                                    | distinct policies on distinct tables; re-asserted.                      |
+
+**Policy:** never rename existing files. New migrations MUST use `supabase migration new <name>` (timestamp prefix). When two same-prefix historical files touch security-critical state, add a forward-only timestamped re-assertion migration (idempotent: `CREATE OR REPLACE` / `DROP IF EXISTS` / `ALTER FUNCTION ... SET search_path`) instead of rewriting history.

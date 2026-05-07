@@ -85,13 +85,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Return validation result
+    // Return validation result with a uniform message regardless of validity
+    // (final_security_guide A-22 / SEC-013) so the response text isn't itself
+    // an enumeration oracle. The boolean `valid` field still drives UX.
     await new Promise((r) =>
       setTimeout(r, 100 + Math.floor(Math.random() * 100)),
     );
     return NextResponse.json({
       valid: !!profile,
-      message: profile ? "Valid referral code" : "Invalid referral code",
+      message: "Referral code checked",
     });
   } catch (error: any) {
     console.error("Error in POST /api/validate-referral-code:", error);

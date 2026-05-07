@@ -34,11 +34,22 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createServerSupabaseClient(token);
+
+    // A-21: strip admin-only metadata (`updated_at`, `updated_by`) for
+    // non-admins. Public fields stay readable so non-admin client UI that
+    // consumes `min_withdrawal_gel` / `subscription_price_gel` /
+    // `featured_course_id` is unaffected.
+    const { data: isAdminFlag } = await supabase.rpc("check_is_admin", {
+      user_id: user.id,
+    });
+    const isAdmin = !!isAdminFlag;
+    const fields = isAdmin
+      ? "min_withdrawal_gel, subscription_price_gel, featured_course_id, updated_at, updated_by"
+      : "min_withdrawal_gel, subscription_price_gel, featured_course_id";
+
     const { data, error } = await supabase
       .from("platform_settings")
-      .select(
-        "min_withdrawal_gel, subscription_price_gel, featured_course_id, updated_at, updated_by",
-      )
+      .select(fields)
       .limit(1)
       .single();
 

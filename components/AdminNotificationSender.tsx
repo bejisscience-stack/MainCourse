@@ -98,36 +98,44 @@ function AdminNotificationSender() {
     fetchCourses();
   }, []);
 
-  // Fetch users for specific user targeting (decrypt email via RPC)
+  // Fetch users for specific user targeting via admin-only endpoint that
+  // decrypts emails server-side via get_decrypted_profiles (service-role).
+  // Email was removed from get_safe_profiles in mig 239 (security A-3) so
+  // the user list now comes from /api/admin/users-with-emails.
   useEffect(() => {
     const fetchUsers = async () => {
       if (targetType !== "specific") return;
 
       setIsLoading(true);
-      // First get all profile IDs
-      const { data: idData, error: idError } = await supabase
-        .from("profiles_safe")
-        .select("id");
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) {
+          setIsLoading(false);
+          return;
+        }
 
-      if (idError || !idData || idData.length === 0) {
-        setIsLoading(false);
-        return;
-      }
+        const res = await fetch("/api/admin/users-with-emails", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          setIsLoading(false);
+          return;
+        }
 
-      // Then call RPC to get decrypted emails
-      const allIds = idData.map((p: any) => p.id);
-      const { data, error } = await supabase.rpc("get_safe_profiles", {
-        user_ids: allIds,
-      });
-
-      if (!error && data) {
-        const sorted = [...data].sort((a: any, b: any) =>
+        const { users: data } = (await res.json()) as { users: User[] };
+        const sorted = [...data].sort((a, b) =>
           (a.email || "").localeCompare(b.email || ""),
         );
         setUsers(sorted);
         setFilteredUsers(sorted);
+      } catch (err) {
+        console.error("[AdminNotificationSender] fetchUsers failed:", err);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     fetchUsers();
@@ -159,25 +167,29 @@ function AdminNotificationSender() {
       if (emailTarget !== "specific") return;
       if (users.length > 0) return; // Already loaded
 
-      // First get all profile IDs
-      const { data: idData, error: idError } = await supabase
-        .from("profiles_safe")
-        .select("id");
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
 
-      if (idError || !idData || idData.length === 0) return;
+        const res = await fetch("/api/admin/users-with-emails", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
 
-      // Then call RPC to get decrypted emails
-      const allIds = idData.map((p: any) => p.id);
-      const { data, error } = await supabase.rpc("get_safe_profiles", {
-        user_ids: allIds,
-      });
-
-      if (!error && data) {
-        const sorted = [...data].sort((a: any, b: any) =>
+        const { users: data } = (await res.json()) as { users: User[] };
+        const sorted = [...data].sort((a, b) =>
           (a.email || "").localeCompare(b.email || ""),
         );
         setUsers(sorted);
         setFilteredUsers(sorted);
+      } catch (err) {
+        console.error(
+          "[AdminNotificationSender] fetchUsersForEmail failed:",
+          err,
+        );
       }
     };
 

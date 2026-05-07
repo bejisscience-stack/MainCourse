@@ -136,16 +136,16 @@ export async function signIn({ email, password }: SignInData) {
     });
 
     if (error) {
-      // Provide more user-friendly error messages
+      // A-14: collapse "Email not confirmed" and "Invalid login credentials"
+      // into a single generic error so the response no longer distinguishes
+      // unconfirmed-but-existing accounts from wrong-password / unknown
+      // accounts. The "resend verification email" flow is a separate
+      // user-initiated surface that intentionally confirms existence.
       if (
         error.message.includes("Email not confirmed") ||
-        error.message.includes("email_not_confirmed")
+        error.message.includes("email_not_confirmed") ||
+        error.message.includes("Invalid login credentials")
       ) {
-        throw new Error(
-          "Please verify your email address before signing in. Check your inbox for the verification email.",
-        );
-      }
-      if (error.message.includes("Invalid login credentials")) {
         throw new Error(
           "Invalid email or password. Please check your credentials and try again.",
         );

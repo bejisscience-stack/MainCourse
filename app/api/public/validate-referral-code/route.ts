@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import {
-  referralLimiter,
+  publicReferralLimiter,
   getClientIP,
   rateLimitResponse,
 } from "@/lib/rate-limit";
@@ -12,8 +12,10 @@ export const dynamic = "force-dynamic";
 // This endpoint is used during signup when the user is not yet authenticated
 export async function POST(request: NextRequest) {
   try {
-    // Rate limit by IP
-    const { allowed, retryAfterMs } = await referralLimiter.check(
+    // Rate limit by IP — tighter than the authenticated route (5/60s vs
+    // 10/60s) since this endpoint is the anon enumeration vector
+    // (final_security_guide A-22 / SEC-013).
+    const { allowed, retryAfterMs } = await publicReferralLimiter.check(
       getClientIP(request),
     );
     if (!allowed) return rateLimitResponse(retryAfterMs);
@@ -62,13 +64,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Return validation result
+    // Return validation result with a uniform message regardless of validity
+    // (final_security_guide A-22 / SEC-013).
     await new Promise((r) =>
       setTimeout(r, 100 + Math.floor(Math.random() * 100)),
     );
     return NextResponse.json({
       valid: !!profile,
-      message: profile ? "Valid referral code" : "Invalid referral code",
+      message: "Referral code checked",
     });
   } catch (error: any) {
     console.error("Error in POST /api/public/validate-referral-code:", error);

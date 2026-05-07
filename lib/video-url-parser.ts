@@ -5,6 +5,11 @@ const PLATFORM_HOSTNAMES: Record<string, string[]> = {
   instagram: ["instagram.com"],
 };
 
+// Exact-or-subdomain match. `tiktok.com.evil.com` does not match `tiktok.com`.
+function hostnameMatches(hostname: string, allowed: string): boolean {
+  return hostname === allowed || hostname.endsWith("." + allowed);
+}
+
 /**
  * Validate that a URL belongs to the expected platform.
  * Returns true for unknown platforms (safe default — don't block).
@@ -16,7 +21,9 @@ export function validatePlatformUrl(platform: string, url: string): boolean {
 
   try {
     const hostname = new URL(url).hostname.toLowerCase();
-    return allowedHostnames.some((allowed) => hostname.includes(allowed));
+    return allowedHostnames.some((allowed) =>
+      hostnameMatches(hostname, allowed),
+    );
   } catch {
     return false;
   }
@@ -28,8 +35,8 @@ export function validatePlatformUrl(platform: string, url: string): boolean {
 export function detectPlatform(url: string): Platform | null {
   try {
     const hostname = new URL(url).hostname.toLowerCase();
-    if (hostname.includes("tiktok.com")) return "tiktok";
-    if (hostname.includes("instagram.com")) return "instagram";
+    if (hostnameMatches(hostname, "tiktok.com")) return "tiktok";
+    if (hostnameMatches(hostname, "instagram.com")) return "instagram";
     return null;
   } catch {
     return null;
