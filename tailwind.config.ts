@@ -2,11 +2,10 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  darkMode: 'class',
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
@@ -61,26 +60,30 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ["var(--font-inter)", "system-ui", "-apple-system", "sans-serif"],
       },
       boxShadow: {
-        'soft': '0 2px 8px rgba(0, 0, 0, 0.04)',
-        'soft-lg': '0 4px 16px rgba(0, 0, 0, 0.06)',
-        'soft-xl': '0 8px 24px rgba(0, 0, 0, 0.08)',
-        'soft-2xl': '0 12px 32px rgba(0, 0, 0, 0.1)',
-        'glow': '0 0 20px rgba(16, 185, 129, 0.2)',
-        'glow-dark': '0 0 30px rgba(34, 211, 238, 0.3)',
+        soft: "0 2px 8px rgba(0, 0, 0, 0.04)",
+        "soft-lg": "0 4px 16px rgba(0, 0, 0, 0.06)",
+        "soft-xl": "0 8px 24px rgba(0, 0, 0, 0.08)",
+        "soft-2xl": "0 12px 32px rgba(0, 0, 0, 0.1)",
+        glow: "0 0 20px rgba(16, 185, 129, 0.2)",
+        "glow-dark": "0 0 30px rgba(34, 211, 238, 0.3)",
       },
       backgroundImage: {
-        'gradient-radial': 'radial-gradient(ellipse at center, var(--tw-gradient-stops))',
-        'gradient-radial-top': 'radial-gradient(ellipse at top, var(--tw-gradient-stops))',
-        'gradient-radial-bottom': 'radial-gradient(ellipse at bottom, var(--tw-gradient-stops))',
-        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+        "gradient-radial":
+          "radial-gradient(ellipse at center, var(--tw-gradient-stops))",
+        "gradient-radial-top":
+          "radial-gradient(ellipse at top, var(--tw-gradient-stops))",
+        "gradient-radial-bottom":
+          "radial-gradient(ellipse at bottom, var(--tw-gradient-stops))",
+        "gradient-conic":
+          "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
       borderRadius: {
-        'xl': '1rem',
-        '2xl': '1.5rem',
-        '3xl': '2rem',
+        xl: "1rem",
+        "2xl": "1.5rem",
+        "3xl": "2rem",
       },
     },
   },

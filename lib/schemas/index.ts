@@ -46,3 +46,37 @@ export const completeProfileSchema = z.object({
   role: z.enum(["student", "lecturer"]),
   marketingEmailsConsent: z.boolean().optional().default(false),
 });
+
+const multilingualTextSchema = z.object({
+  en: z.string().optional(),
+  ge: z.string().optional(),
+});
+
+export const adminNotificationSendSchema = z.object({
+  target_type: z.enum(["all", "role", "course", "specific"]).optional(),
+  target_role: z.enum(["student", "lecturer", "admin"]).optional(),
+  target_course_id: z.string().uuid().optional(),
+  target_user_ids: z.array(z.string()).optional(),
+  title: multilingualTextSchema,
+  message: multilingualTextSchema.optional(),
+  message_html: multilingualTextSchema.optional(),
+  channel: z.enum(["in_app", "email", "both"]).optional(),
+  language: z.enum(["en", "ge", "both"]).optional(),
+  email_target: z
+    .enum(["profiles", "coming_soon", "both", "specific"])
+    .optional(),
+  target_emails: z.array(z.string()).optional(),
+  category: z
+    .enum([
+      "marketing",
+      "transactional_security",
+      "transactional_terms",
+      "transactional_account",
+    ])
+    .optional(),
+});
+
+export const adminPaymentsActionSchema = z.object({
+  paymentId: z.string().uuid(),
+  action: z.literal("complete"),
+});

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface CourseCreationModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export default function CourseCreationModal({
   user,
   profile: profileProp,
 }: CourseCreationModalProps) {
+  const { t } = useI18n();
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -332,7 +334,9 @@ export default function CourseCreationModal({
       >
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-white">Create New Course</h2>
+            <h2 className="text-2xl font-bold text-white">
+              {t("adminCourseCreation.modalTitle")}
+            </h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded p-1 transition-colors"

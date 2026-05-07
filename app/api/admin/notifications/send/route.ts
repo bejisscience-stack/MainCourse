@@ -9,6 +9,7 @@ import { sendAdminNotificationEmail } from "@/lib/email";
 import { logAdminAction } from "@/lib/audit-log";
 import { isValidUUID } from "@/lib/validation";
 import { adminLimiter, rateLimitResponse } from "@/lib/rate-limit";
+import { adminNotificationSendSchema } from "@/lib/schemas";
 import type { AdminNotificationPayload } from "@/types/notification";
 import sanitizeHtml from "sanitize-html";
 
@@ -324,7 +325,15 @@ export async function POST(request: NextRequest) {
     const { allowed, retryAfterMs } = await adminLimiter.check(user.id);
     if (!allowed) return rateLimitResponse(retryAfterMs);
 
-    const body: AdminNotificationPayload = await request.json();
+    const rawBody = await request.json().catch(() => null);
+    const parsed = adminNotificationSendSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request body", issues: parsed.error.flatten() },
+        { status: 400 },
+      );
+    }
+    const body = parsed.data as AdminNotificationPayload;
     const {
       target_type,
       target_role,

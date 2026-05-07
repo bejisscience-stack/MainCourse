@@ -7,6 +7,7 @@ import type {
   MultilingualText,
 } from "@/types/notification";
 import dynamic from "next/dynamic";
+import { useI18n } from "@/contexts/I18nContext";
 
 const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), {
   ssr: false,
@@ -30,6 +31,7 @@ interface ComingSoonEmail {
 }
 
 function AdminNotificationSender() {
+  const { t } = useI18n();
   const [channel, setChannel] = useState<"in_app" | "email" | "both">("in_app");
   const [notifLanguage, setNotifLanguage] = useState<"en" | "ge" | "both">(
     "both",
@@ -486,7 +488,9 @@ function AdminNotificationSender() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-navy-900">Send Notifications</h2>
+        <h2 className="text-2xl font-bold text-navy-900">
+          {t("adminNotificationSender.title")}
+        </h2>
         <p className="text-gray-600 mt-1">
           Create and send targeted notifications to users
         </p>
@@ -1220,13 +1224,17 @@ function AdminNotificationSender() {
 
           {showPreview && (
             <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-              <h4 className="font-semibold text-gray-900">Preview</h4>
+              <h4 className="font-semibold text-gray-900">
+                {t("adminNotificationSender.preview")}
+              </h4>
               <div
                 className={`grid gap-4 ${notifLanguage === "both" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}
               >
                 {(notifLanguage === "en" || notifLanguage === "both") && (
                   <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1">English</p>
+                    <p className="text-xs text-gray-500 mb-1">
+                      {t("adminNotificationSender.languageEn")}
+                    </p>
                     <p className="font-semibold text-gray-900">
                       {titleEn || "(No title)"}
                     </p>
@@ -1237,7 +1245,9 @@ function AdminNotificationSender() {
                 )}
                 {(notifLanguage === "ge" || notifLanguage === "both") && (
                   <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1">Georgian</p>
+                    <p className="text-xs text-gray-500 mb-1">
+                      {t("adminNotificationSender.languageGe")}
+                    </p>
                     <p className="font-semibold text-gray-900">
                       {titleGe || "(სათაური არ არის)"}
                     </p>

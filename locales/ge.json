@@ -1446,5 +1446,17 @@
     "bannerTitle": "შენი მისალმების ფასდაკლება აქტიურია!",
     "bannerSubtitle": "ჩაერთე დაბალ ფასად სანამ ტაიმერი გათავდება.",
     "bannerCta": "კურსების ნახვა"
+  },
+  "adminCourseCreation": {
+    "modalTitle": "ახალი კურსის შექმნა"
+  },
+  "adminEmailManager": {
+    "title": "ელფოსტის მენეჯერი"
+  },
+  "adminNotificationSender": {
+    "title": "შეტყობინებების გაგზავნა",
+    "preview": "გადახედვა",
+    "languageEn": "ინგლისური",
+    "languageGe": "ქართული"
   }
 }

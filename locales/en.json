@@ -1446,5 +1446,17 @@
     "bannerTitle": "Your welcome discount is active!",
     "bannerSubtitle": "Enroll at the lower price before the timer runs out.",
     "bannerCta": "Browse courses"
+  },
+  "adminCourseCreation": {
+    "modalTitle": "Create New Course"
+  },
+  "adminEmailManager": {
+    "title": "Email Manager"
+  },
+  "adminNotificationSender": {
+    "title": "Send Notifications",
+    "preview": "Preview",
+    "languageEn": "English",
+    "languageGe": "Georgian"
   }
 }

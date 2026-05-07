@@ -5,7 +5,7 @@ import {
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
 import { logAdminAction } from "@/lib/audit-log";
-import { isValidUUID } from "@/lib/validation";
+import { adminPaymentsActionSchema } from "@/lib/schemas";
 
 export const dynamic = "force-dynamic";
 
@@ -78,19 +78,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await request.json();
-  const { paymentId, action } = body;
-
-  if (!paymentId || action !== "complete") {
+  const rawBody = await request.json().catch(() => null);
+  const parsed = adminPaymentsActionSchema.safeParse(rawBody);
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: 'Invalid request. Required: paymentId and action "complete"' },
+      {
+        error:
+          'Invalid request. Required: paymentId (uuid) and action "complete"',
+        issues: parsed.error.flatten(),
+      },
       { status: 400 },
     );
   }
-
-  if (!isValidUUID(paymentId)) {
-    return NextResponse.json({ error: "Invalid payment ID" }, { status: 400 });
-  }
+  const { paymentId } = parsed.data;
 
   // Look up the payment
   const { data: payment, error: lookupError } = await supabase

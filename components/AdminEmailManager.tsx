@@ -4,6 +4,7 @@ import { useState, useMemo, memo, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import { useAdminEmails, type AdminEmailEntry } from "@/hooks/useAdminEmails";
+import { useI18n } from "@/contexts/I18nContext";
 
 const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), {
   ssr: false,
@@ -32,6 +33,7 @@ type SortKey =
   | "total_emails_sent";
 
 function AdminEmailManager() {
+  const { t } = useI18n();
   const { emails, isLoading, error, mutate } = useAdminEmails();
 
   // Filters
@@ -425,7 +427,9 @@ function AdminEmailManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-navy-900">Email Manager</h2>
+          <h2 className="text-2xl font-bold text-navy-900">
+            {t("adminEmailManager.title")}
+          </h2>
           <p className="text-gray-600 mt-1">
             {emails.length} total emails &middot; {filteredEmails.length} shown
             &middot; {selectedEmails.size} selected
