@@ -538,12 +538,29 @@ export async function POST(request: NextRequest) {
 
     // ===== EMAIL NOTIFICATIONS =====
     if (sendEmail) {
+      const { emails, error: emailResolveError } = await resolveEmails(
+        serviceSupabase,
+        email_target!,
+        target_type,
+        target_role,
+        target_course_id,
+        target_user_ids,
+        target_emails,
+        effectiveRespectConsent,
+      );
+
+      if (emailResolveError) {
+        return NextResponse.json({ error: emailResolveError }, { status: 400 });
+      }
+
       // A-13: cap transactional bulk-overrides per admin per 24h.
       // The marketing-consent bypass (`effectiveRespectConsent === false`,
       // category=transactional_*) is only abuseable when fanned out to
       // `target_type='all'`. Count prior overriding sends from this admin
       // in the last 24h via `email_send_history` (one row per recipient)
-      // and 429 once the daily cap is reached.
+      // and 429 if THIS call's projected fan-out (recentCount + emails.length)
+      // would exceed the daily cap. Must be evaluated AFTER resolveEmails so
+      // a single all-recipients call cannot bypass the cap on first use.
       const TRANSACTIONAL_BULK_DAILY_CAP = 1000;
       if (
         !effectiveRespectConsent &&
@@ -572,30 +589,19 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        if ((recentCount ?? 0) >= TRANSACTIONAL_BULK_DAILY_CAP) {
+        const priorCount = recentCount ?? 0;
+        if (priorCount + emails.length > TRANSACTIONAL_BULK_DAILY_CAP) {
           return NextResponse.json(
             {
               error:
                 "Daily transactional bulk-send cap reached. Wait 24h or contact another admin.",
+              cap: TRANSACTIONAL_BULK_DAILY_CAP,
+              already_sent_24h: priorCount,
+              this_call_recipients: emails.length,
             },
             { status: 429 },
           );
         }
-      }
-
-      const { emails, error: emailResolveError } = await resolveEmails(
-        serviceSupabase,
-        email_target!,
-        target_type,
-        target_role,
-        target_course_id,
-        target_user_ids,
-        target_emails,
-        effectiveRespectConsent,
-      );
-
-      if (emailResolveError) {
-        return NextResponse.json({ error: emailResolveError }, { status: 400 });
       }
 
       if (emails.length === 0) {
