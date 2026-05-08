@@ -33,6 +33,10 @@ export async function verifyAdminRequest(
   }
   const { user, error: userError } = await verifyTokenAndGetUser(token);
   if (userError || !user) {
+    console.warn("[AdminAuth] token-verify failed", {
+      status: userError?.status,
+      msg: userError?.message,
+    });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -42,10 +46,28 @@ export async function verifyAdminRequest(
     const { data, error } = await supabase.rpc("check_is_admin", {
       user_id: user.id,
     });
-    if (error || data !== true) {
+    if (error) {
+      console.error("[AdminAuth] check_is_admin RPC error", {
+        userId: user.id,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
-  } catch {
+    if (data !== true) {
+      console.warn("[AdminAuth] check_is_admin returned non-true", {
+        userId: user.id,
+        data,
+      });
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+  } catch (e: any) {
+    console.error("[AdminAuth] check_is_admin threw", {
+      userId: user.id,
+      message: e?.message,
+    });
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 

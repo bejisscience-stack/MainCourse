@@ -1,59 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createServerSupabaseClient,
-  verifyTokenAndGetUser,
-} from "@/lib/supabase-server";
-import { getTokenFromHeader } from "@/lib/admin-auth";
-import { adminLimiter, rateLimitResponse } from "@/lib/rate-limit";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { verifyAdminRequest, isAuthError } from "@/lib/admin-auth";
 import { logAdminAction } from "@/lib/audit-log";
 
 export const dynamic = "force-dynamic";
 
-async function checkAdmin(supabase: any, userId: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc("check_is_admin", {
-    user_id: userId,
-  });
-
-  if (error) {
-    console.error("Error checking admin status:", error);
-    return false;
-  }
-
-  return data === true;
-}
-
 // GET: Fetch all lecturer accounts for admin review
 export async function GET(request: NextRequest) {
   try {
-    const token = getTokenFromHeader(request);
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const { user, error: userError } = await verifyTokenAndGetUser(token);
+    const auth = await verifyAdminRequest(request);
+    if (isAuthError(auth)) return auth;
+    const { token, userId } = auth;
 
-    if (userError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    // get_pending_lecturers internally checks auth.uid(), so use a user-scoped client
     const supabase = createServerSupabaseClient(token);
 
-    const isAdmin = await checkAdmin(supabase, user.id);
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: "Forbidden: Admin access required" },
-        { status: 403 },
-      );
-    }
-
-    const { allowed, retryAfterMs } = await adminLimiter.check(user.id);
-    if (!allowed) return rateLimitResponse(retryAfterMs);
-
-    // Get query params for filtering
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status"); // 'pending', 'approved', 'rejected', or null for all
+    const status = searchParams.get("status"); // 'pending' | 'approved' | 'rejected' | null
 
-    // Use RPC function to get all lecturers (SECURITY DEFINER bypasses RLS, VOLATILE prevents caching)
-    // Must use user-scoped client so auth.uid() works inside the RPC's admin check
     const { data: lecturers, error: rpcError } = await supabase.rpc(
       "get_pending_lecturers",
     );
@@ -68,7 +32,7 @@ export async function GET(request: NextRequest) {
     try {
       await logAdminAction(
         request,
-        user.id,
+        userId,
         "view_lecturer_approvals",
         "profiles",
         "list",

@@ -1,29 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createServerSupabaseClient,
-  createServiceRoleClient,
-  verifyTokenAndGetUser,
-} from "@/lib/supabase-server";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { sendLecturerApprovedEmail } from "@/lib/email";
-import { getTokenFromHeader } from "@/lib/admin-auth";
+import { verifyAdminRequest, isAuthError } from "@/lib/admin-auth";
 import { isValidUUID } from "@/lib/validation";
-import { adminLimiter, rateLimitResponse } from "@/lib/rate-limit";
 import { logAdminAction } from "@/lib/audit-log";
 
 export const dynamic = "force-dynamic";
-
-async function checkAdmin(supabase: any, userId: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc("check_is_admin", {
-    user_id: userId,
-  });
-
-  if (error) {
-    console.error("Error checking admin status:", error);
-    return false;
-  }
-
-  return data === true;
-}
 
 // POST: Approve a lecturer account (admin only)
 export async function POST(
@@ -31,25 +13,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const token = getTokenFromHeader(request);
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const { user, error: userError } = await verifyTokenAndGetUser(token);
-
-    if (userError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const supabase = createServerSupabaseClient(token);
-
-    const isAdmin = await checkAdmin(supabase, user.id);
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: "Forbidden: Admin access required" },
-        { status: 403 },
-      );
-    }
+    const auth = await verifyAdminRequest(request);
+    if (isAuthError(auth)) return auth;
+    const { token, userId, serviceSupabase } = auth;
 
     const { id } = await params;
 
@@ -57,13 +23,10 @@ export async function POST(
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
-    // Rate limit
-    const { allowed, retryAfterMs } = await adminLimiter.check(user.id);
-    if (!allowed) return rateLimitResponse(retryAfterMs);
-
     console.log("[Lecturer Approve API] Approving lecturer:", id);
 
-    // Call RPC to approve (uses auth.uid() for admin check)
+    // approve_lecturer_account internally checks auth.uid(), use user-scoped client
+    const supabase = createServerSupabaseClient(token);
     const { error: approveError } = await supabase.rpc(
       "approve_lecturer_account",
       { p_user_id: id },
@@ -76,7 +39,6 @@ export async function POST(
 
     // Fetch the lecturer profile for notification + email.
     // email/full_name are encrypted on profiles — use the decrypt RPC.
-    const serviceSupabase = createServiceRoleClient(token);
     const { data: decrypted, error: profileError } = await serviceSupabase.rpc(
       "get_decrypted_profile",
       { p_user_id: id },
@@ -101,7 +63,7 @@ export async function POST(
           p_message_ge:
             "თქვენი ლექტორის ანგარიში დამტკიცებულია. ახლა შეგიძლიათ დეშბორდზე წვდომა და კურსების შექმნა.",
           p_metadata: { lecturer_id: id },
-          p_created_by: user.id,
+          p_created_by: userId,
         });
       } catch (notifError) {
         console.error("[Lecturer Approve API] Notification error:", notifError);
@@ -125,7 +87,7 @@ export async function POST(
     }
 
     // Audit log
-    await logAdminAction(request, user.id, "lecturer_approved", "profiles", id);
+    await logAdminAction(request, userId, "lecturer_approved", "profiles", id);
 
     return NextResponse.json({
       message: "Lecturer account approved successfully",
