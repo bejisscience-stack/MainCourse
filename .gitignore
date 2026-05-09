@@ -90,3 +90,6 @@ production-schema-export.json
 
 # Claude Code runtime locks
 .claude/scheduled_tasks.lock
+
+# Local production backups (per-table snapshots, pg_dump, manifests)
+/backups/

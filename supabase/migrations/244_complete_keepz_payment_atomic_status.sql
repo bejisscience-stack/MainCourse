@@ -59,8 +59,7 @@ REVOKE ALL ON FUNCTION public._keepz_redact_callback(jsonb) FROM PUBLIC, anon, a
 GRANT EXECUTE ON FUNCTION public._keepz_redact_callback(jsonb) TO service_role;
 
 COMMENT ON FUNCTION public._keepz_redact_callback(jsonb) IS
-  'Allowlist projection for keepz callback persistence. Strips cardInfo and ' ||
-  'replaces cardInfo.token with a SHA-256 hash. Used by complete_keepz_payment.';
+  'Allowlist projection for keepz callback persistence. Strips cardInfo and replaces cardInfo.token with a SHA-256 hash. Used by complete_keepz_payment.';
 
 -- =============================================================================
 -- complete_keepz_payment(uuid, jsonb)
