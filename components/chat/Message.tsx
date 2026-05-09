@@ -548,6 +548,8 @@ const Message = memo(function Message({
   useEffect(() => {
     const checkProject = async () => {
       if (!channelId || !message.id) return;
+      // Optimistic messages have a non-UUID temp id and cannot match projects.message_id
+      if (message.pending || message.failed) return;
 
       setIsLoadingProject(true);
       try {
@@ -557,7 +559,7 @@ const Message = memo(function Message({
             "name, description, video_link, budget, min_views, max_views, platforms, start_date, end_date, status",
           )
           .eq("message_id", message.id)
-          .single();
+          .maybeSingle();
 
         if (!error && data) {
           setProjectData(data);
@@ -570,7 +572,7 @@ const Message = memo(function Message({
     };
 
     checkProject();
-  }, [message.id, channelId, supabase]);
+  }, [message.id, message.pending, message.failed, channelId, supabase]);
 
   const isAuthorLecturer = message.user.role === "lecturer";
   const isPending = message.pending;

@@ -76,6 +76,15 @@ function CourseCard({
     () => (safeOriginalPrice ? formatPriceInGel(safeOriginalPrice) : null),
     [safeOriginalPrice],
   );
+  const discountPercent = useMemo(() => {
+    if (!safeOriginalPrice || safeOriginalPrice <= safePrice) {
+      return null;
+    }
+
+    return Math.round(
+      ((safeOriginalPrice - safePrice) / safeOriginalPrice) * 100,
+    );
+  }, [safeOriginalPrice, safePrice]);
 
   // Welcome-discount display logic.
   // - Course must have an original_price > price for any discount UI to apply.
@@ -438,6 +447,13 @@ function CourseCard({
                 </p>
               )}
             </div>
+            {!isEnrolled && discountPercent && (
+              <p className="text-sm font-semibold text-emerald-500 dark:text-emerald-400">
+                {t("courses.registerAndBuyDiscount", {
+                  discount: discountPercent,
+                })}
+              </p>
+            )}
           </div>
 
           {/* Enroll Button or Custom Action - Always at bottom */}

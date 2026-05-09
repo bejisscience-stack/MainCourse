@@ -78,6 +78,7 @@
     "enrollInBundle": "Enroll in Bundle",
     "enrollNow": "Enroll Now",
     "enrolling": "Enrolling...",
+    "registerAndBuyDiscount": "Sign up and buy with {{discount}}% discount",
     "goToCourse": "Go To Course",
     "alreadyEnrolled": "You are already enrolled in this course",
     "cannotEnrollOwnCourse": "You cannot enroll in your own course.",

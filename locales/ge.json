@@ -78,6 +78,7 @@
     "enrollInBundle": "პაკეტში რეგისტრაცია",
     "enrollNow": "რეგისტრაცია ახლავე",
     "enrolling": "რეგისტრაცია...",
+    "registerAndBuyDiscount": "დარეგისტრირდი და შეიძინე {{discount}} % ფასდაკლებით",
     "goToCourse": "კურსზე გადასვლა",
     "alreadyEnrolled": "თქვენ უკვე დარეგისტრირებული ხართ ამ კურსზე",
     "cannotEnrollOwnCourse": "თქვენ ვერ დარეგისტრირდებით საკუთარ კურსზე.",
