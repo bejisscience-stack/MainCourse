@@ -370,7 +370,7 @@ export default function LecturerChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-navy-950/20 backdrop-blur-[0.5px]">
+    <div className="flex flex-col h-[100dvh] bg-navy-950/20 backdrop-blur-[0.5px]">
       <ChatNavigation />
       <CourseCreationModal
         isOpen={showCourseModal}

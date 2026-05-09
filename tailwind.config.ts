@@ -85,6 +85,9 @@ const config: Config = {
         "2xl": "1.5rem",
         "3xl": "2rem",
       },
+      padding: {
+        safe: "max(0.75rem, env(safe-area-inset-bottom))",
+      },
     },
   },
   plugins: [],

@@ -1206,7 +1206,7 @@ export default function ChatArea({
       {userScrolledUpRef.current && messages.length > 10 && (
         <button
           onClick={handleScrollToBottom}
-          className="absolute bottom-28 sm:bottom-24 right-4 sm:right-6 h-10 w-10 flex items-center justify-center bg-navy-900/85 border border-navy-800/70 text-gray-100 rounded-full shadow-soft hover:shadow-soft-lg hover:bg-navy-800/80 transition-all transform hover:scale-105 z-20 will-change-transform"
+          className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom))] sm:bottom-[calc(6rem+env(safe-area-inset-bottom))] right-4 sm:right-6 h-10 w-10 flex items-center justify-center bg-navy-900/85 border border-navy-800/70 text-gray-100 rounded-full shadow-soft hover:shadow-soft-lg hover:bg-navy-800/80 transition-all transform hover:scale-105 z-20 will-change-transform"
           style={{ transformOrigin: "center", backfaceVisibility: "hidden" }}
           title="Scroll to bottom"
         >
@@ -1276,7 +1276,7 @@ export default function ChatArea({
         if (isProjectsChannel) {
           if (isLecturer) {
             return (
-              <div className="px-4 py-3 border-t border-navy-800/60 bg-navy-950/70">
+              <div className="px-4 pt-3 pb-safe border-t border-navy-800/60 bg-navy-950/70">
                 <button
                   onClick={() => setShowVideoUploadDialog(true)}
                   className="w-12 h-12 flex items-center justify-center bg-emerald-500/90 hover:bg-emerald-500 text-white rounded-full transition-colors shadow-soft hover:shadow-soft-lg hover:scale-105 will-change-transform"
@@ -1305,7 +1305,7 @@ export default function ChatArea({
           } else {
             // For non-lecturers, show a message indicating they can't create projects
             return (
-              <div className="px-4 py-3 border-t border-navy-800/60 bg-navy-950/70">
+              <div className="px-4 pt-3 pb-safe border-t border-navy-800/60 bg-navy-950/70">
                 <div className="text-center text-gray-500 text-sm">
                   {t("chat.onlyLecturerCanCreateProjects")}
                 </div>

@@ -81,6 +81,9 @@ body {
     height: 100dvh;
     overscroll-behavior-y: none;
   }
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 /* Prevent any element from causing horizontal scroll */

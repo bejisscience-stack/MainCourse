@@ -7,6 +7,7 @@ import { edgeFunctionUrl } from "@/lib/api-client";
 import type {
   Message as MessageType,
   MessageAttachment,
+  Reaction,
 } from "@/types/message";
 import type { DirectConversation } from "@/types/direct-message";
 import Message from "./Message";
@@ -51,6 +52,9 @@ export default function DirectChatArea({
     replacePendingMessage,
     loadMore,
     broadcastMessage,
+    broadcastReaction,
+    addReaction,
+    updateMessage,
   } = useDirectMessages({ conversationId, enabled: !!conversationId });
 
   // Mark conversation as read after opening + after new messages arrive while open.
@@ -162,6 +166,65 @@ export default function DirectChatArea({
       broadcastTyping(currentUserId, currentUsername || "User");
   }, [broadcastTyping, currentUserId, currentUsername]);
 
+  const handleReaction = useCallback(
+    async (messageId: string, emoji: string) => {
+      if (!conversationId) return;
+
+      addReaction(messageId, emoji, currentUserId);
+
+      try {
+        let {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          const {
+            data: { session: refreshed },
+          } = await supabase.auth.refreshSession();
+          session = refreshed;
+        }
+        if (!session?.access_token) {
+          throw new Error("Not authenticated. Please log in again.");
+        }
+
+        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        const response = await fetch(edgeFunctionUrl("dm-messages"), {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+            ...(anonKey && { apikey: anonKey }),
+          },
+          body: JSON.stringify({ conversationId, messageId, emoji }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to save reaction");
+        }
+
+        const data = await response.json();
+        const reactions: Reaction[] = Array.isArray(data.reactions)
+          ? data.reactions
+          : [];
+
+        updateMessage(messageId, {
+          reactions: reactions.length > 0 ? reactions : undefined,
+        });
+        broadcastReaction(messageId, reactions);
+      } catch (error) {
+        addReaction(messageId, emoji, currentUserId);
+        console.error("Error saving DM reaction:", error);
+      }
+    },
+    [
+      addReaction,
+      broadcastReaction,
+      conversationId,
+      currentUserId,
+      updateMessage,
+    ],
+  );
+
   const otherTypingUsers = useMemo(
     () => typingUsers.filter((u) => u.id !== currentUserId),
     [typingUsers, currentUserId],
@@ -237,6 +300,7 @@ export default function DirectChatArea({
             message={m as MessageType}
             currentUserId={currentUserId}
             bucket="dm-media"
+            onReaction={handleReaction}
           />
         ))}
       </div>

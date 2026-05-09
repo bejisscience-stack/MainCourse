@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { edgeFunctionUrl } from "@/lib/api-client";
-import type { Message, MessageAttachment } from "@/types/message";
+import type { Message, MessageAttachment, Reaction } from "@/types/message";
 import {
   getCachedAvatarUrl,
   getCachedUsername,
@@ -26,6 +26,10 @@ interface FailedMessage extends Message {
 }
 
 type DmChatMessage = Message | PendingMessage | FailedMessage;
+
+function normalizeReactions(reactions?: Reaction[]) {
+  return reactions && reactions.length > 0 ? reactions : undefined;
+}
 
 function findMatchingPending(
   pendingMap: Map<string, PendingMessage>,
@@ -217,13 +221,32 @@ export function useDirectMessages({
   }, []);
 
   const handleMessageUpdate = useCallback((message: Message) => {
-    setMessages((prev) => prev.map((m) => (m.id === message.id ? message : m)));
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === message.id
+          ? { ...message, reactions: message.reactions ?? m.reactions }
+          : m,
+      ),
+    );
   }, []);
 
   const handleMessageDelete = useCallback((messageId: string) => {
     messageIdsRef.current.delete(messageId);
     setMessages((prev) => prev.filter((m) => m.id !== messageId));
   }, []);
+
+  const handleMessageReaction = useCallback(
+    (messageId: string, reactions: Reaction[]) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? { ...m, reactions: normalizeReactions(reactions) }
+            : m,
+        ),
+      );
+    },
+    [],
+  );
 
   const { isConnected, channelRef, typingUsers, broadcastTyping } =
     useRealtimeDirectMessages({
@@ -232,6 +255,7 @@ export function useDirectMessages({
       onNewMessage: handleNewMessage,
       onMessageUpdate: handleMessageUpdate,
       onMessageDelete: handleMessageDelete,
+      onMessageReaction: handleMessageReaction,
     });
 
   const broadcastMessage = useCallback(
@@ -245,6 +269,78 @@ export function useDirectMessages({
       }
     },
     [channelRef],
+  );
+
+  const broadcastReaction = useCallback(
+    (messageId: string, reactions: Reaction[]) => {
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: "broadcast",
+          event: "message_reaction",
+          payload: { messageId, reactions },
+        });
+      }
+    },
+    [channelRef],
+  );
+
+  const updateMessage = useCallback(
+    (messageId: string, updates: Partial<Message>) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, ...updates } : m)),
+      );
+    },
+    [],
+  );
+
+  const addReaction = useCallback(
+    (messageId: string, emoji: string, userId: string) => {
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id !== messageId) return msg;
+
+          const existingReaction = msg.reactions?.find(
+            (r) => r.emoji === emoji,
+          );
+          const hasReacted = existingReaction?.users.includes(userId);
+
+          if (hasReacted) {
+            const updatedReactions =
+              msg.reactions
+                ?.map((r) => {
+                  if (r.emoji === emoji) {
+                    const newUsers = r.users.filter((id) => id !== userId);
+                    return newUsers.length > 0
+                      ? { ...r, users: newUsers, count: newUsers.length }
+                      : null;
+                  }
+                  return r;
+                })
+                .filter((r): r is NonNullable<typeof r> => r !== null) || [];
+
+            return {
+              ...msg,
+              reactions:
+                updatedReactions.length > 0 ? updatedReactions : undefined,
+            };
+          } else {
+            const updatedReactions = existingReaction
+              ? msg.reactions?.map((r) =>
+                  r.emoji === emoji
+                    ? { ...r, users: [...r.users, userId], count: r.count + 1 }
+                    : r,
+                )
+              : [
+                  ...(msg.reactions || []),
+                  { emoji, count: 1, users: [userId] },
+                ];
+
+            return { ...msg, reactions: updatedReactions };
+          }
+        }),
+      );
+    },
+    [],
   );
 
   const addPendingMessage = useCallback(
@@ -354,5 +450,8 @@ export function useDirectMessages({
     replacePendingMessage,
     loadMore,
     broadcastMessage,
+    broadcastReaction,
+    addReaction,
+    updateMessage,
   };
 }

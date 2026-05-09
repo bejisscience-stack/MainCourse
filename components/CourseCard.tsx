@@ -447,7 +447,7 @@ function CourseCard({
                 </p>
               )}
             </div>
-            {!isEnrolled && discountPercent && (
+            {!isEnrolled && showDiscounted && discountPercent && (
               <p className="text-sm font-semibold text-emerald-500 dark:text-emerald-400">
                 {t("courses.registerAndBuyDiscount", {
                   discount: discountPercent,

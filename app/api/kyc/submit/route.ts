@@ -117,13 +117,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const phone = phoneRaw.replace(/[\s-]/g, "");
-    if (!/^\+995\d{9}$/.test(phone)) {
+    const stripped = phoneRaw.replace(/[\s-]/g, "");
+    if (!/^(?:5\d{8}|\+?\d{12})$/.test(stripped)) {
       return NextResponse.json(
         { error: "Invalid phone number format" },
         { status: 400 },
       );
     }
+    const phone = /^5\d{8}$/.test(stripped)
+      ? `+995${stripped}`
+      : stripped.startsWith("+")
+        ? stripped
+        : `+${stripped}`;
 
     // Defense against malicious clients trying to reference another user's
     // storage objects or smuggle traversal sequences. The RPC re-validates with

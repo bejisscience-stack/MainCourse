@@ -1084,7 +1084,7 @@
       "cameraUnavailable": "We couldn't access a camera. Please use a device with a working camera.",
       "fileTooLarge": "File is too large. Maximum size is {{max}} MB.",
       "invalidImage": "Please upload a JPG, PNG, or WEBP image.",
-      "invalidPhone": "Please enter a valid Georgian mobile number (+995 followed by 9 digits).",
+      "invalidPhone": "Please enter a valid mobile number — 9 digits starting with 5, 12 digits, or + followed by 12 digits.",
       "submitFailed": "Failed to submit verification. Please try again."
     },
     "nav": {

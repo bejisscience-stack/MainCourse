@@ -7,7 +7,7 @@ import type { Course } from "./CourseCard";
 import { useI18n } from "@/contexts/I18nContext";
 import { useUser } from "@/hooks/useUser";
 import { useWelcomeDiscount } from "@/hooks/useWelcomeDiscount";
-import { hasWelcomeDiscount } from "@/lib/pricing";
+import { hasWelcomeDiscount, resolveChargeAmount } from "@/lib/pricing";
 import WelcomeDiscountCountdown from "./WelcomeDiscountCountdown";
 import { supabase } from "@/lib/supabase";
 import { getReferral } from "@/lib/referral-storage";
@@ -557,6 +557,14 @@ export default function EnrollmentModal({
   if (!isOpen || !mounted || typeof document === "undefined") return null;
 
   const price = course.price || 0;
+  // Amount the server will actually charge: discounted price only when the
+  // user's welcome window is still open, otherwise original_price (or price
+  // when there's no original_price). Mirrors lib/pricing#resolveChargeAmount
+  // used by /api/payments/keepz/create-order so UI and charge can't disagree.
+  const { amount: payAmount } = resolveChargeAmount(
+    { price, original_price: course.original_price ?? null },
+    welcomeActive,
+  );
   const courseDescription = course.description?.trim();
   const isPayDisabled =
     isSubmitting ||
@@ -1095,7 +1103,9 @@ export default function EnrollmentModal({
                         d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                       />
                     </svg>
-                    {t("paymentMethod.pay", { amount: `₾${price.toFixed(2)}` })}
+                    {t("paymentMethod.pay", {
+                      amount: `₾${payAmount.toFixed(2)}`,
+                    })}
                   </>
                 )}
               </button>

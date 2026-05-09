@@ -541,7 +541,7 @@ export default function ProjectDetailsModal({
         </div>
 
         {/* Action Footer */}
-        <div className="sticky bottom-0 p-6 md:p-8 pt-4 bg-gradient-to-t from-white via-white dark:from-navy-900 dark:via-navy-900 border-t border-charcoal-100 dark:border-navy-700">
+        <div className="sticky bottom-0 px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:px-8 md:pb-[max(2rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-white via-white dark:from-navy-900 dark:via-navy-900 border-t border-charcoal-100 dark:border-navy-700">
           {canAccessProject ? (
             <button
               onClick={handleGoToProject}

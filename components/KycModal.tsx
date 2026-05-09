@@ -29,7 +29,18 @@ type Step =
 const MAX_FILE_BYTES = 8 * 1024 * 1024; // 8 MB
 const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-const PHONE_REGEX = /^\+995\d{9}$/;
+// Accepts (after stripping spaces and hyphens):
+//   - 9 digits starting with 5  (e.g. 5XXXXXXXX)
+//   - exactly 12 digits          (e.g. 995XXXXXXXXX)
+//   - "+" followed by 12 digits  (e.g. +995XXXXXXXXX)
+const PHONE_REGEX = /^(?:5\d{8}|\+?\d{12})$/;
+
+function normalizePhone(raw: string): string {
+  const s = raw.replace(/[\s-]/g, "");
+  if (/^5\d{8}$/.test(s)) return `+995${s}`;
+  if (/^\d{12}$/.test(s)) return `+${s}`;
+  return s;
+}
 
 function buildSteps(docType: KycDocType | null): Step[] {
   if (docType === "passport") {
@@ -407,7 +418,7 @@ export default function KycModal({
         docFront,
         docBack: docType === "passport" ? null : docBack,
         selfie: selfieBlob,
-        phone: phone.replace(/[\s-]/g, ""),
+        phone: normalizePhone(phone),
       });
       setStep("pending");
       onSubmitted?.();
@@ -610,7 +621,7 @@ export default function KycModal({
             setPhone(e.target.value);
             setPhoneError(null);
           }}
-          placeholder="+995 5XX XX XX XX"
+          placeholder="5XX XXX XXX  /  995XXXXXXXXX  /  +995XXXXXXXXX"
           className="w-full rounded-xl border border-charcoal-300 bg-white px-4 py-3 text-base text-charcoal-950 placeholder-charcoal-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-navy-600 dark:bg-navy-700 dark:text-white dark:placeholder-gray-500"
         />
       </label>
@@ -961,23 +972,25 @@ export default function KycModal({
 
         <div className="max-h-[88vh] overflow-y-auto px-4 py-8 sm:px-6 sm:py-10">
           {/* Header + progress */}
-          <div className="mb-8 space-y-3">
-            <h2 className="text-3xl font-bold text-charcoal-950 dark:text-white">
-              {t("kyc.modal.title")}
-            </h2>
-            <p className="text-charcoal-600 dark:text-gray-400">
-              {t("kyc.modal.subtitle")}
-            </p>
+          {step !== "pending" ? (
+            <div className="mb-8 space-y-3">
+              <h2 className="text-3xl font-bold text-charcoal-950 dark:text-white">
+                {t("kyc.modal.title")}
+              </h2>
+              <p className="text-charcoal-600 dark:text-gray-400">
+                {t("kyc.modal.subtitle")}
+              </p>
 
-            {!showRejectedScreen && step !== "pending" ? (
-              <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-charcoal-100 dark:bg-navy-700">
-                <div
-                  className="h-full bg-emerald-500 transition-all"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-            ) : null}
-          </div>
+              {!showRejectedScreen ? (
+                <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-charcoal-100 dark:bg-navy-700">
+                  <div
+                    className="h-full bg-emerald-500 transition-all"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           <div>{body}</div>
 

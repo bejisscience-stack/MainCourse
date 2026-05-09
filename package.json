@@ -17,7 +17,8 @@
     "dev:clean": "rm -rf .next && next dev -H 0.0.0.0",
     "clean": "rm -rf .next out dist *.tsbuildinfo",
     "reinstall": "rm -rf node_modules package-lock.json && npm cache clean --force && npm install",
-    "fix": "npm run reinstall && npm run dev:clean"
+    "fix": "npm run reinstall && npm run dev:clean",
+    "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
@@ -48,6 +49,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^14.2.35",
     "@types/js-cookie": "^3.0.6",
     "@types/node": "^20.11.24",
     "@types/react": "^18.3.1",

@@ -18,6 +18,14 @@ const PostHogPageView = dynamic(() => import("@/components/PostHogPageView"), {
   loading: () => null,
 });
 
+const WebVitalsReporter = dynamic(
+  () => import("@/components/WebVitalsReporter"),
+  {
+    ssr: false,
+    loading: () => null,
+  },
+);
+
 const GlobalBackgroundManager = dynamic(
   () => import("@/components/GlobalBackgroundManager"),
   {
@@ -100,6 +108,7 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: "cover",
   themeColor: "#22c55e",
 };
 
@@ -178,6 +187,9 @@ export default async function RootLayout({
               <I18nProvider initialLanguage={initialLanguage}>
                 <Suspense fallback={null}>
                   <PostHogPageView />
+                </Suspense>
+                <Suspense fallback={null}>
+                  <WebVitalsReporter />
                 </Suspense>
                 <ScrollPrevention />
                 <ProfileCompletionGuard />

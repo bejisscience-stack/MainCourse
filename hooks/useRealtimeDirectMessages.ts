@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import type { Message, ReplyPreview } from "@/types/message";
+import type { Message, Reaction, ReplyPreview } from "@/types/message";
 import type { DmTypingUser } from "@/types/direct-message";
 import { getCachedAvatarUrl, getCachedUsername } from "./useRealtimeMessages";
 
@@ -10,6 +10,7 @@ interface UseRealtimeDirectMessagesOptions {
   onNewMessage?: (message: Message) => void;
   onMessageUpdate?: (message: Message) => void;
   onMessageDelete?: (messageId: string) => void;
+  onMessageReaction?: (messageId: string, reactions: Reaction[]) => void;
 }
 
 const MAX_RECONNECT_ATTEMPTS = 10;
@@ -70,6 +71,7 @@ export function useRealtimeDirectMessages({
   onNewMessage,
   onMessageUpdate,
   onMessageDelete,
+  onMessageReaction,
 }: UseRealtimeDirectMessagesOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const [typingUsers, setTypingUsers] = useState<DmTypingUser[]>([]);
@@ -79,6 +81,7 @@ export function useRealtimeDirectMessages({
     onNewMessage,
     onMessageUpdate,
     onMessageDelete,
+    onMessageReaction,
   });
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -88,8 +91,13 @@ export function useRealtimeDirectMessages({
   );
 
   useEffect(() => {
-    callbacksRef.current = { onNewMessage, onMessageUpdate, onMessageDelete };
-  }, [onNewMessage, onMessageUpdate, onMessageDelete]);
+    callbacksRef.current = {
+      onNewMessage,
+      onMessageUpdate,
+      onMessageDelete,
+      onMessageReaction,
+    };
+  }, [onNewMessage, onMessageUpdate, onMessageDelete, onMessageReaction]);
 
   useEffect(() => {
     if (!enabled || !conversationId) {
@@ -134,6 +142,18 @@ export function useRealtimeDirectMessages({
           (payload: { payload: Message }) => {
             const message = payload.payload;
             if (message?.id) callbacksRef.current.onNewMessage?.(message);
+          },
+        )
+        .on(
+          "broadcast",
+          { event: "message_reaction" },
+          (payload: {
+            payload?: { messageId?: string; reactions?: Reaction[] };
+          }) => {
+            const { messageId, reactions } = payload.payload || {};
+            if (messageId && Array.isArray(reactions)) {
+              callbacksRef.current.onMessageReaction?.(messageId, reactions);
+            }
           },
         )
         .on(
