@@ -7,7 +7,7 @@ import { getTokenFromHeader } from "@/lib/admin-auth";
 import { enrollmentRequestSchema } from "@/lib/schemas";
 import {
   generalLimiter,
-  writeLimiter,
+  enrollmentWriteLimiter,
   rateLimitResponse,
   getClientIP,
 } from "@/lib/rate-limit";
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const rl = await writeLimiter.check(getClientIP(request));
+    const rl = await enrollmentWriteLimiter.check(user.id);
     if (!rl.allowed) return rateLimitResponse(rl.retryAfterMs);
 
     const rawBody = await request.json();

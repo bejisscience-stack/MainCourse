@@ -92,7 +92,15 @@ export default function KycModal({
   const cameraReqRef = useRef(0);
   const mountedRef = useRef(true);
   const [permState, setPermState] = useState<
-    "idle" | "requesting" | "granted" | "denied" | "unavailable"
+    | "idle"
+    | "requesting"
+    | "granted"
+    | "denied-browser"
+    | "denied-os"
+    | "busy"
+    | "notfound"
+    | "insecure"
+    | "unavailable"
   >("idle");
   const [selfieBlob, setSelfieBlob] = useState<Blob | null>(null);
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
@@ -211,18 +219,40 @@ export default function KycModal({
       setPermState("unavailable");
       return;
     }
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setPermState("insecure");
+      return;
+    }
     setFileError(null);
     setPermState("requesting");
     const myReqId = ++cameraReqRef.current;
+
+    const tryGet = (constraints: MediaStreamConstraints) =>
+      navigator.mediaDevices.getUserMedia(constraints);
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "user",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
+      let stream: MediaStream;
+      try {
+        stream = await tryGet({
+          video: {
+            facingMode: "user",
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+      } catch (firstErr: any) {
+        // Loosen constraints only for hardware/constraint errors. Permission
+        // errors must propagate so we don't double-prompt or mask them.
+        const name = firstErr?.name;
+        const retryable =
+          name === "OverconstrainedError" ||
+          name === "ConstraintNotSatisfiedError" ||
+          name === "NotFoundError" ||
+          name === "NotReadableError";
+        if (!retryable) throw firstErr;
+        stream = await tryGet({ video: true, audio: false });
+      }
       // The user may have already closed the modal, navigated, or moved past
       // the selfie step while the permission prompt was open. If so, drop the
       // stream immediately rather than leaking the camera.
@@ -245,7 +275,49 @@ export default function KycModal({
       setPermState("granted");
     } catch (err: any) {
       if (!mountedRef.current || cameraReqRef.current !== myReqId) return;
-      setPermState(err?.name === "NotAllowedError" ? "denied" : "unavailable");
+      // Surface the DOMException name to devtools so support can diagnose
+      // without round-trips. No PII, no media bytes.
+      // eslint-disable-next-line no-console
+      console.warn("[KYC] getUserMedia failed:", err?.name, err?.message);
+
+      const name = err?.name;
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+        // Distinguish browser-level block from OS-level block. If the browser
+        // thinks permission is granted but the call still fails, the block is
+        // at the OS / antivirus / hardware layer.
+        let osLevel = false;
+        try {
+          const status = await navigator.permissions?.query?.({
+            name: "camera" as PermissionName,
+          });
+          if (status?.state === "granted") osLevel = true;
+        } catch {
+          /* Permissions API not supported (Safari < 16) */
+        }
+        setPermState(osLevel ? "denied-os" : "denied-browser");
+        return;
+      }
+      if (
+        name === "NotReadableError" ||
+        name === "TrackStartError" ||
+        name === "AbortError"
+      ) {
+        setPermState("busy");
+        return;
+      }
+      if (
+        name === "NotFoundError" ||
+        name === "OverconstrainedError" ||
+        name === "DevicesNotFoundError"
+      ) {
+        setPermState("notfound");
+        return;
+      }
+      if (name === "SecurityError") {
+        setPermState("insecure");
+        return;
+      }
+      setPermState("unavailable");
     }
   }, []);
 
@@ -749,22 +821,37 @@ export default function KycModal({
             </div>
           ) : null}
 
-          {permState === "denied" ? (
+          {permState === "denied-browser" ||
+          permState === "denied-os" ||
+          permState === "busy" ||
+          permState === "notfound" ||
+          permState === "insecure" ||
+          permState === "unavailable" ? (
             <div className="space-y-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
-              <p>{t("kyc.errors.cameraDenied")}</p>
-              <button
-                type="button"
-                onClick={() => void startCamera()}
-                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
-              >
-                {t("kyc.steps.selfie.startCamera")}
-              </button>
-            </div>
-          ) : null}
-
-          {permState === "unavailable" ? (
-            <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
-              {t("kyc.errors.cameraUnavailable")}
+              <p className="whitespace-pre-line">
+                {t(
+                  permState === "denied-browser"
+                    ? "kyc.errors.cameraDeniedBrowser"
+                    : permState === "denied-os"
+                      ? "kyc.errors.cameraDeniedOs"
+                      : permState === "busy"
+                        ? "kyc.errors.cameraBusy"
+                        : permState === "notfound"
+                          ? "kyc.errors.cameraNotFound"
+                          : permState === "insecure"
+                            ? "kyc.errors.cameraInsecure"
+                            : "kyc.errors.cameraUnavailable",
+                )}
+              </p>
+              {permState !== "notfound" && permState !== "insecure" ? (
+                <button
+                  type="button"
+                  onClick={() => void startCamera()}
+                  className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
+                >
+                  {t("kyc.steps.selfie.startCamera")}
+                </button>
+              ) : null}
             </div>
           ) : null}
 

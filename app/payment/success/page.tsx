@@ -47,10 +47,7 @@ function PaymentSuccessContent() {
           headers: { Authorization: `Bearer ${session.access_token}` },
         },
       );
-      if (!res.ok) {
-        setStatus("failed");
-        return true;
-      }
+      if (!res.ok) return false;
 
       const data = await res.json();
       setPaymentType(data.paymentType);

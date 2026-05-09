@@ -1085,6 +1085,11 @@
       "fileTooLarge": "File is too large. Maximum size is {{max}} MB.",
       "invalidImage": "Please upload a JPG, PNG, or WEBP image.",
       "invalidPhone": "Please enter a valid mobile number — 9 digits starting with 5, 12 digits, or + followed by 12 digits.",
+      "cameraDeniedBrowser": "Camera is blocked for this site. Click the camera icon in the address bar (or open Site Settings) and set Camera to Allow, then try again.",
+      "cameraDeniedOs": "Your browser allowed the camera, but your operating system or antivirus is blocking it.\nWindows: Settings → Privacy & security → Camera → enable camera access for desktop apps and for your browser.\nmacOS: System Settings → Privacy & Security → Camera → enable your browser, then restart it.\nThen try again, or use 'Upload from device' below.",
+      "cameraBusy": "Your camera is being used by another app (Zoom, Teams, Meet, etc.). Close that app and try again, or use 'Upload from device'.",
+      "cameraNotFound": "No compatible camera was found on this device. Please use 'Upload from device' below.",
+      "cameraInsecure": "The camera only works over a secure (HTTPS) connection. Please reload the page or open it in a different browser.",
       "submitFailed": "Failed to submit verification. Please try again."
     },
     "nav": {
