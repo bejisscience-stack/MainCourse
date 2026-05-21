@@ -88,6 +88,14 @@ export async function signUp({
         "Too many signup attempts. Please wait a few minutes and try again.",
       );
     }
+    if (
+      msg.includes("Database error saving new user") ||
+      msg.toLowerCase().includes("username already exists")
+    ) {
+      throw new Error(
+        "That username is already taken. Please choose a different one.",
+      );
+    }
     throw new Error(msg || "Failed to create account. Please try again.");
   }
 
