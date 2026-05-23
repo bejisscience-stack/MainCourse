@@ -99,9 +99,10 @@ export default function ProjectDetailsModal({
     return () => setMounted(false);
   }, []);
 
-  // Check if user is enrolled in the course
+  // Check if user is enrolled in the course. Standalone projects (course_id
+  // null) skip this branch entirely and gate access purely on hasProjectAccess.
   const isEnrolled = useMemo(() => {
-    if (!project) return false;
+    if (!project || !project.course_id) return false;
     return enrolledCourseIds.has(project.course_id);
   }, [project, enrolledCourseIds]);
 
@@ -208,10 +209,14 @@ export default function ProjectDetailsModal({
     };
   }, [isOpen, showSubscriptionModal, onClose]);
 
-  // Handle Go to Project navigation
+  // Handle Go to Project navigation. Course-bound projects deep-link into the
+  // course chat's projects channel; standalone projects have no chat yet, so
+  // we simply close the modal (the user already has access info inline).
   const handleGoToProject = useCallback(() => {
     if (!project) return;
-    router.push(`/courses/${project.course_id}/chat?channel=projects`);
+    if (project.course_id) {
+      router.push(`/courses/${project.course_id}/chat?channel=projects`);
+    }
     onClose();
   }, [project, router, onClose]);
 
@@ -305,26 +310,28 @@ export default function ProjectDetailsModal({
 
         {/* Content */}
         <div className="p-6 md:p-8 space-y-6 max-h-[60vh] overflow-y-auto">
-          {/* Course & Lecturer Info */}
+          {/* Course & Lecturer Info. Course row hidden for standalone projects. */}
           <div className="flex flex-wrap items-center gap-4 pb-4 border-b border-charcoal-100 dark:border-navy-700">
-            <div className="flex items-center gap-2 text-charcoal-600 dark:text-gray-400">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                />
-              </svg>
-              <span className="font-medium text-charcoal-800 dark:text-gray-200">
-                {project.course_title}
-              </span>
-            </div>
+            {project.course_title && (
+              <div className="flex items-center gap-2 text-charcoal-600 dark:text-gray-400">
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                  />
+                </svg>
+                <span className="font-medium text-charcoal-800 dark:text-gray-200">
+                  {project.course_title}
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-2 text-charcoal-600 dark:text-gray-400">
               <svg
                 className="w-5 h-5"

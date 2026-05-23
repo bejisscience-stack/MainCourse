@@ -229,6 +229,7 @@
     "connecting": "Connecting...",
     "onlyLecturerCanCreateProjects": "Only the course lecturer can create projects",
     "onlyLecturerCanSendMessages": "Only the course lecturer can send messages in this channel",
+    "announcementReadOnlyPlaceholder": "Only the lecturer can post here. You can still react with emojis.",
     "online": "Online",
     "myProfile": "My Profile",
     "myCourses": "My Courses",
@@ -456,6 +457,7 @@
     "textChannel": "Text Channel",
     "voiceChannel": "Voice Channel",
     "lecturesChannel": "Lectures Channel",
+    "announcementChannel": "Announcement Channel (lecturer-only posts)",
     "description": "Description",
     "descriptionPlaceholder": "What is this channel for?",
     "categoryName": "Category Name",
@@ -905,7 +907,30 @@
     "noProjects": "No active projects at the moment",
     "noProjectsDescription": "Check back later for new projects from our courses",
     "projectCount": "{{count}} project",
-    "projectsCount": "{{count}} projects"
+    "projectsCount": "{{count}} projects",
+    "statusActive": "Active",
+    "statusEndingSoon": "Ending soon",
+    "statusExpired": "Expired"
+  },
+  "projectDetail": {
+    "breadcrumbHome": "Home",
+    "breadcrumbProjects": "Projects",
+    "about": "About this project",
+    "howItWorks": "How it works",
+    "step1Title": "Get access",
+    "step1Description": "Enroll in the course or buy a project subscription to unlock submissions.",
+    "step2Title": "Create your video",
+    "step2Description": "Record content that matches every criterion for the platform you target.",
+    "step3Title": "Submit",
+    "step3Description": "Post the video, then drop the link in the project channel to register your submission.",
+    "step4Title": "Get paid",
+    "step4Description": "Earn the listed GEL amount per matched criterion once your video qualifies.",
+    "budgetPool": "Budget Pool",
+    "starts": "Starts",
+    "ends": "Ends",
+    "daysShort": "d",
+    "recentSubmissions": "Recent Submissions",
+    "noSubmissions": "No submissions yet — be the first."
   },
   "viewBot": {
     "tabDashboard": "Dashboard",
@@ -1468,5 +1493,18 @@
     "preview": "Preview",
     "languageEn": "English",
     "languageGe": "Georgian"
+  },
+  "lecturerProjects": {
+    "pageTitle": "My Projects",
+    "pageSubtitle": "Create and manage projects independently of any course.",
+    "createCta": "Create Project",
+    "emptyState": "You haven't created any projects yet.",
+    "createFirst": "Create your first project",
+    "thumbnailStepTitle": "Add a project thumbnail",
+    "thumbnailStepHelp": "Pick an image that represents this project. You can also skip and add one later.",
+    "thumbnailUploading": "Uploading...",
+    "thumbnailUploaded": "Thumbnail ready.",
+    "thumbnailMustBeImage": "Thumbnail must be an image.",
+    "skipThumbnail": "Skip & continue"
   }
 }

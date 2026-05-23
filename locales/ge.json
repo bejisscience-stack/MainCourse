@@ -229,6 +229,7 @@
     "connecting": "დაკავშირება...",
     "onlyLecturerCanCreateProjects": "მხოლოდ კურსის ლექტორს შეუძლია პროექტების შექმნა",
     "onlyLecturerCanSendMessages": "მხოლოდ კურსის ლექტორს შეუძლია ამ არხში შეტყობინებების გაგზავნა",
+    "announcementReadOnlyPlaceholder": "ამ არხში წერა მხოლოდ ლექტორს შეუძლია. შეგიძლიათ მხოლოდ რეაქცია დააფიქსიროთ ემოჯით.",
     "online": "ონლაინ",
     "myProfile": "ჩემი პროფილი",
     "myCourses": "ჩემი კურსები",
@@ -456,6 +457,7 @@
     "textChannel": "ტექსტური არხი",
     "voiceChannel": "ხმოვანი არხი",
     "lecturesChannel": "ლექციების არხი",
+    "announcementChannel": "განცხადებების არხი (მხოლოდ ლექტორი წერს)",
     "description": "აღწერა",
     "descriptionPlaceholder": "რისთვის არის ეს არხი?",
     "categoryName": "კატეგორიის სახელი",
@@ -905,7 +907,30 @@
     "noProjects": "ამ დროისთვის აქტიური პროექტები არ არის",
     "noProjectsDescription": "ახალი პროექტებისთვის შეამოწმეთ მოგვიანებით",
     "projectCount": "{{count}} პროექტი",
-    "projectsCount": "{{count}} პროექტი"
+    "projectsCount": "{{count}} პროექტი",
+    "statusActive": "აქტიური",
+    "statusEndingSoon": "სრულდება",
+    "statusExpired": "ვადაგასული"
+  },
+  "projectDetail": {
+    "breadcrumbHome": "მთავარი",
+    "breadcrumbProjects": "პროექტები",
+    "about": "პროექტის შესახებ",
+    "howItWorks": "როგორ მუშაობს",
+    "step1Title": "მიიღე წვდომა",
+    "step1Description": "ჩაერთე კურსში ან შეიძინე პროექტის გამოწერა წარდგენების გასახსნელად.",
+    "step2Title": "შექმენი ვიდეო",
+    "step2Description": "გადაიღე კონტენტი, რომელიც ემთხვევა შენი არჩეული პლატფორმის ყველა კრიტერიუმს.",
+    "step3Title": "წარადგინე",
+    "step3Description": "გამოაქვეყნე ვიდეო, შემდეგ პროექტის არხში გააზიარე ბმული წარდგენის დასარეგისტრირებლად.",
+    "step4Title": "მიიღე გადახდა",
+    "step4Description": "ვიდეოს კვალიფიკაციის შემდეგ მიიღე მითითებული თანხა GEL-ში თითო კრიტერიუმზე.",
+    "budgetPool": "ბიუჯეტი",
+    "starts": "დაიწყება",
+    "ends": "დასრულდება",
+    "daysShort": "დღე",
+    "recentSubmissions": "ბოლო წარდგენები",
+    "noSubmissions": "ჯერ წარდგენები არ არის — იყავი პირველი."
   },
   "viewBot": {
     "tabDashboard": "მთავარი",
@@ -1468,5 +1493,18 @@
     "preview": "გადახედვა",
     "languageEn": "ინგლისური",
     "languageGe": "ქართული"
+  },
+  "lecturerProjects": {
+    "pageTitle": "ჩემი პროექტები",
+    "pageSubtitle": "შექმენით და მართეთ პროექტები ნებისმიერი კურსისგან დამოუკიდებლად.",
+    "createCta": "პროექტის შექმნა",
+    "emptyState": "თქვენ ჯერ არ შეგიქმნიათ პროექტი.",
+    "createFirst": "შექმენი შენი პირველი პროექტი",
+    "thumbnailStepTitle": "დაამატე პროექტის თამბნეილი",
+    "thumbnailStepHelp": "აირჩიე სურათი, რომელიც ამ პროექტს წარმოაჩენს. ასევე შეგიძლია გამოტოვო და მოგვიანებით დაამატო.",
+    "thumbnailUploading": "იტვირთება...",
+    "thumbnailUploaded": "თამბნეილი მზადაა.",
+    "thumbnailMustBeImage": "თამბნეილი უნდა იყოს სურათი.",
+    "skipThumbnail": "გამოტოვება და გაგრძელება"
   }
 }

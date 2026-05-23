@@ -16,9 +16,9 @@ export interface ProjectCriteria {
 
 export interface ActiveProject {
   id: string;
-  message_id: string;
-  channel_id: string;
-  course_id: string;
+  message_id: string | null;
+  channel_id: string | null;
+  course_id: string | null;
   user_id: string;
   name: string;
   description: string;
@@ -31,8 +31,8 @@ export interface ActiveProject {
   end_date: string;
   created_at: string;
   updated_at: string;
-  // Joined data
-  course_title: string;
+  // Joined data (course is optional after decoupling — standalone projects have no course)
+  course_title: string | null;
   course_thumbnail_url: string | null;
   lecturer_id: string;
   lecturer_username: string | null;
@@ -53,13 +53,14 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
       timeZone: "Asia/Tbilisi",
     }).format(new Date());
 
-    // Fetch active projects with course and lecturer info
+    // Fetch active projects with optional course info (LEFT JOIN — projects
+    // are no longer required to have a course since the decouple migration).
     const { data: projects, error: projectsError } = await supabase
       .from("projects")
       .select(
         `
-        id, message_id, channel_id, course_id, user_id, name, description, video_link, budget, min_views, max_views, platforms, start_date, end_date, created_at, updated_at,
-        courses!inner (
+        id, message_id, channel_id, course_id, user_id, name, description, video_link, thumbnail_url, budget, min_views, max_views, platforms, start_date, end_date, created_at, updated_at,
+        courses (
           id,
           title,
           thumbnail_url,
@@ -87,11 +88,11 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
     }
 
     // Only fetch lecturer profiles if authenticated (get_safe_profiles requires auth)
+    // Lecturer id is canonical on projects.user_id; for legacy course-bound
+    // projects the same id also appears on courses.lecturer_id.
     let profileMap = new Map();
     if (session) {
-      const lecturerIds = [
-        ...new Set(projects.map((p: any) => p.courses.lecturer_id)),
-      ];
+      const lecturerIds = [...new Set(projects.map((p: any) => p.user_id))];
 
       const { data: profiles, error: profilesError } = await supabase.rpc(
         "get_safe_profiles",
@@ -143,7 +144,8 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
 
     // Map projects to ActiveProject interface
     const activeProjects: ActiveProject[] = projects.map((p: any) => {
-      const lecturerProfile: any = profileMap.get(p.courses.lecturer_id);
+      const lecturerProfile: any = profileMap.get(p.user_id);
+      const course = p.courses ?? null;
       return {
         id: p.id,
         message_id: p.message_id,
@@ -161,9 +163,11 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
         end_date: p.end_date,
         created_at: p.created_at,
         updated_at: p.updated_at,
-        course_title: p.courses.title,
-        course_thumbnail_url: p.courses.thumbnail_url,
-        lecturer_id: p.courses.lecturer_id,
+        course_title: course?.title ?? null,
+        // Prefer the project's own thumbnail; fall back to the course thumbnail
+        // (legacy course-bound projects without their own thumbnail_url).
+        course_thumbnail_url: p.thumbnail_url ?? course?.thumbnail_url ?? null,
+        lecturer_id: p.user_id,
         lecturer_username: lecturerProfile?.username || null,
         lecturer_full_name: lecturerProfile?.full_name || null,
         criteria: criteriaMap.get(p.id) || [],

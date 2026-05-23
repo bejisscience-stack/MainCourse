@@ -147,7 +147,7 @@ function ProjectCard({ project, onClick }: ProjectCardProps) {
         {project.course_thumbnail_url ? (
           <img
             src={project.course_thumbnail_url}
-            alt={project.course_title}
+            alt={project.course_title ?? project.name}
             className={`w-full h-full object-cover ${isExpired ? "grayscale" : ""}`}
             width={400}
             height={112}
@@ -208,25 +208,27 @@ function ProjectCard({ project, onClick }: ProjectCardProps) {
           </div>
         )}
 
-        {/* Course Badge - Bottom Left */}
-        <div className="absolute bottom-2 left-2 bg-white/90 dark:bg-navy-800/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center space-x-1.5 border border-charcoal-100/50 dark:border-navy-700/50 z-10 shadow-soft max-w-[70%]">
-          <svg
-            className="w-3 h-3 text-charcoal-600 dark:text-gray-300 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-            />
-          </svg>
-          <span className="text-charcoal-600 dark:text-gray-300 text-[10px] font-medium truncate">
-            {project.course_title}
-          </span>
-        </div>
+        {/* Course Badge - Bottom Left. Hidden for standalone projects (no course). */}
+        {project.course_title && (
+          <div className="absolute bottom-2 left-2 bg-white/90 dark:bg-navy-800/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center space-x-1.5 border border-charcoal-100/50 dark:border-navy-700/50 z-10 shadow-soft max-w-[70%]">
+            <svg
+              className="w-3 h-3 text-charcoal-600 dark:text-gray-300 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+              />
+            </svg>
+            <span className="text-charcoal-600 dark:text-gray-300 text-[10px] font-medium truncate">
+              {project.course_title}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Project Info Section */}
