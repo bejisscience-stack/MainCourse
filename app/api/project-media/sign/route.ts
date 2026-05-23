@@ -51,13 +51,22 @@ export async function GET(request: NextRequest) {
 
   const { data: resourceRow, error: resourceError } = await serviceSupabase
     .from("project_resources")
-    .select("id, url, project_id")
+    .select("id, url, project_id, resource_type")
     .eq("project_id", projectId)
     .eq("url", normalizedPath)
     .maybeSingle();
 
   if (resourceError || !resourceRow) {
     return NextResponse.json({ error: "Resource not found" }, { status: 404 });
+  }
+
+  // SEC: link resources are external http(s) URLs, never storage paths. The
+  // sign endpoint must refuse to mint signed URLs for them.
+  if (resourceRow.resource_type === "link") {
+    return NextResponse.json(
+      { error: "Cannot sign link resource" },
+      { status: 400 },
+    );
   }
 
   const { data: project, error: projectError } = await serviceSupabase
@@ -68,6 +77,22 @@ export async function GET(request: NextRequest) {
 
   if (projectError || !project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+
+  // SEC: prevent storage-path laundering. A malicious project owner could have
+  // inserted project_resources.url = "<other-course>/<channel>/<user>/<file>"
+  // to alias a chat-media object outside their namespace. Enforce that the
+  // path lives in the project's expected storage namespace:
+  //   - standalone projects   → standalone-projects/{project.user_id}/...
+  //   - legacy course-bound   → {project.course_id}/...
+  const expectedPrefix = project.course_id
+    ? `${project.course_id}/`
+    : `standalone-projects/${project.user_id}/`;
+  if (!normalizedPath.startsWith(expectedPrefix)) {
+    return NextResponse.json(
+      { error: "Invalid resource path" },
+      { status: 403 },
+    );
   }
 
   const isPublicActive =

@@ -4,6 +4,7 @@ import {
   verifyTokenAndGetUser,
 } from "@/lib/supabase-server";
 import { getTokenFromHeader } from "@/lib/admin-auth";
+import { isSafeUrl } from "@/lib/url-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -211,19 +212,37 @@ export async function POST(request: NextRequest) {
     }
 
     if (Array.isArray(resources) && resources.length > 0) {
+      // SEC: scheme/path validation per resource type.
+      //   - link  → must be a real http(s) URL (rejects javascript:/data:/etc.).
+      //   - image/video → must be a relative storage path under
+      //     standalone-projects/{user.id}/ to prevent path laundering through
+      //     /api/project-media/sign (chat-media bucket isolation).
+      const ownerPrefix = `standalone-projects/${user.id}/`;
       const rows = resources
         .filter(
-          (r) =>
-            r &&
+          (
+            r,
+          ): r is ResourceInput & {
+            url: string;
+            type: NonNullable<ResourceInput["type"]>;
+          } =>
+            !!r &&
             typeof r.url === "string" &&
             r.url.trim() !== "" &&
             (r.type === "image" || r.type === "video" || r.type === "link"),
         )
+        .map((r) => ({ ...r, url: r.url.trim() }))
+        .filter((r) => {
+          if (r.type === "link") return isSafeUrl(r.url);
+          // image/video: relative storage path, owner-scoped
+          if (r.url.includes("://")) return false;
+          return r.url.startsWith(ownerPrefix);
+        })
         .map((r, i) => ({
           project_id: projectRecord.id,
-          resource_type: r.type!,
+          resource_type: r.type,
           title: r.title?.trim() || null,
-          url: r.url!.trim(),
+          url: r.url,
           display_order: i,
         }));
       if (rows.length > 0) {

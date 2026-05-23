@@ -1,6 +1,7 @@
 "use client";
 
 import { useProjectResourceUrl } from "@/hooks/useProjectResourceUrl";
+import { toSafeHref } from "@/lib/url-utils";
 
 export function ProjectResourceMedia({
   projectId,
@@ -16,9 +17,18 @@ export function ProjectResourceMedia({
   const { signedUrl, isLoading } = useProjectResourceUrl(projectId, url);
 
   if (resourceType === "link") {
+    // SEC: sanitize to http(s) only. Reject javascript:/data:/etc. to prevent XSS.
+    const safeHref = toSafeHref(url);
+    if (!safeHref) {
+      return (
+        <span className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-charcoal-200 dark:border-navy-700 bg-white dark:bg-navy-900/60 text-charcoal-600 dark:text-gray-400 text-sm font-medium break-all">
+          {title || url}
+        </span>
+      );
+    }
     return (
       <a
-        href={url}
+        href={safeHref}
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-charcoal-200 dark:border-navy-700 bg-white dark:bg-navy-900/60 text-emerald-600 dark:text-emerald-400 hover:bg-charcoal-50 dark:hover:bg-navy-800 transition-colors text-sm font-medium break-all"
@@ -36,7 +46,7 @@ export function ProjectResourceMedia({
             d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
           />
         </svg>
-        {title || url}
+        {title || safeHref}
       </a>
     );
   }
