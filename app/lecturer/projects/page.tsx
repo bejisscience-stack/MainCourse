@@ -1,12 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import Navigation from "@/components/Navigation";
 import BackgroundShapes from "@/components/BackgroundShapes";
 import ProjectCard from "@/components/ProjectCard";
-import ProjectDetailsModal from "@/components/ProjectDetailsModal";
 import LecturerProjectCreationModal from "@/components/LecturerProjectCreationModal";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
@@ -85,6 +84,7 @@ async function fetchOwnProjects(userId: string): Promise<ActiveProject[]> {
 
 export default function LecturerProjectsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
   const { user, profile, isLoading: userLoading } = useUser();
 
@@ -94,11 +94,25 @@ export default function LecturerProjectsPage() {
   const isApprovedLecturer =
     profile?.role === "lecturer" && profile?.is_approved === true;
 
+  const [createOpen, setCreateOpen] = useState(false);
+
   useEffect(() => {
     if (userLoading) return;
     if (!user) router.push("/login");
     else if (!isApprovedLecturer) router.push("/");
   }, [user, userLoading, isApprovedLecturer, router]);
+
+  useEffect(() => {
+    if (
+      searchParams.get("create") === "true" &&
+      !userLoading &&
+      user &&
+      isApprovedLecturer
+    ) {
+      setCreateOpen(true);
+      router.replace("/lecturer/projects", { scroll: false });
+    }
+  }, [searchParams, userLoading, user, isApprovedLecturer, router]);
 
   const swrKey =
     user && isApprovedLecturer ? ["lecturer-projects", user.id] : null;
@@ -110,9 +124,6 @@ export default function LecturerProjectsPage() {
     revalidateOnFocus: false,
     fallbackData: [],
   });
-
-  const [createOpen, setCreateOpen] = useState(false);
-  const [selected, setSelected] = useState<ActiveProject | null>(null);
 
   const handleCreated = useCallback(() => {
     mutate();
@@ -191,11 +202,7 @@ export default function LecturerProjectsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {safeProjects.map((p) => (
-              <ProjectCard
-                key={p.id}
-                project={p}
-                onClick={() => setSelected(p)}
-              />
+              <ProjectCard key={p.id} project={p} href={`/projects/${p.id}`} />
             ))}
           </div>
         )}
@@ -205,12 +212,6 @@ export default function LecturerProjectsPage() {
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
         onCreated={handleCreated}
-      />
-
-      <ProjectDetailsModal
-        isOpen={selected !== null}
-        onClose={() => setSelected(null)}
-        project={selected}
       />
     </div>
   );

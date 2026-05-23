@@ -9,12 +9,14 @@ import CourseCreationModal from "@/components/CourseCreationModal";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import { useLecturerCourses } from "@/hooks/useLecturerCourses";
+import { useI18n } from "@/contexts/I18nContext";
 import type { Server, Channel } from "@/types/server";
 import type { Message as MessageType } from "@/types/message";
 import type { User } from "@supabase/supabase-js";
 
 export default function LecturerChatPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { user, profile, role: userRole, isLoading: userLoading } = useUser();
   const {
     courses,
@@ -396,16 +398,26 @@ export default function LecturerChatPage() {
                   d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                 />
               </svg>
-              <p className="text-lg font-medium mb-2">No courses yet</p>
-              <p className="text-sm mb-6">
-                Create your first course to start chatting with students
+              <p className="text-lg font-medium mb-2">
+                {t("lecturerChat.noCoursesTitle")}
               </p>
-              <Link
-                href="/lecturer/dashboard"
-                className="inline-block bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                Go to Dashboard
-              </Link>
+              <p className="text-sm mb-6">
+                {t("lecturerChat.noCoursesDescription")}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  href="/lecturer/projects?create=true"
+                  className="inline-block bg-teal-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-teal-700 transition-colors"
+                >
+                  {t("lecturerDashboard.createFirstProject")}
+                </Link>
+                <Link
+                  href="/lecturer/dashboard"
+                  className="inline-block bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  {t("lecturerChat.goToDashboard")}
+                </Link>
+              </div>
             </div>
           </div>
         ) : (

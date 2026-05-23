@@ -13,6 +13,12 @@ type CriterionInput = {
   platform?: string | null;
 };
 
+type ResourceInput = {
+  type?: "image" | "video" | "link";
+  title?: string | null;
+  url?: string;
+};
+
 type CreateProjectBody = {
   name?: string;
   description?: string;
@@ -25,6 +31,7 @@ type CreateProjectBody = {
   startDate?: string;
   endDate?: string;
   criteria?: CriterionInput[];
+  resources?: ResourceInput[];
 };
 
 // POST /api/lecturer/projects
@@ -86,6 +93,7 @@ export async function POST(request: NextRequest) {
       startDate,
       endDate,
       criteria,
+      resources,
     } = body;
 
     // Input validation. The DB CHECK constraints (mig 050) also enforce most
@@ -112,9 +120,13 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    if (typeof minViews !== "number" || minViews < 5000) {
+    if (
+      typeof minViews !== "number" ||
+      minViews < 0 ||
+      !Number.isInteger(minViews)
+    ) {
       return NextResponse.json(
-        { error: "minViews must be at least 5000" },
+        { error: "minViews must be a non-negative integer" },
         { status: 400 },
       );
     }
@@ -193,6 +205,35 @@ export async function POST(request: NextRequest) {
           console.error(
             "[lecturer/projects] criteria insert error:",
             critError.message,
+          );
+        }
+      }
+    }
+
+    if (Array.isArray(resources) && resources.length > 0) {
+      const rows = resources
+        .filter(
+          (r) =>
+            r &&
+            typeof r.url === "string" &&
+            r.url.trim() !== "" &&
+            (r.type === "image" || r.type === "video" || r.type === "link"),
+        )
+        .map((r, i) => ({
+          project_id: projectRecord.id,
+          resource_type: r.type!,
+          title: r.title?.trim() || null,
+          url: r.url!.trim(),
+          display_order: i,
+        }));
+      if (rows.length > 0) {
+        const { error: resourceError } = await supabase
+          .from("project_resources")
+          .insert(rows);
+        if (resourceError) {
+          console.error(
+            "[lecturer/projects] resources insert error:",
+            resourceError.message,
           );
         }
       }

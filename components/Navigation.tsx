@@ -128,12 +128,20 @@ function Navigation() {
               </>
             )}
             {userRole === "lecturer" && (
-              <Link
-                href="/lecturer/dashboard"
-                className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
-              >
-                {t("nav.dashboard")}
-              </Link>
+              <>
+                <Link
+                  href="/lecturer/dashboard"
+                  className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
+                >
+                  {t("nav.dashboard")}
+                </Link>
+                <Link
+                  href="/lecturer/projects"
+                  className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
+                >
+                  {t("nav.projects")}
+                </Link>
+              </>
             )}
             {userRole === "admin" && (
               <>
@@ -302,6 +310,26 @@ function Navigation() {
                                 />
                               </svg>
                               {t("nav.chat")}
+                            </Link>
+                            <Link
+                              href="/lecturer/projects"
+                              onClick={() => setIsProfileMenuOpen(false)}
+                              className="flex items-center px-4 py-2.5 text-sm text-charcoal-700 dark:text-gray-200 hover:bg-charcoal-100 dark:hover:bg-navy-600/80 transition-colors font-medium"
+                            >
+                              <svg
+                                className="w-5 h-5 mr-3 text-charcoal-500 dark:text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                                />
+                              </svg>
+                              {t("nav.projects")}
                             </Link>
                           </>
                         ) : userRole === "admin" ? (
@@ -507,13 +535,22 @@ function Navigation() {
                 </>
               )}
               {userRole === "lecturer" && (
-                <Link
-                  href="/lecturer/dashboard"
-                  className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {t("nav.dashboard")}
-                </Link>
+                <>
+                  <Link
+                    href="/lecturer/dashboard"
+                    className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {t("nav.dashboard")}
+                  </Link>
+                  <Link
+                    href="/lecturer/projects"
+                    className="text-charcoal-600 dark:text-gray-400 hover:text-charcoal-950 dark:hover:text-white font-normal text-sm transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {t("nav.projects")}
+                  </Link>
+                </>
               )}
               <div className="pt-4 border-t border-charcoal-100/50 dark:border-navy-800/50">
                 <div className="mb-4 flex items-center justify-center gap-4">
@@ -604,6 +641,26 @@ function Navigation() {
                             />
                           </svg>
                           {t("nav.chat")}
+                        </Link>
+                        <Link
+                          href="/lecturer/projects"
+                          className="flex items-center w-full px-4 py-2 text-charcoal-600 dark:text-gray-300 hover:bg-charcoal-50/50 dark:hover:bg-navy-800/50 rounded-xl transition-colors text-sm"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <svg
+                            className="w-5 h-5 mr-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                            />
+                          </svg>
+                          {t("nav.projects")}
                         </Link>
                         <Link
                           href="/settings"

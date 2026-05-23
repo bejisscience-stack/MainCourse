@@ -76,7 +76,7 @@ export default function BudgetPoolCard({
   }, [budget.status]);
 
   return (
-    <aside className="bg-white dark:bg-navy-800 rounded-3xl border border-charcoal-100/60 dark:border-navy-700/60 shadow-soft p-6 md:p-7 space-y-5">
+    <aside className="bg-white dark:bg-navy-800 rounded-3xl border border-charcoal-100/60 dark:border-navy-700/60 shadow-soft lg:shadow-lg lg:ring-1 lg:ring-charcoal-100/80 dark:lg:ring-navy-600/50 p-6 md:p-7 space-y-5">
       {/* Total budget header */}
       <div>
         <div className="text-[11px] font-semibold uppercase tracking-wider text-charcoal-500 dark:text-gray-400">
@@ -145,7 +145,7 @@ export default function BudgetPoolCard({
               {project.platforms.map((p) => (
                 <span
                   key={p}
-                  className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-charcoal-100 text-charcoal-700 dark:bg-navy-700 dark:text-gray-200 capitalize"
+                  className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-charcoal-100 text-charcoal-700 dark:bg-navy-700 dark:text-gray-200 capitalize border border-charcoal-200/60 dark:border-navy-600/60"
                 >
                   {p}
                 </span>

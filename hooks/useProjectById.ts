@@ -14,8 +14,8 @@ async function fetchProject(id: string): Promise<ActiveProject | null> {
     .from("projects")
     .select(
       `
-      id, message_id, channel_id, course_id, user_id, name, description, video_link, budget, min_views, max_views, platforms, start_date, end_date, created_at, updated_at, status,
-      courses!inner ( id, title, thumbnail_url, lecturer_id )
+      id, message_id, channel_id, course_id, user_id, name, description, video_link, thumbnail_url, budget, min_views, max_views, platforms, start_date, end_date, created_at, updated_at, status,
+      courses ( id, title, thumbnail_url, lecturer_id )
     `,
     )
     .eq("id", id)
@@ -29,11 +29,13 @@ async function fetchProject(id: string): Promise<ActiveProject | null> {
   if (!project) return null;
 
   const p: any = project;
+  const course = p.courses ?? null;
+  const lecturerId = p.user_id ?? course?.lecturer_id;
 
   let profile: any = null;
-  if (session) {
+  if (session && lecturerId) {
     const { data: profiles } = await supabase.rpc("get_safe_profiles", {
-      user_ids: [p.courses.lecturer_id],
+      user_ids: [lecturerId],
     });
     profile = profiles?.[0] || null;
   }
@@ -41,6 +43,12 @@ async function fetchProject(id: string): Promise<ActiveProject | null> {
   const { data: criteria } = await supabase
     .from("project_criteria")
     .select("id, criteria_text, rpm, display_order, platform")
+    .eq("project_id", p.id)
+    .order("display_order", { ascending: true });
+
+  const { data: resources } = await supabase
+    .from("project_resources")
+    .select("id, resource_type, title, url, display_order")
     .eq("project_id", p.id)
     .order("display_order", { ascending: true });
 
@@ -61,9 +69,9 @@ async function fetchProject(id: string): Promise<ActiveProject | null> {
     end_date: p.end_date,
     created_at: p.created_at,
     updated_at: p.updated_at,
-    course_title: p.courses.title,
-    course_thumbnail_url: p.courses.thumbnail_url,
-    lecturer_id: p.courses.lecturer_id,
+    course_title: course?.title ?? null,
+    course_thumbnail_url: p.thumbnail_url ?? course?.thumbnail_url ?? null,
+    lecturer_id: lecturerId,
     lecturer_username: profile?.username || null,
     lecturer_full_name: profile?.full_name || null,
     criteria: (criteria || []).map((c: any) => ({
@@ -72,6 +80,13 @@ async function fetchProject(id: string): Promise<ActiveProject | null> {
       rpm: c.rpm,
       display_order: c.display_order,
       platform: c.platform,
+    })),
+    resources: (resources || []).map((r: any) => ({
+      id: r.id,
+      resource_type: r.resource_type,
+      title: r.title,
+      url: r.url,
+      display_order: r.display_order,
     })),
   };
 }
@@ -88,7 +103,6 @@ export function useProjectById(id: string | null | undefined) {
 
   const refresh = useCallback(() => mutate(), [mutate]);
 
-  // Realtime updates for this project's row + its criteria
   useEffect(() => {
     if (!id) return;
     const chProject = supabase
@@ -109,6 +123,16 @@ export function useProjectById(id: string | null | undefined) {
           event: "*",
           schema: "public",
           table: "project_criteria",
+          filter: `project_id=eq.${id}`,
+        },
+        () => refresh(),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "project_resources",
           filter: `project_id=eq.${id}`,
         },
         () => refresh(),

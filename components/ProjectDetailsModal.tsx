@@ -9,6 +9,7 @@ import { useEnrollments } from "@/hooks/useEnrollments";
 import { useProjectAccess } from "@/hooks/useProjectAccess";
 import { useSignedChatMediaUrl } from "@/hooks/useSignedChatMediaUrl";
 import { formatPriceInGel } from "@/lib/currency";
+import LinkifiedText from "@/components/LinkifiedText";
 
 /** True when value is a chat-media bucket-relative path (no scheme). */
 function isChatMediaStoragePath(value: string | null | undefined): boolean {
@@ -356,9 +357,11 @@ export default function ProjectDetailsModal({
               <h3 className="text-sm font-semibold text-charcoal-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                 {t("activeProjects.description")}
               </h3>
-              <p className="text-charcoal-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
-                {project.description}
-              </p>
+              <LinkifiedText
+                text={project.description}
+                className="text-charcoal-700 dark:text-gray-300"
+                linkClassName="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 underline underline-offset-2 break-all"
+              />
             </div>
           )}
 

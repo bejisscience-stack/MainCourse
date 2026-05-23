@@ -46,7 +46,7 @@ html {
   height: 100%;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   overflow-y: auto;
   scroll-behavior: smooth;
   text-rendering: optimizeLegibility;
@@ -62,7 +62,7 @@ body {
   height: auto;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   overflow-y: auto;
   scroll-behavior: smooth;
   text-rendering: optimizeLegibility;
@@ -89,21 +89,21 @@ body {
 }
 
 /* Ensure main containers don't extend beyond viewport */
-main {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-  position: relative;
-}
-
-/* Prevent scrolling beyond content */
 #__next,
 #__next > div {
   min-height: 100%;
   height: auto;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+/* Prevent scrolling beyond content */
+main {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  position: relative;
 }
 
 /* Smooth transitions for all transform-based hover effects - prevents flickering */

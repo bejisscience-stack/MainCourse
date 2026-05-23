@@ -7,6 +7,7 @@ import Navigation from "@/components/Navigation";
 import BudgetPoolCard from "@/components/projects/BudgetPoolCard";
 import HowItWorks from "@/components/projects/HowItWorks";
 import CriteriaGrid from "@/components/projects/CriteriaGrid";
+import ProjectResourcesList from "@/components/projects/ProjectResourcesList";
 import RecentSubmissions from "@/components/projects/RecentSubmissions";
 import ProjectSubscriptionModal from "@/components/ProjectSubscriptionModal";
 import { useI18n } from "@/contexts/I18nContext";
@@ -16,6 +17,7 @@ import { useProjectAccess } from "@/hooks/useProjectAccess";
 import { useSignedChatMediaUrl } from "@/hooks/useSignedChatMediaUrl";
 import { useProjectCountdown } from "@/hooks/useProjectCountdown";
 import { useProjectById } from "@/hooks/useProjectById";
+import LinkifiedText from "@/components/LinkifiedText";
 
 function isChatMediaStoragePath(value: string | null | undefined): boolean {
   return !!value && !value.includes("://");
@@ -72,6 +74,50 @@ export default function ProjectDetailPage() {
     }
   }, [project?.name]);
 
+  const budgetPrimaryAction = useMemo(
+    () =>
+      canAccessProject
+        ? {
+            label: t("activeProjects.goToProject"),
+            onClick: handleGoToProject,
+            icon: (
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
+              </svg>
+            ),
+          }
+        : {
+            label: t("activeProjects.subscribeToProjects"),
+            onClick: handleSubscribeClick,
+            icon: (
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                />
+              </svg>
+            ),
+          },
+    [canAccessProject, handleGoToProject, handleSubscribeClick, t],
+  );
+
   // 404 / loading states
   if (!isLoading && !project) {
     return (
@@ -118,7 +164,7 @@ export default function ProjectDetailPage() {
     t("activeProjects.unknownLecturer");
 
   return (
-    <main className="relative min-h-screen bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900">
+    <main className="relative min-h-screen overflow-visible bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900">
       <div className="fixed inset-0 bg-gradient-to-b from-[#fafafa] via-white to-[#fafafa] dark:from-navy-950 dark:via-navy-900 dark:to-navy-950 pointer-events-none" />
       <Navigation />
 
@@ -224,21 +270,31 @@ export default function ProjectDetailPage() {
               <div className="h-80 bg-white dark:bg-navy-800 rounded-3xl" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10 lg:items-stretch">
               {/* Left column */}
-              <div className="lg:col-span-2 space-y-10">
+              <div className="lg:col-span-2 space-y-10 min-w-0 order-2 lg:order-1">
                 {/* About */}
                 <section>
                   <h2 className="text-2xl font-bold text-charcoal-950 dark:text-white mb-4">
                     {t("projectDetail.about") || "About this project"}
                   </h2>
-                  <p className="text-charcoal-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
-                    {project.description}
-                  </p>
+                  <LinkifiedText
+                    text={project.description}
+                    className="text-charcoal-700 dark:text-gray-300"
+                    linkClassName="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 underline underline-offset-2 break-all"
+                  />
                 </section>
 
                 {/* How it works */}
                 <HowItWorks />
+
+                {/* Resources */}
+                {project.resources.length > 0 && (
+                  <ProjectResourcesList
+                    projectId={project.id}
+                    resources={project.resources}
+                  />
+                )}
 
                 {/* Criteria */}
                 {project.criteria.length > 0 && (
@@ -249,52 +305,12 @@ export default function ProjectDetailPage() {
                 <RecentSubmissions projectId={project.id} />
               </div>
 
-              {/* Right column */}
-              <div className="lg:col-span-1">
-                <div className="lg:sticky lg:top-24">
+              {/* Outer grid cell stretches to row height; inner wrapper sticks */}
+              <div className="lg:col-span-1 order-1 lg:order-2">
+                <div className="lg:sticky lg:top-[calc(var(--welcome-banner-h,0px)+5.25rem)] lg:z-10">
                   <BudgetPoolCard
                     project={project}
-                    primaryAction={
-                      canAccessProject
-                        ? {
-                            label: t("activeProjects.goToProject"),
-                            onClick: handleGoToProject,
-                            icon: (
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M13 7l5 5m0 0l-5 5m5-5H6"
-                                />
-                              </svg>
-                            ),
-                          }
-                        : {
-                            label: t("activeProjects.subscribeToProjects"),
-                            onClick: handleSubscribeClick,
-                            icon: (
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                                />
-                              </svg>
-                            ),
-                          }
-                    }
+                    primaryAction={budgetPrimaryAction}
                     referenceVideoUrl={resolvedVideoLink}
                   />
                 </div>

@@ -1,11 +1,15 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useI18n } from "@/contexts/I18nContext";
 import VideoUploadDialog, {
   type ProjectSubmissionData,
 } from "@/components/chat/VideoUploadDialog";
+import {
+  prepareProjectResourcesForInsert,
+  resourceExtensionForFile,
+} from "@/lib/project-resources";
 
 interface LecturerProjectCreationModalProps {
   isOpen: boolean;
@@ -37,7 +41,19 @@ export default function LecturerProjectCreationModal({
   const [isUploadingThumb, setIsUploadingThumb] = useState(false);
   const [thumbError, setThumbError] = useState<string | null>(null);
   const [step, setStep] = useState<"thumbnail" | "form">("thumbnail");
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const thumbnailPreview = useMemo(() => {
+    if (!thumbnailFile) return null;
+    return URL.createObjectURL(thumbnailFile);
+  }, [thumbnailFile]);
+
+  useEffect(() => {
+    return () => {
+      if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+    };
+  }, [thumbnailPreview]);
 
   const resetAndClose = useCallback(() => {
     setThumbnailFile(null);
@@ -110,6 +126,25 @@ export default function LecturerProjectCreationModal({
         videoPath = path;
       }
 
+      const storedResources = await prepareProjectResourcesForInsert(
+        data.resources,
+        async (file, storagePath) => {
+          const { error: upErr } = await supabase.storage
+            .from("chat-media")
+            .upload(storagePath, file, {
+              cacheControl: "3600",
+              upsert: false,
+            });
+          if (upErr) {
+            throw new Error(`Failed to upload resource: ${upErr.message}`);
+          }
+        },
+        (file, type) => {
+          const ext = resourceExtensionForFile(file, type);
+          return `standalone-projects/${session.user.id}/resource-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+        },
+      );
+
       const resp = await fetch("/api/lecturer/projects", {
         method: "POST",
         headers: {
@@ -128,6 +163,7 @@ export default function LecturerProjectCreationModal({
           startDate: data.startDate,
           endDate: data.endDate,
           criteria: data.criteria,
+          resources: storedResources,
         }),
       });
 
@@ -153,67 +189,210 @@ export default function LecturerProjectCreationModal({
   if (step === "thumbnail") {
     return (
       <div
-        className="fixed inset-0 bg-charcoal-950/95 backdrop-blur-md z-[9999] flex items-center justify-center p-4"
+        className="fixed inset-0 bg-navy-950/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
         onClick={(e) => {
           if (e.target === e.currentTarget) resetAndClose();
         }}
       >
-        <div className="w-full max-w-md bg-white dark:bg-navy-900 rounded-2xl p-6 space-y-4 shadow-2xl">
-          <h2 className="text-lg font-semibold text-charcoal-950 dark:text-white">
-            {t("lecturerProjects.thumbnailStepTitle") ||
-              "Add a project thumbnail"}
-          </h2>
-          <p className="text-sm text-charcoal-600 dark:text-gray-400">
-            {t("lecturerProjects.thumbnailStepHelp") ||
-              "Pick an image that represents this project. You can also skip and add one later."}
-          </p>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="block w-full text-sm text-charcoal-700 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-500/10 dark:file:text-emerald-300"
-            disabled={isUploadingThumb}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleThumbnailPick(f);
-            }}
-          />
-
-          {isUploadingThumb && (
-            <p className="text-xs text-charcoal-500 dark:text-gray-400">
-              {t("lecturerProjects.thumbnailUploading") || "Uploading..."}
-            </p>
-          )}
-          {thumbError && (
-            <p className="text-xs text-red-600 dark:text-red-400">
-              {thumbError}
-            </p>
-          )}
-          {thumbnailUrl && !isUploadingThumb && (
-            <p className="text-xs text-emerald-600 dark:text-emerald-400">
-              {t("lecturerProjects.thumbnailUploaded") || "Thumbnail ready."}
-            </p>
-          )}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={resetAndClose}
-              className="px-4 py-2 text-sm font-medium text-charcoal-600 dark:text-gray-300 hover:bg-charcoal-50 dark:hover:bg-navy-800 rounded-lg"
+        <div
+          className="relative w-full max-w-md bg-navy-950/90 border border-navy-800/60 rounded-2xl shadow-soft-xl overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={resetAndClose}
+            className="absolute top-4 right-4 z-10 w-8 h-8 bg-navy-800/70 hover:bg-navy-700 rounded-full flex items-center justify-center text-gray-300 transition-colors"
+            aria-label={t("common.close") || "Close"}
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              {t("common.cancel") || "Cancel"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setStep("form")}
-              disabled={isUploadingThumb}
-              className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 rounded-lg"
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+
+          <div className="p-6 space-y-5">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-100 mb-1 pr-10">
+                {t("lecturerProjects.thumbnailStepTitle") ||
+                  "Add a project thumbnail"}
+              </h2>
+              <p className="text-sm text-gray-500">
+                {t("lecturerProjects.thumbnailStepHelp") ||
+                  "Pick an image that represents this project. You can also skip and add one later."}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>
+                  {t("lecturerProjects.thumbnailStepProgress") || "Step 1 of 2"}
+                </span>
+                <span className="text-gray-300">
+                  {t("lecturerProjects.thumbnailStepLabel") || "Thumbnail"}
+                </span>
+              </div>
+              <div className="w-full h-1 bg-navy-800/60 rounded-full overflow-hidden">
+                <div className="h-full w-1/2 bg-emerald-400/80 transition-all" />
+              </div>
+            </div>
+
+            <label
+              htmlFor="project-thumbnail-input"
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (!isUploadingThumb) setIsDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                if (isUploadingThumb) return;
+                const f = e.dataTransfer.files?.[0];
+                if (f) handleThumbnailPick(f);
+              }}
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition-all ${
+                isDragging
+                  ? "border-emerald-400 bg-emerald-500/10"
+                  : "border-navy-700/80 bg-navy-900/40 hover:border-emerald-500/50 hover:bg-navy-900/60"
+              } ${isUploadingThumb ? "pointer-events-none opacity-70" : ""}`}
             >
-              {thumbnailUrl
-                ? t("common.continue") || "Continue"
-                : t("lecturerProjects.skipThumbnail") || "Skip & continue"}
-            </button>
+              {thumbnailPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={thumbnailPreview}
+                  alt=""
+                  className="mb-3 max-h-44 w-full rounded-xl object-contain"
+                />
+              ) : (
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-navy-800/60 text-emerald-400">
+                  <svg
+                    className="h-7 w-7"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
+              )}
+
+              <span className="text-sm font-semibold text-gray-200">
+                {thumbnailFile
+                  ? thumbnailFile.name
+                  : t("lecturerProjects.thumbnailDropHint") ||
+                    "Click to upload or drag and drop"}
+              </span>
+              <span className="mt-1 text-xs text-gray-500">
+                {t("lecturerProjects.thumbnailFormats") ||
+                  "JPG, PNG, or WEBP · Recommended 16:9"}
+              </span>
+
+              <input
+                id="project-thumbnail-input"
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={isUploadingThumb}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleThumbnailPick(f);
+                }}
+              />
+            </label>
+
+            {isUploadingThumb && (
+              <div className="flex items-center gap-2 rounded-xl border border-navy-800/60 bg-navy-900/50 px-4 py-3 text-sm text-gray-400">
+                <svg
+                  className="h-4 w-4 animate-spin text-emerald-400"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                <span>
+                  {t("lecturerProjects.thumbnailUploading") || "Uploading..."}
+                </span>
+              </div>
+            )}
+
+            {thumbError && (
+              <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                {thumbError}
+              </div>
+            )}
+
+            {thumbnailUrl && !isUploadingThumb && (
+              <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                <svg
+                  className="h-4 w-4 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                <span>
+                  {t("lecturerProjects.thumbnailUploaded") ||
+                    "Thumbnail ready."}
+                </span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-navy-800/60">
+              <button
+                type="button"
+                onClick={resetAndClose}
+                className="px-4 py-2 text-sm font-semibold text-gray-300 bg-navy-900/60 border border-navy-800/60 rounded-lg hover:bg-navy-800/70 transition-colors"
+              >
+                {t("common.cancel") || "Cancel"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep("form")}
+                disabled={isUploadingThumb}
+                className="px-4 py-2 text-sm font-semibold text-white bg-emerald-500/90 rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {thumbnailUrl
+                  ? t("common.continue") || "Continue"
+                  : t("lecturerProjects.skipThumbnail") || "Skip & continue"}
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -1,18 +1,20 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect } from 'react';
-import ProjectCard from '@/components/ProjectCard';
-import ProjectDetailsModal from '@/components/ProjectDetailsModal';
-import { useActiveProjects, type ActiveProject } from '@/hooks/useActiveProjects';
-import { useI18n } from '@/contexts/I18nContext';
-import { ScrollReveal } from './ScrollReveal';
+import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import ProjectCard from "@/components/ProjectCard";
+import {
+  useActiveProjects,
+  type ActiveProject,
+} from "@/hooks/useActiveProjects";
+import { useI18n } from "@/contexts/I18nContext";
+import { ScrollReveal } from "./ScrollReveal";
 
 export default function ActiveProjectsCarousel() {
+  const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAllMobile, setShowAllMobile] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<ActiveProject | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const { projects, isLoading, error: projectsError } = useActiveProjects();
   const { t, isReady: translationsReady } = useI18n();
 
@@ -28,7 +30,7 @@ export default function ActiveProjectsCarousel() {
     if (projects.length < 2) return;
     const interval = setInterval(() => {
       if (!isHovered) {
-        setCurrentIndex(prev => (prev + 1) % projects.length);
+        setCurrentIndex((prev) => (prev + 1) % projects.length);
       }
     }, 4000);
     return () => clearInterval(interval);
@@ -44,15 +46,12 @@ export default function ActiveProjectsCarousel() {
     setCurrentIndex((prev) => (prev < projects.length - 1 ? prev + 1 : 0));
   }, [projects.length]);
 
-  const handleProjectClick = useCallback((project: ActiveProject) => {
-    setSelectedProject(project);
-    setIsModalOpen(true);
-  }, []);
-
-  const handleCloseModal = useCallback(() => {
-    setIsModalOpen(false);
-    setSelectedProject(null);
-  }, []);
+  const handleProjectClick = useCallback(
+    (project: ActiveProject) => {
+      router.push(`/projects/${project.id}`);
+    },
+    [router],
+  );
 
   // Show loading only when we have no data yet - don't block content
   if (isLoading && projects.length === 0) {
@@ -61,13 +60,15 @@ export default function ActiveProjectsCarousel() {
         <div className="max-w-7xl mx-auto">
           <ScrollReveal delay={0} duration={600}>
             <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white text-center mb-12 tracking-tight">
-              {t('activeProjects.title')}
+              {t("activeProjects.title")}
             </h2>
           </ScrollReveal>
           <ScrollReveal delay={100} duration={600}>
             <div className="flex items-center justify-center">
               <div className="text-charcoal-500 dark:text-gray-400">
-                {translationsReady ? t('activeProjects.loading') : 'Loading projects...'}
+                {translationsReady
+                  ? t("activeProjects.loading")
+                  : "Loading projects..."}
               </div>
             </div>
           </ScrollReveal>
@@ -82,23 +83,30 @@ export default function ActiveProjectsCarousel() {
         <div className="max-w-7xl mx-auto">
           <ScrollReveal delay={0} duration={600}>
             <h2 className="text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white text-center mb-12 tracking-tight">
-              {translationsReady ? t('activeProjects.title') : 'Active Projects'}
+              {translationsReady
+                ? t("activeProjects.title")
+                : "Active Projects"}
             </h2>
           </ScrollReveal>
           <ScrollReveal delay={100} duration={600}>
             <div className="flex flex-col items-center justify-center">
               <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 text-red-700 dark:text-red-400 px-6 py-4 rounded-2xl max-w-md text-center shadow-soft">
                 <p className="font-medium mb-2">
-                  {translationsReady ? t('activeProjects.errorLoading') : 'Error Loading Projects'}
+                  {translationsReady
+                    ? t("activeProjects.errorLoading")
+                    : "Error Loading Projects"}
                 </p>
                 <p className="text-sm mb-4 text-red-600 dark:text-red-400">
-                  {projectsError.message || (translationsReady ? t('activeProjects.errorMessage') : 'An error occurred')}
+                  {projectsError.message ||
+                    (translationsReady
+                      ? t("activeProjects.errorMessage")
+                      : "An error occurred")}
                 </p>
                 <button
                   onClick={() => window.location.reload()}
                   className="bg-charcoal-950 dark:bg-emerald-500 text-white px-5 py-2 rounded-full font-medium hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft text-sm"
                 >
-                  {translationsReady ? t('common.retry') : 'Retry'}
+                  {translationsReady ? t("common.retry") : "Retry"}
                 </button>
               </div>
             </div>
@@ -113,13 +121,19 @@ export default function ActiveProjectsCarousel() {
     return null;
   }
 
-  const safeCurrentIndex = Math.min(currentIndex, Math.max(0, projects.length - 1));
+  const safeCurrentIndex = Math.min(
+    currentIndex,
+    Math.max(0, projects.length - 1),
+  );
   const showArrows = projects.length >= 2;
 
   // 3D ring calculations
   const anglePerItem = 360 / projects.length;
   const ringRotation = -safeCurrentIndex * anglePerItem;
-  const radius = Math.max(420, Math.round((300 * projects.length) / (2 * Math.PI)) + 60);
+  const radius = Math.max(
+    420,
+    Math.round((300 * projects.length) / (2 * Math.PI)) + 60,
+  );
 
   return (
     <>
@@ -128,10 +142,15 @@ export default function ActiveProjectsCarousel() {
           <ScrollReveal delay={0} duration={600}>
             <div className="text-center mb-12">
               <h2 className="inline-block text-3xl md:text-4xl font-bold text-charcoal-950 dark:text-white tracking-tight">
-                {translationsReady ? t('activeProjects.title') : 'Active Projects'}
+                {translationsReady
+                  ? t("activeProjects.title")
+                  : "Active Projects"}
               </h2>
               <p className="mt-3 text-lg text-charcoal-600 dark:text-gray-400">
-                {projects.length} {translationsReady ? t('activeProjects.projectsAvailable') : 'active projects available'}
+                {projects.length}{" "}
+                {translationsReady
+                  ? t("activeProjects.projectsAvailable")
+                  : "active projects available"}
               </p>
             </div>
           </ScrollReveal>
@@ -139,14 +158,16 @@ export default function ActiveProjectsCarousel() {
           <div className="relative">
             {/* Mobile View: Vertical Stack — unchanged layout */}
             <div className="md:hidden flex flex-col gap-6 px-4">
-              {projects.slice(0, showAllMobile ? undefined : 3).map((project) => (
-                <div key={project.id} className="w-full">
-                  <ProjectCard
-                    project={project}
-                    onClick={() => handleProjectClick(project)}
-                  />
-                </div>
-              ))}
+              {projects
+                .slice(0, showAllMobile ? undefined : 3)
+                .map((project) => (
+                  <div key={project.id} className="w-full">
+                    <ProjectCard
+                      project={project}
+                      href={`/projects/${project.id}`}
+                    />
+                  </div>
+                ))}
 
               {projects.length > 3 && (
                 <div className="flex justify-center mt-2">
@@ -156,16 +177,44 @@ export default function ActiveProjectsCarousel() {
                   >
                     {showAllMobile ? (
                       <>
-                        <span>{translationsReady ? t('common.showLess') : 'Show Less'}</span>
-                        <svg className="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        <span>
+                          {translationsReady
+                            ? t("common.showLess")
+                            : "Show Less"}
+                        </span>
+                        <svg
+                          className="w-4 h-4 transform rotate-180"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
                         </svg>
                       </>
                     ) : (
                       <>
-                        <span>{translationsReady ? t('common.showMore') : 'Show More'}</span>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        <span>
+                          {translationsReady
+                            ? t("common.showMore")
+                            : "Show More"}
+                        </span>
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
                         </svg>
                       </>
                     )}
@@ -182,7 +231,10 @@ export default function ActiveProjectsCarousel() {
                   <button
                     onClick={handlePrevious}
                     className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 md:-translate-x-10 z-30 w-14 h-14 md:w-16 md:h-16 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl dark:shadow-glow-dark flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-charcoal-100/50 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 group will-change-transform"
-                    style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+                    style={{
+                      transformOrigin: "center",
+                      backfaceVisibility: "hidden",
+                    }}
                     aria-label="Previous project"
                   >
                     <svg
@@ -191,14 +243,22 @@ export default function ActiveProjectsCarousel() {
                       stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M15 19l-7-7 7-7"
+                      />
                     </svg>
                   </button>
 
                   <button
                     onClick={handleNext}
                     className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 md:translate-x-10 z-30 w-14 h-14 md:w-16 md:h-16 bg-white dark:bg-navy-800 rounded-full shadow-soft-xl dark:shadow-glow-dark flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-charcoal-100/50 dark:border-emerald-500/30 hover:border-emerald-500 dark:hover:border-emerald-400 group will-change-transform"
-                    style={{ transformOrigin: 'center', backfaceVisibility: 'hidden' }}
+                    style={{
+                      transformOrigin: "center",
+                      backfaceVisibility: "hidden",
+                    }}
                     aria-label="Next project"
                   >
                     <svg
@@ -207,7 +267,12 @@ export default function ActiveProjectsCarousel() {
                       stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M9 5l7 7-7 7"
+                      />
                     </svg>
                   </button>
                 </>
@@ -215,30 +280,38 @@ export default function ActiveProjectsCarousel() {
 
               {/* 3D Ring — perspective container */}
               <div
-                style={{ perspective: '2000px', height: '520px', position: 'relative' }}
+                style={{
+                  perspective: "2000px",
+                  height: "520px",
+                  position: "relative",
+                }}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
               >
                 {/* Rotating ring */}
                 <div
                   style={{
-                    position: 'absolute',
-                    width: '100%',
-                    height: '100%',
-                    transformStyle: 'preserve-3d',
+                    position: "absolute",
+                    width: "100%",
+                    height: "100%",
+                    transformStyle: "preserve-3d",
                     transform: `rotateY(${ringRotation}deg)`,
-                    transition: 'transform 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: "transform 0.7s cubic-bezier(0.4, 0, 0.2, 1)",
                   }}
                 >
                   {projects.map((project, i) => {
                     // Angular distance from the front face (0° = front)
-                    const cardAngle = ((i * anglePerItem) + ringRotation + 360) % 360;
-                    const normalizedAngle = cardAngle > 180 ? 360 - cardAngle : cardAngle;
+                    const cardAngle =
+                      (i * anglePerItem + ringRotation + 360) % 360;
+                    const normalizedAngle =
+                      cardAngle > 180 ? 360 - cardAngle : cardAngle;
                     // Front half (<90°) fully visible; 90–120° fade out; back half (>120°) hidden
                     const opacity =
-                      normalizedAngle < 90 ? 1 :
-                      normalizedAngle > 120 ? 0 :
-                      (120 - normalizedAngle) / 30;
+                      normalizedAngle < 90
+                        ? 1
+                        : normalizedAngle > 120
+                          ? 0
+                          : (120 - normalizedAngle) / 30;
 
                     const isFront = i === safeCurrentIndex;
 
@@ -246,17 +319,21 @@ export default function ActiveProjectsCarousel() {
                       <div
                         key={project.id}
                         style={{
-                          position: 'absolute',
-                          width: '300px',
-                          left: '50%',
-                          top: '50%',
-                          marginLeft: '-150px',
-                          marginTop: '-210px',
+                          position: "absolute",
+                          width: "300px",
+                          left: "50%",
+                          top: "50%",
+                          marginLeft: "-150px",
+                          marginTop: "-210px",
                           transform: `rotateY(${i * anglePerItem}deg) translateZ(${radius}px)`,
                           opacity,
-                          pointerEvents: opacity > 0.1 ? 'auto' : 'none',
-                          transition: 'opacity 0.3s ease',
-                          cursor: isFront ? 'pointer' : opacity > 0.1 ? 'pointer' : 'default',
+                          pointerEvents: opacity > 0.1 ? "auto" : "none",
+                          transition: "opacity 0.3s ease",
+                          cursor: isFront
+                            ? "pointer"
+                            : opacity > 0.1
+                              ? "pointer"
+                              : "default",
                         }}
                         onClick={() => {
                           if (isFront) {
@@ -277,13 +354,6 @@ export default function ActiveProjectsCarousel() {
           </div>
         </div>
       </section>
-
-      {/* Project Details Modal */}
-      <ProjectDetailsModal
-        project={selectedProject}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-      />
     </>
   );
 }

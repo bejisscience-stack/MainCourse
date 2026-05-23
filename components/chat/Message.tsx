@@ -10,6 +10,7 @@ import { useUserMuteStatus } from "@/hooks/useMuteStatus";
 import { useProjectCountdown } from "@/hooks/useProjectCountdown";
 import { useSignedDmMediaUrl } from "@/hooks/useSignedDmMediaUrl";
 import { useSignedChatMediaUrl } from "@/hooks/useSignedChatMediaUrl";
+import LinkifiedText from "@/components/LinkifiedText";
 import ProjectCard from "./ProjectCard";
 import type {
   Message as MessageType,
@@ -885,7 +886,15 @@ const Message = memo(function Message({
                     : `text-gray-100 text-[15px] whitespace-pre-wrap break-words leading-6 ${isPending ? "opacity-50" : isFailed ? "opacity-70" : ""}`
               }
             >
-              {message.content}
+              <LinkifiedText
+                text={message.content}
+                className="leading-6"
+                linkClassName={
+                  isOwn
+                    ? "text-white hover:text-emerald-100 underline underline-offset-2 break-all"
+                    : undefined
+                }
+              />
             </div>
           )}
 

@@ -9,6 +9,10 @@ import { ChevronDown, Pin, PinOff } from "lucide-react";
 import VideoUploadDialog, {
   type ProjectSubmissionData,
 } from "./VideoUploadDialog";
+import {
+  prepareProjectResourcesForInsert,
+  resourceExtensionForFile,
+} from "@/lib/project-resources";
 
 const LecturesChannel = dynamic(() => import("./LecturesChannel"), {
   loading: () => (
@@ -904,6 +908,50 @@ export default function ChatArea({
         }
       }
 
+      if (data.resources?.length > 0 && projectRecord) {
+        try {
+          const storedResources = await prepareProjectResourcesForInsert(
+            data.resources,
+            async (file, storagePath) => {
+              const { error: uploadError } = await supabase.storage
+                .from("chat-media")
+                .upload(storagePath, file, {
+                  cacheControl: "3600",
+                  upsert: false,
+                });
+              if (uploadError) {
+                throw new Error(uploadError.message);
+              }
+            },
+            (file, type) => {
+              const ext = resourceExtensionForFile(file, type);
+              const fileName = `resource-${Date.now()}-${crypto.randomUUID().replace(/-/g, "").substring(0, 16)}.${ext}`;
+              return `${channel.courseId}/${channel.id}/${session.user.id}/${fileName}`;
+            },
+          );
+
+          if (storedResources.length > 0) {
+            const resourceRecords = storedResources.map((resource, index) => ({
+              project_id: projectRecord.id,
+              resource_type: resource.type,
+              title: resource.title ?? null,
+              url: resource.url,
+              display_order: index,
+            }));
+
+            const { error: resourcesError } = await supabase
+              .from("project_resources")
+              .insert(resourceRecords);
+
+            if (resourcesError) {
+              console.error("Error creating resources:", resourcesError);
+            }
+          }
+        } catch (resourceUploadError) {
+          console.error("Error uploading resources:", resourceUploadError);
+        }
+      }
+
       // If budget > 0, initiate Keepz payment
       if (needsPayment && projectRecord) {
         const orderResponse = await fetch("/api/payments/keepz/create-order", {
@@ -1374,6 +1422,7 @@ export default function ChatArea({
             isSending={isSending}
             channelId={channel.id}
             isMuted={isMuted || !canSendMessages}
+            maxFileSizeMb={isLecturer ? 100 : 10}
           />
         );
       })()}

@@ -57,15 +57,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-    if (file.size > MAX_FILE_SIZE) {
-      return errorResponse(
-        `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is 10 MB.`,
-        413,
-        cors,
-      );
-    }
-
     let fileType: "image" | "video" | "gif" = "image";
     if (ALLOWED_VIDEO_TYPES.includes(mimeType)) fileType = "video";
     else if (mimeType === "image/gif") fileType = "gif";
@@ -107,6 +98,19 @@ Deno.serve(async (req: Request) => {
           403,
           cors,
         );
+    }
+
+    // Per-role size cap: admins and the course's lecturer get 100 MB,
+    // students stay at 10 MB. Bucket-level cap is 100 MB.
+    const isPrivileged = isAdmin || course?.lecturer_id === user.id;
+    const MAX_FILE_SIZE = isPrivileged ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+    const maxMb = isPrivileged ? 100 : 10;
+    if (file.size > MAX_FILE_SIZE) {
+      return errorResponse(
+        `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is ${maxMb} MB.`,
+        413,
+        cors,
+      );
     }
 
     const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");

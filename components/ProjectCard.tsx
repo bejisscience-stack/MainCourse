@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useMemo } from "react";
+import Link from "next/link";
 import { useI18n } from "@/contexts/I18nContext";
 import { formatPriceInGel } from "@/lib/currency";
 import type { ActiveProject } from "@/hooks/useActiveProjects";
@@ -27,9 +28,10 @@ const platformConfig: Record<
 interface ProjectCardProps {
   project: ActiveProject;
   onClick?: () => void;
+  href?: string;
 }
 
-function ProjectCard({ project, onClick }: ProjectCardProps) {
+function ProjectCard({ project, onClick, href }: ProjectCardProps) {
   const { t } = useI18n();
 
   // Countdown timer hook
@@ -132,14 +134,22 @@ function ProjectCard({ project, onClick }: ProjectCardProps) {
     }
   };
 
-  return (
+  const cardClassName = `h-full flex flex-col bg-gradient-to-br from-white to-gray-50 dark:from-navy-800 dark:to-navy-900 rounded-2xl overflow-hidden shadow-soft transition-all duration-300 border border-charcoal-100/50 dark:border-navy-700/50 ${
+    isExpired
+      ? "opacity-60 grayscale cursor-not-allowed"
+      : "hover:shadow-xl hover:shadow-emerald-500/10 dark:hover:shadow-emerald-500/20 hover:scale-[1.02] hover:-translate-y-1 cursor-pointer"
+  }`;
+
+  const actionButtonClassName = `w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg transition-all duration-200 ${
+    isExpired
+      ? "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+      : "text-white bg-charcoal-950 dark:bg-emerald-500 hover:bg-charcoal-800 dark:hover:bg-emerald-600 hover:shadow-soft dark:hover:shadow-glow-dark"
+  }`;
+
+  const cardInner = (
     <div
-      onClick={handleClick}
-      className={`h-full flex flex-col bg-gradient-to-br from-white to-gray-50 dark:from-navy-800 dark:to-navy-900 rounded-2xl overflow-hidden shadow-soft transition-all duration-300 border border-charcoal-100/50 dark:border-navy-700/50 ${
-        isExpired
-          ? "opacity-60 grayscale cursor-not-allowed"
-          : "hover:shadow-xl hover:shadow-emerald-500/10 dark:hover:shadow-emerald-500/20 hover:scale-[1.02] hover:-translate-y-1 cursor-pointer"
-      }`}
+      onClick={onClick ? handleClick : undefined}
+      className={cardClassName}
       style={{ transformOrigin: "center", backfaceVisibility: "hidden" }}
     >
       {/* Header Section with Thumbnail */}
@@ -376,60 +386,91 @@ function ProjectCard({ project, onClick }: ProjectCardProps) {
 
         {/* Action Button */}
         <div className="mt-3">
-          <button
-            disabled={isExpired}
-            className={`w-full inline-flex items-center justify-center px-3 py-2 text-xs font-medium rounded-lg transition-all duration-200 ${
-              isExpired
-                ? "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                : "text-white bg-charcoal-950 dark:bg-emerald-500 hover:bg-charcoal-800 dark:hover:bg-emerald-600 hover:shadow-soft dark:hover:shadow-glow-dark"
-            }`}
-          >
-            {isExpired ? (
-              <>
-                <svg
-                  className="w-3 h-3 mr-1.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-                {t("activeProjects.projectExpired") || "Project Expired"}
-              </>
-            ) : (
-              <>
-                <svg
-                  className="w-3 h-3 mr-1.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                  />
-                </svg>
-                {t("activeProjects.viewDetails")}
-              </>
-            )}
-          </button>
+          {href && !isExpired ? (
+            <div className={actionButtonClassName}>
+              <svg
+                className="w-3 h-3 mr-1.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                />
+              </svg>
+              {t("activeProjects.viewDetails")}
+            </div>
+          ) : (
+            <button disabled={isExpired} className={actionButtonClassName}>
+              {isExpired ? (
+                <>
+                  <svg
+                    className="w-3 h-3 mr-1.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                    />
+                  </svg>
+                  {t("activeProjects.projectExpired") || "Project Expired"}
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-3 h-3 mr-1.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
+                  </svg>
+                  {t("activeProjects.viewDetails")}
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
+
+  if (href && !isExpired && !onClick) {
+    return (
+      <Link
+        href={href}
+        className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-navy-950"
+      >
+        {cardInner}
+      </Link>
+    );
+  }
+
+  return cardInner;
 }
 
 export default memo(ProjectCard);

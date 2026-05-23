@@ -839,6 +839,25 @@ export default function LecturerDashboard() {
                 </svg>
                 {t("lecturerDashboard.createBundle")}
               </button>
+              <Link
+                href="/lecturer/projects?create=true"
+                className="px-6 py-3 bg-teal-600 dark:bg-teal-500 text-white font-semibold rounded-xl hover:bg-teal-700 dark:hover:bg-teal-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark flex items-center gap-2"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
+                </svg>
+                {t("lecturerDashboard.createProject")}
+              </Link>
               <button
                 onClick={() => handleOpenModal()}
                 className="px-6 py-3 bg-charcoal-950 dark:bg-emerald-500 text-white font-semibold rounded-xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark flex items-center gap-2"
@@ -1080,12 +1099,23 @@ export default function LecturerDashboard() {
               <p className="text-charcoal-600 dark:text-gray-400 text-lg mb-4">
                 {t("lecturerDashboard.noCoursesYet")}
               </p>
-              <button
-                onClick={() => handleOpenModal()}
-                className="px-6 py-3 bg-charcoal-950 dark:bg-emerald-500 text-white font-semibold rounded-xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark"
-              >
-                {t("lecturerDashboard.createFirstCourse")}
-              </button>
+              <p className="text-charcoal-500 dark:text-gray-500 text-sm mb-6">
+                {t("lecturerDashboard.orCreateProjectHint")}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  href="/lecturer/projects?create=true"
+                  className="px-6 py-3 bg-teal-600 dark:bg-teal-500 text-white font-semibold rounded-xl hover:bg-teal-700 dark:hover:bg-teal-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark"
+                >
+                  {t("lecturerDashboard.createFirstProject")}
+                </Link>
+                <button
+                  onClick={() => handleOpenModal()}
+                  className="px-6 py-3 bg-charcoal-950 dark:bg-emerald-500 text-white font-semibold rounded-xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark"
+                >
+                  {t("lecturerDashboard.createFirstCourse")}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

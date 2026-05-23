@@ -14,6 +14,14 @@ export interface ProjectCriteria {
   platform: string | null;
 }
 
+export interface ProjectResource {
+  id: string;
+  resource_type: "image" | "video" | "link";
+  title: string | null;
+  url: string;
+  display_order: number;
+}
+
 export interface ActiveProject {
   id: string;
   message_id: string | null;
@@ -39,6 +47,7 @@ export interface ActiveProject {
   lecturer_full_name: string | null;
   // Criteria
   criteria: ProjectCriteria[];
+  resources: ProjectResource[];
 }
 
 async function fetchActiveProjects(): Promise<ActiveProject[]> {
@@ -142,6 +151,33 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
       });
     });
 
+    const { data: allResources, error: resourcesError } = await supabase
+      .from("project_resources")
+      .select("id, project_id, resource_type, title, url, display_order")
+      .in("project_id", projectIds)
+      .order("display_order", { ascending: true });
+
+    if (resourcesError) {
+      console.error(
+        "[useActiveProjects] Error fetching resources:",
+        resourcesError,
+      );
+    }
+
+    const resourcesMap = new Map<string, ProjectResource[]>();
+    allResources?.forEach((r: any) => {
+      if (!resourcesMap.has(r.project_id)) {
+        resourcesMap.set(r.project_id, []);
+      }
+      resourcesMap.get(r.project_id)!.push({
+        id: r.id,
+        resource_type: r.resource_type,
+        title: r.title,
+        url: r.url,
+        display_order: r.display_order,
+      });
+    });
+
     // Map projects to ActiveProject interface
     const activeProjects: ActiveProject[] = projects.map((p: any) => {
       const lecturerProfile: any = profileMap.get(p.user_id);
@@ -171,6 +207,7 @@ async function fetchActiveProjects(): Promise<ActiveProject[]> {
         lecturer_username: lecturerProfile?.username || null,
         lecturer_full_name: lecturerProfile?.full_name || null,
         criteria: criteriaMap.get(p.id) || [],
+        resources: resourcesMap.get(p.id) || [],
       };
     });
 

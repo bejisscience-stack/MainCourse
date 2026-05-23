@@ -12,6 +12,10 @@ import { useProjectCountdown } from "@/hooks/useProjectCountdown";
 import { useProjectBudget } from "@/hooks/useProjectBudget";
 import { useProjectAccess } from "@/hooks/useProjectAccess";
 import { useSignedChatMediaUrl } from "@/hooks/useSignedChatMediaUrl";
+import { ProjectResourceMedia } from "@/components/projects/ProjectResourceMedia";
+import type { ProjectResource } from "@/hooks/useActiveProjects";
+import LinkifiedText from "@/components/LinkifiedText";
+import { isSafeUrl } from "@/lib/url-utils";
 
 /** True when value is a chat-media bucket-relative path (no scheme), false
  *  for external/legacy https URLs and YouTube links. */
@@ -39,16 +43,6 @@ function getYouTubeId(url: string): string | null {
     // not a valid URL
   }
   return null;
-}
-
-/** SEC-10: Only allow http/https URLs to prevent javascript: protocol XSS */
-function isSafeUrl(url: string): boolean {
-  try {
-    const p = new URL(url);
-    return ["http:", "https:"].includes(p.protocol);
-  } catch {
-    return false;
-  }
 }
 
 export interface ProjectCriteria {
@@ -133,6 +127,9 @@ export default function ProjectCard({
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
   const [projectCriteria, setProjectCriteria] = useState<ProjectCriteria[]>([]);
+  const [projectResources, setProjectResources] = useState<ProjectResource[]>(
+    [],
+  );
   const [reviewingSubmissionId, setReviewingSubmissionId] = useState<
     string | null
   >(null);
@@ -223,6 +220,24 @@ export default function ProjectCard({
                 text: c.criteria_text,
                 rpm: parseFloat(c.rpm),
                 platform: c.platform || undefined,
+              })),
+            );
+          }
+
+          const { data: resources } = await supabase
+            .from("project_resources")
+            .select("id, resource_type, title, url, display_order")
+            .eq("project_id", projectData.id)
+            .order("display_order", { ascending: true });
+
+          if (resources) {
+            setProjectResources(
+              resources.map((r) => ({
+                id: r.id,
+                resource_type: r.resource_type,
+                title: r.title,
+                url: r.url,
+                display_order: r.display_order,
               })),
             );
           }
@@ -899,11 +914,17 @@ export default function ProjectCard({
           </div>
 
           {/* Description */}
-          <p
-            className={`text-xs sm:text-sm leading-relaxed ${isProjectExpired ? "text-gray-500" : "text-gray-300"} ${!isExpanded ? "line-clamp-2" : ""}`}
-          >
-            {project.description}
-          </p>
+          {project.description && (
+            <div className="rounded-xl border border-navy-800/60 bg-navy-900/40 p-3 sm:p-4">
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {t("activeProjects.description")}
+              </h4>
+              <LinkifiedText
+                text={project.description}
+                className={`text-sm ${isProjectExpired ? "text-gray-500" : "text-gray-300"} ${!isExpanded ? "line-clamp-4" : ""}`}
+              />
+            </div>
+          )}
 
           {/* Action Button (when not expanded) */}
           {!isExpanded &&
@@ -1084,6 +1105,38 @@ export default function ProjectCard({
                       </>
                     );
                   })()}
+                </div>
+              </div>
+            )}
+
+            {projectDbId && projectResources.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 text-emerald-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                    />
+                  </svg>
+                  {t("projects.resourcesTitle")}
+                </h4>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {projectResources.map((resource) => (
+                    <ProjectResourceMedia
+                      key={resource.id}
+                      projectId={projectDbId}
+                      resourceType={resource.resource_type}
+                      url={resource.url}
+                      title={resource.title}
+                    />
+                  ))}
                 </div>
               </div>
             )}

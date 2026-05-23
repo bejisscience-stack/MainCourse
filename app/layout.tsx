@@ -161,7 +161,7 @@ export default async function RootLayout({
           />
         </noscript>
       </head>
-      <body className={`${inter.className} overflow-x-hidden`}>
+      <body className={`${inter.className} overflow-x-clip`}>
         <Script
           id="meta-pixel"
           strategy="afterInteractive"
@@ -199,7 +199,7 @@ export default async function RootLayout({
                 </Suspense>
                 <WelcomeDiscountBanner />
                 <div
-                  className="min-h-full w-full overflow-x-hidden"
+                  className="min-h-full w-full overflow-x-clip"
                   style={{ paddingTop: "var(--welcome-banner-h, 0px)" }}
                 >
                   {children}
