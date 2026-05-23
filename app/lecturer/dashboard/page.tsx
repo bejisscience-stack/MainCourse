@@ -6,9 +6,11 @@ import Link from "next/link";
 import Navigation from "@/components/Navigation";
 import BackgroundShapes from "@/components/BackgroundShapes";
 import CourseCard from "@/components/CourseCard";
+import ProjectCard from "@/components/ProjectCard";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/useUser";
 import { useLecturerCourses } from "@/hooks/useLecturerCourses";
+import { useLecturerProjects } from "@/hooks/useLecturerProjects";
 import { useI18n } from "@/contexts/I18nContext";
 import { formatPriceInGel } from "@/lib/currency";
 import type { Course } from "@/hooks/useCourses";
@@ -25,6 +27,8 @@ export default function LecturerDashboard() {
   } = useLecturerCourses(user?.id || null);
   // Defensive check: ensure courses is always an array
   const safeCourses = Array.isArray(courses) ? courses : [];
+  const { projects: lecturerProjects } = useLecturerProjects(user?.id || null);
+  const safeProjects = Array.isArray(lecturerProjects) ? lecturerProjects : [];
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -1163,6 +1167,36 @@ export default function LecturerDashboard() {
               ))}
             </div>
           )}
+
+          {/* My Projects Section */}
+          <div className="mb-8 mt-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-charcoal-950 dark:text-white mb-6">
+              {t("lecturerProjects.pageTitle")}
+            </h2>
+            {safeProjects.length === 0 ? (
+              <div className="text-center py-12 bg-white dark:bg-navy-800 border-2 border-dashed border-charcoal-200 dark:border-navy-700 rounded-3xl">
+                <p className="text-charcoal-600 dark:text-gray-400 text-lg mb-4">
+                  {t("lecturerProjects.emptyState")}
+                </p>
+                <Link
+                  href="/lecturer/projects?create=true"
+                  className="inline-block px-6 py-3 bg-teal-600 dark:bg-teal-500 text-white font-semibold rounded-xl hover:bg-teal-700 dark:hover:bg-teal-600 transition-all duration-200 hover:shadow-soft dark:hover:shadow-glow-dark"
+                >
+                  {t("lecturerDashboard.createFirstProject")}
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {safeProjects.map((p) => (
+                  <ProjectCard
+                    key={p.id}
+                    project={p}
+                    href={`/projects/${p.id}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Course Creation/Edit Modal - Step-based Wizard */}
           {showModal && (
