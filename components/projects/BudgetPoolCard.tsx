@@ -12,6 +12,8 @@ interface BudgetPoolCardProps {
     label: string;
     onClick: () => void;
     icon?: React.ReactNode;
+    disabled?: boolean;
+    title?: string;
   };
   referenceVideoUrl?: string | null;
 }
@@ -157,8 +159,15 @@ export default function BudgetPoolCard({
 
       {/* CTA */}
       <button
+        type="button"
         onClick={primaryAction.onClick}
-        className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-semibold text-white bg-charcoal-950 dark:bg-emerald-500 rounded-2xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 shadow-soft hover:shadow-glow transition-all duration-200"
+        disabled={primaryAction.disabled}
+        title={primaryAction.title}
+        className={`w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-semibold text-white rounded-2xl shadow-soft transition-all duration-200 ${
+          primaryAction.disabled
+            ? "bg-charcoal-400 dark:bg-navy-600 cursor-not-allowed opacity-70"
+            : "bg-charcoal-950 dark:bg-emerald-500 hover:bg-charcoal-800 dark:hover:bg-emerald-600 hover:shadow-glow"
+        }`}
       >
         {primaryAction.icon}
         {primaryAction.label}

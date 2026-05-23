@@ -10,12 +10,14 @@ import CriteriaGrid from "@/components/projects/CriteriaGrid";
 import ProjectResourcesList from "@/components/projects/ProjectResourcesList";
 import RecentSubmissions from "@/components/projects/RecentSubmissions";
 import ProjectSubscriptionModal from "@/components/ProjectSubscriptionModal";
+import VideoSubmissionDialog from "@/components/chat/VideoSubmissionDialog";
 import { useI18n } from "@/contexts/I18nContext";
 import { useUser } from "@/hooks/useUser";
 import { useEnrollments } from "@/hooks/useEnrollments";
 import { useProjectAccess } from "@/hooks/useProjectAccess";
 import { useSignedChatMediaUrl } from "@/hooks/useSignedChatMediaUrl";
 import { useProjectCountdown } from "@/hooks/useProjectCountdown";
+import { useProjectBudget } from "@/hooks/useProjectBudget";
 import { useProjectById } from "@/hooks/useProjectById";
 import LinkifiedText from "@/components/LinkifiedText";
 
@@ -28,13 +30,15 @@ export default function ProjectDetailPage() {
   const projectId = params?.id;
   const { t } = useI18n();
   const router = useRouter();
-  const { user } = useUser();
+  const { user, role: userRole } = useUser();
   const { project, isLoading } = useProjectById(projectId);
   const { enrolledCourseIds } = useEnrollments(user?.id || null);
   const { hasProjectAccess } = useProjectAccess(user?.id);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showSubmissionDialog, setShowSubmissionDialog] = useState(false);
 
   const countdown = useProjectCountdown(project?.start_date, project?.end_date);
+  const budget = useProjectBudget(project?.id ?? "", project?.budget ?? 0);
 
   // Resolve reference video — chat-media path → signed URL; YouTube/external passes through
   const videoLinkPath = isChatMediaStoragePath(project?.video_link)
@@ -52,10 +56,63 @@ export default function ProjectDetailPage() {
 
   const canAccessProject = isEnrolled || hasProjectAccess;
 
-  const handleGoToProject = useCallback(() => {
-    if (!project) return;
-    router.push(`/courses/${project.course_id}/chat?channel=projects`);
-  }, [project, router]);
+  const isLecturer = userRole === "lecturer";
+  const isProjectOwner = !!user && !!project && user.id === project.user_id;
+  const isProjectExpired = countdown.isExpired;
+  const hasProjectStarted = countdown.isStarted;
+  const hasBudgetAvailable =
+    !project || budget.isLoading || budget.remainingBudget > 0;
+  const canSubmit =
+    !isLecturer &&
+    !isProjectOwner &&
+    !isProjectExpired &&
+    hasProjectStarted &&
+    hasBudgetAvailable &&
+    (isEnrolled || hasProjectAccess);
+
+  const submitDisabledReason = useMemo((): string | null => {
+    if (isLecturer) return "Lecturers cannot submit videos";
+    if (isProjectOwner) return "You cannot submit to your own project";
+    if (!hasProjectAccess && !isEnrolled)
+      return "Subscribe to projects to submit";
+    if (isProjectExpired) return "This project has expired";
+    if (!hasProjectStarted)
+      return countdown.formattedTime || "Project has not started yet";
+    if (project && !budget.isLoading && budget.remainingBudget <= 0)
+      return "Budget has been depleted";
+    return null;
+  }, [
+    isLecturer,
+    isProjectOwner,
+    hasProjectAccess,
+    isEnrolled,
+    isProjectExpired,
+    hasProjectStarted,
+    countdown.formattedTime,
+    project,
+    budget.isLoading,
+    budget.remainingBudget,
+  ]);
+
+  const handleSubmitClick = useCallback(() => {
+    if (canSubmit) setShowSubmissionDialog(true);
+  }, [canSubmit]);
+
+  const submitVideoIcon = (
+    <svg
+      className="w-4 h-4"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 4v16m8-8H4"
+      />
+    </svg>
+  );
 
   const handleSubscribeClick = useCallback(() => {
     if (!user) {
@@ -78,23 +135,11 @@ export default function ProjectDetailPage() {
     () =>
       canAccessProject
         ? {
-            label: t("activeProjects.goToProject"),
-            onClick: handleGoToProject,
-            icon: (
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 7l5 5m0 0l-5 5m5-5H6"
-                />
-              </svg>
-            ),
+            label: t("projects.submitVideo"),
+            onClick: handleSubmitClick,
+            disabled: !canSubmit,
+            title: !canSubmit ? (submitDisabledReason ?? undefined) : undefined,
+            icon: submitVideoIcon,
           }
         : {
             label: t("activeProjects.subscribeToProjects"),
@@ -115,7 +160,14 @@ export default function ProjectDetailPage() {
               </svg>
             ),
           },
-    [canAccessProject, handleGoToProject, handleSubscribeClick, t],
+    [
+      canAccessProject,
+      canSubmit,
+      handleSubmitClick,
+      handleSubscribeClick,
+      submitDisabledReason,
+      t,
+    ],
   );
 
   // 404 / loading states
@@ -324,16 +376,42 @@ export default function ProjectDetailPage() {
       {project && (
         <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 bg-gradient-to-t from-white via-white/95 to-white/0 dark:from-navy-950 dark:via-navy-950/95 dark:to-transparent">
           <button
+            type="button"
             onClick={
-              canAccessProject ? handleGoToProject : handleSubscribeClick
+              canAccessProject ? handleSubmitClick : handleSubscribeClick
             }
-            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-semibold text-white bg-charcoal-950 dark:bg-emerald-500 rounded-2xl hover:bg-charcoal-800 dark:hover:bg-emerald-600 shadow-lg transition-colors"
+            disabled={canAccessProject && !canSubmit}
+            title={
+              canAccessProject && !canSubmit
+                ? (submitDisabledReason ?? undefined)
+                : undefined
+            }
+            className={`w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-semibold text-white rounded-2xl shadow-lg transition-colors ${
+              canAccessProject && !canSubmit
+                ? "bg-charcoal-400 dark:bg-navy-600 cursor-not-allowed opacity-70"
+                : "bg-charcoal-950 dark:bg-emerald-500 hover:bg-charcoal-800 dark:hover:bg-emerald-600"
+            }`}
           >
             {canAccessProject
-              ? t("activeProjects.goToProject")
+              ? t("projects.submitVideo")
               : t("activeProjects.subscribeToProjects")}
           </button>
         </div>
+      )}
+
+      {project && showSubmissionDialog && (
+        <VideoSubmissionDialog
+          isOpen={showSubmissionDialog}
+          onClose={() => setShowSubmissionDialog(false)}
+          onSubmit={() => setShowSubmissionDialog(false)}
+          platforms={project.platforms}
+          {...(project.message_id && project.channel_id
+            ? {
+                projectMessageId: project.message_id,
+                channelId: project.channel_id,
+              }
+            : { projectDbId: project.id })}
+        />
       )}
 
       <ProjectSubscriptionModal

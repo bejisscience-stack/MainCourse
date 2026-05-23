@@ -16,7 +16,10 @@ function isChatMediaStoragePath(value: string | null | undefined): boolean {
   return !!value && !value.includes("://");
 }
 import ProjectSubscriptionModal from "./ProjectSubscriptionModal";
+import VideoSubmissionDialog from "./chat/VideoSubmissionDialog";
 import type { ActiveProject } from "@/hooks/useActiveProjects";
+import { useProjectCountdown } from "@/hooks/useProjectCountdown";
+import { useProjectBudget } from "@/hooks/useProjectBudget";
 
 // Platform configuration with icons and colors
 const platformConfig: Record<
@@ -78,11 +81,15 @@ export default function ProjectDetailsModal({
 }: ProjectDetailsModalProps) {
   const { t } = useI18n();
   const router = useRouter();
-  const { user } = useUser();
+  const { user, role: userRole } = useUser();
   const { enrolledCourseIds } = useEnrollments(user?.id || null);
   const { hasProjectAccess } = useProjectAccess(user?.id);
   const [mounted, setMounted] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showSubmissionDialog, setShowSubmissionDialog] = useState(false);
+
+  const countdown = useProjectCountdown(project?.start_date, project?.end_date);
+  const budget = useProjectBudget(project?.id ?? "", project?.budget ?? 0);
 
   // After mig 235, project.video_link may be a chat-media path. Resolve to a
   // signed URL for the "Reference Video" link below; YouTube / external URLs
@@ -109,6 +116,48 @@ export default function ProjectDetailsModal({
 
   // User can access if enrolled OR has project access (free 1-month or subscription)
   const canAccessProject = isEnrolled || hasProjectAccess;
+
+  const isLecturer = userRole === "lecturer";
+  const isProjectOwner = !!user && !!project && user.id === project.user_id;
+  const isProjectExpired = countdown.isExpired;
+  const hasProjectStarted = countdown.isStarted;
+  const hasBudgetAvailable =
+    !project || budget.isLoading || budget.remainingBudget > 0;
+  const canSubmit =
+    !isLecturer &&
+    !isProjectOwner &&
+    !isProjectExpired &&
+    hasProjectStarted &&
+    hasBudgetAvailable &&
+    (isEnrolled || hasProjectAccess);
+
+  const submitDisabledReason = useMemo((): string | null => {
+    if (isLecturer) return "Lecturers cannot submit videos";
+    if (isProjectOwner) return "You cannot submit to your own project";
+    if (!hasProjectAccess && !isEnrolled)
+      return "Subscribe to projects to submit";
+    if (isProjectExpired) return "This project has expired";
+    if (!hasProjectStarted)
+      return countdown.formattedTime || "Project has not started yet";
+    if (project && !budget.isLoading && budget.remainingBudget <= 0)
+      return "Budget has been depleted";
+    return null;
+  }, [
+    isLecturer,
+    isProjectOwner,
+    hasProjectAccess,
+    isEnrolled,
+    isProjectExpired,
+    hasProjectStarted,
+    countdown.formattedTime,
+    project,
+    budget.isLoading,
+    budget.remainingBudget,
+  ]);
+
+  const handleSubmitClick = useCallback(() => {
+    if (canSubmit) setShowSubmissionDialog(true);
+  }, [canSubmit]);
 
   // Format budget as currency (GEL)
   const formattedBudget = useMemo(() => {
@@ -194,7 +243,12 @@ export default function ProjectDetailsModal({
   // Handle ESC key to close modal
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen && !showSubscriptionModal) {
+      if (
+        e.key === "Escape" &&
+        isOpen &&
+        !showSubscriptionModal &&
+        !showSubmissionDialog
+      ) {
         onClose();
       }
     };
@@ -208,18 +262,7 @@ export default function ProjectDetailsModal({
       document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "unset";
     };
-  }, [isOpen, showSubscriptionModal, onClose]);
-
-  // Handle Go to Project navigation. Course-bound projects deep-link into the
-  // course chat's projects channel; standalone projects have no chat yet, so
-  // we simply close the modal (the user already has access info inline).
-  const handleGoToProject = useCallback(() => {
-    if (!project) return;
-    if (project.course_id) {
-      router.push(`/courses/${project.course_id}/chat?channel=projects`);
-    }
-    onClose();
-  }, [project, router, onClose]);
+  }, [isOpen, showSubscriptionModal, showSubmissionDialog, onClose]);
 
   // Handle subscribe click
   const handleSubscribeClick = useCallback(() => {
@@ -554,8 +597,17 @@ export default function ProjectDetailsModal({
         <div className="sticky bottom-0 px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:px-8 md:pb-[max(2rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-white via-white dark:from-navy-900 dark:via-navy-900 border-t border-charcoal-100 dark:border-navy-700">
           {canAccessProject ? (
             <button
-              onClick={handleGoToProject}
-              className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 text-base font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl hover:from-emerald-600 hover:to-teal-700 transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5"
+              type="button"
+              onClick={handleSubmitClick}
+              disabled={!canSubmit}
+              title={
+                !canSubmit ? (submitDisabledReason ?? undefined) : undefined
+              }
+              className={`w-full inline-flex items-center justify-center gap-2 px-6 py-4 text-base font-semibold text-white rounded-2xl transition-all duration-200 shadow-lg ${
+                !canSubmit
+                  ? "bg-emerald-400/60 cursor-not-allowed opacity-70"
+                  : "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5"
+              }`}
             >
               <svg
                 className="w-5 h-5"
@@ -567,10 +619,10 @@ export default function ProjectDetailsModal({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                  d="M12 4v16m8-8H4"
                 />
               </svg>
-              {t("activeProjects.goToProject")}
+              {t("projects.submitVideo")}
             </button>
           ) : (
             <button

@@ -10,9 +10,13 @@ interface VideoSubmissionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: () => void;
-  projectId: string;
-  channelId: string;
-  platforms: string[]; // Array of platform names for this project
+  platforms: string[];
+  /** Chat mode: message_id of the project message (alias kept for ProjectCard). */
+  projectId?: string;
+  projectMessageId?: string;
+  channelId?: string;
+  /** Direct mode: database project id for standalone projects (no chat). */
+  projectDbId?: string;
 }
 
 const PLATFORM_NAMES: Record<string, string> = {
@@ -20,14 +24,60 @@ const PLATFORM_NAMES: Record<string, string> = {
   tiktok: "TikTok",
 };
 
+async function insertSubmission(
+  supabaseClient: typeof supabase,
+  submissionData: Record<string, unknown>,
+) {
+  let { error: submissionError } = await supabaseClient
+    .from("project_submissions")
+    .insert(submissionData);
+
+  if (
+    submissionError &&
+    (submissionError.message?.includes("platform_links") ||
+      submissionError.code === "42703")
+  ) {
+    console.warn(
+      "platform_links column not found, retrying without it:",
+      submissionError.message,
+    );
+    const { platform_links: _platformLinks, ...dataWithoutPlatformLinks } =
+      submissionData;
+    const { error: retryError } = await supabaseClient
+      .from("project_submissions")
+      .insert(dataWithoutPlatformLinks);
+
+    if (retryError) {
+      throw new Error(
+        `Failed to save submission: ${retryError.message || retryError.code || "Unknown error"}. Note: Please run migration 054_add_platform_links_to_submissions.sql to enable platform-specific links.`,
+      );
+    }
+    console.warn(
+      "Submission saved without platform_links. Please run migration 054_add_platform_links_to_submissions.sql",
+    );
+    return;
+  }
+
+  if (submissionError) {
+    throw new Error(
+      `Failed to save submission: ${submissionError.message || submissionError.code || "Unknown error"}`,
+    );
+  }
+}
+
 export default function VideoSubmissionDialog({
   isOpen,
   onClose,
   onSubmit,
   projectId,
+  projectMessageId,
   channelId,
+  projectDbId,
   platforms,
 }: VideoSubmissionDialogProps) {
+  const resolvedMessageId = projectMessageId ?? projectId;
+  const isChatMode = !!(resolvedMessageId && channelId);
+  const isDirectMode = !!projectDbId && !isChatMode;
   const { t } = useI18n();
   // Store links for each platform
   const [platformLinks, setPlatformLinks] = useState<Record<string, string>>(
@@ -162,131 +212,106 @@ export default function VideoSubmissionDialog({
         // Use the first link as the primary video URL for backward compatibility
         const primaryVideoUrl = Object.values(videoLinks)[0] || null;
 
-        // Always use 'Submission' as the message content to keep comments private
-        // The actual comment is stored separately in project_submissions.message
-        // and is visible to lecturers in the submission details
-        const messageContent = "Submission";
-
-        // First, create the message as a reply to the project
-        // Note: projectId is the message_id of the project message
-        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        const response = await fetch(edgeFunctionUrl("chat-messages"), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-            ...(anonKey && { apikey: anonKey }),
-          },
-          body: JSON.stringify({
-            chatId: channelId,
-            content: messageContent,
-            replyTo: projectId, // This is the message_id of the project
-          }),
-        });
-
-        if (!response.ok) {
-          let errorMessage = "Failed to send message";
-          let errorDetails = "";
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorData.details || errorMessage;
-            errorDetails = errorData.details || "";
-            console.error("Message creation failed:", {
-              status: response.status,
-              statusText: response.statusText,
-              error: errorMessage,
-              details: errorDetails,
-              errorData,
-              projectId,
-              channelId,
-            });
-          } catch (parseError) {
-            console.error("Failed to parse error response:", parseError);
-            errorMessage = `Server error: ${response.status} ${response.statusText}`;
-          }
-          const fullErrorMessage = errorDetails
-            ? `${errorMessage}. ${errorDetails}`
-            : errorMessage;
-          throw new Error(fullErrorMessage);
-        }
-
-        const { message: createdMessage } = await response.json();
-
-        if (!createdMessage || !createdMessage.id) {
+        if (!isChatMode && !isDirectMode) {
           throw new Error(
-            "Failed to create message - invalid response from server",
+            "Invalid submission configuration: provide projectMessageId + channelId (chat) or projectDbId (direct).",
           );
         }
 
-        // Get the project to find project_id and course_id
-        const { data: project, error: projectError } = await supabase
-          .from("projects")
-          .select("id, course_id")
-          .eq("message_id", projectId)
-          .maybeSingle();
+        if (isDirectMode) {
+          const submissionData: Record<string, unknown> = {
+            project_id: projectDbId,
+            message_id: null,
+            channel_id: null,
+            course_id: null,
+            user_id: session.user.id,
+            video_url: primaryVideoUrl || null,
+            message: message.trim() || null,
+          };
+          if (Object.keys(videoLinks).length > 0) {
+            submissionData.platform_links = videoLinks;
+          }
+          await insertSubmission(supabase, submissionData);
+        } else {
+          // Always use 'Submission' as the message content to keep comments private
+          const messageContent = "Submission";
+          const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+          const response = await fetch(edgeFunctionUrl("chat-messages"), {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+              ...(anonKey && { apikey: anonKey }),
+            },
+            body: JSON.stringify({
+              chatId: channelId,
+              content: messageContent,
+              replyTo: resolvedMessageId,
+            }),
+          });
 
-        if (projectError) {
-          throw new Error(`Failed to find project: ${projectError.message}`);
-        }
+          if (!response.ok) {
+            let errorMessage = "Failed to send message";
+            let errorDetails = "";
+            try {
+              const errorData = await response.json();
+              errorMessage =
+                errorData.error || errorData.details || errorMessage;
+              errorDetails = errorData.details || "";
+              console.error("Message creation failed:", {
+                status: response.status,
+                statusText: response.statusText,
+                error: errorMessage,
+                details: errorDetails,
+                errorData,
+                projectMessageId: resolvedMessageId,
+                channelId,
+              });
+            } catch (parseError) {
+              console.error("Failed to parse error response:", parseError);
+              errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            }
+            const fullErrorMessage = errorDetails
+              ? `${errorMessage}. ${errorDetails}`
+              : errorMessage;
+            throw new Error(fullErrorMessage);
+          }
 
-        if (!project) {
-          throw new Error(t("videoSubmission.projectNotFound"));
-        }
+          const { message: createdMessage } = await response.json();
 
-        // Then, create the submission record in the database
-        // Use the actual project.id (not message_id)
-        // Store platform links as JSON
-        const submissionData: any = {
-          project_id: project.id, // Use the actual project.id from database
-          message_id: createdMessage.id,
-          channel_id: channelId,
-          course_id: project.course_id,
-          user_id: session.user.id,
-          video_url: primaryVideoUrl || null, // Keep primary URL for backward compatibility
-          message: message.trim() || null,
-        };
-
-        // Try to include platform_links if we have links to store
-        // If the column doesn't exist, we'll catch the error and retry without it
-        if (Object.keys(videoLinks).length > 0) {
-          submissionData.platform_links = videoLinks;
-        }
-
-        let { error: submissionError } = await supabase
-          .from("project_submissions")
-          .insert(submissionData);
-
-        // If error is about missing column, try again without platform_links
-        if (
-          submissionError &&
-          (submissionError.message?.includes("platform_links") ||
-            submissionError.code === "42703")
-        ) {
-          console.warn(
-            "platform_links column not found, retrying without it:",
-            submissionError.message,
-          );
-          // Remove platform_links and try again
-          const { platform_links, ...dataWithoutPlatformLinks } =
-            submissionData;
-          const { error: retryError } = await supabase
-            .from("project_submissions")
-            .insert(dataWithoutPlatformLinks);
-
-          if (retryError) {
-            console.error("Error creating submission (retry):", retryError);
+          if (!createdMessage || !createdMessage.id) {
             throw new Error(
-              `Failed to save submission: ${retryError.message || retryError.code || "Unknown error"}. Note: Please run migration 054_add_platform_links_to_submissions.sql to enable platform-specific links.`,
+              "Failed to create message - invalid response from server",
             );
           }
-          // Success without platform_links - warn user
-          console.warn(
-            "Submission saved without platform_links. Please run migration 054_add_platform_links_to_submissions.sql",
-          );
-        } else if (submissionError) {
-          throw new Error(
-            `Failed to save submission: ${submissionError.message || submissionError.code || "Unknown error"}`,
-          );
+
+          const { data: project, error: projectError } = await supabase
+            .from("projects")
+            .select("id, course_id")
+            .eq("message_id", resolvedMessageId)
+            .maybeSingle();
+
+          if (projectError) {
+            throw new Error(`Failed to find project: ${projectError.message}`);
+          }
+
+          if (!project) {
+            throw new Error(t("videoSubmission.projectNotFound"));
+          }
+
+          const submissionData: Record<string, unknown> = {
+            project_id: project.id,
+            message_id: createdMessage.id,
+            channel_id: channelId,
+            course_id: project.course_id,
+            user_id: session.user.id,
+            video_url: primaryVideoUrl || null,
+            message: message.trim() || null,
+          };
+          if (Object.keys(videoLinks).length > 0) {
+            submissionData.platform_links = videoLinks;
+          }
+          await insertSubmission(supabase, submissionData);
         }
 
         setSubmitSuccess(true);
@@ -306,12 +331,16 @@ export default function VideoSubmissionDialog({
       platformLinks,
       message,
       validateForm,
-      projectId,
+      resolvedMessageId,
       channelId,
+      projectDbId,
+      isChatMode,
+      isDirectMode,
       platforms,
       onSubmit,
       onClose,
       supabase,
+      t,
     ],
   );
 
