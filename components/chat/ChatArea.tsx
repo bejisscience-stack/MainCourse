@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import Message from "./Message";
 import MessageInput from "./MessageInput";
 import dynamic from "next/dynamic";
@@ -36,6 +37,7 @@ interface ChatAreaProps {
   channel: Channel | null;
   currentUserId: string;
   isLecturer?: boolean;
+  isAdmin?: boolean;
   onSendMessage: (channelId: string, content: string | null) => void;
   onReply?: (messageId: string) => void;
   onReaction?: (messageId: string, emoji: string) => void;
@@ -172,6 +174,7 @@ export default function ChatArea({
   channel,
   currentUserId,
   isLecturer = false,
+  isAdmin = false,
   onSendMessage,
   onReply,
   onReaction,
@@ -183,6 +186,9 @@ export default function ChatArea({
   canManagePins = isLecturer,
 }: ChatAreaProps) {
   const { t } = useI18n();
+  const searchParams = useSearchParams();
+  const deepLinkMessageId = searchParams?.get("message") ?? null;
+  const consumedDeepLinkRef = useRef<string | null>(null);
   const isEnrollmentExpired = !isEnrolledInCourse;
   const [replyTo, setReplyTo] = useState<
     | {
@@ -699,6 +705,41 @@ export default function ChatArea({
     },
     [loadUntilMessage, scrollToMessage, t],
   );
+
+  // Bell-notification deep-link: when the URL carries ?message=<id> and that
+  // message belongs to this channel, scroll it into view once messages are
+  // loaded. Tracked in a ref so we don't re-scroll after the user scrolls away.
+  useEffect(() => {
+    if (!deepLinkMessageId) return;
+    if (!channel?.id) return;
+    if (consumedDeepLinkRef.current === deepLinkMessageId) return;
+    if (isLoading) return;
+
+    let cancelled = false;
+    const attempt = async () => {
+      if (scrollToMessage(deepLinkMessageId)) {
+        consumedDeepLinkRef.current = deepLinkMessageId;
+        return;
+      }
+      const found = await loadUntilMessage(deepLinkMessageId);
+      if (cancelled) return;
+      window.setTimeout(() => {
+        if (cancelled) return;
+        if (found) scrollToMessage(deepLinkMessageId);
+        consumedDeepLinkRef.current = deepLinkMessageId;
+      }, 80);
+    };
+    attempt();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    deepLinkMessageId,
+    channel?.id,
+    isLoading,
+    scrollToMessage,
+    loadUntilMessage,
+  ]);
 
   const handleTogglePin = useCallback(
     async (messageId: string) => {
@@ -1263,14 +1304,16 @@ export default function ChatArea({
 
       {/* Message input or Project submission button */}
       {(() => {
-        // Check if this is a restricted channel (Lectures or Projects)
+        // Check if this is a restricted channel (Lectures, Projects, or Announcement)
         const channelName = channel.name?.toLowerCase() || "";
         const channelType = channel.type as string;
         const isLecturesChannel =
           channelName === "lectures" && channelType === "lectures";
         const isProjectsChannel = channelName === "projects";
-        const isRestrictedChannel = isLecturesChannel || isProjectsChannel;
-        const canSendMessages = !isRestrictedChannel || isLecturer;
+        const isAnnouncementChannel = channelType === "announcement";
+        const isRestrictedChannel =
+          isLecturesChannel || isProjectsChannel || isAnnouncementChannel;
+        const canSendMessages = !isRestrictedChannel || isLecturer || isAdmin;
 
         // For projects channel, show plus button only for lecturers
         if (isProjectsChannel) {
@@ -1322,7 +1365,9 @@ export default function ChatArea({
             onCancelReply={() => setReplyTo(undefined)}
             placeholder={
               !canSendMessages
-                ? t("chat.onlyLecturerCanSendMessages")
+                ? isAnnouncementChannel
+                  ? t("chat.announcementReadOnlyPlaceholder")
+                  : t("chat.onlyLecturerCanSendMessages")
                 : `Message #${channel.name}`
             }
             disabled={!canSendMessages}

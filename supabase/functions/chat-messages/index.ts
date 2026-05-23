@@ -229,7 +229,7 @@ Deno.serve(async (req: Request) => {
 
       const { data: channel, error: channelError } = await supabase
         .from("channels")
-        .select("id, course_id, name")
+        .select("id, course_id, name, type")
         .eq("id", chatId)
         .single();
 
@@ -244,6 +244,18 @@ Deno.serve(async (req: Request) => {
         .select("lecturer_id")
         .eq("id", channel.course_id)
         .single();
+
+      // Announcement channels are lecturer/admin write-only.
+      if (channel.type === "announcement") {
+        const isCourseLecturer = course?.lecturer_id === user.id;
+        if (!isAdmin && !isCourseLecturer) {
+          return errorResponse(
+            "Only the lecturer can post in this announcement channel",
+            403,
+            cors,
+          );
+        }
+      }
 
       if (!isAdmin) {
         const { data: enrollment } = await supabase

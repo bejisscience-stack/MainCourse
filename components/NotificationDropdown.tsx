@@ -1,12 +1,18 @@
-'use client';
+"use client";
 
-import { memo, useCallback } from 'react';
-import { useNotifications } from '@/hooks/useNotifications';
-import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
-import { useI18n } from '@/contexts/I18nContext';
-import { getLocalizedText, notificationColors, type Notification } from '@/types/notification';
-import { formatDistanceToNow } from 'date-fns';
-import { enUS, ka } from 'date-fns/locale';
+import { memo, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
+import { useI18n } from "@/contexts/I18nContext";
+import {
+  getLocalizedText,
+  notificationColors,
+  routeFor,
+  type Notification,
+} from "@/types/notification";
+import { formatDistanceToNow } from "date-fns";
+import { enUS, ka } from "date-fns/locale";
 
 interface NotificationDropdownProps {
   isOpen: boolean;
@@ -19,34 +25,39 @@ function NotificationItem({
   notification,
   language,
   onMarkAsRead,
+  onNavigate,
 }: {
   notification: Notification;
-  language: 'en' | 'ge';
+  language: "en" | "ge";
   onMarkAsRead: (id: string) => void;
+  onNavigate: (notification: Notification) => void;
 }) {
   const title = getLocalizedText(notification.title, language);
   const message = getLocalizedText(notification.message, language);
-  const colors = notificationColors[notification.type] || notificationColors.system;
+  const colors =
+    notificationColors[notification.type] || notificationColors.system;
 
   const timeAgo = formatDistanceToNow(new Date(notification.created_at), {
     addSuffix: true,
-    locale: language === 'ge' ? ka : enUS,
+    locale: language === "ge" ? ka : enUS,
   });
 
   const handleClick = useCallback(() => {
     if (!notification.read) {
       onMarkAsRead(notification.id);
     }
-  }, [notification.id, notification.read, onMarkAsRead]);
+    onNavigate(notification);
+  }, [notification, onMarkAsRead, onNavigate]);
 
   return (
     <div
       onClick={handleClick}
       className={`
         relative px-4 py-3 cursor-pointer transition-colors
-        ${notification.read
-          ? 'bg-transparent hover:bg-charcoal-50/50 dark:hover:bg-navy-700/50'
-          : `${colors.bg} hover:opacity-90`
+        ${
+          notification.read
+            ? "bg-transparent hover:bg-charcoal-50/50 dark:hover:bg-navy-700/50"
+            : `${colors.bg} hover:opacity-90`
         }
       `}
     >
@@ -58,28 +69,63 @@ function NotificationItem({
       <div className="flex items-start gap-3">
         {/* Icon */}
         <div className={`flex-shrink-0 mt-0.5 ${colors.icon}`}>
-          {notification.type.includes('approved') || notification.type === 'admin_message' ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          {notification.type.includes("approved") ||
+          notification.type === "admin_message" ? (
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
-          ) : notification.type.includes('rejected') ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          ) : notification.type.includes("rejected") ? (
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           )}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-medium ${notification.read ? 'text-charcoal-700 dark:text-gray-300' : colors.text}`}>
+          <p
+            className={`text-sm font-medium ${notification.read ? "text-charcoal-700 dark:text-gray-300" : colors.text}`}
+          >
             {title}
           </p>
           {message && (
-            <p className={`text-sm mt-0.5 line-clamp-2 ${notification.read ? 'text-charcoal-500 dark:text-gray-400' : 'text-charcoal-600 dark:text-gray-300'}`}>
+            <p
+              className={`text-sm mt-0.5 line-clamp-2 ${notification.read ? "text-charcoal-500 dark:text-gray-400" : "text-charcoal-600 dark:text-gray-300"}`}
+            >
               {message}
             </p>
           )}
@@ -92,19 +138,39 @@ function NotificationItem({
   );
 }
 
-function NotificationDropdown({ isOpen, onClose, position, onUnreadCountChange }: NotificationDropdownProps) {
-  const { notifications, isLoading, markAsRead, markAllAsRead, mutate } = useNotifications({ limit: 10 });
+function NotificationDropdown({
+  isOpen,
+  onClose,
+  position,
+  onUnreadCountChange,
+}: NotificationDropdownProps) {
+  const { notifications, isLoading, markAsRead, markAllAsRead, mutate } =
+    useNotifications({ limit: 10 });
   const { resetCount, refresh: refreshUnreadCount } = useUnreadNotifications();
   const { t, language } = useI18n();
+  const router = useRouter();
 
-  const handleMarkAsRead = useCallback(async (notificationId: string) => {
-    try {
-      await markAsRead(notificationId);
-      onUnreadCountChange?.();
-    } catch (err) {
-      console.error('Error marking notification as read:', err);
-    }
-  }, [markAsRead, onUnreadCountChange]);
+  const handleNavigate = useCallback(
+    (notification: Notification) => {
+      const destination = routeFor(notification);
+      if (!destination) return;
+      onClose();
+      router.push(destination);
+    },
+    [router, onClose],
+  );
+
+  const handleMarkAsRead = useCallback(
+    async (notificationId: string) => {
+      try {
+        await markAsRead(notificationId);
+        onUnreadCountChange?.();
+      } catch (err) {
+        console.error("Error marking notification as read:", err);
+      }
+    },
+    [markAsRead, onUnreadCountChange],
+  );
 
   const handleMarkAllAsRead = useCallback(async () => {
     try {
@@ -112,7 +178,7 @@ function NotificationDropdown({ isOpen, onClose, position, onUnreadCountChange }
       await resetCount();
       // resetCount already sets count to 0, no need for additional refresh
     } catch (err) {
-      console.error('Error marking all as read:', err);
+      console.error("Error marking all as read:", err);
     }
   }, [markAllAsRead, resetCount]);
 
@@ -133,14 +199,14 @@ function NotificationDropdown({ isOpen, onClose, position, onUnreadCountChange }
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-charcoal-200 dark:border-navy-600/60 bg-charcoal-50/30 dark:bg-navy-600/20">
         <h3 className="text-sm font-semibold text-charcoal-950 dark:text-white">
-          {t('notifications.title')}
+          {t("notifications.title")}
         </h3>
         {hasUnread && (
           <button
             onClick={handleMarkAllAsRead}
             className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium transition-colors"
           >
-            {t('notifications.markAllAsRead')}
+            {t("notifications.markAllAsRead")}
           </button>
         )}
       </div>
@@ -167,7 +233,7 @@ function NotificationDropdown({ isOpen, onClose, position, onUnreadCountChange }
               />
             </svg>
             <p className="text-sm text-charcoal-500 dark:text-gray-400">
-              {t('notifications.noNotifications')}
+              {t("notifications.noNotifications")}
             </p>
           </div>
         ) : (
@@ -178,6 +244,7 @@ function NotificationDropdown({ isOpen, onClose, position, onUnreadCountChange }
                 notification={notification}
                 language={language}
                 onMarkAsRead={handleMarkAsRead}
+                onNavigate={handleNavigate}
               />
             ))}
           </div>
@@ -191,7 +258,7 @@ function NotificationDropdown({ isOpen, onClose, position, onUnreadCountChange }
             onClick={onClose}
             className="w-full text-center text-xs text-charcoal-500 dark:text-gray-400 hover:text-charcoal-700 dark:hover:text-gray-300 font-medium py-1 transition-colors"
           >
-            {t('common.close')}
+            {t("common.close")}
           </button>
         </div>
       )}

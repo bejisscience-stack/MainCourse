@@ -1,21 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import Navigation from "@/components/Navigation";
-import ProjectCard from "@/components/ProjectCard";
-import ProjectDetailsModal from "@/components/ProjectDetailsModal";
-import {
-  useActiveProjects,
-  type ActiveProject,
-} from "@/hooks/useActiveProjects";
+import ProjectCampaignCard from "@/components/ProjectCampaignCard";
+import { useActiveProjects } from "@/hooks/useActiveProjects";
 import { useI18n } from "@/contexts/I18nContext";
 
 export default function ProjectsPage() {
   const { t } = useI18n();
   const { projects, isLoading, error } = useActiveProjects();
-  const [selectedProject, setSelectedProject] = useState<ActiveProject | null>(
-    null,
-  );
 
   useEffect(() => {
     if (typeof window !== "undefined" && typeof window.fbq === "function") {
@@ -29,14 +22,14 @@ export default function ProjectsPage() {
   return (
     <main className="relative bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900 overflow-hidden min-h-screen">
       {/* Base gradient layer */}
-      <div className="fixed inset-0 bg-gradient-to-b from-[#fafafa] via-white to-[#fafafa] dark:from-navy-950 dark:via-navy-900 dark:to-navy-950 pointer-events-none"></div>
+      <div className="fixed inset-0 bg-gradient-to-b from-[#fafafa] via-white to-[#fafafa] dark:from-navy-950 dark:via-navy-900 dark:to-navy-950 pointer-events-none" />
 
       <Navigation />
       <div className="relative z-10 pt-24 pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="text-center mb-10">
-            <h1 className="text-4xl md:text-5xl font-bold text-charcoal-950 dark:text-white mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold text-charcoal-950 dark:text-white mb-4 tracking-tight">
               {t("projectsPage.title")}
             </h1>
             <p className="text-lg text-charcoal-600 dark:text-gray-400 max-w-2xl mx-auto">
@@ -46,7 +39,7 @@ export default function ProjectsPage() {
 
           {/* Projects Count Badge */}
           {!isLoading && !error && projects.length > 0 && (
-            <div className="flex justify-center mb-8">
+            <div className="flex justify-center mb-10">
               <span className="inline-flex items-center px-4 py-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-sm font-medium rounded-full">
                 {projects.length === 1
                   ? t("projectsPage.projectCount", { count: projects.length })
@@ -57,28 +50,12 @@ export default function ProjectsPage() {
 
           {/* Loading State */}
           {isLoading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, i) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              {[...Array(6)].map((_, i) => (
                 <div
                   key={i}
-                  className="bg-white dark:bg-navy-800 rounded-2xl overflow-hidden shadow-soft border border-charcoal-100/50 dark:border-navy-700/50 animate-pulse"
-                >
-                  <div className="w-full h-28 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-navy-700 dark:to-navy-600"></div>
-                  <div className="p-4 space-y-3">
-                    <div className="h-5 bg-gray-200 dark:bg-navy-700 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-navy-700 rounded w-1/2"></div>
-                    <div className="flex gap-2">
-                      <div className="h-5 bg-gray-200 dark:bg-navy-700 rounded w-16"></div>
-                      <div className="h-5 bg-gray-200 dark:bg-navy-700 rounded w-14"></div>
-                    </div>
-                    <div className="h-4 bg-gray-200 dark:bg-navy-700 rounded w-2/3"></div>
-                    <div className="pt-3 border-t border-gray-100 dark:border-navy-700">
-                      <div className="h-4 bg-gray-200 dark:bg-navy-700 rounded w-full"></div>
-                      <div className="h-1.5 bg-gray-200 dark:bg-navy-700 rounded-full mt-2"></div>
-                    </div>
-                    <div className="h-8 bg-gray-200 dark:bg-navy-700 rounded-lg"></div>
-                  </div>
-                </div>
+                  className="aspect-square rounded-3xl overflow-hidden border border-charcoal-100/60 dark:border-navy-700/60 bg-gradient-to-br from-white via-charcoal-50 to-white dark:from-navy-800 dark:via-navy-900 dark:to-navy-800 animate-pulse"
+                />
               ))}
             </div>
           )}
@@ -99,7 +76,7 @@ export default function ProjectsPage() {
 
           {/* Empty State */}
           {!isLoading && !error && projects.length === 0 && (
-            <div className="text-center py-16 bg-white/50 dark:bg-navy-800/50 rounded-2xl border border-charcoal-100/50 dark:border-navy-700/50">
+            <div className="text-center py-16 bg-white/50 dark:bg-navy-800/50 rounded-3xl border border-charcoal-100/50 dark:border-navy-700/50">
               <div className="w-16 h-16 bg-charcoal-100 dark:bg-navy-700 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg
                   className="w-8 h-8 text-charcoal-400 dark:text-gray-500"
@@ -126,25 +103,14 @@ export default function ProjectsPage() {
 
           {/* Projects Grid */}
           {!isLoading && !error && projects.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
               {projects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  onClick={() => setSelectedProject(project)}
-                />
+                <ProjectCampaignCard key={project.id} project={project} />
               ))}
             </div>
           )}
         </div>
       </div>
-
-      {/* Project Details Modal */}
-      <ProjectDetailsModal
-        project={selectedProject}
-        isOpen={!!selectedProject}
-        onClose={() => setSelectedProject(null)}
-      />
     </main>
   );
 }

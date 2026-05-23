@@ -1,4 +1,4 @@
-import type { Message } from './message';
+import type { Message } from "./message";
 
 export interface Server {
   id: string;
@@ -13,7 +13,7 @@ export interface ChannelCategory {
   channels: Channel[];
 }
 
-export type ChannelType = 'text' | 'voice' | 'lectures';
+export type ChannelType = "text" | "voice" | "lectures" | "announcement";
 
 export interface Channel {
   id: string;

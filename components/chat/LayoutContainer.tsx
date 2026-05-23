@@ -482,6 +482,7 @@ export default function LayoutContainer({
             channel={activeChannel}
             currentUserId={currentUserId}
             isLecturer={isLecturer}
+            isAdmin={role === "admin"}
             canManagePins={isLecturer || role === "admin"}
             onSendMessage={onSendMessage || (() => {})}
             onReaction={onReaction}
