@@ -74,6 +74,8 @@ interface MessageInputProps {
   uploadEndpoint?: string; // defaults to "chat-media"
   uploadIdParamName?: string; // defaults to "chatId"
   uploadIdValue?: string; // defaults to channelId
+  // Per-role upload cap in MB. Edge function enforces the authoritative limit.
+  maxFileSizeMb?: number;
 }
 
 const ALLOWED_IMAGE_TYPES = [
@@ -91,7 +93,6 @@ const ALLOWED_VIDEO_TYPES = [
   "video/x-matroska",
 ];
 const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export default function MessageInput({
   onSend,
@@ -106,7 +107,9 @@ export default function MessageInput({
   uploadEndpoint = "chat-media",
   uploadIdParamName = "chatId",
   uploadIdValue,
+  maxFileSizeMb = 10,
 }: MessageInputProps) {
+  const MAX_FILE_SIZE = maxFileSizeMb * 1024 * 1024;
   const [content, setContent] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
@@ -333,7 +336,9 @@ export default function MessageInput({
           xhr.onerror = () => reject(new Error("Upload failed"));
           xhr.onabort = () => reject(new Error("Upload cancelled"));
           xhr.ontimeout = () => reject(new Error("Upload timed out"));
-          xhr.timeout = 30000; // 30 second timeout
+          // Scale timeout with file cap: ~12s per allowed MB, min 120s.
+          // 10 MB cap → 120s; 100 MB cap → 1200s.
+          xhr.timeout = Math.max(120000, maxFileSizeMb * 12000);
 
           xhr.open("POST", edgeFunctionUrl(uploadEndpoint));
           xhr.setRequestHeader(
@@ -411,7 +416,7 @@ export default function MessageInput({
         }
         if (file.size > MAX_FILE_SIZE) {
           errors.push(
-            `"${file.name}" - too large (${(file.size / 1024 / 1024).toFixed(1)} MB, max 10 MB)`,
+            `"${file.name}" - too large (${(file.size / 1024 / 1024).toFixed(1)} MB, max ${maxFileSizeMb} MB)`,
           );
           continue;
         }

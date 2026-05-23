@@ -1329,6 +1329,7 @@ export default function ChatArea({
             isSending={isSending}
             channelId={channel.id}
             isMuted={isMuted || !canSendMessages}
+            maxFileSizeMb={isLecturer ? 100 : 10}
           />
         );
       })()}
