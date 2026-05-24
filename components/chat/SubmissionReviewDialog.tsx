@@ -27,6 +27,8 @@ interface SubmissionReviewDialogProps {
 const PLATFORM_NAMES: Record<string, string> = {
   instagram: "Instagram",
   tiktok: "TikTok",
+  youtube: "YouTube",
+  facebook: "Facebook",
 };
 
 export default function SubmissionReviewDialog({
@@ -82,18 +84,23 @@ export default function SubmissionReviewDialog({
         const criteriaMap: Record<string, string[]> = {};
         const commentsMap: Record<string, string> = {};
         const rpmMap: Record<string, number> = {};
+        const statusMap: Record<string, "accepted" | "rejected"> = {};
 
         reviews.forEach((review) => {
           const platform = review.platform || "all";
           criteriaMap[platform] = review.matched_criteria_ids || [];
           commentsMap[platform] = review.comment || "";
           rpmMap[platform] = parseFloat(review.payment_amount || "0");
+          if (review.status === "accepted" || review.status === "rejected") {
+            statusMap[platform] = review.status;
+          }
         });
 
         // Only update state if we have reviews - don't reset existing state
         setSelectedCriteria((prev) => ({ ...prev, ...criteriaMap }));
         setComments((prev) => ({ ...prev, ...commentsMap }));
         setLastSavedRPM((prev) => ({ ...prev, ...rpmMap }));
+        setReviewStatus((prev) => ({ ...prev, ...statusMap }));
       }
       // If no reviews, don't reset - let user make selections
     } catch (error) {
@@ -229,7 +236,7 @@ export default function SubmissionReviewDialog({
 
         setLastSavedRPM((prev) => ({
           ...prev,
-          [platform]: finalPaymentAmount,
+          [platform]: currentStatus === "rejected" ? 0 : finalPaymentAmount,
         }));
         setSaveSuccess((prev) => ({ ...prev, [platform]: true }));
 
@@ -250,8 +257,8 @@ export default function SubmissionReviewDialog({
       projectId,
       selectedCriteria,
       comments,
+      reviewStatus,
       getCriteriaForPlatform,
-      supabase,
       onReview,
     ],
   );
@@ -292,6 +299,9 @@ export default function SubmissionReviewDialog({
   const currentLastSavedRPM = lastSavedRPM[selectedPlatform] || 0;
   const currentIsSaving = isSaving[selectedPlatform] || false;
   const currentSaveSuccess = saveSuccess[selectedPlatform] || false;
+  const currentReviewStatus = reviewStatus[selectedPlatform] || "accepted";
+  const canSaveReview =
+    currentReviewStatus === "rejected" || currentSelectedCriteria.length > 0;
 
   return (
     <div
@@ -612,7 +622,7 @@ export default function SubmissionReviewDialog({
               onClick={async () => {
                 await saveReviewForPlatform(selectedPlatform);
               }}
-              disabled={currentIsSaving || currentSelectedCriteria.length === 0}
+              disabled={currentIsSaving || !canSaveReview}
               className="px-6 py-2 text-sm font-semibold text-white bg-emerald-500/90 rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {currentIsSaving ? (

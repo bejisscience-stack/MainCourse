@@ -1,10 +1,16 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { useProjectSubmissions } from "@/hooks/useProjectSubmissions";
+import SubmissionReviewDialog from "@/components/chat/SubmissionReviewDialog";
+import type { ProjectCriteria } from "@/components/chat/ProjectCard";
+import { formatPriceInGel } from "@/lib/currency";
 
 interface RecentSubmissionsProps {
   projectId: string;
+  canReview?: boolean;
+  criteria?: ProjectCriteria[];
 }
 
 function timeAgo(iso: string, locale: string) {
@@ -26,9 +32,30 @@ function timeAgo(iso: string, locale: string) {
 
 export default function RecentSubmissions({
   projectId,
+  canReview = false,
+  criteria = [],
 }: RecentSubmissionsProps) {
   const { t, language } = useI18n();
-  const { submissions, isLoading } = useProjectSubmissions(projectId, 10);
+  const { submissions, isLoading, mutate } = useProjectSubmissions(
+    projectId,
+    10,
+  );
+  const [reviewingSubmissionId, setReviewingSubmissionId] = useState<
+    string | null
+  >(null);
+  const [reviewingSubmission, setReviewingSubmission] = useState<{
+    submissionData: { platformLinks: Record<string, string> };
+  } | null>(null);
+
+  const handleReviewSaved = useCallback(() => {
+    mutate();
+  }, [mutate]);
+
+  const handleCloseReview = useCallback(() => {
+    setReviewingSubmissionId(null);
+    setReviewingSubmission(null);
+    mutate();
+  }, [mutate]);
 
   return (
     <section>
@@ -79,6 +106,12 @@ export default function RecentSubmissions({
                 s.submitter_username ||
                 t("activeProjects.unknownLecturer");
               const initial = (name || "?").trim().charAt(0).toUpperCase();
+              const hasReview = s.reviews.length > 0;
+              const totalRPM = s.reviews.reduce(
+                (sum, r) => sum + (r.payment_amount || 0),
+                0,
+              );
+
               return (
                 <li
                   key={s.id}
@@ -109,35 +142,77 @@ export default function RecentSubmissions({
                       {timeAgo(s.created_at, language)}
                     </div>
                   </div>
-                  {s.video_url && (
-                    <a
-                      href={s.video_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-xl bg-charcoal-100 dark:bg-navy-700 text-charcoal-700 dark:text-gray-200 hover:bg-emerald-500/15 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
-                      aria-label={t("activeProjects.viewVideo") || "View video"}
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {hasReview && totalRPM > 0 && (
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        {formatPriceInGel(totalRPM)} RPM
+                      </span>
+                    )}
+                    {hasReview && (
+                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+                        {t("projects.reviewed") || "Reviewed"}
+                      </span>
+                    )}
+                    {canReview && !hasReview && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReviewingSubmissionId(s.id);
+                          setReviewingSubmission({
+                            submissionData: {
+                              platformLinks: s.platform_links || {},
+                            },
+                          });
+                        }}
+                        className="px-3 py-1 bg-emerald-500/90 hover:bg-emerald-500 text-white text-xs rounded-lg transition-colors"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                        />
-                      </svg>
-                    </a>
-                  )}
+                        {t("projectDetail.reviewSubmission") || "Review"}
+                      </button>
+                    )}
+                    {s.video_url && (
+                      <a
+                        href={s.video_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-charcoal-100 dark:bg-navy-700 text-charcoal-700 dark:text-gray-200 hover:bg-emerald-500/15 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
+                        aria-label={
+                          t("activeProjects.viewVideo") || "View video"
+                        }
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                          />
+                        </svg>
+                      </a>
+                    )}
+                  </div>
                 </li>
               );
             })}
           </ul>
         )}
       </div>
+
+      {reviewingSubmissionId && reviewingSubmission && (
+        <SubmissionReviewDialog
+          isOpen={!!reviewingSubmissionId}
+          onClose={handleCloseReview}
+          onReview={handleReviewSaved}
+          submissionId={reviewingSubmissionId}
+          projectId={projectId}
+          criteria={criteria}
+          submission={reviewingSubmission}
+        />
+      )}
     </section>
   );
 }

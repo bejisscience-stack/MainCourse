@@ -93,3 +93,9 @@ production-schema-export.json
 
 # Local production backups (per-table snapshots, pg_dump, manifests)
 /backups/
+
+# Stray images (not for commit)
+/IMG_*.jpeg
+/IMG_*.jpg
+/IMG_*.png
+/public/supabase/

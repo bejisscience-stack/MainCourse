@@ -4,16 +4,24 @@ import { useEffect, useCallback } from "react";
 import useSWR from "swr";
 import { supabase } from "@/lib/supabase";
 
+export interface SubmissionReviewSummary {
+  platform: string;
+  status: "pending" | "accepted" | "rejected";
+  payment_amount: number;
+}
+
 export interface ProjectSubmission {
   id: string;
   project_id: string;
   user_id: string;
   video_url: string | null;
   message: string | null;
+  platform_links: Record<string, string> | null;
   created_at: string;
   submitter_username: string | null;
   submitter_full_name: string | null;
   submitter_avatar_url: string | null;
+  reviews: SubmissionReviewSummary[];
 }
 
 async function fetchProjectSubmissions(
@@ -28,7 +36,9 @@ async function fetchProjectSubmissions(
   // callers get nothing back, which is fine — we render an empty state.
   const { data: submissions, error } = await supabase
     .from("project_submissions")
-    .select("id, project_id, user_id, video_url, message, created_at")
+    .select(
+      "id, project_id, user_id, video_url, message, platform_links, created_at",
+    )
     .eq("project_id", projectId)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -39,6 +49,25 @@ async function fetchProjectSubmissions(
   }
 
   if (!submissions || submissions.length === 0) return [];
+
+  const submissionIds = submissions.map((s: { id: string }) => s.id);
+
+  const { data: reviews } = await supabase
+    .from("submission_reviews")
+    .select("submission_id, platform, status, payment_amount")
+    .eq("project_id", projectId)
+    .in("submission_id", submissionIds);
+
+  const reviewsBySubmission = new Map<string, SubmissionReviewSummary[]>();
+  for (const review of reviews || []) {
+    const list = reviewsBySubmission.get(review.submission_id) || [];
+    list.push({
+      platform: review.platform || "all",
+      status: review.status,
+      payment_amount: parseFloat(review.payment_amount || "0"),
+    });
+    reviewsBySubmission.set(review.submission_id, list);
+  }
 
   let profileMap = new Map<string, any>();
   if (session) {
@@ -57,10 +86,12 @@ async function fetchProjectSubmissions(
       user_id: s.user_id,
       video_url: s.video_url,
       message: s.message,
+      platform_links: s.platform_links ?? null,
       created_at: s.created_at,
       submitter_username: profile?.username || null,
       submitter_full_name: profile?.full_name || null,
       submitter_avatar_url: profile?.avatar_url || null,
+      reviews: reviewsBySubmission.get(s.id) || [],
     };
   });
 }
@@ -94,6 +125,16 @@ export function useProjectSubmissions(
           event: "*",
           schema: "public",
           table: "project_submissions",
+          filter: `project_id=eq.${projectId}`,
+        },
+        () => refresh(),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "submission_reviews",
           filter: `project_id=eq.${projectId}`,
         },
         () => refresh(),

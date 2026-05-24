@@ -58,6 +58,10 @@ export default function ProjectDetailPage() {
 
   const isLecturer = userRole === "lecturer";
   const isProjectOwner = !!user && !!project && user.id === project.user_id;
+  const canReviewSubmissions =
+    !!user &&
+    !!project &&
+    (user.id === project.user_id || user.id === project.lecturer_id);
   const isProjectExpired = countdown.isExpired;
   const hasProjectStarted = countdown.isStarted;
   const hasBudgetAvailable =
@@ -354,7 +358,16 @@ export default function ProjectDetailPage() {
                 )}
 
                 {/* Recent Submissions */}
-                <RecentSubmissions projectId={project.id} />
+                <RecentSubmissions
+                  projectId={project.id}
+                  canReview={canReviewSubmissions}
+                  criteria={project.criteria.map((c) => ({
+                    id: c.id,
+                    text: c.criteria_text,
+                    rpm: c.rpm,
+                    platform: c.platform ?? undefined,
+                  }))}
+                />
               </div>
 
               {/* Outer grid cell stretches to row height; inner wrapper sticks */}
