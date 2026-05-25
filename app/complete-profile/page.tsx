@@ -81,6 +81,18 @@ export default function CompleteProfilePage() {
       }
 
       setSuccess(true);
+
+      // Meta Pixel: track completed registration for OAuth/new users finishing
+      // onboarding here (email signups fire CompleteRegistration on /signup,
+      // so the two paths don't double-count).
+      if (typeof window !== "undefined" && typeof window.fbq === "function") {
+        window.fbq("track", "CompleteRegistration", {
+          content_name: "Account Registration",
+          status: role,
+          registration_method: "oauth",
+        });
+      }
+
       await mutate();
 
       setTimeout(() => {

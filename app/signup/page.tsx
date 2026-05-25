@@ -131,6 +131,17 @@ function SignUpForm() {
 
       if (data.user) {
         setSuccess(true);
+
+        // Meta Pixel: track new account registration so ads can optimize for
+        // real signups. Fired here because email signups complete on this page
+        // (they don't pass through /complete-profile).
+        if (typeof window !== "undefined" && typeof window.fbq === "function") {
+          window.fbq("track", "CompleteRegistration", {
+            content_name: "Account Registration",
+            status: role,
+            registration_method: "email",
+          });
+        }
         // Email confirmation is required — user needs to check their inbox.
         // The redirect URL is preserved in the email confirmation link via
         // emailRedirectTo's ?next= param, so they'll land at the right place
