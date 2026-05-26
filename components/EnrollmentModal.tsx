@@ -361,6 +361,21 @@ export default function EnrollmentModal({
           enrollmentMode === "bundle"
             ? "bundle_enrollment"
             : "course_enrollment";
+
+        // Meta Pixel: InitiateCheckout fires when user commits to pay (before
+        // hitting Keepz). Pairs with the Purchase event in /payment/success so
+        // Meta's algorithm can optimize the InitiateCheckout → Purchase funnel.
+        if (typeof window !== "undefined" && typeof window.fbq === "function") {
+          window.fbq("track", "InitiateCheckout", {
+            content_ids: [course.id],
+            content_type: enrollmentMode === "bundle" ? "bundle" : "course",
+            content_category: paymentType,
+            value: payAmount,
+            currency: "GEL",
+            num_items: 1,
+          });
+        }
+
         const orderResponse = await fetch("/api/payments/keepz/create-order", {
           method: "POST",
           headers: {
@@ -485,6 +500,21 @@ export default function EnrollmentModal({
           enrollmentMode === "bundle"
             ? "bundle_enrollment"
             : "course_enrollment";
+
+        // Meta Pixel: InitiateCheckout fires when user commits to pay (before
+        // hitting Keepz). Pairs with the Purchase event in /payment/success so
+        // Meta's algorithm can optimize the InitiateCheckout → Purchase funnel.
+        if (typeof window !== "undefined" && typeof window.fbq === "function") {
+          window.fbq("track", "InitiateCheckout", {
+            content_ids: [course.id],
+            content_type: enrollmentMode === "bundle" ? "bundle" : "course",
+            content_category: paymentType,
+            value: payAmount,
+            currency: "GEL",
+            num_items: 1,
+          });
+        }
+
         const orderResponse = await fetch("/api/payments/keepz/create-order", {
           method: "POST",
           headers: {

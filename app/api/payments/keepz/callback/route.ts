@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase-server";
 import { decryptCallback, redactKeepzPayload } from "@/lib/keepz";
 import { callbackLimiter, getClientIP } from "@/lib/rate-limit";
+import { sendCapiEvent } from "@/lib/meta-capi";
 
 export const dynamic = "force-dynamic";
 
@@ -318,6 +319,55 @@ export async function POST(request: NextRequest) {
             alreadyCompleted: rpcResult?.already_completed || false,
           },
         );
+
+        // Server-side Meta Conversions API event — only on a FRESH callback,
+        // never on retried/duplicate ones. event_id = payment.id so it
+        // deduplicates with the browser fbq("Purchase", ..., {eventID})
+        // call in /payment/success/page.tsx. If iOS 14+ blocks the browser
+        // event, this server-side one still reaches Meta.
+        if (!rpcResult?.already_completed) {
+          try {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("email, username")
+              .eq("id", payment.user_id)
+              .maybeSingle();
+            const capiResult = await sendCapiEvent({
+              eventId: payment.id,
+              eventName: "Purchase",
+              eventSourceUrl: "https://swavleba.ge/payment/success",
+              actionSource: "website",
+              userData: {
+                email: profile?.email || null,
+                externalId: payment.user_id,
+              },
+              customData: {
+                value: Number(payment.amount) || 0,
+                currency: "GEL",
+                content_name:
+                  payment.payment_type === "bundle_enrollment"
+                    ? "Bundle Purchase"
+                    : "Course Purchase",
+                content_category: payment.payment_type,
+                content_type: "product",
+              },
+            });
+            if (!capiResult.ok && !capiResult.skipped) {
+              console.error(
+                "[Keepz Callback] Meta Conversions API failed:",
+                capiResult.error,
+                "fbtrace:",
+                capiResult.fbtraceId,
+              );
+            }
+          } catch (capiErr) {
+            // Never fail the callback because of analytics
+            console.error(
+              "[Keepz Callback] CAPI error (non-fatal):",
+              capiErr,
+            );
+          }
+        }
       }
 
       // Save card info if present (from saveCard: true payments)
