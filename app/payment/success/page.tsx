@@ -74,13 +74,22 @@ function PaymentSuccessContent() {
       typeof window !== "undefined" &&
       typeof window.fbq === "function"
     ) {
-      window.fbq("track", "Purchase", {
-        value: amount || 0,
-        currency: "GEL",
-        content_name: "Course Purchase",
-      });
+      window.fbq(
+        "track",
+        "Purchase",
+        {
+          value: amount || 0,
+          currency: "GEL",
+          content_name: "Course Purchase",
+        },
+        // Deduplication with the server-side Conversions API event fired
+        // from /api/payments/keepz/callback. paymentId is the same uuid the
+        // server uses as event_id, so Meta merges both into one Pixel event.
+        // If iOS 14+ blocks this browser event, the server one still lands.
+        paymentId ? { eventID: paymentId } : undefined,
+      );
     }
-  }, [status, amount]);
+  }, [status, amount, paymentId]);
 
   useEffect(() => {
     if (!paymentId) {
