@@ -27,6 +27,7 @@ export interface ProjectSubmission {
 async function fetchProjectSubmissions(
   projectId: string,
   limit: number,
+  approvedOnly: boolean,
 ): Promise<ProjectSubmission[]> {
   const {
     data: { session },
@@ -34,12 +35,25 @@ async function fetchProjectSubmissions(
 
   // RLS restricts this query to enrolled users / lecturer; unauthenticated
   // callers get nothing back, which is fine — we render an empty state.
-  const { data: submissions, error } = await supabase
-    .from("project_submissions")
-    .select(
-      "id, project_id, user_id, video_url, message, platform_links, created_at",
-    )
-    .eq("project_id", projectId)
+  // When `approvedOnly`, use an inner join + status filter so LIMIT applies
+  // after filtering and we don't drop rows client-side.
+  const baseSelect =
+    "id, project_id, user_id, video_url, message, platform_links, created_at";
+
+  const query = approvedOnly
+    ? supabase
+        .from("project_submissions")
+        .select(
+          `${baseSelect}, submission_reviews!inner(submission_id, platform, status, payment_amount)`,
+        )
+        .eq("project_id", projectId)
+        .eq("submission_reviews.status", "accepted")
+    : supabase
+        .from("project_submissions")
+        .select(baseSelect)
+        .eq("project_id", projectId);
+
+  const { data: submissions, error } = await query
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -50,23 +64,40 @@ async function fetchProjectSubmissions(
 
   if (!submissions || submissions.length === 0) return [];
 
-  const submissionIds = submissions.map((s: { id: string }) => s.id);
-
-  const { data: reviews } = await supabase
-    .from("submission_reviews")
-    .select("submission_id, platform, status, payment_amount")
-    .eq("project_id", projectId)
-    .in("submission_id", submissionIds);
-
   const reviewsBySubmission = new Map<string, SubmissionReviewSummary[]>();
-  for (const review of reviews || []) {
-    const list = reviewsBySubmission.get(review.submission_id) || [];
-    list.push({
-      platform: review.platform || "all",
-      status: review.status,
-      payment_amount: parseFloat(review.payment_amount || "0"),
-    });
-    reviewsBySubmission.set(review.submission_id, list);
+
+  if (approvedOnly) {
+    // Reviews are embedded on each row via the inner join.
+    for (const s of submissions as any[]) {
+      const embedded = Array.isArray(s.submission_reviews)
+        ? s.submission_reviews
+        : s.submission_reviews
+          ? [s.submission_reviews]
+          : [];
+      const list: SubmissionReviewSummary[] = embedded.map((review: any) => ({
+        platform: review.platform || "all",
+        status: review.status,
+        payment_amount: parseFloat(review.payment_amount || "0"),
+      }));
+      reviewsBySubmission.set(s.id, list);
+    }
+  } else {
+    const submissionIds = submissions.map((s: { id: string }) => s.id);
+    const { data: reviews } = await supabase
+      .from("submission_reviews")
+      .select("submission_id, platform, status, payment_amount")
+      .eq("project_id", projectId)
+      .in("submission_id", submissionIds);
+
+    for (const review of reviews || []) {
+      const list = reviewsBySubmission.get(review.submission_id) || [];
+      list.push({
+        platform: review.platform || "all",
+        status: review.status,
+        payment_amount: parseFloat(review.payment_amount || "0"),
+      });
+      reviewsBySubmission.set(review.submission_id, list);
+    }
   }
 
   let profileMap = new Map<string, any>();
@@ -99,10 +130,11 @@ async function fetchProjectSubmissions(
 export function useProjectSubmissions(
   projectId: string | null | undefined,
   limit: number = 10,
+  approvedOnly: boolean = false,
 ) {
   const { data, error, isLoading, mutate } = useSWR<ProjectSubmission[]>(
-    projectId ? ["project-submissions", projectId, limit] : null,
-    () => fetchProjectSubmissions(projectId!, limit),
+    projectId ? ["project-submissions", projectId, limit, approvedOnly] : null,
+    () => fetchProjectSubmissions(projectId!, limit, approvedOnly),
     {
       revalidateOnFocus: false,
       dedupingInterval: 15000,

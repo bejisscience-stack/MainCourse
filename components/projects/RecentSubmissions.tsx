@@ -39,6 +39,7 @@ export default function RecentSubmissions({
   const { submissions, isLoading, mutate } = useProjectSubmissions(
     projectId,
     10,
+    !canReview,
   );
   const [reviewingSubmissionId, setReviewingSubmissionId] = useState<
     string | null
