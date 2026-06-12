@@ -99,3 +99,7 @@ production-schema-export.json
 /IMG_*.jpg
 /IMG_*.png
 /public/supabase/
+
+# Production DB backups (local only)
+backups/
+CLAUDE.md.pre-ruflo.bak
