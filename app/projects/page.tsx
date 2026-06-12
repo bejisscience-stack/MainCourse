@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Navigation from "@/components/Navigation";
 import ProjectCampaignCard from "@/components/ProjectCampaignCard";
+import ProjectsHero from "@/components/projects/ProjectsHero";
+import ProjectsCtaPanel from "@/components/projects/ProjectsCtaPanel";
+import HowItWorks from "@/components/projects/HowItWorks";
+import ProjectSubscriptionModal from "@/components/ProjectSubscriptionModal";
 import { useActiveProjects } from "@/hooks/useActiveProjects";
+import { useUser } from "@/hooks/useUser";
 import { useI18n } from "@/contexts/I18nContext";
 
 export default function ProjectsPage() {
   const { t } = useI18n();
+  const router = useRouter();
+  const { user } = useUser();
   const { projects, isLoading, error } = useActiveProjects();
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined" && typeof window.fbq === "function") {
@@ -19,6 +28,14 @@ export default function ProjectsPage() {
     }
   }, []);
 
+  const handleSubscribeClick = useCallback(() => {
+    if (!user) {
+      router.push("/login?redirect=/projects");
+      return;
+    }
+    setShowSubscriptionModal(true);
+  }, [user, router]);
+
   return (
     <main className="relative bg-gradient-to-b from-[#fafafa] to-white dark:from-navy-950 dark:to-navy-900 overflow-hidden min-h-screen">
       {/* Base gradient layer */}
@@ -27,26 +44,29 @@ export default function ProjectsPage() {
       <Navigation />
       <div className="relative z-10 pt-24 pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="text-center mb-10">
-            <h1 className="text-4xl md:text-5xl font-bold text-charcoal-950 dark:text-white mb-4 tracking-tight">
-              {t("projectsPage.title")}
-            </h1>
-            <p className="text-lg text-charcoal-600 dark:text-gray-400 max-w-2xl mx-auto">
-              {t("projectsPage.subtitle")}
-            </p>
+          <ProjectsHero />
+
+          <ProjectsCtaPanel onSubscribeClick={handleSubscribeClick} />
+
+          <div className="mb-14">
+            <HowItWorks variant="compact" />
           </div>
 
-          {/* Projects Count Badge */}
-          {!isLoading && !error && projects.length > 0 && (
-            <div className="flex justify-center mb-10">
+          {/* Active projects */}
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold text-charcoal-950 dark:text-white mb-3">
+              {t("projectsPage.activeProjectsHeading")}
+            </h2>
+            {!isLoading && !error && projects.length > 0 && (
               <span className="inline-flex items-center px-4 py-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-sm font-medium rounded-full">
                 {projects.length === 1
                   ? t("projectsPage.projectCount", { count: projects.length })
-                  : t("projectsPage.projectsCount", { count: projects.length })}
+                  : t("projectsPage.projectsCount", {
+                      count: projects.length,
+                    })}
               </span>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Loading State */}
           {isLoading && (
@@ -111,6 +131,12 @@ export default function ProjectsPage() {
           )}
         </div>
       </div>
+
+      <ProjectSubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        onSuccess={() => setShowSubscriptionModal(false)}
+      />
     </main>
   );
 }

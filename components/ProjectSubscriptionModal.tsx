@@ -29,7 +29,7 @@ export default function ProjectSubscriptionModal({
 }: ProjectSubscriptionModalProps) {
   const { t } = useI18n();
   const { user } = useUser();
-  const { subscription } = useProjectAccess(user?.id);
+  const { subscription, hasProjectAccess } = useProjectAccess(user?.id);
   const { cards, deleteCard } = useSavedCards();
   const { subscriptionPrice } = usePlatformSettings();
 
@@ -490,6 +490,37 @@ export default function ProjectSubscriptionModal({
   // Payment view
   const renderPaymentView = () => (
     <>
+      {/* Renewal context: user still has access and is paying to extend */}
+      {hasProjectAccess && subscription?.status === "active" && (
+        <div className="mx-6 mt-4 flex items-start gap-3 p-3 rounded-xl border bg-emerald-500/10 border-emerald-500/30">
+          <svg
+            className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <div>
+            <p className="text-sm font-semibold text-emerald-300">
+              {t("projectSubscription.activeTitle")}
+            </p>
+            {subscription.expires_at && (
+              <p className="text-xs mt-0.5 text-emerald-200/70">
+                {t("projectSubscription.activeUntil", {
+                  date: new Date(subscription.expires_at).toLocaleDateString(),
+                })}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Inline payment processing */}
       {tokenPaymentStatus === "processing" && (
         <div className="p-8 flex flex-col items-center gap-3 animate-fade-in">
@@ -900,7 +931,12 @@ export default function ProjectSubscriptionModal({
         {/* Divider */}
         <div className="border-t border-navy-700/50" />
 
-        {subscription ? renderStatusView() : renderPaymentView()}
+        {/* Status view only while a payment is pending (it owns the Keepz
+            retry flow). Active subs fall through to the payment view so
+            renewal is possible; rejected/expired ones so re-subscribing is. */}
+        {subscription?.status === "pending"
+          ? renderStatusView()
+          : renderPaymentView()}
       </div>
     </div>
   );

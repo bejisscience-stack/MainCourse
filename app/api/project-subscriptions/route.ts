@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase
       .from("project_subscriptions")
       .select(
-        "id, user_id, status, price, payment_method, payment_screenshot, created_at, updated_at",
+        "id, user_id, status, price, payment_method, payment_screenshot, starts_at, expires_at, approved_at, created_at, updated_at",
       )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
         payment_method: payment_method || "keepz",
       })
       .select(
-        "id, user_id, status, price, payment_method, payment_screenshot, created_at, updated_at",
+        "id, user_id, status, price, payment_method, payment_screenshot, starts_at, expires_at, approved_at, created_at, updated_at",
       )
       .single();
 

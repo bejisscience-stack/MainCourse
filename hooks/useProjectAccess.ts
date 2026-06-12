@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR, { mutate } from "swr";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
 export interface ProjectSubscription {
@@ -43,10 +43,6 @@ async function getAuthToken(): Promise<string | null> {
  * 2. Active project subscription
  */
 export function useProjectAccess(userId?: string): ProjectAccessData {
-  const [projectAccessExpiresAt, setProjectAccessExpiresAt] = useState<
-    string | null
-  >(null);
-
   // Fetch profile project_access_expires_at
   const { data: profileData, isLoading: profileLoading } = useSWR(
     userId ? `/api/profile?userId=${userId}` : null,
@@ -108,12 +104,11 @@ export function useProjectAccess(userId?: string): ProjectAccessData {
     };
   }, [userId]);
 
-  // Update local state from profile data
-  useEffect(() => {
-    if (profileData?.profile?.project_access_expires_at) {
-      setProjectAccessExpiresAt(profileData.profile.project_access_expires_at);
-    }
-  }, [profileData]);
+  // Derived directly from SWR data so it updates on the same commit that
+  // flips profileLoading — a useState+useEffect copy lags one render and
+  // briefly shows the wrong access state to subscribed users.
+  const projectAccessExpiresAt: string | null =
+    profileData?.profile?.project_access_expires_at ?? null;
 
   const now = new Date();
 
