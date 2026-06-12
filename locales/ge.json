@@ -984,7 +984,22 @@
     "reviewSubmission": "განხილვა",
     "criteriaSubtitle": "მიიღე GEL თანხა ყოველ 1 000 ნახვაზე, როცა ვიდეო აკმაყოფილებს თითო კრიტერიუმს.",
     "oneCriterion": "1 კრიტერიუმი",
-    "criteriaCount": "{{count}} კრიტერიუმი"
+    "criteriaCount": "{{count}} კრიტერიუმი",
+    "endsInDays": "სრულდება {{days}} დღეში",
+    "endsInHours": "სრულდება {{hours}} საათში",
+    "startsInDays": "იწყება {{days}} დღეში",
+    "share": "გაზიარება",
+    "linkCopied": "დაკოპირდა!",
+    "timeLeft": "დარჩენილი დრო",
+    "noCriteriaTitle": "კრიტერიუმები მალე გამოჩნდება",
+    "noCriteriaBody": "ბიუჯეტიდან თანხას იღებ შენი ვიდეოს ნახვების მიხედვით, პროექტის ნახვების დიაპაზონის ფარგლებში. ზუსტი კრიტერიუმები აქ გამოჩნდება — შემოიხედე მალე.",
+    "mySubmissions": "შენი წარდგენები",
+    "mySubmissionsHint": "აქ ხედავ ყველაფრის სტატუსს, რაც ამ პროექტზე წარადგინე.",
+    "statusAwaitingReview": "განხილვის მოლოდინში",
+    "statusInReview": "განიხილება",
+    "statusAccepted": "მიღებულია",
+    "statusRejected": "არ იქნა მიღებული",
+    "earned": "მიღებული"
   },
   "viewBot": {
     "tabDashboard": "მთავარი",

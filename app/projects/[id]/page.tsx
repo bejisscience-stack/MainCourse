@@ -7,8 +7,13 @@ import Navigation from "@/components/Navigation";
 import BudgetPoolCard from "@/components/projects/BudgetPoolCard";
 import HowItWorks from "@/components/projects/HowItWorks";
 import CriteriaGrid from "@/components/projects/CriteriaGrid";
+import CriteriaEmptyState from "@/components/projects/CriteriaEmptyState";
 import ProjectResourcesList from "@/components/projects/ProjectResourcesList";
 import RecentSubmissions from "@/components/projects/RecentSubmissions";
+import MySubmissions from "@/components/projects/MySubmissions";
+import ShareButton from "@/components/projects/ShareButton";
+import HeroCountdownChip from "@/components/projects/HeroCountdownChip";
+import { getPlatformVisual } from "@/components/projects/platformVisuals";
 import ProjectSubscriptionModal from "@/components/ProjectSubscriptionModal";
 import VideoSubmissionDialog from "@/components/chat/VideoSubmissionDialog";
 import { useI18n } from "@/contexts/I18nContext";
@@ -19,6 +24,7 @@ import { useSignedChatMediaUrl } from "@/hooks/useSignedChatMediaUrl";
 import { useProjectCountdown } from "@/hooks/useProjectCountdown";
 import { useProjectBudget } from "@/hooks/useProjectBudget";
 import { useProjectById } from "@/hooks/useProjectById";
+import { useMyProjectSubmissions } from "@/hooks/useMyProjectSubmissions";
 import LinkifiedText from "@/components/LinkifiedText";
 
 function isChatMediaStoragePath(value: string | null | undefined): boolean {
@@ -58,6 +64,12 @@ export default function ProjectDetailPage() {
 
   const isLecturer = userRole === "lecturer";
   const isProjectOwner = !!user && !!project && user.id === project.user_id;
+  const myUserId = user && !isLecturer && !isProjectOwner ? user.id : null;
+  const {
+    submissions: mySubmissions,
+    isLoading: mySubmissionsLoading,
+    mutate: mutateMySubmissions,
+  } = useMyProjectSubmissions(project?.id, myUserId);
   const canReviewSubmissions =
     !!user &&
     !!project &&
@@ -225,9 +237,15 @@ export default function ProjectDetailPage() {
       <Navigation />
 
       <div className="relative z-10 pt-20 pb-24">
-        {/* Hero */}
+        {/* Hero — compact band when there's no course thumbnail to show */}
         <div className="relative">
-          <div className="relative h-[300px] md:h-[420px] w-full overflow-hidden bg-gradient-to-br from-charcoal-200 via-white to-emerald-50 dark:from-navy-800 dark:via-navy-900 dark:to-navy-800">
+          <div
+            className={`relative w-full overflow-hidden bg-gradient-to-br from-charcoal-200 via-white to-emerald-50 dark:from-navy-800 dark:via-navy-900 dark:to-navy-800 ${
+              project?.course_thumbnail_url
+                ? "h-[300px] md:h-[420px]"
+                : "h-[200px] md:h-[260px]"
+            }`}
+          >
             {project?.course_thumbnail_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -243,23 +261,26 @@ export default function ProjectDetailPage() {
 
           {/* Overlay content positioned absolutely on hero */}
           <div className="absolute inset-x-0 bottom-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 md:pb-10">
-            {/* Breadcrumb */}
-            <nav className="flex items-center gap-2 text-xs md:text-sm text-white/80 mb-4">
-              <Link href="/" className="hover:text-white transition-colors">
-                {t("projectDetail.breadcrumbHome") || "Home"}
-              </Link>
-              <span className="text-white/40">›</span>
-              <Link
-                href="/projects"
-                className="hover:text-white transition-colors"
-              >
-                {t("projectDetail.breadcrumbProjects") || "Projects"}
-              </Link>
-              <span className="text-white/40">›</span>
-              <span className="text-white truncate max-w-[200px] md:max-w-none">
-                {project?.name || "…"}
-              </span>
-            </nav>
+            {/* Breadcrumb + share */}
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <nav className="flex items-center gap-2 text-xs md:text-sm text-white/80 min-w-0">
+                <Link href="/" className="hover:text-white transition-colors">
+                  {t("projectDetail.breadcrumbHome") || "Home"}
+                </Link>
+                <span className="text-white/40">›</span>
+                <Link
+                  href="/projects"
+                  className="hover:text-white transition-colors"
+                >
+                  {t("projectDetail.breadcrumbProjects") || "Projects"}
+                </Link>
+                <span className="text-white/40">›</span>
+                <span className="text-white truncate max-w-[200px] md:max-w-none">
+                  {project?.name || "…"}
+                </span>
+              </nav>
+              <ShareButton className="flex-shrink-0" />
+            </div>
 
             {/* Status + course chips */}
             {project && (
@@ -271,22 +292,43 @@ export default function ProjectDetailPage() {
                     {statusPill.label}
                   </span>
                 )}
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/15 text-white backdrop-blur-sm border border-white/15">
-                  <svg
-                    className="w-3.5 h-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                    />
-                  </svg>
-                  {project.course_title}
-                </span>
+                {project.course_title && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/15 text-white backdrop-blur-sm border border-white/15">
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                      />
+                    </svg>
+                    {project.course_title}
+                  </span>
+                )}
+                <HeroCountdownChip
+                  countdown={countdown}
+                  startDate={project.start_date}
+                />
+                {project.platforms.map((p) => {
+                  const visual = getPlatformVisual(
+                    p,
+                    t("activeProjects.allPlatforms") || "All Platforms",
+                  );
+                  return (
+                    <span
+                      key={p}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/15 text-white backdrop-blur-sm border border-white/15 [&_svg]:w-3.5 [&_svg]:h-3.5"
+                    >
+                      {visual.icon}
+                      {visual.label}
+                    </span>
+                  );
+                })}
               </div>
             )}
 
@@ -341,8 +383,12 @@ export default function ProjectDetailPage() {
                   />
                 </section>
 
-                {/* How it works */}
-                <HowItWorks />
+                {/* Criteria — the earnings info comes right after About */}
+                {project.criteria.length > 0 ? (
+                  <CriteriaGrid criteria={project.criteria} />
+                ) : (
+                  <CriteriaEmptyState />
+                )}
 
                 {/* Resources */}
                 {project.resources.length > 0 && (
@@ -352,10 +398,11 @@ export default function ProjectDetailPage() {
                   />
                 )}
 
-                {/* Criteria */}
-                {project.criteria.length > 0 && (
-                  <CriteriaGrid criteria={project.criteria} />
-                )}
+                {/* Your submissions (viewer's own, any review status) */}
+                <MySubmissions
+                  submissions={mySubmissions}
+                  isLoading={mySubmissionsLoading}
+                />
 
                 {/* Recent Submissions */}
                 <RecentSubmissions
@@ -368,6 +415,11 @@ export default function ProjectDetailPage() {
                     platform: c.platform ?? undefined,
                   }))}
                 />
+
+                {/* How it works — explainer for first-timers, after the facts.
+                    Default 2x2 variant: compact's 4 columns get too narrow
+                    inside this 2/3-width column. */}
+                <HowItWorks />
               </div>
 
               {/* Outer grid cell stretches to row height; inner wrapper sticks */}
@@ -416,7 +468,10 @@ export default function ProjectDetailPage() {
         <VideoSubmissionDialog
           isOpen={showSubmissionDialog}
           onClose={() => setShowSubmissionDialog(false)}
-          onSubmit={() => setShowSubmissionDialog(false)}
+          onSubmit={() => {
+            setShowSubmissionDialog(false);
+            mutateMySubmissions();
+          }}
           platforms={project.platforms}
           {...(project.message_id && project.channel_id
             ? {

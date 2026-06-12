@@ -984,7 +984,22 @@
     "reviewSubmission": "Review",
     "criteriaSubtitle": "Earn per 1,000 views when your video meets each requirement.",
     "oneCriterion": "1 criterion",
-    "criteriaCount": "{{count}} criteria"
+    "criteriaCount": "{{count}} criteria",
+    "endsInDays": "Ends in {{days}}d",
+    "endsInHours": "Ends in {{hours}}h",
+    "startsInDays": "Starts in {{days}}d",
+    "share": "Share",
+    "linkCopied": "Copied!",
+    "timeLeft": "Time left",
+    "noCriteriaTitle": "Criteria coming soon",
+    "noCriteriaBody": "You earn from the budget pool based on the views your video gets within the project's view range. The exact criteria will be announced here — check back soon.",
+    "mySubmissions": "Your submissions",
+    "mySubmissionsHint": "Track the status of everything you've submitted to this project.",
+    "statusAwaitingReview": "Awaiting review",
+    "statusInReview": "In review",
+    "statusAccepted": "Accepted",
+    "statusRejected": "Not accepted",
+    "earned": "Earned"
   },
   "viewBot": {
     "tabDashboard": "Dashboard",

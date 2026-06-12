@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { formatPriceInGel } from "@/lib/currency";
 import { useProjectBudget } from "@/hooks/useProjectBudget";
+import { useProjectCountdown } from "@/hooks/useProjectCountdown";
 import type { ActiveProject } from "@/hooks/useActiveProjects";
 
 interface BudgetPoolCardProps {
@@ -43,6 +44,12 @@ export default function BudgetPoolCard({
 }: BudgetPoolCardProps) {
   const { t } = useI18n();
   const budget = useProjectBudget(project.id, project.budget);
+  const countdown = useProjectCountdown(project.start_date, project.end_date);
+
+  const isUrgent =
+    countdown.isStarted &&
+    !countdown.isExpired &&
+    countdown.timeRemaining.days <= 3;
 
   const totalLabel = useMemo(
     () => stripDecimals(formatPriceInGel(project.budget)),
@@ -117,6 +124,42 @@ export default function BudgetPoolCard({
           >
             {Math.round(budget.percentageRemaining)}%
           </span>
+        </div>
+      </div>
+
+      {/* Time left */}
+      <div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-charcoal-500 dark:text-gray-400">
+            {t("projectDetail.timeLeft") || "Time left"}
+          </span>
+          <span
+            className={`text-sm font-semibold tabular-nums ${
+              countdown.isExpired
+                ? "text-gray-500"
+                : isUrgent
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-charcoal-900 dark:text-white"
+            }`}
+          >
+            {countdown.isExpired
+              ? t("activeProjects.expired") || "Expired"
+              : !countdown.isStarted
+                ? formatDate(project.start_date)
+                : `${countdown.timeRemaining.days}${t("projectDetail.daysShort") || "d"} ${countdown.timeRemaining.hours}h`}
+          </span>
+        </div>
+        <div className="mt-2 w-full h-1.5 bg-charcoal-100 dark:bg-navy-700 rounded-full overflow-hidden">
+          <div
+            className={`h-full transition-all duration-500 ${
+              countdown.isExpired
+                ? "bg-gray-400 dark:bg-gray-600"
+                : isUrgent
+                  ? "bg-amber-500"
+                  : "bg-emerald-500"
+            }`}
+            style={{ width: `${countdown.percentageRemaining}%` }}
+          />
         </div>
       </div>
 
